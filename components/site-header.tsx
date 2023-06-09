@@ -2,16 +2,7 @@ import Link from "next/link"
 
 import { siteConfig } from "@/config/site"
 import { buttonVariants } from "@/components/ui/button"
-import {
-  CommandDialog,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-  CommandSeparator,
-  CommandShortcut,
-} from "@/components/ui/command"
+import { CommandMenu } from "@/components/command-menu"
 import { Icons } from "@/components/icons"
 import { MainNav } from "@/components/main-nav"
 import { ThemeToggle } from "@/components/theme-toggle"
@@ -23,26 +14,12 @@ export function SiteHeader() {
         <MainNav items={siteConfig.mainNav} />
         <div className="flex flex-1 items-center justify-end space-x-4">
           <nav className="flex items-center space-x-1">
+            <CommandMenu />
             <Link
               href={siteConfig.links.github}
               target="_blank"
               rel="noreferrer"
             >
-              {/* <CommandInput placeholder="Type a command or search..." />
-              <CommandList>
-                <CommandEmpty>No results found.</CommandEmpty>
-                <CommandGroup heading="Suggestions">
-                  <CommandItem>Calendar</CommandItem>
-                  <CommandItem>Search Emoji</CommandItem>
-                  <CommandItem>Calculator</CommandItem>
-                </CommandGroup>
-                <CommandSeparator />
-                <CommandGroup heading="Settings">
-                  <CommandItem>Profile</CommandItem>
-                  <CommandItem>Billing</CommandItem>
-                  <CommandItem>Settings</CommandItem>
-                </CommandGroup>
-              </CommandList> */}
               <div
                 className={buttonVariants({
                   size: "sm",
