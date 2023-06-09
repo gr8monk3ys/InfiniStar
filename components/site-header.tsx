@@ -7,6 +7,7 @@ import { Icons } from "@/components/icons"
 import { MainNav } from "@/components/main-nav"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Button } from "@/components/ui/button"
 
 export function SiteHeader() {
   return (
@@ -32,10 +33,16 @@ export function SiteHeader() {
               </div>
             </Link>
             <ThemeToggle />
-            <Avatar>
+            <Button asChild>
+              <Link href="/authentication">Login</Link>
+            </Button>
+            <Button asChild>
+              <Link href="/authentication">Sign Up</Link>
+            </Button>
+            {/* <Avatar>
               <AvatarImage src="https://github.com/shadcn.png" />
               <AvatarFallback>CN</AvatarFallback>
-            </Avatar>
+            </Avatar> */}
           </nav>
         </div>
       </div>
