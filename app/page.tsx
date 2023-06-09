@@ -14,7 +14,7 @@ export default function IndexPage() {
           Interactive Virtual Chats with Advanced Language Learning Models Step
           into the future of language learning with Infinistar. Our advanced AI
           technology creates virtual chats that feel just like texting someone
-          you're interested in, making your learning experience interactive and
+          you are interested in, making your learning experience interactive and
           enjoyable. Harness the power of AI for language learning, brought to
           you by Infinistar.
         </p>
