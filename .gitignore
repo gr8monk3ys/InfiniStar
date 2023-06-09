@@ -1,0 +1,23 @@
+.serena/
+.env
+.env.*
+!.env.example
+!.env.ci.example
+!.env.local.example
+!.env.template
+tsconfig.tsbuildinfo
+.next/
+coverage/
+playwright-report/
+test-results/
+output/
+tmp/
+.playwright-cli/
+node_modules/
+prisma/dev.db
+prisma/dev.db-journal
+.vercel
+log.txt
+
+# clerk configuration (can include secrets)
+/.clerk/
