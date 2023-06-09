@@ -1,20 +1,20 @@
 "use client"
 
 import Link from "next/link"
-
+import Image from "next/image"
 import { AspectRatio } from "@/components/ui/aspect-ratio"
 
 const characters = [
   // List of characters here.
   {
-    name: "Character 1",
-    image: "/path/to/image1.jpg",
-    chatLink: "/chat/character1",
+    name: "Waifu 1",
+    image: "../../public/image/waifu1.png",
+    chatLink: "/chat/waifu1",
   },
   {
-    name: "Character 2",
-    image: "/path/to/image2.jpg",
-    chatLink: "/chat/character2",
+    name: "Waifu 2",
+    image: "../../public/image/waifu2.png",
+    chatLink: "/chat/waifu2",
   },
   // ...
 ]
@@ -32,7 +32,7 @@ export default function ExplorePage() {
           <Link key={character.name} href={character.chatLink} passHref>
             <div className="group relative cursor-pointer overflow-hidden rounded-lg">
               <AspectRatio>
-                <img
+                <Image
                   src={character.image}
                   alt={character.name}
                   className="h-full w-full rounded-lg object-cover"
