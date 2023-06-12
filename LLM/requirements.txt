@@ -1,0 +1,8 @@
+requests
+playsound
+python-dotenv
+Flask
+langchain
+openai
+pydub
+pyaudio
