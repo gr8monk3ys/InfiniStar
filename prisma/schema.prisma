@@ -85,3 +85,9 @@ model Post {
 
   @@map(name: "posts")
 }
+
+model ChatMessage {
+  id     Int     @id @default(autoincrement())
+  user   String
+  message String
+}
