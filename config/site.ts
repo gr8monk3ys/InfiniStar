@@ -19,7 +19,7 @@ export const siteConfig = {
     {
       title: "Settings",
       href: "/forms",
-    }
+    },
   ],
   links: {
     twitter: "https://twitter.com/shadcn",
