@@ -19,10 +19,10 @@ export default async function IndexPage() {
             Welcome to Infinistar
           </h1>
           <p className="max-w-[42rem] leading-normal text-muted-foreground sm:text-xl sm:leading-8">
-            Interactive Virtual Chats with Advanced Language Learning Models. Step
-            into the future of language learning with Infinistar. Our advanced AI
-            technology creates virtual chats that feel just like texting someone
-            you are interested in
+            Interactive Virtual Chats with Advanced Language Learning Models.
+            Step into the future of language learning with Infinistar. Our
+            advanced AI technology creates virtual chats that feel just like
+            texting someone you are interested in
           </p>
         </div>
       </section>

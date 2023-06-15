@@ -25,25 +25,13 @@ export default function PricingPage() {
             What&apos;s included in the PRO plan
           </h3>
           <ul className="grid gap-3 text-sm text-muted-foreground sm:grid-cols-2">
-            <li className="flex items-center">
-              Unlimited Posts
-            </li>
-            <li className="flex items-center">
-              Unlimited Users
-            </li>
+            <li className="flex items-center">Unlimited Posts</li>
+            <li className="flex items-center">Unlimited Users</li>
 
-            <li className="flex items-center">
-              Custom domain
-            </li>
-            <li className="flex items-center">
-              Dashboard Analytics
-            </li>
-            <li className="flex items-center">
-              Access to Discord
-            </li>
-            <li className="flex items-center">
-              Premium Support
-            </li>
+            <li className="flex items-center">Custom domain</li>
+            <li className="flex items-center">Dashboard Analytics</li>
+            <li className="flex items-center">Access to Discord</li>
+            <li className="flex items-center">Premium Support</li>
           </ul>
         </div>
         <div className="flex flex-col gap-4 text-center">
