@@ -17,9 +17,19 @@ export default function IndexPage() {
   const handleChange = (e) => setMessage(e.target.value)
 
   // Handle the button click
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     // Add the current input to the chat as a user message
-    setChat((prevChat) => [...prevChat, { user: "user", message }])
+    const response = await fetch("/api/chat", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ message }),
+    })
+
+    const data = await response.json()
+
+    setChat((prevChat) => [...prevChat, data.message])
     setMessage("") // Clear the input
   }
 
