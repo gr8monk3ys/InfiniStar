@@ -11,21 +11,21 @@ export default function IndexPage() {
           Terms of Service <br className="hidden sm:inline" />
         </h1>
         <p className="text-lg text-muted-foreground">
-          Hello and welcome! These Terms of Service ("Terms") are an agreement
-          formed between you ("You") and Generatively Inc. ("Company," "we" or
-          "us") and cover the website available at joyland.ai (the "Website"),
+        Hello and welcome! These Terms of Service (&quot;Terms&quot;) are an agreement
+          formed between you (&quot;You&quot;) and Generatively Inc. (&quot;Company,&quot; &quot;we&quot; or
+          &quot;us&quot;) and cover the website available at joyland.ai (the &quot;Website&quot;),
           and together with any content, tools, features and functionality
-          offered on or through our Website (the "Services"). These Terms govern
+          offered on or through our Website (the &quot;Services&quot;). These Terms govern
           your access to and use of the Services. Please read them carefully, as
           they include important information about your legal rights. By
-          accessing and/or using the Services, you're agreeing to these Terms.
-          If you don't understand or agree to these Terms, please don't use the
-          Services. For purposes of these Terms, 'you' and 'your' means you as
+          accessing and/or using the Services, you&apos;re agreeing to these Terms.
+          If you don&apos;t understand or agree to these Terms, please don&apos;t use the
+          Services. For purposes of these Terms, &apos;you&apos; and &apos;your&apos; means you as
           the user of the Services. If you use the Services on behalf of a
-          company or other entity then 'you' includes you and that entity, and
+          company or other entity then &apos;you&apos; includes you and that entity, and
           you represent and warrant that (a) you are an authorized
           representative of the entity with the authority to bind the entity to
-          these Terms, and (b) you agree to these Terms on the entity's behalf.
+          these Terms, and (b) you agree to these Terms on the entity&apos;s behalf.
           Use of the Services Your Registration Obligations: You may need to go
           through the relevant registration process to access and use certain
           functions, and registration data and other information about you are
@@ -49,7 +49,7 @@ export default function IndexPage() {
           practices and limits concerning use of the Services, including without
           limitation the maximum period of time that data or other content will
           be retained by the Services and the maximum storage space that will be
-          allotted on Infinistar's servers on your behalf. You agree that
+          allotted on Infinistar&apos;s servers on your behalf. You agree that
           Infinistar has no responsibility or liability for the deletion or
           failure to store any data or other content maintained or uploaded to
           the Services. You further acknowledge that Infinistar reserves the
@@ -57,12 +57,12 @@ export default function IndexPage() {
           sole discretion, with or without notice. Conditions Of Use User
           Conduct. You are solely responsible for all code, video, images,
           information, data, text, software, music, sound, photographs,
-          graphics, messages or other materials ('Content') that you upload,
-          post, publish or display (hereinafter, 'Upload') or email or otherwise
+          graphics, messages or other materials (&apos;Content&apos;) that you upload,
+          post, publish or display (hereinafter, &apos;Upload&apos;) or email or otherwise
           transmit via the Services. The following are examples of the kind of
           content and/or use that is illegal or prohibited by Infinistar.
           Infinistar reserves the right to investigate and take appropriate
-          legal action against anyone who, in Infinistar's sole discretion,
+          legal action against anyone who, in Infinistar&apos;s sole discretion,
           violates this provision, including without limitation, removing the
           offending Content from the Website or Services, suspending or
           terminating the account of such violators and reporting them to
@@ -76,10 +76,10 @@ export default function IndexPage() {
           hardware or telecommunications equipment; (iv) poses or creates a
           privacy or security risk to any person; (v) constitutes unsolicited or
           unauthorized advertising, promotional materials, commercial activities
-          and/or sales, 'junk mail,' 'spam,' 'contests,' 'sweepstakes,' or any
+          and/or sales, &apos;junk mail,&apos; &apos;spam,&apos; &apos;contests,&apos; &apos;sweepstakes,&apos; or any
           other form of solicitation; (vi) is unlawful, harmful, threatening,
           abusive, harassing, tortious, excessively violent, defamatory, vulgar,
-          obscene, pornographic, libelous, invasive of another's privacy,
+          obscene, pornographic, libelous, invasive of another&apos;s privacy,
           hateful racially, ethnically or otherwise objectionable; or (vii) in
           the sole judgment of Infinistar, is objectionable or which restricts
           or inhibits any other person from using or enjoying the Website or
@@ -112,7 +112,7 @@ export default function IndexPage() {
           property right or other rights of any person, or that violates any
           applicable laws. Intellectual Property Rights User Content Uploaded to
           the Site: With respect to the content or other materials you upload to
-          or create using the Services (collectively, "User Content"), you
+          or create using the Services (collectively, &quot;User Content&quot;), you
           represent and warrant that you own all rights, titles and interests in
           and to such User Content, including, without limitation, all
           copyrights and rights of publicity contained therein, or are otherwise
@@ -126,11 +126,11 @@ export default function IndexPage() {
           display, upload, perform, distribute, store, modify and otherwise use
           your User Content for any Infinistar-related purpose in any form,
           medium or technology now known or later developed. Characters and
-          Generations: For any automated AI character ('Character') that you
+          Generations: For any automated AI character (&apos;Character&apos;) that you
           create or upload using the Service, you own all rights in that
           Character (and to the extent you create derivative works, you own all
           rights you otherwise would own in them) and any text, images or video
-          it generates ('Generations') that are elicited directly or indirectly
+          it generates (&apos;Generations&apos;) that are elicited directly or indirectly
           by you, and grant to Infinistar and to any Infinistar user who elicits
           Generations from your Character to the fullest extent permitted under
           the law a nonexclusive, worldwide, royalty-free, fully paid up,
@@ -138,12 +138,12 @@ export default function IndexPage() {
           display, upload, perform, distribute, store, modify and otherwise use
           the Character you created and any related Generations for any purpose
           in any form, medium or technology now known or later developed. For
-          the avoidance of doubt, violations of Infinistar's Acceptable Use
+          the avoidance of doubt, violations of Infinistar&apos;s Acceptable Use
           Policy unrelated to intellectual property issues do not affect the
-          user's intellectual property rights in any Characters or their
+          user&apos;s intellectual property rights in any Characters or their
           Generations. Website or Services Content, Software, and Trademarks:
           You acknowledge and agree that the Website or Services may contain
-          content or features ("Site Content") that are protected by copyright,
+          content or features (&quot;Site Content&quot;) that are protected by copyright,
           patent, trademark, trade secret, or other proprietary rights and laws.
           In connection with your use of the Website or Services, you will not
           engage in or use any data mining, robots, scraping, or similar
@@ -172,7 +172,7 @@ export default function IndexPage() {
           use of any content, including any reliance on the accuracy,
           completeness, or usefulness of such content. You acknowledge and agree
           that any questions, comments, suggestions, ideas, feedback or other
-          information about the Website or Services ("Submissions") provided by
+          information about the Website or Services (&quot;Submissions&quot;) provided by
           you to Infinistar are non-confidential and Infinistar will be entitled
           to the unrestricted use and dissemination of these Submissions for any
           purpose, without acknowledgment of or compensation to you. Without
@@ -208,7 +208,7 @@ export default function IndexPage() {
           copyright or intellectual property owner. Counter-Notice. If you
           believe that your User Content that was removed (or to which access
           was disabled) is not infringing, or that you have the authorization
-          from the copyright owner, the copyright owner's agent, or pursuant to
+          from the copyright owner, the copyright owner&apos;s agent, or pursuant to
           the law, to upload and use the content in your User Content, you may
           send a written counter-notice containing the following information to
           the Copyright Agent: your physical or electronic signature;
@@ -253,7 +253,7 @@ export default function IndexPage() {
           information; (ii) unauthorized access to or alteration of your
           transmissions or data; (iii) statements or conduct of any third party
           (including users) on the Services; or (iv) any other matter relating
-          to the Services. In no event will Infinistar's total liability to you
+          to the Services. In no event will Infinistar&apos;s total liability to you
           for all damages, losses, or causes of action exceed one hundred
           dollars ($100). Some jurisdictions do not allow the exclusion of
           certain warranties or the limitation or exclusion of liability for
@@ -264,8 +264,8 @@ export default function IndexPage() {
           Services. Dispute Resolution By Binding Arbitration This section
           affects your rights so please read it carefully. Agreement to
           Arbitrate This Dispute Resolution by Binding Arbitration section of
-          the Terms is referred to in these Terms as the "Arbitration
-          Agreement." You agree that any and all disputes or claims that have
+          the Terms is referred to in these Terms as the &quot;Arbitration
+          Agreement.&quot; You agree that any and all disputes or claims that have
           arisen or may arise between you and Infinistar, whether arising out of
           or relating to these Terms (including any alleged breach thereof), the
           Website or Services, any aspect of the relationship or transactions
@@ -286,12 +286,12 @@ export default function IndexPage() {
           only on an individual basis and not as a plaintiff or class member in
           any purported class or representative action or proceeding. Unless
           both You and Infinistar agree otherwise, the arbitrator may not
-          consolidate or join more than one person's or party's claims and may
+          consolidate or join more than one person&apos;s or party&apos;s claims and may
           not otherwise preside over any form of a consolidated, representative,
           or class proceeding. Also, the arbitrator may award relief (including
           monetary, injunctive, and declaratory relief) only in favor of the
           individual party seeking relief and only to the extent necessary to
-          provide relief necessitated by that party's individual claim(s).
+          provide relief necessitated by that party&apos;s individual claim(s).
           Pre-Arbitration Dispute Resolution Infinistar is always interested in
           resolving disputes amicably and fairly, so if you have concerns, we
           strongly encourage you to first email us about them at
@@ -308,7 +308,7 @@ export default function IndexPage() {
           discard any content within the Website or Services, for any reason,
           including, without limitation, for lack of use or if Infinistar
           believes that you have violated or acted inconsistently with the
-          letter or spirit of these Terms or Infinistar's Acceptable Use Policy.
+          letter or spirit of these Terms or Infinistar&apos;s Acceptable Use Policy.
           Infinistar may also in its sole discretion and at any time discontinue
           providing the Services, or any part thereof, with or without notice.
           You agree that any termination of your access to the Services under
@@ -318,7 +318,7 @@ export default function IndexPage() {
           related information and files in your account and/or bar any further
           access to such files or the Services. Termination of your account or
           access to any component of the Services will not terminate
-          Infinistar's rights to your User Content. Further, you agree that
+          Infinistar&apos;s rights to your User Content. Further, you agree that
           Infinistar will not be liable to you or any third party for any
           termination of your access to the Services. General Entire Agreement:
           These Terms constitute the entire agreement between you and Infinistar
@@ -332,7 +332,7 @@ export default function IndexPage() {
           within the state of Delaware. Severance: If any provision of these
           Terms is found by a court of competent jurisdiction to be invalid, the
           parties nevertheless agree that the court should endeavor to give
-          effect to the parties' intentions as reflected in the provision, and
+          effect to the parties&apos; intentions as reflected in the provision, and
           the other provisions of these Terms remain in full force and effect.
           No Waiver: Any failure of Infinistar to exercise or enforce any right
           or provision of these terms does not constitute a waiver of such right
