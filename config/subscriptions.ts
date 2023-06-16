@@ -1,5 +1,6 @@
-import { SubscriptionPlan } from "types"
 import { env } from "@/env.mjs"
+
+import { SubscriptionPlan } from "types"
 
 export const freePlan: SubscriptionPlan = {
   name: "Free",

@@ -44,7 +44,7 @@ export default function ExplorePage() {
                   className="h-full w-full rounded-lg object-cover"
                 />
               </AspectRatio>
-              <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-black bg-opacity-10 transition duration-200 group-hover:bg-opacity-25">
+              <div className="group-hover:/25 absolute inset-0 flex items-center justify-center rounded-lg bg-black/10 transition duration-200">
                 <span className="font-bold text-white">{character.name}</span>
               </div>
             </div>
