@@ -2,8 +2,8 @@ import { headers } from "next/headers"
 import { env } from "@/env.mjs"
 import Stripe from "stripe"
 
-import { db } from "@/lib/db"
-import { stripe } from "@/lib/stripe"
+import { db } from "@/app/lib/prismadb"
+import { stripe } from "@/app/lib/stripe"
 
 export async function POST(req: Request) {
   const body = await req.text()
