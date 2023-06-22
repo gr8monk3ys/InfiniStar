@@ -1,0 +1,681 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String    @id @default(uuid()) @db.Uuid
+  clerkId       String    @unique // Clerk external user ID
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  hashedPassword String?  @map("hashedPassword")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Profile fields
+  bio      String? // User bio/about me
+  location String? // User location
+  website  String? // User website URL
+
+  // Age gating / NSFW preferences
+  isAdult          Boolean   @default(false)
+  adultConfirmedAt DateTime?
+  nsfwEnabled      Boolean   @default(false)
+  nsfwEnabledAt    DateTime?
+
+  // Presence fields
+  presenceStatus    String?   @default("offline") // "online", "offline", "away"
+  lastSeenAt        DateTime? // Last time user was active
+  customStatus      String? // Custom status message
+  customStatusEmoji String? // Emoji for custom status
+
+  // GDPR Account Deletion
+  deletionRequested    Boolean   @default(false)
+  deletionRequestedAt  DateTime?
+  deletionScheduledFor DateTime? // When account will be permanently deleted (30 days after request)
+  deletionCancelledAt  DateTime? // When user cancelled their deletion request
+
+  // Notification preferences
+  emailNotifications Boolean  @default(true) // Master toggle for email notifications
+  emailDigest        String   @default("none") // "none", "daily", "weekly"
+  browserNotifications Boolean @default(false) // Browser notifications (in-app, best-effort)
+  notifyOnNewMessage Boolean  @default(true) // Notify on new messages
+  notifyOnMention    Boolean  @default(true) // Notify when mentioned
+  notifyOnAIComplete Boolean  @default(true) // Notify when AI response completes
+  mutedConversations String[] // Conversation IDs to mute notifications for
+
+  // Auto-delete settings for conversations
+  autoDeleteEnabled     Boolean   @default(false) // Whether auto-delete is enabled
+  autoDeleteAfterDays   Int       @default(30) // Days after which to delete: 7, 14, 30, 60, 90, 180, 365
+  autoDeleteArchived    Boolean   @default(false) // Whether to include archived conversations
+  autoDeleteExcludeTags String[] // Tag IDs to exclude from auto-deletion
+  lastAutoDeleteRun     DateTime? // When auto-delete was last run
+
+  stripeCustomerId       String?   @unique @map("stripe_customer_id")
+  stripeSubscriptionId   String?   @unique @map("stripe_subscription_id")
+  stripePriceId          String?   @map("stripe_price_id")
+  stripeCurrentPeriodEnd DateTime? @map("stripe_current_period_end")
+
+  // Acquisition / first-touch attribution (slice A3 — all nullable, additive)
+  referralSource String? // free-form ref/referrer label captured at first touch
+  utmSource      String? // utm_source from first-touch landing
+  utmMedium      String? // utm_medium from first-touch landing
+  utmCampaign    String? // utm_campaign from first-touch landing
+  firstTouchAt   DateTime? // when the visitor first landed (from ist_attribution cookie)
+
+  // Self-referral graph: who referred this user
+  referredById String? @db.Uuid
+  referredBy   User?   @relation("UserReferrals", fields: [referredById], references: [id], onDelete: SetNull)
+  referrals    User[]  @relation("UserReferrals")
+
+  conversations Conversation[] @relation("UserConversations")
+  seenMessages  Message[]      @relation("Seen")
+
+  messages Message[]
+  userSessions UserSession[]
+
+  pushSubscriptions PushSubscription[]
+
+  tags             Tag[]
+  aiMemories       AIMemory[]
+  messageTemplates MessageTemplate[]
+  characters       Character[]
+  personas         UserPersona[]
+  blocksInitiated  UserBlock[]       @relation("BlocksInitiated")
+  blocksReceived   UserBlock[]       @relation("BlocksReceived")
+  reportsFiled     ContentReport[]
+  characterLikes   CharacterLike[]
+  characterComments CharacterComment[]
+  tipsGiven        CreatorTip[]          @relation("CreatorTipsGiven")
+  tipsReceived     CreatorTip[]          @relation("CreatorTipsReceived")
+  subscriptionsGiven    CreatorSubscription[] @relation("CreatorSubscriptionsGiven")
+  subscriptionsReceived CreatorSubscription[] @relation("CreatorSubscriptionsReceived")
+  following            UserFollow[]        @relation("UserFollows")
+  followers            UserFollow[]        @relation("UserFollowers")
+
+  @@index([deletionRequested, deletionScheduledFor])
+  @@index([referredById])
+  @@index([utmSource, createdAt])
+  @@map("users")
+}
+
+model UserSession {
+  id           String   @id @default(uuid()) @db.Uuid
+  sessionToken String   @unique
+  userId       String   @db.Uuid
+  deviceType   String?
+  browser      String?
+  os           String?
+  ipAddress    String?
+  createdAt    DateTime @default(now())
+  lastActiveAt DateTime @default(now())
+  expiresAt    DateTime
+  isRevoked    Boolean  @default(false)
+  revokedAt    DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("user_sessions")
+}
+
+model PushSubscription {
+  id        String   @id @default(uuid()) @db.Uuid
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId    String @db.Uuid
+  endpoint  String @unique
+  p256dh    String
+  auth      String
+  userAgent String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("push_subscriptions")
+}
+
+model Conversation {
+  id             String     @id @default(uuid()) @db.Uuid
+  createdAt      DateTime   @default(now())
+  lastMessageAt  DateTime   @default(now())
+  name           String?
+  isGroup        Boolean    @default(false)
+  isAI           Boolean    @default(false)
+  aiModel        String? // e.g., "claude-3-5-sonnet-20241022"
+  aiSystemPrompt String? // Custom system prompt for AI personality
+  aiPersonality  String? // Preset personality: "assistant", "creative", "technical", "friendly", "professional", "custom"
+  characterId    String?      @db.Uuid
+  character      Character?   @relation(fields: [characterId], references: [id], onDelete: SetNull)
+  personaId      String?      @db.Uuid
+  persona        UserPersona? @relation(fields: [personaId], references: [id], onDelete: SetNull)
+
+  // Archiving functionality
+  archivedBy String[] // Array of user IDs who archived this conversation
+  archivedAt DateTime? // When conversation was first archived (by any user)
+
+  // Pinning functionality
+  pinnedBy String[] // Array of user IDs who pinned this conversation
+  pinnedAt DateTime? // When conversation was first pinned (by any user)
+
+  // Muting functionality
+  mutedBy String[] // Array of user IDs who muted this conversation
+  mutedAt DateTime? // When conversation was first muted (by any user)
+
+  // Summary functionality
+  summary             String? // AI-generated conversation summary
+  summaryGeneratedAt  DateTime? // When the summary was last generated
+  summaryMessageCount Int? // Number of messages when summary was generated (for cache invalidation)
+
+  messages Message[]
+
+  users User[] @relation("UserConversations")
+
+  // Tags for organizing conversations
+  tags Tag[] @relation("ConversationTags")
+
+  // Shares for conversation sharing
+  shares ConversationShare[]
+
+  // Performance indexes for search
+  @@index([lastMessageAt])
+  @@index([isAI])
+  @@index([characterId])
+  @@index([archivedBy], type: Gin)
+  @@index([pinnedBy], type: Gin)
+  @@index([mutedBy], type: Gin)
+  @@map("conversations")
+}
+
+model Character {
+  id        String   @id @default(uuid()) @db.Uuid
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  name             String
+  slug             String   @unique
+  tagline          String?
+  description      String?
+  greeting         String?
+  scenario         String?
+  exampleDialogues String?
+  systemPrompt     String
+  avatarUrl        String?
+  coverImageUrl    String?
+  tags             String[] @default([])
+
+  isPublic   Boolean   @default(false)
+  featured   Boolean   @default(false)
+  isNsfw     Boolean   @default(false)
+  viewCount  Int       @default(0)
+  usageCount Int       @default(0)
+  lastUsedAt DateTime?
+  category   String    @default("general")
+  likeCount  Int       @default(0)
+  commentCount Int     @default(0)
+
+  createdById String @db.Uuid
+  createdBy   User   @relation(fields: [createdById], references: [id], onDelete: Cascade)
+
+  conversations Conversation[]
+  likes         CharacterLike[]
+  comments      CharacterComment[]
+
+  @@index([isPublic, featured])
+  @@index([isPublic, isNsfw])
+  @@index([createdAt])
+  @@index([usageCount])
+  @@map("characters")
+}
+
+model Message {
+  id        String    @id @default(uuid()) @db.Uuid
+  body      String?
+  image     String?
+  audioUrl  String?
+  audioTranscript String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  editedAt  DateTime? // Track when message was last edited
+  deletedAt DateTime? // Soft delete timestamp
+  isDeleted Boolean   @default(false) // Soft delete flag
+  isAI      Boolean   @default(false) // True if message is from AI
+
+  // Token usage tracking for AI messages
+  inputTokens  Int? // Tokens used for input (context + message)
+  outputTokens Int? // Tokens used for AI response
+
+  // Reactions stored as JSON: { "👍": ["userId1", "userId2"], "❤️": ["userId3"] }
+  reactions Json? @default("{}")
+
+  // Alternative AI replies (e.g., regenerations) stored as a JSON array of strings.
+  // `body` always contains the currently active variant for fast reads.
+  variants      Json @default("[]")
+  activeVariant Int  @default(0)
+
+  // Reply/threading support
+  replyToId String?   @db.Uuid
+  replyTo   Message?  @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  replies   Message[] @relation("MessageReplies")
+
+  seen User[] @relation("Seen")
+
+  conversationId String       @db.Uuid
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  senderId String @db.Uuid
+  sender   User   @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  // Performance indexes for search and pagination
+  @@index([conversationId, createdAt])
+  @@index([isDeleted])
+  @@index([senderId, createdAt])
+  @@index([conversationId, isDeleted, createdAt])
+  @@map("messages")
+}
+
+model AiUsage {
+  id        String   @id @default(uuid()) @db.Uuid
+  createdAt DateTime @default(now())
+
+  // User and conversation references
+  userId         String @db.Uuid
+  conversationId String @db.Uuid
+
+  // Model information
+  model String // e.g., "claude-3-5-sonnet-20241022"
+
+  // Token usage
+  inputTokens  Int
+  outputTokens Int
+  totalTokens  Int
+
+  // Cost estimation (in cents)
+  inputCost  Float
+  outputCost Float
+  totalCost  Float
+
+  // Request metadata
+  requestType String // "chat" or "chat-stream"
+  latencyMs   Int? // Response time in milliseconds
+
+  @@index([userId])
+  @@index([conversationId])
+  @@index([createdAt])
+  @@index([userId, createdAt])
+  @@map("ai_usage")
+}
+
+model Tag {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String // Tag name (e.g., "Work", "Personal", "Important")
+  color     String // Color code (e.g., "red", "blue", "green")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // User who owns this tag (tags are user-specific)
+  userId String @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Many-to-many relationship with conversations
+  conversations Conversation[] @relation("ConversationTags")
+
+  @@unique([userId, name]) // Unique tag name per user
+  @@index([userId])
+  @@map("tags")
+}
+
+model AIMemory {
+  id        String   @id @default(uuid()) @db.Uuid
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // User who owns this memory
+  userId String @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Memory identifier (e.g., "user_preferences", "project_context", "favorite_color")
+  key String
+
+  // The remembered information (max 500 characters enforced at application level)
+  content String
+
+  // Type of memory for categorization and filtering
+  category MemoryCategory @default(FACT)
+
+  // Priority level (1-5, where 5 is highest priority)
+  importance Int @default(3)
+
+  // Optional expiration for temporary memories
+  expiresAt DateTime?
+
+  // Source context - which conversation triggered this memory
+  sourceConversationId String? @db.Uuid
+
+  @@unique([userId, key]) // Each user can only have one memory per key
+  @@index([userId])
+  @@index([category])
+  @@index([expiresAt])
+  @@map("ai_memories")
+}
+
+model MessageTemplate {
+  id        String   @id @default(uuid()) @db.Uuid
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // User who owns this template
+  userId String @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Template details
+  name     String // Template name/label (e.g., "Thank you", "Meeting request")
+  content  String // The template text (max 2000 chars enforced at application level)
+  shortcut String? // Optional keyboard shortcut (e.g., "/thanks", "/meeting") - must start with "/"
+  category String? // Optional category for organization (e.g., "Greetings", "Business", "Personal")
+
+  // Usage tracking
+  usageCount Int       @default(0) // Track how often this template is used
+  lastUsedAt DateTime? // When the template was last used
+
+  @@unique([userId, shortcut]) // Unique shortcut per user (shortcuts are optional but must be unique when set)
+  @@unique([userId, name]) // Unique template name per user
+  @@index([userId])
+  @@index([category])
+  @@index([usageCount])
+  @@map("message_templates")
+}
+
+enum MemoryCategory {
+  PREFERENCE // User preferences (e.g., "prefers dark mode", "likes concise answers")
+  FACT // Facts about the user (e.g., "works as software engineer", "lives in NYC")
+  CONTEXT // Project or work context (e.g., "working on React app", "uses TypeScript")
+  INSTRUCTION // Standing instructions (e.g., "always use metric units", "avoid jargon")
+  RELATIONSHIP // Relationship info (e.g., "has a dog named Max", "married to Sarah")
+}
+
+// Conversation sharing functionality
+model ConversationShare {
+  id        String   @id @default(uuid()) @db.Uuid
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relation to conversation
+  conversationId String       @db.Uuid
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  // User who created the share
+  createdById String @db.Uuid
+
+  // Share token for public link sharing (cryptographically secure)
+  shareToken String @unique
+
+  // Type of share: "link" (public link) or "invite" (specific users)
+  shareType ShareType @default(LINK)
+
+  // Permission level: "view" (read-only) or "participate" (can send messages)
+  permission SharePermission @default(VIEW)
+
+  // Optional expiration date
+  expiresAt DateTime?
+
+  // Optional maximum uses
+  maxUses Int?
+
+  // Track number of times used
+  useCount Int @default(0)
+
+  // Enable/disable sharing
+  isActive Boolean @default(true)
+
+  // For invite-only: array of allowed email addresses
+  allowedEmails String[] @default([])
+
+  // Optional share name/description for management
+  name String?
+
+  @@index([conversationId])
+  @@index([createdById])
+  @@index([expiresAt])
+  @@map("conversation_shares")
+}
+
+enum ShareType {
+  LINK // Public link that anyone can use
+  INVITE // Invite-only, restricted to specific emails
+}
+
+enum SharePermission {
+  VIEW // Read-only access to conversation
+  PARTICIPATE // Can send messages in conversation
+}
+
+model UserBlock {
+  id        String   @id @default(uuid()) @db.Uuid
+  createdAt DateTime @default(now())
+  reason    String?
+
+  blockerId String @db.Uuid
+  blockedId String @db.Uuid
+
+  blocker User @relation("BlocksInitiated", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked User @relation("BlocksReceived", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerId, blockedId])
+  @@index([blockerId])
+  @@index([blockedId])
+  @@map("user_blocks")
+}
+
+model ContentReport {
+  id        String   @id @default(uuid()) @db.Uuid
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  reporterId String @db.Uuid
+  reporter   User   @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+
+  targetType ReportTargetType
+  targetId   String
+  reason     ReportReason
+  details    String?
+  status     ReportStatus     @default(OPEN)
+
+  resolvedAt DateTime?
+  resolvedBy String?
+
+  @@index([reporterId])
+  @@index([targetType, targetId])
+  @@index([status])
+  @@map("content_reports")
+}
+
+enum ReportTargetType {
+  USER
+  MESSAGE
+  CONVERSATION
+  CHARACTER
+}
+
+enum ReportReason {
+  HARASSMENT
+  HATE
+  SEXUAL
+  VIOLENCE
+  SPAM
+  COPYRIGHT
+  OTHER
+}
+
+enum ReportStatus {
+  OPEN
+  REVIEWING
+  RESOLVED
+  DISMISSED
+}
+
+model CharacterLike {
+  id        String   @id @default(uuid()) @db.Uuid
+  createdAt DateTime @default(now())
+
+  userId String @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  characterId String    @db.Uuid
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, characterId])
+  @@index([characterId])
+  @@index([userId])
+  @@map("character_likes")
+}
+
+model CharacterComment {
+  id        String   @id @default(uuid()) @db.Uuid
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  body String
+
+  characterId String    @db.Uuid
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  authorId String @db.Uuid
+  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([characterId, createdAt])
+  @@index([authorId, createdAt])
+  @@map("character_comments")
+}
+
+model AffiliateClick {
+  id              String   @id @default(uuid()) @db.Uuid
+  createdAt       DateTime @default(now())
+  partnerId       String
+  source          String
+  destinationUrl  String
+  destinationHost String
+  referrer        String?
+  userAgent       String?
+  clientIp        String?
+
+  @@index([createdAt])
+  @@index([partnerId, createdAt])
+  @@index([source, createdAt])
+  @@index([destinationHost, createdAt])
+  @@map("affiliate_clicks")
+}
+
+model CreatorTip {
+  id        String   @id @default(uuid()) @db.Uuid
+  createdAt DateTime @default(now())
+
+  supporterId String @db.Uuid
+  supporter   User   @relation("CreatorTipsGiven", fields: [supporterId], references: [id], onDelete: Cascade)
+
+  creatorId String @db.Uuid
+  creator   User   @relation("CreatorTipsReceived", fields: [creatorId], references: [id], onDelete: Cascade)
+
+  amountCents Int
+  currency    String                  @default("USD")
+  note        String?
+  status      CreatorTransactionStatus @default(PENDING)
+  stripeCheckoutSessionId String?      @unique @map("stripe_checkout_session_id")
+  stripePaymentIntentId   String?      @unique @map("stripe_payment_intent_id")
+
+  @@index([creatorId, createdAt])
+  @@index([supporterId, createdAt])
+  @@index([creatorId, status])
+  @@map("creator_tips")
+}
+
+model CreatorSubscription {
+  id        String   @id @default(uuid()) @db.Uuid
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  supporterId String @db.Uuid
+  supporter   User   @relation("CreatorSubscriptionsGiven", fields: [supporterId], references: [id], onDelete: Cascade)
+
+  creatorId String @db.Uuid
+  creator   User   @relation("CreatorSubscriptionsReceived", fields: [creatorId], references: [id], onDelete: Cascade)
+
+  tierName    String
+  amountCents Int
+  currency    String                      @default("USD")
+  interval    CreatorSubscriptionInterval @default(MONTHLY)
+  status      CreatorSubscriptionStatus   @default(ACTIVE)
+  stripeSubscriptionId String?            @unique @map("stripe_subscription_id")
+  stripeCheckoutSessionId String?         @unique @map("stripe_checkout_session_id")
+  stripeCustomerId      String?           @map("stripe_customer_id")
+  stripeCurrentPeriodEnd DateTime?        @map("stripe_current_period_end")
+  startedAt   DateTime                    @default(now())
+  canceledAt  DateTime?
+
+  @@unique([supporterId, creatorId])
+  @@index([creatorId, status])
+  @@index([supporterId, status])
+  @@map("creator_subscriptions")
+}
+
+model UserFollow {
+  followerId  String   @db.Uuid
+  followingId String   @db.Uuid
+  createdAt   DateTime @default(now())
+
+  follower  User @relation("UserFollows", fields: [followerId], references: [id], onDelete: Cascade)
+  following User @relation("UserFollowers", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@id([followerId, followingId])
+  @@index([followingId])
+  @@index([followerId])
+  @@map("user_follows")
+}
+
+enum CreatorTransactionStatus {
+  PENDING
+  COMPLETED
+  REFUNDED
+  FAILED
+}
+
+enum CreatorSubscriptionInterval {
+  MONTHLY
+  YEARLY
+}
+
+enum CreatorSubscriptionStatus {
+  ACTIVE
+  CANCELED
+  PAUSED
+}
+
+model UserPersona {
+  id        String   @id @default(uuid()) @db.Uuid
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  name              String
+  description       String?
+  appearance        String?
+  personalityTraits String?
+
+  isDefault Boolean @default(false)
+
+  userId String @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  conversations Conversation[]
+
+  @@index([userId])
+  @@map("user_personas")
+}
