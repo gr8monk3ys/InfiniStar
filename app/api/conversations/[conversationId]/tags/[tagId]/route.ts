@@ -1,0 +1,139 @@
+import { NextResponse, type NextRequest } from "next/server"
+
+import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
+import { apiLogger } from "@/app/lib/logger"
+import prisma from "@/app/lib/prismadb"
+import { getPusherUserChannel } from "@/app/lib/pusher-channels"
+import { pusherServer } from "@/app/lib/pusher-server"
+import { getClientIdentifier, tagLimiter } from "@/app/lib/rate-limit"
+import getCurrentUser from "@/app/actions/getCurrentUser"
+
+interface RouteParams {
+  params: Promise<{
+    conversationId: string
+    tagId: string
+  }>
+}
+
+/**
+ * DELETE /api/conversations/[conversationId]/tags/[tagId]
+ * Remove a tag from a conversation
+ */
+export async function DELETE(request: NextRequest, { params }: RouteParams) {
+  try {
+    const { conversationId, tagId } = await params
+
+    // Rate limiting
+    const identifier = getClientIdentifier(request)
+    const allowed = await Promise.resolve(tagLimiter.check(identifier))
+    if (!allowed) {
+      return NextResponse.json(
+        { error: "Too many requests. Please try again later." },
+        { status: 429 }
+      )
+    }
+
+    // CSRF Protection
+    const headerToken = request.headers.get("X-CSRF-Token")
+    const cookieToken = getCsrfTokenFromRequest(request)
+
+    if (!verifyCsrfToken(headerToken, cookieToken)) {
+      return NextResponse.json({ error: "Invalid CSRF token" }, { status: 403 })
+    }
+
+    const currentUser = await getCurrentUser()
+    if (!currentUser) {
+      return NextResponse.json({ error: "User not found" }, { status: 401 })
+    }
+
+    // Find the conversation and verify user is a participant
+    const conversation = await prisma.conversation.findUnique({
+      where: {
+        id: conversationId,
+      },
+      select: {
+        id: true,
+        users: {
+          select: { id: true },
+        },
+        tags: {
+          select: { id: true },
+        },
+      },
+    })
+
+    if (!conversation) {
+      return NextResponse.json({ error: "Conversation not found" }, { status: 404 })
+    }
+
+    // Verify user is a participant
+    if (!conversation.users.some((user: { id: string }) => user.id === currentUser.id)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
+    }
+
+    // Verify the tag exists and belongs to the user
+    const tag = await prisma.tag.findUnique({
+      where: {
+        id: tagId,
+      },
+    })
+
+    if (!tag) {
+      return NextResponse.json({ error: "Tag not found" }, { status: 404 })
+    }
+
+    if (tag.userId !== currentUser.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
+    }
+
+    // Check if tag is attached to this conversation
+    if (!conversation.tags.some((tagItem: { id: string }) => tagItem.id === tagId)) {
+      return NextResponse.json(
+        { error: "Tag is not attached to this conversation" },
+        { status: 400 }
+      )
+    }
+
+    // Remove the tag from the conversation
+    const updatedConversation = await prisma.conversation.update({
+      where: {
+        id: conversationId,
+      },
+      data: {
+        tags: {
+          disconnect: {
+            id: tagId,
+          },
+        },
+      },
+      include: {
+        tags: {
+          where: {
+            userId: currentUser.id,
+          },
+        },
+        users: true,
+        messages: {
+          include: {
+            sender: true,
+            seen: true,
+          },
+        },
+      },
+    })
+
+    // Trigger Pusher event for real-time update (user-specific)
+    await pusherServer.trigger(getPusherUserChannel(currentUser.id), "conversation:tag:remove", {
+      conversationId,
+      tagId,
+    })
+
+    return NextResponse.json({
+      conversation: updatedConversation,
+      success: true,
+    })
+  } catch (error) {
+    apiLogger.error({ err: error }, "Error removing tag from conversation")
+    return NextResponse.json({ error: "Failed to remove tag" }, { status: 500 })
+  }
+}

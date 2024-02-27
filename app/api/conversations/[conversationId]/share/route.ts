@@ -1,0 +1,153 @@
+/**
+ * Conversation Share API Routes
+ *
+ * POST /api/conversations/[conversationId]/share - Create a share link
+ * GET /api/conversations/[conversationId]/share - List all shares for a conversation
+ */
+
+import { NextResponse, type NextRequest } from "next/server"
+import { z } from "zod"
+
+import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
+import { apiLogger } from "@/app/lib/logger"
+import { getClientIdentifier, shareLimiter } from "@/app/lib/rate-limit"
+import { createShareLink, getSharesForConversation, getShareUrl } from "@/app/lib/sharing"
+import getCurrentUser from "@/app/actions/getCurrentUser"
+
+// Validation schema for creating a share
+const createShareSchema = z.object({
+  shareType: z.enum(["LINK", "INVITE"]).optional().default("LINK"),
+  permission: z.enum(["VIEW", "PARTICIPATE"]).optional().default("VIEW"),
+  expiresAt: z
+    .string()
+    .datetime()
+    .optional()
+    .nullable()
+    .transform((val) => (val ? new Date(val) : null)),
+  maxUses: z.number().int().positive().optional().nullable(),
+  allowedEmails: z.array(z.string().email()).optional().default([]),
+  name: z.string().max(100).optional().nullable(),
+})
+
+interface IParams {
+  conversationId: string
+}
+
+// POST - Create a new share link
+export async function POST(request: NextRequest, { params }: { params: Promise<IParams> }) {
+  try {
+    // CSRF Protection
+    if (!verifyCsrfToken(request.headers.get("X-CSRF-Token"), getCsrfTokenFromRequest(request))) {
+      return NextResponse.json({ error: "Invalid CSRF token" }, { status: 403 })
+    }
+
+    // Rate limiting
+    const identifier = getClientIdentifier(request)
+    const allowed = await Promise.resolve(shareLimiter.check(identifier))
+    if (!allowed) {
+      return NextResponse.json(
+        { error: "Too many requests. Please try again later." },
+        { status: 429 }
+      )
+    }
+
+    const currentUser = await getCurrentUser()
+    const { conversationId } = await params
+
+    if (!currentUser?.id || !currentUser?.email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    // Parse and validate request body
+    let body: unknown
+    try {
+      body = await request.json()
+    } catch {
+      body = {}
+    }
+
+    const validationResult = createShareSchema.safeParse(body)
+
+    if (!validationResult.success) {
+      return NextResponse.json(
+        {
+          error: "Invalid request data",
+          details: validationResult.error.flatten().fieldErrors,
+        },
+        { status: 400 }
+      )
+    }
+
+    const { shareType, permission, expiresAt, maxUses, allowedEmails, name } = validationResult.data
+
+    // Validate invite-only shares have allowed emails
+    if (shareType === "INVITE" && allowedEmails.length === 0) {
+      return NextResponse.json(
+        { error: "Invite-only shares must have at least one allowed email" },
+        { status: 400 }
+      )
+    }
+
+    // Create the share
+    const result = await createShareLink(currentUser.id, conversationId, {
+      shareType: shareType as "LINK" | "INVITE",
+      permission: permission as "VIEW" | "PARTICIPATE",
+      expiresAt,
+      maxUses,
+      allowedEmails,
+      name,
+    })
+
+    if (!result.success) {
+      return NextResponse.json(
+        { error: result.error },
+        { status: result.error === "Conversation not found" ? 404 : 403 }
+      )
+    }
+
+    // Return share with URL
+    const shareUrl = getShareUrl(result.share!.shareToken)
+
+    return NextResponse.json({
+      share: result.share,
+      shareUrl,
+    })
+  } catch (error) {
+    apiLogger.error({ err: error }, "CREATE_SHARE_ERROR")
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+  }
+}
+
+// GET - List all shares for a conversation
+export async function GET(request: NextRequest, { params }: { params: Promise<IParams> }) {
+  try {
+    const currentUser = await getCurrentUser()
+    const { conversationId } = await params
+
+    if (!currentUser?.id || !currentUser?.email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const result = await getSharesForConversation(currentUser.id, conversationId)
+
+    if (!result.success) {
+      return NextResponse.json(
+        { error: result.error },
+        { status: result.error === "Conversation not found" ? 404 : 403 }
+      )
+    }
+
+    // Add share URLs to each share
+    const sharesWithUrls = result.shares!.map(
+      (share: { shareToken: string; [key: string]: unknown }) => ({
+        ...share,
+        shareUrl: getShareUrl(share.shareToken),
+      })
+    )
+
+    return NextResponse.json({ shares: sharesWithUrls })
+  } catch (error) {
+    apiLogger.error({ err: error }, "GET_SHARES_ERROR")
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+  }
+}

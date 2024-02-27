@@ -1,0 +1,131 @@
+import { NextResponse, type NextRequest } from "next/server"
+import { z } from "zod"
+
+import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
+import { apiLogger } from "@/app/lib/logger"
+import prisma from "@/app/lib/prismadb"
+import { getPusherConversationChannel } from "@/app/lib/pusher-channels"
+import { pusherServer } from "@/app/lib/pusher-server"
+import { apiLimiter } from "@/app/lib/rate-limit"
+import getCurrentUser from "@/app/actions/getCurrentUser"
+
+// Validation schema
+const reactionSchema = z.object({
+  emoji: z.string().min(1).max(10), // Emoji as string
+})
+
+// POST /api/messages/[messageId]/react - Add or toggle a reaction
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ messageId: string }> }
+) {
+  try {
+    // CSRF Protection
+    const headerToken = request.headers.get("X-CSRF-Token")
+    const cookieToken = getCsrfTokenFromRequest(request)
+
+    if (!verifyCsrfToken(headerToken, cookieToken)) {
+      return NextResponse.json({ error: "Invalid CSRF token" }, { status: 403 })
+    }
+
+    const currentUser = await getCurrentUser()
+    const { messageId } = await params
+
+    if (!currentUser?.id || !currentUser?.email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    if (!apiLimiter.check(currentUser.id)) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 })
+    }
+
+    // Validate request body
+    const body = await request.json()
+    const validation = reactionSchema.safeParse(body)
+
+    if (!validation.success) {
+      return NextResponse.json({ error: validation.error.issues[0].message }, { status: 400 })
+    }
+
+    const { emoji } = validation.data
+
+    // Find the message
+    const message = await prisma.message.findUnique({
+      where: { id: messageId },
+      include: {
+        sender: true,
+        seen: true,
+      },
+    })
+
+    if (!message) {
+      return NextResponse.json({ error: "Message not found" }, { status: 404 })
+    }
+
+    // Check if user is a participant in the message's conversation
+    const conversation = await prisma.conversation.findFirst({
+      where: {
+        id: message.conversationId,
+        users: { some: { id: currentUser.id } },
+      },
+      select: { id: true },
+    })
+
+    if (!conversation) {
+      return NextResponse.json(
+        { error: "You can only react to messages in your own conversations" },
+        { status: 403 }
+      )
+    }
+
+    // Check if message is deleted
+    if (message.isDeleted) {
+      return NextResponse.json({ error: "Cannot react to deleted message" }, { status: 400 })
+    }
+
+    // Parse existing reactions
+    const reactions = (message.reactions as Record<string, string[]>) || {}
+
+    // Toggle reaction: if user already reacted with this emoji, remove it; otherwise add it
+    if (reactions[emoji] && Array.isArray(reactions[emoji])) {
+      if (reactions[emoji].includes(currentUser.id)) {
+        // Remove user's reaction
+        reactions[emoji] = reactions[emoji].filter((id) => id !== currentUser.id)
+        // Remove emoji key if no reactions left
+        if (reactions[emoji].length === 0) {
+          delete reactions[emoji]
+        }
+      } else {
+        // Add user's reaction
+        reactions[emoji].push(currentUser.id)
+      }
+    } else {
+      // First reaction with this emoji
+      reactions[emoji] = [currentUser.id]
+    }
+
+    // Update the message
+    const updatedMessage = await prisma.message.update({
+      where: { id: messageId },
+      data: {
+        reactions: reactions,
+      },
+      include: {
+        sender: true,
+        seen: true,
+      },
+    })
+
+    // Trigger Pusher event for real-time update
+    await pusherServer.trigger(
+      getPusherConversationChannel(message.conversationId),
+      "message:reaction",
+      updatedMessage
+    )
+
+    return NextResponse.json(updatedMessage)
+  } catch (error: unknown) {
+    apiLogger.error({ err: error }, "MESSAGE_REACTION_ERROR")
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+  }
+}
