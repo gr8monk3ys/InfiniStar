@@ -1,0 +1,102 @@
+/**
+ * Auto-Delete Settings API Routes
+ *
+ * GET /api/settings/auto-delete - Get current auto-delete settings
+ * PATCH /api/settings/auto-delete - Update auto-delete settings
+ */
+
+import { NextResponse, type NextRequest } from "next/server"
+import { z } from "zod"
+
+import {
+  getAutoDeleteSettings,
+  RETENTION_PERIODS,
+  updateAutoDeleteSettings,
+} from "@/app/lib/auto-delete"
+import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
+import { apiLogger } from "@/app/lib/logger"
+import prisma from "@/app/lib/prismadb"
+import { apiLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
+import getCurrentUser from "@/app/actions/getCurrentUser"
+
+// Validation schema for updating auto-delete settings
+const updateSettingsSchema = z.object({
+  autoDeleteEnabled: z.boolean().optional(),
+  autoDeleteAfterDays: z
+    .number()
+    .refine((val) => RETENTION_PERIODS.includes(val as 7 | 14 | 30 | 60 | 90 | 180 | 365), {
+      message: "Invalid retention period. Must be 7, 14, 30, 60, 90, 180, or 365 days.",
+    })
+    .optional(),
+  autoDeleteArchived: z.boolean().optional(),
+  autoDeleteExcludeTags: z.array(z.string()).optional(),
+})
+
+/**
+ * GET /api/settings/auto-delete
+ * Get current auto-delete settings for the user
+ */
+export async function GET() {
+  try {
+    const currentUser = await getCurrentUser()
+    if (!currentUser) {
+      return NextResponse.json({ error: "User not found" }, { status: 401 })
+    }
+
+    const settings = await getAutoDeleteSettings(currentUser.id)
+
+    return NextResponse.json({ settings })
+  } catch (error) {
+    apiLogger.error({ err: error }, "Error fetching auto-delete settings")
+    return NextResponse.json({ error: "Failed to fetch auto-delete settings" }, { status: 500 })
+  }
+}
+
+/**
+ * PATCH /api/settings/auto-delete
+ * Update auto-delete settings for the user
+ */
+export async function PATCH(request: NextRequest) {
+  try {
+    // Rate limiting
+    const identifier = getClientIdentifier(request)
+    const allowed = await Promise.resolve(apiLimiter.check(identifier))
+    if (!allowed) {
+      return NextResponse.json(
+        { error: "Too many requests. Please try again later." },
+        { status: 429 }
+      )
+    }
+
+    // CSRF Protection
+    const headerToken = request.headers.get("X-CSRF-Token")
+    const cookieToken = getCsrfTokenFromRequest(request)
+
+    if (!verifyCsrfToken(headerToken, cookieToken)) {
+      return NextResponse.json({ error: "Invalid CSRF token" }, { status: 403 })
+    }
+
+    const currentUser = await getCurrentUser()
+    if (!currentUser) {
+      return NextResponse.json({ error: "User not found" }, { status: 401 })
+    }
+
+    const body = await request.json()
+
+    // Validate input
+    const validationResult = updateSettingsSchema.safeParse(body)
+    if (!validationResult.success) {
+      return NextResponse.json({ error: validationResult.error.issues[0].message }, { status: 400 })
+    }
+
+    const updatedSettings = await updateAutoDeleteSettings(currentUser.id, validationResult.data)
+
+    return NextResponse.json({
+      message: "Auto-delete settings updated successfully",
+      settings: updatedSettings,
+    })
+  } catch (error) {
+    apiLogger.error({ err: error }, "Error updating auto-delete settings")
+    return NextResponse.json({ error: "Failed to update auto-delete settings" }, { status: 500 })
+  }
+}
