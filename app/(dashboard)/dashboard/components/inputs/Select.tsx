@@ -1,23 +1,16 @@
 'use client';
 
-import ReactSelect from 'react-select'
-
-interface SelectProps {
-  label: string;
-  value?: Record<string, any>;
-  onChange: (value: Record<string, any>) => void;
-  options: Record<string, any>[];
-  disabled?: boolean;
-}
+import ReactSelect from "react-select";
+import { SelectProps } from "@/app/types";
 
 const Select: React.FC<SelectProps> = ({
   label,
   value,
   onChange,
   options,
-  disabled,
+  disabled
 }) => {
-  return ( 
+  return (
     <div className="z-[100]">
       <label
         className="
@@ -42,12 +35,12 @@ const Select: React.FC<SelectProps> = ({
           menuPortal: (base) => ({ ...base, zIndex: 9999 })
         }}
         classNames={{
-          control: () => 'text-sm',
+          control: () => "text-sm"
         }}
       />
       </div>
     </div>
    );
-}
- 
+};
+
 export default Select;

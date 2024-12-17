@@ -3,22 +3,20 @@
 import { Fragment, useMemo, useState } from 'react'
 import { Dialog, Transition } from '@headlessui/react'
 import { IoClose, IoTrash } from 'react-icons/io5'
-import { Conversation, User } from '@prisma/client';
 import { format } from 'date-fns';
 
-import useOtherUser from '@/app/(dashboard)/dashboard/hooks/useOtherUser';
-import useActiveList from '@/app/(dashboard)/dashboard/hooks/useActiveList';
+import useOtherUser from '@/app/hooks/useOtherUser';
+import useActiveList from '@/app/hooks/useActiveList';
 
 import Avatar from '@/app/components/Avatar';
 import AvatarGroup from '@/app/components/AvatarGroup';
 import ConfirmModal from './ConfirmModal';
+import { FullConversationType } from '@/app/types';
 
 interface ProfileDrawerProps {
   isOpen: boolean;
   onClose: () => void;
-  data: Conversation & {
-    users: User[]
-  }
+  data: FullConversationType;
 }
 
 const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
@@ -34,15 +32,15 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
   }, [otherUser.createdAt]);
   
   const title = useMemo(() => {
-    return data.name || otherUser.name;
-  }, [data.name, otherUser.name]);
+    return data.title || otherUser.name;
+  }, [data.title, otherUser.name]);
 
   const { members } = useActiveList();
-  const isActive = members.indexOf(otherUser?.email!) !== -1;
+  const isActive = members.indexOf(otherUser?.id!) !== -1;
 
   const statusText = useMemo(() => {
     if (data.isGroup) {
-      return `${data.users.length} members`;
+      return `${data.user.length} members`;
     }
 
     return isActive ? 'Active' : 'Offline'
@@ -65,8 +63,8 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
             leaveFrom="opacity-100"
             leaveTo="opacity-0"
           >
-          <div className="fixed inset-0 bg-black bg-opacity-40" />
-        </Transition.Child>
+            <div className="fixed inset-0 bg-black bg-opacity-40" />
+          </Transition.Child>
 
           <div className="fixed inset-0 overflow-hidden">
             <div className="absolute inset-0 overflow-hidden">
@@ -99,7 +97,11 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
                       <div className="relative mt-6 flex-1 px-4 sm:px-6">
                         <div className="flex flex-col items-center">
                           <div className="mb-2">
-                            {data.isGroup ? <AvatarGroup users={data.users} /> : <Avatar user={otherUser} />}
+                            {data.isGroup ? (
+                              <AvatarGroup users={data.user} />
+                            ) : (
+                              <Avatar user={otherUser} />
+                            )}
                           </div>
                           <div>
                             {title}
@@ -121,50 +123,20 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
                         <dl className="space-y-8 px-4 sm:space-y-6 sm:px-6">
                           {data.isGroup && (
                             <div>
-                              <dt 
-                                className="
-                                  text-sm 
-                                  font-medium 
-                                  text-gray-500 
-                                  sm:w-40 
-                                  sm:flex-shrink-0
-                                "
-                              >
+                              <dt className="text-sm font-medium text-gray-500 sm:w-40 sm:flex-shrink-0">
                                 Emails
                               </dt>
-                              <dd 
-                                className="
-                                  mt-1 
-                                  text-sm 
-                                  text-gray-900 
-                                  sm:col-span-2
-                                "
-                              >
-                                {data.users.map((user) => user.email).join(', ')}
+                              <dd className="mt-1 text-sm text-gray-900 sm:col-span-2">
+                                {data.user.map((user) => user.email).join(', ')}
                               </dd>
                             </div>
                           )}
                           {!data.isGroup && (
                             <div>
-                              <dt 
-                                className="
-                                  text-sm 
-                                  font-medium 
-                                  text-gray-500 
-                                  sm:w-40 
-                                  sm:flex-shrink-0
-                                "
-                              >
+                              <dt className="text-sm font-medium text-gray-500 sm:w-40 sm:flex-shrink-0">
                                 Email
                               </dt>
-                              <dd 
-                                className="
-                                  mt-1 
-                                  text-sm 
-                                  text-gray-900 
-                                  sm:col-span-2
-                                "
-                              >
+                              <dd className="mt-1 text-sm text-gray-900 sm:col-span-2">
                                 {otherUser.email}
                               </dd>
                             </div>
@@ -173,25 +145,10 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
                             <>
                               <hr />
                               <div>
-                                <dt 
-                                  className="
-                                    text-sm 
-                                    font-medium 
-                                    text-gray-500 
-                                    sm:w-40 
-                                    sm:flex-shrink-0
-                                  "
-                                >
+                                <dt className="text-sm font-medium text-gray-500 sm:w-40 sm:flex-shrink-0">
                                   Joined
                                 </dt>
-                                <dd 
-                                  className="
-                                    mt-1 
-                                    text-sm 
-                                    text-gray-900 
-                                    sm:col-span-2
-                                  "
-                                >
+                                <dd className="mt-1 text-sm text-gray-900 sm:col-span-2">
                                   <time dateTime={joinedDate}>
                                     {joinedDate}
                                   </time>

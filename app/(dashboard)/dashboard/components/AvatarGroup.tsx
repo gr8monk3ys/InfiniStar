@@ -4,13 +4,13 @@ import { User } from "@prisma/client";
 import Image from "next/image";
 
 interface AvatarGroupProps {
-  users?: User[];
+  user?: User[];
 };
 
 const AvatarGroup: React.FC<AvatarGroupProps> = ({ 
-  users = [] 
+  user = [] 
 }) => {
-  const slicedUsers = users.slice(0, 3);
+  const sliceduser = user.slice(0, 3);
   
   const positionMap = {
     0: 'top-0 left-[12px]',
@@ -19,17 +19,16 @@ const AvatarGroup: React.FC<AvatarGroupProps> = ({
   }
 
   return (
-    <div className="relative h-11 w-11">
-      {slicedUsers.map((user, index) => (
+    <div className="relative size-11">
+      {sliceduser.map((user, index) => (
         <div 
           key={user.id} 
           className={`
             absolute
             inline-block 
-            rounded-full 
+            size-[21px] 
             overflow-hidden
-            h-[21px]
-            w-[21px]
+            rounded-full
             ${positionMap[index as keyof typeof positionMap]}
           `}>
             <Image

@@ -9,10 +9,10 @@ async function Sidebar({ children }: {
   const currentUser = await getCurrentUser();
 
   return (
-    <div className="h-full">
+    <div className="fixed inset-y-0 left-0 z-40 size-full lg:w-20">
       <DesktopSidebar currentUser={currentUser!} />
       <MobileFooter />
-      <main className="lg:pl-20 h-full">
+      <main className="h-full lg:pl-20">
         {children}
       </main>
     </div>

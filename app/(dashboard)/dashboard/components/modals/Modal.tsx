@@ -27,8 +27,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children }) => {
             className="
               fixed 
               inset-0 
-              bg-gray-500 
-              bg-opacity-75 
+              bg-gray-500/75
               transition-opacity
             "
           />
@@ -58,17 +57,16 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children }) => {
               <Dialog.Panel 
                 className="
                   relative 
-                  transform 
+                  w-full 
                   overflow-hidden 
                   rounded-lg 
                   bg-white 
-                  px-4 
-                  pb-4
+                  px-4
+                  pb-4 
                   pt-5 
                   text-left 
-                  shadow-xl 
+                  shadow-xl
                   transition-all
-                  w-full
                   sm:my-8 
                   sm:w-full 
                   sm:max-w-lg 
@@ -80,11 +78,11 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children }) => {
                     absolute 
                     right-0 
                     top-0 
+                    z-10 
                     hidden 
                     pr-4 
-                    pt-4 
+                    pt-4
                     sm:block
-                    z-10
                   "
                 >
                   <button
@@ -102,7 +100,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children }) => {
                     onClick={onClose}
                   >
                     <span className="sr-only">Close</span>
-                    <IoClose className="h-6 w-6" aria-hidden="true" />
+                    <IoClose className="size-6" aria-hidden="true" />
                   </button>
                 </div>
                 {children}

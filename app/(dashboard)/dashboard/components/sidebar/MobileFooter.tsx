@@ -16,14 +16,14 @@ const MobileFooter = () => {
     <div 
       className="
         fixed 
-        justify-between 
-        w-full 
         bottom-0 
         z-40 
         flex 
+        w-full 
         items-center 
+        justify-between 
+        border-t 
         bg-white 
-        border-t-[1px] 
         lg:hidden
       "
     >

@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+import { Suspense } from "react";
 import getConversationById from "@/app/actions/getConversationById";
 import getMessages from "@/app/actions/getMessages";
 
@@ -6,11 +8,16 @@ import Body from "./components/Body";
 import Form from "./components/Form";
 import EmptyState from "@/app/components/EmptyState";
 
-interface IParams {
-  conversationId: string;
-}
+export const metadata: Metadata = {
+  title: 'Chat',
+  description: 'Chat with others',
+};
 
-const ChatId = async ({ params }: { params: IParams }) => {
+export default async function ChatPage({
+  params,
+}: {
+  params: { conversationId: string }
+}) {
   const conversation = await getConversationById(params.conversationId);
   const messages = await getMessages(params.conversationId);
 
@@ -21,10 +28,10 @@ const ChatId = async ({ params }: { params: IParams }) => {
           <EmptyState />
         </div>
       </div>
-    )
+    );
   }
 
-  return ( 
+  return (
     <div className="lg:pl-80 h-full">
       <div className="h-full flex flex-col">
         <Header conversation={conversation} />
@@ -34,5 +41,3 @@ const ChatId = async ({ params }: { params: IParams }) => {
     </div>
   );
 }
-
-export default ChatId;

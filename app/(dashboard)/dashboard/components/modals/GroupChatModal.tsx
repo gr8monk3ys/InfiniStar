@@ -19,13 +19,13 @@ import { toast } from 'react-hot-toast';
 interface GroupChatModalProps {
   isOpen?: boolean;
   onClose: () => void;
-  users: User[];
+  user: User[];
 }
 
 const GroupChatModal: React.FC<GroupChatModalProps> = ({ 
   isOpen, 
   onClose, 
-  users = []
+  user = []
 }) => {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
@@ -92,7 +92,7 @@ const GroupChatModal: React.FC<GroupChatModalProps> = ({
               <Select
                 disabled={isLoading}
                 label="Members" 
-                options={users.map((user) => ({ 
+                options={user.map((user) => ({ 
                   value: user.id, 
                   label: user.name 
                 }))} 

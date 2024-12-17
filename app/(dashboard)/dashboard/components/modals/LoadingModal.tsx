@@ -21,8 +21,7 @@ const LoadingModal = () => {
             className="
               fixed 
               inset-0 
-              bg-gray-100 
-              bg-opacity-50 
+              bg-gray-100/50
               transition-opacity
             "
           />
