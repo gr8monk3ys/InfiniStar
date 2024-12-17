@@ -1,12 +1,12 @@
 // @ts-nocheck
 // TODO: Fix this when we turn strict mode on.
-import { UserSubscriptionPlan } from "@/app/types"
+import { userubscriptionPlan } from "@/app/types"
 import { freePlan, proPlan } from "@/config/subscriptions"
 import { db } from "@/app/lib/prismadb"
 
-export async function getUserSubscriptionPlan(
+export async function getuserubscriptionPlan(
   userId: string
-): Promise<UserSubscriptionPlan> {
+): Promise<userubscriptionPlan> {
   const user = await db.user.findFirst({
     where: {
       id: userId,
