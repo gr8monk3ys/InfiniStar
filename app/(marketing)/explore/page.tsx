@@ -39,9 +39,9 @@ export default function ExplorePage() {
                 <Image
                   src={character.image}
                   alt={character.name}
+                  className="size-full object-cover"
                   width={character.width}
                   height={character.height}
-                  className="h-full w-full rounded-lg object-cover"
                 />
               </AspectRatio>
               <div className="group-hover:/25 absolute inset-0 flex items-center justify-center rounded-lg bg-black/10 transition duration-200">

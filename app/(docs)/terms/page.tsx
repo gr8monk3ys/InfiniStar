@@ -87,7 +87,7 @@ export default function IndexPage() {
           objectionable; or (vii) in the sole judgment of Infinistar, is
           objectionable or which restricts or inhibits any other person from
           using or enjoying the Website or Services, or which may expose
-          Infinistar or its users to any harm or liability of any type;
+          Infinistar or its user to any harm or liability of any type;
           interfere with or disrupt the Website or Services or servers or
           networks connected to the Website or Services, or disobey any
           requirements, procedures, policies or regulations of networks
@@ -188,13 +188,13 @@ export default function IndexPage() {
           with legal process, applicable laws or government requests; (b)
           enforce these Terms; (c) respond to claims that any content violates
           the rights of third parties; or (d) protect the rights, property, or
-          personal safety of Infinistar, its users and the public. You
+          personal safety of Infinistar, its user and the public. You
           understand that the technical processing and transmission of the
           Website and Services, including your content, may involve (a)
           transmissions over various networks; and (b) changes to conform and
           adapt to technical requirements of connecting networks or devices.
           Copyright Complaints: Infinistar respects the intellectual property of
-          others, and we ask our users to do the same. If you believe that your
+          others, and we ask our user to do the same. If you believe that your
           work has been copied in a way that constitutes copyright infringement,
           or that your intellectual property rights have been otherwise
           violated, you can notify Infinistar of your infringement claim by
@@ -257,7 +257,7 @@ export default function IndexPage() {
           otherwise, resulting from: (I) the use or the inability to use the
           Services or any related information; (ii) unauthorized access to or
           alteration of your transmissions or data; (iii) statements or conduct
-          of any third party (including users) on the Services; or (iv) any
+          of any third party (including user) on the Services; or (iv) any
           other matter relating to the Services. In no event will
           Infinistar&apos;s total liability to you for all damages, losses, or
           causes of action exceed one hundred dollars ($100). Some jurisdictions

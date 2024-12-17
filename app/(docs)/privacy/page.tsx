@@ -65,7 +65,7 @@ export default function IndexPage() {
           the Internet again (persistent cookies). For more details on cookies,
           please visit All About Cookies. Analytics: We may use a variety of
           online analytics products that use cookies to help us analyze how
-          users use the Site and enhance your experience when you use the Site.
+          user use the Site and enhance your experience when you use the Site.
           Your Choices: On most web browsers, you will find a “help” section on
           the toolbar. Please refer to this section for information on how to
           receive a notification when you are receiving a new cookie and how to
@@ -126,9 +126,9 @@ export default function IndexPage() {
           Information with our affiliates, meaning an entity that controls, is
           controlled by, or is under common control with Infinistar. Our
           affiliates may use the Personal Information we share in a manner
-          consistent with this Privacy Policy. Other Users. Certain actions you
-          take may be visible to other users of the Services or result in
-          content that is made available to other users of the Services. 4.
+          consistent with this Privacy Policy. Other user. Certain actions you
+          take may be visible to other user of the Services or result in
+          content that is made available to other user of the Services. 4.
           Update Your Information Please contact us at support@joyland.ai if you
           need to change or correct your Personal Information. 5. Age
           Requirement If you are under 13 years old OR if you are an EU citizen
@@ -162,7 +162,7 @@ export default function IndexPage() {
           Personal Information to Infinistar. In addition, we are not
           responsible for the circumvention of any privacy settings or security
           measures contained on the Services, or Third Party Sites. 8.
-          International Users By using our Service, you understand and
+          International user By using our Service, you understand and
           acknowledge that your Personal Information may be transferred from
           your location to our facilities and servers in the United States. 9.
           Information Provided by Choice In certain circumstances providing
@@ -177,15 +177,15 @@ export default function IndexPage() {
           Information, and (4) how we disclose Personal Information. These
           disclosures do not limit our ability to use or disclose information as
           described in Sections 2 and 3. To the extent provided for by law and
-          subject to applicable exceptions, users have the following privacy
+          subject to applicable exceptions, user have the following privacy
           rights in relation to the Personal Information we collect: The right
           to know what Personal Information we have collected and how we have
           used and disclosed that Personal Information; The right to request
           deletion of your Personal Information; and The right to be free from
           discrimination relating to the exercise of any of your privacy rights.
           We do not and will not sell your Personal Information. Exercising Your
-          Rights. Users can exercise the above privacy rights by emailing us at:
-          support@joyland.ai. If users want to learn more detailed privacy
+          Rights. user can exercise the above privacy rights by emailing us at:
+          support@joyland.ai. If user want to learn more detailed privacy
           policies, they can refer to the following link
           (https://delcode.delaware.gov/title6/c012c/index.html) Verification:
           In order to protect your Personal Information from unauthorized access

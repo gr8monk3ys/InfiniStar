@@ -10,7 +10,7 @@ export const metadata = {
 
 export default function PricingPage() {
   return (
-    <section className="container flex flex-col  gap-6 py-8 md:max-w-[64rem] md:py-12 lg:py-24">
+    <section className="container flex flex-col  gap-6 py-8 md:max-w-5xl md:py-12 lg:py-24">
       <div className="mx-auto flex w-full flex-col gap-4 md:max-w-[58rem]">
         <h2 className="font-heading text-3xl leading-[1.1] sm:text-3xl md:text-6xl">
           Simple, and transparent
@@ -26,7 +26,7 @@ export default function PricingPage() {
           </h3>
           <ul className="grid gap-3 text-sm text-muted-foreground sm:grid-cols-2">
             <li className="flex items-center">Unlimited Posts</li>
-            <li className="flex items-center">Unlimited Users</li>
+            <li className="flex items-center">Unlimited user</li>
 
             <li className="flex items-center">Custom domain</li>
             <li className="flex items-center">Dashboard Analytics</li>
