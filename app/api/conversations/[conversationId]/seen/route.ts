@@ -34,7 +34,7 @@ export async function POST(
             seen: true
           },
         },
-        users: true,
+        user: true,
       },
     });
 

@@ -30,7 +30,7 @@ export async function POST(
         data: {
           name,
           isGroup,
-          users: {
+          user: {
             connect: [
               ...members.map((member: { value: string }) => ({  
                 id: member.value 
@@ -42,12 +42,12 @@ export async function POST(
           }
         },
         include: {
-          users: true,
+          user: true,
         }
       });
 
        // Update all connections with new conversation
-      newConversation.users.forEach((user) => {
+      newConversation.user.forEach((user) => {
         if (user.email) {
           pusherServer.trigger(user.email, 'conversation:new', newConversation);
         }
@@ -81,7 +81,7 @@ export async function POST(
 
     const newConversation = await prisma.conversation.create({
       data: {
-        users: {
+        user: {
           connect: [
             {
               id: currentUser.id
@@ -93,12 +93,12 @@ export async function POST(
         }
       },
       include: {
-        users: true
+        user: true
       }
     });
 
     // Update all connections with new conversation
-    newConversation.users.map((user) => {
+    newConversation.user.map((user) => {
       if (user.email) {
         pusherServer.trigger(user.email, 'conversation:new', newConversation);
       }

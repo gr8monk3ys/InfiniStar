@@ -1,71 +1,57 @@
-import { headers } from "next/headers"
-import { env } from "@/env.mjs"
-import Stripe from "stripe"
+import Stripe from "stripe";
+import { headers } from "next/headers";
+import { NextResponse } from "next/server";
 
-import { db } from "@/app/lib/prismadb"
-import { stripe } from "@/app/lib/stripe"
+import prisma from "@/app/lib/prismadb";
+import { stripe } from "@/app/lib/stripe";
 
 export async function POST(req: Request) {
-  const body = await req.text()
-  const signature = headers().get("Stripe-Signature") as string
+  const headersList = await headers();
+  const signature = headersList.get("Stripe-Signature") as string;
 
-  let event: Stripe.Event
+  let event: Stripe.Event;
 
   try {
     event = stripe.webhooks.constructEvent(
-      body,
+      await req.text(),
       signature,
-      env.STRIPE_WEBHOOK_SECRET
-    )
-  } catch (error) {
-    return new Response(`Webhook Error: ${error.message}`, { status: 400 })
+      process.env.STRIPE_WEBHOOK_SECRET!
+    );
+  } catch (error: any) {
+    return new NextResponse(`Webhook Error: ${error.message}`, { status: 400 });
   }
 
-  const session = event.data.object as Stripe.Checkout.Session
+  const session = event.data.object as Stripe.Checkout.Session;
+  const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
 
   if (event.type === "checkout.session.completed") {
-    // Retrieve the subscription details from Stripe.
-    const subscription = await stripe.subscriptions.retrieve(
-      session.subscription as string
-    )
+    const userId = session?.metadata?.userId;
 
-    // Update the user stripe into in our database.
-    // Since this is the initial subscription, we need to update
-    // the subscription id and customer id.
-    await db.user.update({
-      where: {
-        id: session?.metadata?.userId,
-      },
+    await prisma.user.update({
+      where: { id: userId },
       data: {
         stripeSubscriptionId: subscription.id,
-        stripeCustomerId: subscription.customer as string,
         stripePriceId: subscription.items.data[0].price.id,
         stripeCurrentPeriodEnd: new Date(
           subscription.current_period_end * 1000
         ),
       },
-    })
+    });
   }
 
   if (event.type === "invoice.payment_succeeded") {
-    // Retrieve the subscription details from Stripe.
-    const subscription = await stripe.subscriptions.retrieve(
-      session.subscription as string
-    )
+    const userId = session?.metadata?.userId;
 
-    // Update the price id and set the new period end.
-    await db.user.update({
-      where: {
-        stripeSubscriptionId: subscription.id,
-      },
+    await prisma.user.update({
+      where: { id: userId },
       data: {
         stripePriceId: subscription.items.data[0].price.id,
         stripeCurrentPeriodEnd: new Date(
           subscription.current_period_end * 1000
         ),
       },
-    })
+    });
   }
 
-  return new Response(null, { status: 200 })
+  return new NextResponse(null, { status: 200 });
 }

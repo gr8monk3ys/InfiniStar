@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
-
-import getCurrentUser from "@/app/actions/getCurrentUser";
-import { pusherServer } from '@/app/libs/pusher'
+import { getServerSession } from "next-auth";
 import prisma from "@/app/libs/prismadb";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 export async function POST(
   request: Request,
 ) {
   try {
-    const currentUser = await getCurrentUser();
+    const session = await getServerSession(authOptions);
+    const currentUser = session?.user;
     const body = await request.json();
     const {
       message,
@@ -21,34 +21,28 @@ export async function POST(
     }
 
     const newMessage = await prisma.message.create({
-      include: {
-        seen: true,
-        sender: true
-      },
       data: {
-        body: message,
-        image: image,
-        conversation: {
-          connect: { id: conversationId }
-        },
-        sender: {
-          connect: { id: currentUser.id }
-        },
+        content: message || '',
+        role: 'user',
+        conversationId,
+        senderId: currentUser.id,
         seen: {
           connect: {
             id: currentUser.id
           }
-        },
+        }
+      },
+      include: {
+        sender: true,
+        seen: true
       }
     });
 
-    
     const updatedConversation = await prisma.conversation.update({
       where: {
         id: conversationId
       },
       data: {
-        lastMessageAt: new Date(),
         messages: {
           connect: {
             id: newMessage.id
@@ -56,29 +50,19 @@ export async function POST(
         }
       },
       include: {
-        users: true,
+        user: true,
         messages: {
           include: {
+            sender: true,
             seen: true
           }
         }
       }
     });
 
-    await pusherServer.trigger(conversationId, 'messages:new', newMessage);
-
-    const lastMessage = updatedConversation.messages[updatedConversation.messages.length - 1];
-
-    updatedConversation.users.map((user) => {
-      pusherServer.trigger(user.email!, 'conversation:update', {
-        id: conversationId,
-        messages: [lastMessage]
-      });
-    });
-
-    return NextResponse.json(newMessage)
+    return NextResponse.json(newMessage);
   } catch (error) {
-    console.log(error, 'ERROR_MESSAGES')
+    console.log(error, 'ERROR_MESSAGES');
     return new NextResponse('Error', { status: 500 });
   }
 }

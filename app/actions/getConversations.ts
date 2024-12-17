@@ -19,7 +19,7 @@ const getConversations = async () => {
         }
       },
       include: {
-        users: true,
+        user: true,
         messages: {
           include: {
             sender: true,
