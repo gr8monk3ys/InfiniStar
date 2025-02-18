@@ -1,0 +1,154 @@
+import { NextResponse, type NextRequest } from "next/server"
+import { z } from "zod"
+
+import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
+import { apiLogger } from "@/app/lib/logger"
+import prisma from "@/app/lib/prismadb"
+import { apiLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
+import getCurrentUser from "@/app/actions/getCurrentUser"
+
+// Valid email digest options
+const EMAIL_DIGEST_OPTIONS = ["none", "daily", "weekly"] as const
+
+// Validation schema for notification preferences
+const updatePreferencesSchema = z.object({
+  emailNotifications: z.boolean().optional(),
+  emailDigest: z.enum(EMAIL_DIGEST_OPTIONS).optional(),
+  browserNotifications: z.boolean().optional(),
+  notifyOnNewMessage: z.boolean().optional(),
+  notifyOnMention: z.boolean().optional(),
+  notifyOnAIComplete: z.boolean().optional(),
+})
+
+// GET /api/notifications/preferences - Get current notification preferences
+export async function GET(_request: NextRequest) {
+  try {
+    const currentUser = await getCurrentUser()
+
+    if (!currentUser?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: currentUser.id },
+      select: {
+        emailNotifications: true,
+        emailDigest: true,
+        browserNotifications: true,
+        notifyOnNewMessage: true,
+        notifyOnMention: true,
+        notifyOnAIComplete: true,
+        mutedConversations: true,
+      },
+    })
+
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 })
+    }
+
+    return NextResponse.json({
+      preferences: {
+        emailNotifications: user.emailNotifications ?? true,
+        emailDigest: user.emailDigest ?? "none",
+        browserNotifications: user.browserNotifications ?? false,
+        notifyOnNewMessage: user.notifyOnNewMessage ?? true,
+        notifyOnMention: user.notifyOnMention ?? true,
+        notifyOnAIComplete: user.notifyOnAIComplete ?? true,
+        mutedConversations: user.mutedConversations ?? [],
+      },
+    })
+  } catch (error: unknown) {
+    apiLogger.error({ err: error }, "Error fetching notification preferences")
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+  }
+}
+
+// PATCH /api/notifications/preferences - Update notification preferences
+export async function PATCH(request: NextRequest) {
+  try {
+    // Rate limiting
+    const identifier = getClientIdentifier(request)
+    const allowed = await Promise.resolve(apiLimiter.check(identifier))
+    if (!allowed) {
+      return NextResponse.json(
+        { error: "Too many requests. Please try again later." },
+        { status: 429 }
+      )
+    }
+
+    // CSRF Protection
+    if (!verifyCsrfToken(request.headers.get("X-CSRF-Token"), getCsrfTokenFromRequest(request))) {
+      return NextResponse.json({ error: "Invalid CSRF token" }, { status: 403 })
+    }
+
+    const currentUser = await getCurrentUser()
+
+    if (!currentUser?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const body = await request.json()
+    const validation = updatePreferencesSchema.safeParse(body)
+
+    if (!validation.success) {
+      return NextResponse.json({ error: validation.error.issues[0].message }, { status: 400 })
+    }
+
+    const {
+      emailNotifications,
+      emailDigest,
+      browserNotifications,
+      notifyOnNewMessage,
+      notifyOnMention,
+      notifyOnAIComplete,
+    } = validation.data
+
+    // Build update data - only include fields that are present
+    const updateData: {
+      emailNotifications?: boolean
+      emailDigest?: string
+      browserNotifications?: boolean
+      notifyOnNewMessage?: boolean
+      notifyOnMention?: boolean
+      notifyOnAIComplete?: boolean
+    } = {}
+
+    if (emailNotifications !== undefined) updateData.emailNotifications = emailNotifications
+    if (emailDigest !== undefined) updateData.emailDigest = emailDigest
+    if (browserNotifications !== undefined) updateData.browserNotifications = browserNotifications
+    if (notifyOnNewMessage !== undefined) updateData.notifyOnNewMessage = notifyOnNewMessage
+    if (notifyOnMention !== undefined) updateData.notifyOnMention = notifyOnMention
+    if (notifyOnAIComplete !== undefined) updateData.notifyOnAIComplete = notifyOnAIComplete
+
+    // Update user notification preferences
+    const updatedUser = await prisma.user.update({
+      where: { id: currentUser.id },
+      data: updateData,
+      select: {
+        emailNotifications: true,
+        emailDigest: true,
+        browserNotifications: true,
+        notifyOnNewMessage: true,
+        notifyOnMention: true,
+        notifyOnAIComplete: true,
+        mutedConversations: true,
+      },
+    })
+
+    return NextResponse.json({
+      message: "Notification preferences updated successfully",
+      preferences: {
+        emailNotifications: updatedUser.emailNotifications,
+        emailDigest: updatedUser.emailDigest,
+        browserNotifications: updatedUser.browserNotifications,
+        notifyOnNewMessage: updatedUser.notifyOnNewMessage,
+        notifyOnMention: updatedUser.notifyOnMention,
+        notifyOnAIComplete: updatedUser.notifyOnAIComplete,
+        mutedConversations: updatedUser.mutedConversations,
+      },
+    })
+  } catch (error: unknown) {
+    apiLogger.error({ err: error }, "Error updating notification preferences")
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+  }
+}
