@@ -1,26 +1,39 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server"
 
-import getCurrentUser from "@/app/actions/getCurrentUser";
-import { pusherServer } from '@/app/libs/pusher'
-import prisma from "@/app/libs/prismadb";
+import { verifyCsrfToken } from "@/app/lib/csrf"
+import prisma from "@/app/lib/prismadb"
+import { pusherServer } from "@/app/lib/pusher"
+import getCurrentUser from "@/app/actions/getCurrentUser"
 
 interface IParams {
-  conversationId?: string;
+  conversationId?: string
 }
 
-export async function POST(
-  request: Request,
-  { params }: { params: IParams }
-) {
+export async function POST(request: NextRequest, { params }: { params: Promise<IParams> }) {
   try {
-    const currentUser = await getCurrentUser();
-    const {
-      conversationId
-    } = params;
+    // CSRF Protection
+    const headerToken = request.headers.get("X-CSRF-Token")
+    const cookieHeader = request.headers.get("cookie")
+    let cookieToken: string | null = null
 
-    
+    if (cookieHeader) {
+      const cookies = cookieHeader.split(";").reduce((acc, cookie) => {
+        const [key, value] = cookie.trim().split("=")
+        acc[key] = value
+        return acc
+      }, {} as Record<string, string>)
+      cookieToken = cookies["csrf-token"] || null
+    }
+
+    if (!verifyCsrfToken(headerToken, cookieToken)) {
+      return NextResponse.json({ error: "Invalid CSRF token" }, { status: 403 })
+    }
+
+    const currentUser = await getCurrentUser()
+    const { conversationId } = await params
+
     if (!currentUser?.id || !currentUser?.email) {
-      return new NextResponse('Unauthorized', { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
     // Find existing conversation
@@ -31,28 +44,28 @@ export async function POST(
       include: {
         messages: {
           include: {
-            seen: true
+            seen: true,
           },
         },
-        user: true,
+        users: true,
       },
-    });
+    })
 
     if (!conversation) {
-      return new NextResponse('Invalid ID', { status: 400 });
+      return new NextResponse("Invalid ID", { status: 400 })
     }
 
     // Find last message
-    const lastMessage = conversation.messages[conversation.messages.length - 1];
+    const lastMessage = conversation.messages[conversation.messages.length - 1]
 
     if (!lastMessage) {
-      return NextResponse.json(conversation);
+      return NextResponse.json(conversation)
     }
 
     // Update seen of last message
     const updatedMessage = await prisma.message.update({
       where: {
-        id: lastMessage.id
+        id: lastMessage.id,
       },
       include: {
         sender: true,
@@ -61,29 +74,28 @@ export async function POST(
       data: {
         seen: {
           connect: {
-            id: currentUser.id
-          }
-        }
-      }
-    });
+            id: currentUser.id,
+          },
+        },
+      },
+    })
 
     // Update all connections with new seen
-    await pusherServer.trigger(currentUser.email, 'conversation:update', {
+    await pusherServer.trigger(currentUser.email, "conversation:update", {
       id: conversationId,
-      messages: [updatedMessage]
-    });
+      messages: [updatedMessage],
+    })
 
     // If user has already seen the message, no need to go further
     if (lastMessage.seenIds.indexOf(currentUser.id) !== -1) {
-      return NextResponse.json(conversation);
+      return NextResponse.json(conversation)
     }
 
     // Update last message seen
-    await pusherServer.trigger(conversationId!, 'message:update', updatedMessage);
+    await pusherServer.trigger(conversationId!, "message:update", updatedMessage)
 
-    return new NextResponse('Success');
+    return new NextResponse("Success")
   } catch (error) {
-    console.log(error, 'ERROR_MESSAGES_SEEN')
-    return new NextResponse('Error', { status: 500 });
+    return new NextResponse("Error", { status: 500 })
   }
 }
