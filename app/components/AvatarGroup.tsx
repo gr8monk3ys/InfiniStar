@@ -1,44 +1,41 @@
-'use client';
+"use client"
 
-import { User } from "@prisma/client";
-import Image from "next/image";
+import { memo, useMemo } from "react"
+import Image from "next/image"
+import type { User } from "@prisma/client"
 
 interface AvatarGroupProps {
-  users: User[];
+  users: User[]
 }
 
 const AvatarGroup: React.FC<AvatarGroupProps> = ({ users = [] }) => {
-  const slicedUsers = users.slice(0, 3);
-  
+  const slicedUsers = useMemo(() => users.slice(0, 3), [users])
+
   const positionMap = {
-    0: 'top-0 left-[12px]',
-    1: 'bottom-0',
-    2: 'bottom-0 right-0'
-  };
+    0: "top-0 left-[12px]",
+    1: "bottom-0",
+    2: "bottom-0 right-0",
+  }
 
   return (
-    <div className="relative h-11 w-11">
+    <div className="relative size-11">
       {slicedUsers.map((user, index) => (
-        <div 
-          key={user.id} 
+        <div
+          key={user.id}
           className={`
             absolute
-            inline-block 
-            rounded-full 
+            inline-block
+            size-[21px]
             overflow-hidden
-            h-[21px]
-            w-[21px]
+            rounded-full
             ${positionMap[index as keyof typeof positionMap]}
-          `}>
-            <Image
-              fill
-              src={user?.image || '/placeholder.jpg'}
-              alt="Avatar"
-            />
+          `}
+        >
+          <Image fill src={user?.image || "/placeholder.jpg"} alt={`${user.name}'s avatar`} />
         </div>
       ))}
     </div>
-  );
-};
+  )
+}
 
-export default AvatarGroup;
+export default memo(AvatarGroup)

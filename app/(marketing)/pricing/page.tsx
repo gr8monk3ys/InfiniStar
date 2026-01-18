@@ -2,7 +2,6 @@ import Link from "next/link"
 
 import { cn } from "@/app/lib/utils"
 import { buttonVariants } from "@/app/components/ui/button"
-import { Icons } from "@/app/components/icons"
 
 export const metadata = {
   title: "Pricing",
@@ -21,9 +20,7 @@ export default function PricingPage() {
       </div>
       <div className="grid w-full items-start gap-10 rounded-lg border p-10 md:grid-cols-[1fr_200px]">
         <div className="grid gap-6">
-          <h3 className="text-xl font-bold sm:text-2xl">
-            What&apos;s included in the PRO plan
-          </h3>
+          <h3 className="text-xl font-bold sm:text-2xl">What&apos;s included in the PRO plan</h3>
           <ul className="grid gap-3 text-sm text-muted-foreground sm:grid-cols-2">
             <li className="flex items-center">Unlimited Posts</li>
             <li className="flex items-center">Unlimited user</li>
@@ -37,9 +34,7 @@ export default function PricingPage() {
         <div className="flex flex-col gap-4 text-center">
           <div>
             <h4 className="text-7xl font-bold">$15</h4>
-            <p className="text-sm font-medium text-muted-foreground">
-              Billed Monthly
-            </p>
+            <p className="text-sm font-medium text-muted-foreground">Billed Monthly</p>
           </div>
           <Link href="/login" className={cn(buttonVariants({ size: "lg" }))}>
             Get Started

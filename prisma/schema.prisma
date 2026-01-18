@@ -20,6 +20,25 @@ model User {
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 
+  // Profile fields
+  bio                    String?   // User bio/about me
+  location               String?   // User location
+  website                String?   // User website URL
+
+  // Presence fields
+  presenceStatus         String?   @default("offline") // "online", "offline", "away"
+  lastSeenAt             DateTime? // Last time user was active
+  customStatus           String?   // Custom status message
+  customStatusEmoji      String?   // Emoji for custom status
+
+  // Email verification
+  verificationToken     String?   @unique
+  verificationTokenExpiry DateTime?
+
+  // Password reset
+  resetToken            String?   @unique
+  resetTokenExpiry      DateTime?
+
   stripeCustomerId      String?   @unique @map("stripe_customer_id")
   stripeSubscriptionId  String?   @unique @map("stripe_subscription_id")
   stripePriceId         String?   @map("stripe_price_id")
@@ -75,7 +94,23 @@ model Conversation {
   lastMessageAt DateTime @default(now())
   name          String?
   isGroup       Boolean  @default(false)
-  
+  isAI          Boolean  @default(false)
+  aiModel       String?  // e.g., "claude-3-5-sonnet-20241022"
+  aiSystemPrompt String? // Custom system prompt for AI personality
+  aiPersonality  String? // Preset personality: "assistant", "creative", "technical", "friendly", "professional", "custom"
+
+  // Archiving functionality
+  archivedBy     String[] @db.ObjectId // Array of user IDs who archived this conversation
+  archivedAt     DateTime? // When conversation was first archived (by any user)
+
+  // Pinning functionality
+  pinnedBy       String[] @db.ObjectId // Array of user IDs who pinned this conversation
+  pinnedAt       DateTime? // When conversation was first pinned (by any user)
+
+  // Muting functionality
+  mutedBy        String[] @db.ObjectId // Array of user IDs who muted this conversation
+  mutedAt        DateTime? // When conversation was first muted (by any user)
+
   messageIds String[] @db.ObjectId
   messages   Message[]
 
@@ -90,6 +125,19 @@ model Message {
   body      String?
   image     String?
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  editedAt  DateTime? // Track when message was last edited
+  deletedAt DateTime? // Soft delete timestamp
+  isDeleted Boolean  @default(false) // Soft delete flag
+  isAI      Boolean  @default(false) // True if message is from AI
+
+  // Reactions stored as JSON: { "👍": ["userId1", "userId2"], "❤️": ["userId3"] }
+  reactions Json?    @default("{}")
+
+  // Reply/threading support
+  replyToId String?  @db.ObjectId
+  replyTo   Message? @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  replies   Message[] @relation("MessageReplies")
 
   seenIds String[] @db.ObjectId
   seen    User[]   @relation("Seen", fields: [seenIds], references: [id])
@@ -101,4 +149,35 @@ model Message {
   sender   User   @relation(fields: [senderId], references: [id], onDelete: Cascade)
 
   @@map("messages")
+}
+
+model AiUsage {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  createdAt DateTime @default(now())
+
+  // User and conversation references
+  userId         String @db.ObjectId
+  conversationId String @db.ObjectId
+
+  // Model information
+  model String // e.g., "claude-3-5-sonnet-20241022"
+
+  // Token usage
+  inputTokens  Int
+  outputTokens Int
+  totalTokens  Int
+
+  // Cost estimation (in cents)
+  inputCost  Float
+  outputCost Float
+  totalCost  Float
+
+  // Request metadata
+  requestType String // "chat" or "chat-stream"
+  latencyMs   Int?   // Response time in milliseconds
+
+  @@map("ai_usage")
+  @@index([userId])
+  @@index([conversationId])
+  @@index([createdAt])
 }

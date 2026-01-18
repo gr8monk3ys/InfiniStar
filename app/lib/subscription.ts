@@ -1,12 +1,8 @@
-// @ts-nocheck
-// TODO: Fix this when we turn strict mode on.
-import { userubscriptionPlan } from "@/app/types"
 import { freePlan, proPlan } from "@/config/subscriptions"
 import { db } from "@/app/lib/prismadb"
+import { type UserSubscriptionPlan } from "@/app/types"
 
-export async function getuserubscriptionPlan(
-  userId: string
-): Promise<userubscriptionPlan> {
+export async function getUserSubscriptionPlan(userId: string): Promise<UserSubscriptionPlan> {
   const user = await db.user.findFirst({
     where: {
       id: userId,
@@ -24,16 +20,20 @@ export async function getuserubscriptionPlan(
   }
 
   // Check if user is on a pro plan.
-  const isPro =
+  const isPro = Boolean(
     user.stripePriceId &&
-    user.stripeCurrentPeriodEnd?.getTime() + 86_400_000 > Date.now()
+      user.stripeCurrentPeriodEnd &&
+      user.stripeCurrentPeriodEnd.getTime() + 86_400_000 > Date.now()
+  )
 
   const plan = isPro ? proPlan : freePlan
 
   return {
     ...plan,
-    ...user,
-    stripeCurrentPeriodEnd: user.stripeCurrentPeriodEnd?.getTime(),
+    stripeCustomerId: user.stripeCustomerId,
+    stripeSubscriptionId: user.stripeSubscriptionId,
+    stripePriceId: plan.stripePriceId,
+    stripeCurrentPeriodEnd: user.stripeCurrentPeriodEnd?.getTime() ?? 0,
     isPro,
   }
 }

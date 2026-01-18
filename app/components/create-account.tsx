@@ -9,7 +9,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/app/components/ui/card"
-import { Input } from "@/app/components/ui/input"
 import { Label } from "@/app/components/ui/label"
 import { Icons } from "@/app/components/icons"
 
@@ -18,9 +17,7 @@ export function DemoCreateAccount() {
     <Card>
       <CardHeader className="space-y-1">
         <CardTitle className="text-2xl">Create an account</CardTitle>
-        <CardDescription>
-          Enter your email below to create your account
-        </CardDescription>
+        <CardDescription>Enter your email below to create your account</CardDescription>
       </CardHeader>
       <CardContent className="grid gap-4">
         <div className="grid grid-cols-2 gap-6">
@@ -38,18 +35,24 @@ export function DemoCreateAccount() {
             <span className="w-full border-t" />
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-background px-2 text-muted-foreground">
-              Or continue with
-            </span>
+            <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
           </div>
         </div>
         <div className="grid gap-2">
           <Label htmlFor="email">Email</Label>
-          <Input id="email" type="email" placeholder="m@example.com" />
+          <input
+            id="email"
+            type="email"
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+          />
         </div>
         <div className="grid gap-2">
           <Label htmlFor="password">Password</Label>
-          <Input id="password" type="password" />
+          <input
+            id="password"
+            type="password"
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+          />
         </div>
       </CardContent>
       <CardFooter>

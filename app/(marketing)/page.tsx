@@ -12,10 +12,9 @@ export default async function IndexPage() {
             Welcome to Infinistar
           </h1>
           <p className="max-w-2xl leading-normal text-muted-foreground sm:text-xl sm:leading-8">
-            Interactive Virtual Chats with Advanced Language Learning Models.
-            Step into the future of language learning with Infinistar. Our
-            advanced AI technology creates virtual chats that feel just like
-            texting someone you are interested in
+            Interactive Virtual Chats with Advanced Language Learning Models. Step into the future
+            of language learning with Infinistar. Our advanced AI technology creates virtual chats
+            that feel just like texting someone you are interested in
           </p>
         </div>
       </section>
@@ -24,13 +23,10 @@ export default async function IndexPage() {
         className="container space-y-6 bg-slate-50 py-8 dark:bg-transparent md:py-12 lg:py-24"
       >
         <div className="mx-auto flex max-w-5xl flex-col items-center space-y-4 text-center">
-          <h2 className="font-heading text-3xl leading-[1.1] sm:text-3xl md:text-6xl">
-            Features
-          </h2>
+          <h2 className="font-heading text-3xl leading-[1.1] sm:text-3xl md:text-6xl">Features</h2>
           <p className="max-w-2xl leading-normal text-muted-foreground sm:text-lg sm:leading-7">
-            This project is an experiment to see how a modern app, with features
-            like auth, subscriptions, API routes, and static pages would work in
-            Next.js 13 app dir.
+            This project is an experiment to see how a modern app, with features like auth,
+            subscriptions, API routes, and static pages would work in Next.js 13 app dir.
           </p>
         </div>
         <div className="mx-auto grid justify-center gap-4 sm:grid-cols-2 md:max-w-5xl md:grid-cols-3">
@@ -54,9 +50,7 @@ export default async function IndexPage() {
               </svg>
               <div className="space-y-2">
                 <h3 className="font-bold">React 18</h3>
-                <p className="text-sm">
-                  Server and Client Components. Use hook.
-                </p>
+                <p className="text-sm">Server and Client Components. Use hook.</p>
               </div>
             </div>
           </div>
@@ -81,8 +75,7 @@ export default async function IndexPage() {
               <div className="space-y-2">
                 <h3 className="font-bold">Components</h3>
                 <p className="text-sm text-muted-foreground">
-                  UI components built using Radix UI and styled with Tailwind
-                  CSS.
+                  UI components built using Radix UI and styled with Tailwind CSS.
                 </p>
               </div>
             </div>
@@ -96,7 +89,7 @@ export default async function IndexPage() {
                 strokeWidth="1"
                 className="size-12 fill-current"
               >
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
               </svg>
               <div className="space-y-2">
                 <h3 className="font-bold">Authentication</h3>
@@ -122,8 +115,8 @@ export default async function IndexPage() {
         </div>
         <div className="mx-auto text-center md:max-w-5xl">
           <p className="leading-normal text-muted-foreground sm:text-lg sm:leading-7">
-            Taxonomy also includes a blog and a full-featured documentation site
-            built using Contentlayer and MDX.
+            Taxonomy also includes a blog and a full-featured documentation site built using
+            Contentlayer and MDX.
           </p>
         </div>
       </section>
@@ -133,8 +126,8 @@ export default async function IndexPage() {
             Proudly Open Source
           </h2>
           <p className="max-w-2xl leading-normal text-muted-foreground sm:text-lg sm:leading-7">
-            Taxonomy is open source and powered by open source software. <br />{" "}
-            The code is available on{" "}
+            Taxonomy is open source and powered by open source software. <br /> The code is
+            available on{" "}
             <Link
               href={siteConfig.links.github}
               target="_blank"

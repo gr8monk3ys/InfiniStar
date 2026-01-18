@@ -1,10 +1,10 @@
 import * as React from "react"
 import Link from "next/link"
 
-import { NavItem } from "@/app/types/nav"
 import { siteConfig } from "@/config/site"
 import { cn } from "@/app/lib/utils"
 import { Icons } from "@/app/components/icons"
+import { type NavItem } from "@/app/types/nav"
 
 interface MainNavProps {
   items?: NavItem[]
@@ -20,10 +20,10 @@ export function MainNav({ items }: MainNavProps) {
       {items?.length ? (
         <nav className="flex gap-6">
           {items?.map(
-            (item, index) =>
+            (item) =>
               item.href && (
                 <Link
-                  key={index}
+                  key={item.href}
                   href={item.href}
                   className={cn(
                     "flex items-center text-sm font-medium text-muted-foreground",

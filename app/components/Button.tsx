@@ -1,14 +1,14 @@
-import clsx from "clsx";
-import { ButtonHTMLAttributes, FC } from "react";
+import { type ButtonHTMLAttributes, type FC } from "react"
+import clsx from "clsx"
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  type?: "button" | "submit" | "reset";
-  fullWidth?: boolean;
-  children?: React.ReactNode;
-  onClick?: () => void;
-  secondary?: boolean;
-  danger?: boolean;
-  disabled?: boolean;
+  type?: "button" | "submit" | "reset"
+  fullWidth?: boolean
+  children?: React.ReactNode
+  onClick?: () => void
+  secondary?: boolean
+  danger?: boolean
+  disabled?: boolean
 }
 
 const Button: FC<ButtonProps> = ({
@@ -26,7 +26,8 @@ const Button: FC<ButtonProps> = ({
       onClick={onClick}
       type={type}
       disabled={disabled}
-      className={clsx(`
+      className={clsx(
+        `
         flex 
         justify-center 
         rounded-md 
@@ -40,15 +41,15 @@ const Button: FC<ButtonProps> = ({
         `,
         disabled && "opacity-50 cursor-default",
         fullWidth && "w-full",
-        secondary ? 'text-gray-900' : 'text-white',
-        danger && 'bg-rose-500 hover:bg-rose-600 focus-visible:outline-rose-600',
-        !secondary && !danger && 'bg-sky-500 hover:bg-sky-600 focus-visible:outline-sky-600'
+        secondary ? "text-gray-900" : "text-white",
+        danger && "bg-rose-500 hover:bg-rose-600 focus-visible:outline-rose-600",
+        !secondary && !danger && "bg-sky-500 hover:bg-sky-600 focus-visible:outline-sky-600"
       )}
       {...props}
     >
       {children}
     </button>
-  );
+  )
 }
 
-export default Button;
+export default Button
