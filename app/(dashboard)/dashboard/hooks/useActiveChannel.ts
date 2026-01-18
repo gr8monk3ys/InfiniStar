@@ -1,42 +1,50 @@
-import { useEffect, useState } from "react";
-import { pusherClient } from "../libs/pusher";
-import { Channel, Members } from "pusher-js";
-import useActiveList from "./useActiveList";
+import { useEffect, useState } from "react"
+import { type Channel, type Members } from "pusher-js"
 
-const useActiveChannel = () => {
-  const { set, add, remove } = useActiveList();
-  const [activeChannel, setActiveChannel] = useState<Channel | null>(null);
+import { pusherClient } from "@/app/lib/pusher"
+
+import useActiveList from "./useActiveList"
+
+// Type for Pusher presence channel member
+interface PusherMember {
+  id: string
+  info?: Record<string, unknown>
+}
+
+const useActiveChannel = (): void => {
+  const { set, add, remove } = useActiveList()
+  const [activeChannel, setActiveChannel] = useState<Channel | null>(null)
 
   useEffect(() => {
-    let channel = activeChannel;
+    let channel = activeChannel
 
     if (!channel) {
-      channel = pusherClient.subscribe('presence-messenger');
-      setActiveChannel(channel);
+      channel = pusherClient.subscribe("presence-messenger")
+      setActiveChannel(channel)
     }
 
     channel.bind("pusher:subscription_succeeded", (members: Members) => {
-      const initialMembers: string[] = [];
+      const initialMembers: string[] = []
 
-      members.each((member: Record<string, any>) => initialMembers.push(member.id));
-      set(initialMembers);
-    });
+      members.each((member: PusherMember) => initialMembers.push(member.id))
+      set(initialMembers)
+    })
 
-    channel.bind("pusher:member_added", (member: Record<string, any>) => {
+    channel.bind("pusher:member_added", (member: PusherMember) => {
       add(member.id)
-    });
+    })
 
-    channel.bind("pusher:member_removed", (member: Record<string, any>) => {
-      remove(member.id);
-    });
+    channel.bind("pusher:member_removed", (member: PusherMember) => {
+      remove(member.id)
+    })
 
     return () => {
       if (activeChannel) {
-        pusherClient.unsubscribe('presence-messenger');
-        setActiveChannel(null);
+        pusherClient.unsubscribe("presence-messenger")
+        setActiveChannel(null)
       }
     }
-  }, [activeChannel, set, add, remove]);
+  }, [activeChannel, set, add, remove])
 }
 
-export default useActiveChannel;
+export default useActiveChannel
