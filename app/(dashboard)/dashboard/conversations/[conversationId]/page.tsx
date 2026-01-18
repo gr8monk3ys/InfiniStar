@@ -1,43 +1,44 @@
-import type { Metadata } from "next";
-import { Suspense } from "react";
-import getConversationById from "@/app/actions/getConversationById";
-import getMessages from "@/app/actions/getMessages";
+import type { Metadata } from "next"
 
-import Header from "./components/Header";
-import Body from "./components/Body";
-import Form from "./components/Form";
-import EmptyState from "@/app/components/EmptyState";
+import getConversationById from "@/app/actions/getConversationById"
+import getMessages from "@/app/actions/getMessages"
+import EmptyState from "@/app/components/EmptyState"
+
+import Body from "./components/Body"
+import Form from "./components/Form"
+import Header from "./components/Header"
 
 export const metadata: Metadata = {
-  title: 'Chat',
-  description: 'Chat with others',
-};
+  title: "Chat",
+  description: "Chat with others",
+}
 
 export default async function ChatPage({
   params,
 }: {
-  params: { conversationId: string }
+  params: Promise<{ conversationId: string }>
 }) {
-  const conversation = await getConversationById(params.conversationId);
-  const messages = await getMessages(params.conversationId);
+  const { conversationId } = await params
+  const conversation = await getConversationById(conversationId)
+  const messages = await getMessages(conversationId)
 
   if (!conversation) {
     return (
-      <div className="lg:pl-80 h-full">
-        <div className="h-full flex flex-col">
+      <div className="h-full lg:pl-80">
+        <div className="flex h-full flex-col">
           <EmptyState />
         </div>
       </div>
-    );
+    )
   }
 
   return (
-    <div className="lg:pl-80 h-full">
-      <div className="h-full flex flex-col">
-        <Header conversation={conversation} />
+    <div className="h-full lg:pl-80">
+      <div className="flex h-full flex-col">
+        <Header conversation={{ ...conversation, messages }} />
         <Body initialMessages={messages} />
-        <Form />
+        <Form isAI={conversation.isAI || false} />
       </div>
     </div>
-  );
+  )
 }

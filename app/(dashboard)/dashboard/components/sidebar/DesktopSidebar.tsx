@@ -1,28 +1,26 @@
-'use client';
+"use client"
 
-import DesktopItem from "./DesktopItem";
-import useRoutes from "@/app/(dashboard)/dashboard/hooks/useRoutes";
-import SettingsModal from "./SettingsModal";
-import { useState } from "react";
-import Avatar from "../Avatar";
-import { User } from "@prisma/client";
+import { useState } from "react"
+import { type User } from "@prisma/client"
+
+import useRoutes from "@/app/(dashboard)/dashboard/hooks/useRoutes"
+import Avatar from "@/app/components/Avatar"
+
+import DesktopItem from "./DesktopItem"
+import SettingsModal from "./SettingsModal"
 
 interface DesktopSidebarProps {
   currentUser: User
 }
 
-const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
-  currentUser
-}) => {
-  const routes = useRoutes();
-  const [isOpen, setIsOpen] = useState(false);
+const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ currentUser }) => {
+  const routes = useRoutes()
+  const [isOpen, setIsOpen] = useState(false)
 
-  console.log({ currentUser, }, 'TEST')
-
-  return ( 
+  return (
     <>
       <SettingsModal currentUser={currentUser} isOpen={isOpen} onClose={() => setIsOpen(false)} />
-      <div 
+      <div
         className="
           hidden 
           lg:fixed 
@@ -53,8 +51,8 @@ const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
           </ul>
         </nav>
         <nav className="mt-4 flex flex-col items-center justify-between">
-          <div 
-            onClick={() => setIsOpen(true)} 
+          <div
+            onClick={() => setIsOpen(true)}
             className="cursor-pointer transition hover:opacity-75"
           >
             <Avatar user={currentUser} />
@@ -62,7 +60,7 @@ const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
         </nav>
       </div>
     </>
-   );
+  )
 }
- 
-export default DesktopSidebar;
+
+export default DesktopSidebar

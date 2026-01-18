@@ -1,31 +1,27 @@
-import Link from "next/link";
-
-import clsx from "clsx";
+import Link from "next/link"
+import clsx from "clsx"
+import type { IconType } from "react-icons"
 
 interface MobileItemProps {
-  href: string;
-  icon: any;
-  active?: boolean;
-  onClick?: () => void;
+  href: string
+  icon: IconType
+  active?: boolean
+  onClick?: () => void
 }
 
-const MobileItem: React.FC<MobileItemProps> = ({ 
-  href, 
-  icon: Icon, 
-  active,
-  onClick
-}) => {
+const MobileItem: React.FC<MobileItemProps> = ({ href, icon: Icon, active, onClick }) => {
   const handleClick = () => {
     if (onClick) {
-      return onClick();
+      return onClick()
     }
-  };
+  }
 
-  return ( 
-    <Link 
-      onClick={handleClick} 
-      href={href} 
-      className={clsx(`
+  return (
+    <Link
+      onClick={handleClick}
+      href={href}
+      className={clsx(
+        `
         group 
         flex 
         gap-x-3 
@@ -39,11 +35,12 @@ const MobileItem: React.FC<MobileItemProps> = ({
         hover:text-black 
         hover:bg-gray-100
       `,
-        active && 'bg-gray-100 text-black',
-      )}>
+        active && "bg-gray-100 text-black"
+      )}
+    >
       <Icon className="size-6" aria-hidden="true" />
     </Link>
-   );
+  )
 }
- 
-export default MobileItem;
+
+export default MobileItem

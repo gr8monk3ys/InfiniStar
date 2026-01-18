@@ -1,15 +1,10 @@
-'use client';
+"use client"
 
-import ReactSelect from "react-select";
-import { SelectProps } from "@/app/types";
+import ReactSelect from "react-select"
 
-const Select: React.FC<SelectProps> = ({
-  label,
-  value,
-  onChange,
-  options,
-  disabled
-}) => {
+import { type SelectProps } from "@/app/types"
+
+const Select: React.FC<SelectProps> = ({ label, value, onChange, options, disabled }) => {
   return (
     <div className="z-[100]">
       <label
@@ -24,23 +19,23 @@ const Select: React.FC<SelectProps> = ({
         {label}
       </label>
       <div className="mt-2">
-      <ReactSelect
-        isDisabled={disabled}
-        value={value}
-        onChange={onChange}
-        isMulti
-        options={options}
-        menuPortalTarget={document.body}
-        styles={{
-          menuPortal: (base) => ({ ...base, zIndex: 9999 })
-        }}
-        classNames={{
-          control: () => "text-sm"
-        }}
-      />
+        <ReactSelect
+          isDisabled={disabled}
+          value={value}
+          onChange={onChange}
+          isMulti
+          options={options}
+          menuPortalTarget={document.body}
+          styles={{
+            menuPortal: (base) => ({ ...base, zIndex: 9999 }),
+          }}
+          classNames={{
+            control: () => "text-sm",
+          }}
+        />
       </div>
     </div>
-   );
-};
+  )
+}
 
-export default Select;
+export default Select
