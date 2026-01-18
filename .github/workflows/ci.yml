@@ -1,0 +1,124 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master, develop]
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run linter
+        run: npm run lint
+
+      - name: Run type check
+        run: npm run typecheck
+
+      - name: Run tests
+        run: npm test
+        env:
+          CI: true
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+        if: matrix.node-version == '20.x'
+        with:
+          files: ./coverage/lcov.info
+          flags: unittests
+          name: codecov-umbrella
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Build application
+        run: npm run build
+        env:
+          # Provide placeholder values for build
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
+          NEXTAUTH_URL: http://localhost:3000
+          NEXTAUTH_SECRET: test-secret-key-for-ci-build-only
+          GITHUB_CLIENT_ID: test
+          GITHUB_CLIENT_SECRET: test
+          GITHUB_ACCESS_TOKEN: test
+          GOOGLE_CLIENT_ID: test
+          GOOGLE_CLIENT_SECRET: test
+          DATABASE_URL: mongodb://localhost:27017/test
+          SMTP_FROM: test@example.com
+          POSTMARK_API_TOKEN: test
+          POSTMARK_SIGN_IN_TEMPLATE: test
+          POSTMARK_ACTIVATION_TEMPLATE: test
+          STRIPE_API_KEY: sk_test_placeholder
+          STRIPE_WEBHOOK_SECRET: test
+          STRIPE_PRO_MONTHLY_PLAN_ID: test
+          PUSHER_APP_ID: test
+          PUSHER_SECRET: test
+          NEXT_PUBLIC_PUSHER_APP_KEY: test
+          NEXT_PUBLIC_PUSHER_CLUSTER: us2
+          ANTHROPIC_API_KEY: test
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: build
+          path: .next
+          retention-days: 7
+
+  security:
+    name: Security Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+
+      - name: Run npm audit
+        run: npm audit --audit-level=high
+        continue-on-error: true
+
+      - name: Check for vulnerabilities
+        run: |
+          npm audit --json > audit.json || true
+          cat audit.json

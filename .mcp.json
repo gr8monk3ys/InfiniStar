@@ -1,0 +1,23 @@
+{
+  "mcpServers": {
+    "stripe": {
+      "type": "http",
+      "url": "https://mcp.stripe.com",
+      "description": "Manage Stripe subscriptions, customers, and payments for InfiniStar's PRO plan"
+    },
+    "github": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_ACCESS_TOKEN}"
+      },
+      "description": "GitHub integration for PR management, issues, and deployments"
+    },
+    "sentry": {
+      "type": "http",
+      "url": "https://mcp.sentry.dev/mcp",
+      "description": "Monitor production errors and debug issues in InfiniStar"
+    }
+  }
+}
