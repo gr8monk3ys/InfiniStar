@@ -1,6 +1,8 @@
 import { type NextRequest } from "next/server"
 import Anthropic from "@anthropic-ai/sdk"
+import { z } from "zod"
 
+import { buildMemoryContext, getRelevantMemories } from "@/app/lib/ai-memory"
 import {
   getDefaultPersonality,
   getSystemPrompt,
@@ -13,6 +15,15 @@ import { pusherServer } from "@/app/lib/pusher"
 import { aiChatLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 import { sanitizePlainText } from "@/app/lib/sanitize"
 import getCurrentUser from "@/app/actions/getCurrentUser"
+
+// Validation schema for AI chat stream requests
+const chatStreamSchema = z.object({
+  message: z
+    .string()
+    .min(1, "Message is required")
+    .max(10000, "Message too long (max 10000 characters)"),
+  conversationId: z.string().min(1, "Conversation ID is required"),
+})
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY || "",
@@ -79,15 +90,17 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { message, conversationId } = body
 
-    if (!message) {
-      return new Response("Message is required", { status: 400 })
+    // Validate request body with Zod schema
+    const validation = chatStreamSchema.safeParse(body)
+    if (!validation.success) {
+      return new Response(JSON.stringify({ error: validation.error.errors[0].message }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      })
     }
 
-    if (!conversationId) {
-      return new Response("Conversation ID is required", { status: 400 })
-    }
+    const { message, conversationId } = validation.data
 
     // Sanitize user input to prevent XSS attacks
     const sanitizedMessage = sanitizePlainText(message)
@@ -167,17 +180,30 @@ export async function POST(request: NextRequest) {
           conversation.aiPersonality && isValidPersonality(conversation.aiPersonality)
             ? conversation.aiPersonality
             : getDefaultPersonality()
-        const systemPrompt = getSystemPrompt(
+        const baseSystemPrompt = getSystemPrompt(
           personalityType,
           conversation.aiSystemPrompt || undefined
         )
 
+        // Fetch and include user memories in system prompt
+        let systemPrompt = baseSystemPrompt
         try {
-          // Call Anthropic API with streaming and system prompt
+          const memories = await getRelevantMemories(currentUser.id)
+          if (memories.length > 0) {
+            const memoryContext = buildMemoryContext(memories)
+            systemPrompt = baseSystemPrompt + "\n" + memoryContext
+          }
+        } catch (memoryError) {
+          // Log but don't fail the request if memory fetch fails
+          console.warn("Failed to fetch memories:", memoryError)
+        }
+
+        try {
+          // Call Anthropic API with streaming and system prompt (including memories)
           const stream = await anthropic.messages.stream({
             model: modelToUse,
             max_tokens: 1024,
-            system: systemPrompt, // Add system prompt for personality
+            system: systemPrompt, // Add system prompt for personality + memories
             messages: conversationHistory,
           })
 
@@ -213,7 +239,7 @@ export async function POST(request: NextRequest) {
             latencyMs,
           })
 
-          // Create AI message in database with full response
+          // Create AI message in database with full response and token usage
           const aiMessage = await prisma.message.create({
             data: {
               body: fullResponse,
@@ -227,6 +253,8 @@ export async function POST(request: NextRequest) {
                 connect: { id: currentUser.id },
               },
               isAI: true,
+              inputTokens: finalMessage.usage.input_tokens,
+              outputTokens: finalMessage.usage.output_tokens,
             },
             include: {
               seen: true,
@@ -243,10 +271,15 @@ export async function POST(request: NextRequest) {
           // Trigger Pusher event for complete AI response
           await pusherServer.trigger(conversationId, "messages:new", aiMessage)
 
-          // Send completion signal
+          // Send completion signal with token usage data
           const completeData = JSON.stringify({
             type: "done",
             messageId: aiMessage.id,
+            usage: {
+              inputTokens: finalMessage.usage.input_tokens,
+              outputTokens: finalMessage.usage.output_tokens,
+              totalTokens: finalMessage.usage.input_tokens + finalMessage.usage.output_tokens,
+            },
           })
           controller.enqueue(encoder.encode(`data: ${completeData}\n\n`))
 

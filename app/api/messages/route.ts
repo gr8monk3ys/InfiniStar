@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { getServerSession } from "next-auth"
+import { z } from "zod"
 
 import { authOptions } from "@/app/lib/auth"
 import { verifyCsrfToken } from "@/app/lib/csrf"
@@ -7,6 +8,14 @@ import prisma from "@/app/lib/prismadb"
 import { pusherServer } from "@/app/lib/pusher"
 import { apiLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 import { sanitizeMessage, sanitizeUrl } from "@/app/lib/sanitize"
+
+// Validation schema for creating messages
+const createMessageSchema = z.object({
+  message: z.string().max(5000, "Message too long (max 5000 characters)").optional(),
+  image: z.string().url("Invalid image URL").max(2000, "Image URL too long").optional().nullable(),
+  conversationId: z.string().min(1, "Conversation ID is required"),
+  replyToId: z.string().optional().nullable(),
+})
 
 export async function POST(request: NextRequest) {
   // CSRF Protection
@@ -56,12 +65,23 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     const currentUser = session?.user
-    const body = await request.json()
-    const { message, image, conversationId, replyToId } = body
 
     if (!currentUser?.id || !currentUser?.email) {
       return new NextResponse("Unauthorized", { status: 401 })
     }
+
+    const body = await request.json()
+
+    // Validate request body with Zod schema
+    const validation = createMessageSchema.safeParse(body)
+    if (!validation.success) {
+      return new NextResponse(JSON.stringify({ error: validation.error.errors[0].message }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      })
+    }
+
+    const { message, image, conversationId, replyToId } = validation.data
 
     // Sanitize user input to prevent XSS attacks
     const sanitizedMessage = message ? sanitizeMessage(message) : ""
@@ -134,6 +154,8 @@ export async function POST(request: NextRequest) {
       },
     })
 
+    // Update conversation's lastMessageAt - only select users for notifications
+    // Avoid N+1 query by not loading all messages
     const updatedConversation = await prisma.conversation.update({
       where: {
         id: conversationId,
@@ -147,11 +169,10 @@ export async function POST(request: NextRequest) {
         },
       },
       include: {
-        users: true,
-        messages: {
-          include: {
-            sender: true,
-            seen: true,
+        users: {
+          select: {
+            id: true,
+            email: true,
           },
         },
       },
