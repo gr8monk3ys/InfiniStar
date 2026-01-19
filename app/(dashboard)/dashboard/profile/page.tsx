@@ -1,22 +1,84 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import Image from "next/image"
+import { useCallback, useEffect, useState } from "react"
+import dynamic from "next/dynamic"
 import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
-import { CldUploadButton, type CloudinaryUploadWidgetResults } from "next-cloudinary"
+import type { CloudinaryUploadWidgetResults } from "next-cloudinary"
 import toast from "react-hot-toast"
-import { HiCamera, HiChatBubbleLeftRight, HiGlobeAlt, HiLockClosed, HiUser } from "react-icons/hi2"
+import {
+  HiBell,
+  HiClock,
+  HiComputerDesktop,
+  HiLockClosed,
+  HiPaintBrush,
+  HiShieldCheck,
+  HiTrash,
+  HiUser,
+} from "react-icons/hi2"
 
 import { ApiError, api, createLoadingToast } from "@/app/lib/api-client"
+import DeleteAccountModal from "@/app/components/modals/DeleteAccountModal"
 import StatusModal from "@/app/components/modals/StatusModal"
+import { DarkModeToggle, ThemeCustomizer, ThemeSelector } from "@/app/components/themes"
+
+import {
+  AccountTabContent,
+  NotificationsTabContent,
+  PasswordTabContent,
+  ProfileTabContent,
+} from "./components"
+
+// Dynamic imports for code splitting - only loaded when tab is active
+const SessionsList = dynamic(() => import("@/app/components/SessionsList"), {
+  loading: () => <div className="h-48 animate-pulse rounded-lg bg-gray-100" />,
+  ssr: false,
+})
+
+const TwoFactorSettings = dynamic(
+  () =>
+    import("@/app/components/TwoFactorSettings").then((mod) => ({
+      default: mod.TwoFactorSettings,
+    })),
+  {
+    loading: () => <div className="h-48 animate-pulse rounded-lg bg-gray-100" />,
+    ssr: false,
+  }
+)
+
+const AutoDeleteSettings = dynamic(
+  () => import("@/app/components/settings").then((mod) => ({ default: mod.AutoDeleteSettings })),
+  {
+    loading: () => <div className="h-48 animate-pulse rounded-lg bg-gray-100" />,
+    ssr: false,
+  }
+)
+
+// Deletion status type
+interface DeletionStatus {
+  deletionRequested: boolean
+  deletionRequestedAt: string | null
+  deletionScheduledFor: string | null
+  daysRemaining: number | null
+}
+
+type TabType =
+  | "profile"
+  | "password"
+  | "security"
+  | "notifications"
+  | "sessions"
+  | "appearance"
+  | "auto-delete"
+  | "account"
 
 export default function ProfilePage() {
   const { data: session, update } = useSession()
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
-  const [activeTab, setActiveTab] = useState<"profile" | "password">("profile")
+  const [activeTab, setActiveTab] = useState<TabType>("profile")
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false)
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
 
   // Profile form state
   const [name, setName] = useState("")
@@ -29,11 +91,77 @@ export default function ProfilePage() {
   const [newPassword, setNewPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
 
+  // Notification preferences state
+  const [emailNotifications, setEmailNotifications] = useState(true)
+  const [emailDigest, setEmailDigest] = useState<"none" | "daily" | "weekly">("none")
+  const [notifyOnNewMessage, setNotifyOnNewMessage] = useState(true)
+  const [notifyOnMention, setNotifyOnMention] = useState(true)
+  const [notifyOnAIComplete, setNotifyOnAIComplete] = useState(true)
+  const [isNotificationsLoading, setIsNotificationsLoading] = useState(false)
+
+  // Deletion status state
+  const [deletionStatus, setDeletionStatus] = useState<DeletionStatus | null>(null)
+  const [isDeletionLoading, setIsDeletionLoading] = useState(false)
+  const [hasPassword, setHasPassword] = useState(false)
+
+  // Fetch deletion status
+  const fetchDeletionStatus = useCallback(async () => {
+    try {
+      const response = await api.get<DeletionStatus>("/api/account/deletion-status", {
+        showErrorToast: false,
+      })
+      setDeletionStatus(response)
+    } catch {
+      // Ignore errors - user might not have access
+    }
+  }, [])
+
+  // Check if user has password (credential account)
+  const checkHasPassword = useCallback(async () => {
+    try {
+      const response = await api.get<{ hasPassword: boolean }>("/api/profile", {
+        showErrorToast: false,
+      })
+      setHasPassword(response.hasPassword)
+    } catch {
+      setHasPassword(false)
+    }
+  }, [])
+
+  // Fetch notification preferences
+  const fetchNotificationPreferences = useCallback(async () => {
+    try {
+      const response = await api.get<{
+        preferences: {
+          emailNotifications: boolean
+          emailDigest: "none" | "daily" | "weekly"
+          notifyOnNewMessage: boolean
+          notifyOnMention: boolean
+          notifyOnAIComplete: boolean
+          mutedConversations: string[]
+        }
+      }>("/api/notifications/preferences", {
+        showErrorToast: false,
+      })
+      const prefs = response.preferences
+      setEmailNotifications(prefs.emailNotifications)
+      setEmailDigest(prefs.emailDigest)
+      setNotifyOnNewMessage(prefs.notifyOnNewMessage)
+      setNotifyOnMention(prefs.notifyOnMention)
+      setNotifyOnAIComplete(prefs.notifyOnAIComplete)
+    } catch {
+      // Use defaults if fetch fails
+    }
+  }, [])
+
   useEffect(() => {
     if (session?.user) {
       setName(session.user.name || "")
+      fetchDeletionStatus()
+      checkHasPassword()
+      fetchNotificationPreferences()
     }
-  }, [session])
+  }, [session, fetchDeletionStatus, checkHasPassword, fetchNotificationPreferences])
 
   const handleAvatarUpload = async (result: CloudinaryUploadWidgetResults) => {
     if (!result.info || typeof result.info === "string" || !result.info.secure_url) {
@@ -47,24 +175,15 @@ export default function ProfilePage() {
     try {
       const response = await api.patch<{ message: string; user: { image: string } }>(
         "/api/profile",
-        {
-          image: imageUrl,
-        },
-        {
-          retries: 1,
-          showErrorToast: false,
-        }
+        { image: imageUrl },
+        { retries: 1, showErrorToast: false }
       )
 
       loader.success("Avatar updated successfully")
 
-      // Update session with new image
       await update({
         ...session,
-        user: {
-          ...session?.user,
-          image: response.user.image,
-        },
+        user: { ...session?.user, image: response.user.image },
       })
     } catch (error) {
       const message = error instanceof ApiError ? error.message : "Failed to update avatar"
@@ -87,21 +206,14 @@ export default function ProfilePage() {
           location: location || null,
           website: website || null,
         },
-        {
-          retries: 1,
-          showErrorToast: false,
-        }
+        { retries: 1, showErrorToast: false }
       )
 
       loader.success(response.message)
 
-      // Update session with new user data
       await update({
         ...session,
-        user: {
-          ...session?.user,
-          name: response.user.name,
-        },
+        user: { ...session?.user, name: response.user.name },
       })
     } catch (error) {
       const message = error instanceof ApiError ? error.message : "Failed to update profile"
@@ -130,19 +242,12 @@ export default function ProfilePage() {
     try {
       const response = await api.patch<{ message: string }>(
         "/api/profile",
-        {
-          currentPassword,
-          newPassword,
-        },
-        {
-          retries: 1,
-          showErrorToast: false,
-        }
+        { currentPassword, newPassword },
+        { retries: 1, showErrorToast: false }
       )
 
       loader.success(response.message)
 
-      // Clear password fields
       setCurrentPassword("")
       setNewPassword("")
       setConfirmPassword("")
@@ -153,6 +258,68 @@ export default function ProfilePage() {
       setIsLoading(false)
     }
   }
+
+  const handleNotificationsSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsNotificationsLoading(true)
+
+    const loader = createLoadingToast("Saving notification preferences...")
+
+    try {
+      const response = await api.patch<{ message: string }>(
+        "/api/notifications/preferences",
+        {
+          emailNotifications,
+          emailDigest,
+          notifyOnNewMessage,
+          notifyOnMention,
+          notifyOnAIComplete,
+        },
+        { retries: 1, showErrorToast: false }
+      )
+
+      loader.success(response.message)
+    } catch (error) {
+      const message =
+        error instanceof ApiError ? error.message : "Failed to save notification preferences"
+      loader.error(message)
+    } finally {
+      setIsNotificationsLoading(false)
+    }
+  }
+
+  const handleCancelDeletion = async () => {
+    setIsDeletionLoading(true)
+    const loader = createLoadingToast("Cancelling deletion request...")
+
+    try {
+      const response = await api.post<{ success: boolean; message: string }>(
+        "/api/account/cancel-deletion",
+        {},
+        { showErrorToast: false }
+      )
+
+      loader.success(response.message)
+      await fetchDeletionStatus()
+    } catch (error) {
+      const message =
+        error instanceof ApiError ? error.message : "Failed to cancel deletion request"
+      loader.error(message)
+    } finally {
+      setIsDeletionLoading(false)
+    }
+  }
+
+  const tabs: { id: TabType; label: string; icon: React.ReactNode; isDestructive?: boolean }[] = [
+    { id: "profile", label: "Profile Information", icon: <HiUser size={20} /> },
+    { id: "password", label: "Change Password", icon: <HiLockClosed size={20} /> },
+    { id: "security", label: "Security", icon: <HiShieldCheck size={20} /> },
+    { id: "notifications", label: "Notifications", icon: <HiBell size={20} /> },
+    { id: "sessions", label: "Sessions", icon: <HiComputerDesktop size={20} /> },
+    { id: "appearance", label: "Appearance", icon: <HiPaintBrush size={20} /> },
+    { id: "auto-delete", label: "Auto-Delete", icon: <HiClock size={20} /> },
+    { id: "account", label: "Delete Account", icon: <HiTrash size={20} />, isDestructive: true },
+  ]
 
   return (
     <div className="flex min-h-screen flex-col bg-gray-50">
@@ -178,270 +345,161 @@ export default function ProfilePage() {
           {/* Tabs */}
           <div className="border-b border-gray-200">
             <nav className="-mb-px flex gap-8 px-6" aria-label="Profile tabs">
-              <button
-                onClick={() => setActiveTab("profile")}
-                className={`flex items-center gap-2 border-b-2 px-1 py-4 text-sm font-medium ${
-                  activeTab === "profile"
-                    ? "border-sky-500 text-sky-600"
-                    : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
-                }`}
-              >
-                <HiUser size={20} />
-                Profile Information
-              </button>
-              <button
-                onClick={() => setActiveTab("password")}
-                className={`flex items-center gap-2 border-b-2 px-1 py-4 text-sm font-medium ${
-                  activeTab === "password"
-                    ? "border-sky-500 text-sky-600"
-                    : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
-                }`}
-              >
-                <HiLockClosed size={20} />
-                Change Password
-              </button>
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center gap-2 border-b-2 px-1 py-4 text-sm font-medium ${
+                    activeTab === tab.id
+                      ? tab.isDestructive
+                        ? "border-red-500 text-red-600"
+                        : "border-sky-500 text-sky-600"
+                      : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                  }`}
+                >
+                  {tab.icon}
+                  {tab.label}
+                  {tab.id === "account" && deletionStatus?.deletionRequested && (
+                    <span className="ml-1 rounded-full bg-yellow-100 px-2 py-0.5 text-xs text-yellow-800">
+                      Pending
+                    </span>
+                  )}
+                </button>
+              ))}
             </nav>
           </div>
 
           {/* Tab Content */}
           <div className="p-6">
-            {activeTab === "profile" ? (
-              <form
+            {activeTab === "profile" && (
+              <ProfileTabContent
+                user={session?.user}
+                name={name}
+                setName={setName}
+                bio={bio}
+                setBio={setBio}
+                location={location}
+                setLocation={setLocation}
+                website={website}
+                setWebsite={setWebsite}
+                isLoading={isLoading}
                 onSubmit={handleProfileSubmit}
-                className="space-y-6"
-                aria-label="Profile information form"
-              >
-                {/* Avatar */}
-                <div className="flex items-center gap-4">
-                  <div className="relative size-20 overflow-hidden rounded-full bg-gray-200">
-                    {session?.user?.image ? (
-                      <Image
-                        src={session.user.image}
-                        alt={`${session.user.name}'s profile picture`}
-                        fill
-                        className="object-cover"
-                      />
-                    ) : (
-                      <div className="flex size-full items-center justify-center text-2xl font-semibold text-gray-500">
-                        {session?.user?.name?.charAt(0).toUpperCase() || "U"}
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">{session?.user?.name}</p>
-                      <p className="text-sm text-gray-500">{session?.user?.email}</p>
-                      {(session?.user?.customStatus || session?.user?.customStatusEmoji) && (
-                        <p className="mt-1 text-sm text-gray-600">
-                          {session.user.customStatusEmoji && (
-                            <span className="mr-1">{session.user.customStatusEmoji}</span>
-                          )}
-                          {session.user.customStatus}
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex gap-2">
-                      <CldUploadButton
-                        options={{ maxFiles: 1, cropping: true, croppingAspectRatio: 1 }}
-                        onUpload={handleAvatarUpload}
-                        uploadPreset="pgc9ehd5"
-                        className="flex items-center gap-2 rounded-md bg-gray-100 px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-200"
-                      >
-                        <HiCamera size={16} />
-                        Change Avatar
-                      </CldUploadButton>
-                      <button
-                        type="button"
-                        onClick={() => setIsStatusModalOpen(true)}
-                        className="flex items-center gap-2 rounded-md bg-gray-100 px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-200"
-                      >
-                        <HiChatBubbleLeftRight size={16} />
-                        Set Status
-                      </button>
-                    </div>
-                  </div>
-                </div>
+                onAvatarUpload={handleAvatarUpload}
+                onOpenStatusModal={() => setIsStatusModalOpen(true)}
+              />
+            )}
 
-                {/* Name */}
-                <div>
-                  <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-                    Display Name
-                  </label>
-                  <input
-                    id="name"
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    required
-                    disabled={isLoading}
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 disabled:cursor-not-allowed disabled:bg-gray-100"
-                    placeholder="Your name"
-                    maxLength={100}
-                  />
-                </div>
-
-                {/* Bio */}
-                <div>
-                  <label htmlFor="bio" className="block text-sm font-medium text-gray-700">
-                    Bio
-                  </label>
-                  <textarea
-                    id="bio"
-                    value={bio}
-                    onChange={(e) => setBio(e.target.value)}
-                    disabled={isLoading}
-                    rows={4}
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 disabled:cursor-not-allowed disabled:bg-gray-100"
-                    placeholder="Tell us about yourself..."
-                    maxLength={500}
-                  />
-                  <p className="mt-1 text-sm text-gray-500">{bio.length}/500 characters</p>
-                </div>
-
-                {/* Location */}
-                <div>
-                  <label htmlFor="location" className="block text-sm font-medium text-gray-700">
-                    Location
-                  </label>
-                  <input
-                    id="location"
-                    type="text"
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                    disabled={isLoading}
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 disabled:cursor-not-allowed disabled:bg-gray-100"
-                    placeholder="e.g., San Francisco, CA"
-                    maxLength={100}
-                  />
-                </div>
-
-                {/* Website */}
-                <div>
-                  <label htmlFor="website" className="block text-sm font-medium text-gray-700">
-                    Website
-                  </label>
-                  <div className="relative mt-1">
-                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                      <HiGlobeAlt className="size-5 text-gray-400" aria-hidden="true" />
-                    </div>
-                    <input
-                      id="website"
-                      type="url"
-                      value={website}
-                      onChange={(e) => setWebsite(e.target.value)}
-                      disabled={isLoading}
-                      className="block w-full rounded-md border border-gray-300 py-2 pl-10 pr-3 shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 disabled:cursor-not-allowed disabled:bg-gray-100"
-                      placeholder="https://yourwebsite.com"
-                      maxLength={200}
-                    />
-                  </div>
-                </div>
-
-                {/* Submit Button */}
-                <div className="flex justify-end">
-                  <button
-                    type="submit"
-                    disabled={isLoading}
-                    aria-busy={isLoading}
-                    className="rounded-md bg-sky-600 px-4 py-2 text-white hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {isLoading ? "Saving..." : "Save Changes"}
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <form
+            {activeTab === "password" && (
+              <PasswordTabContent
+                currentPassword={currentPassword}
+                setCurrentPassword={setCurrentPassword}
+                newPassword={newPassword}
+                setNewPassword={setNewPassword}
+                confirmPassword={confirmPassword}
+                setConfirmPassword={setConfirmPassword}
+                isLoading={isLoading}
                 onSubmit={handlePasswordSubmit}
-                className="space-y-6"
-                aria-label="Change password form"
-              >
-                <p className="text-sm text-gray-600">
-                  Choose a strong password to keep your account secure.
-                </p>
+              />
+            )}
 
-                {/* Current Password */}
+            {activeTab === "security" && (
+              <div className="space-y-6" aria-label="Security settings section">
                 <div>
-                  <label
-                    htmlFor="currentPassword"
-                    className="block text-sm font-medium text-gray-700"
-                  >
-                    Current Password
-                  </label>
-                  <input
-                    id="currentPassword"
-                    type="password"
-                    value={currentPassword}
-                    onChange={(e) => setCurrentPassword(e.target.value)}
-                    required
-                    disabled={isLoading}
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 disabled:cursor-not-allowed disabled:bg-gray-100"
-                    placeholder="Enter current password"
-                    aria-required="true"
-                  />
+                  <h3 className="text-lg font-medium text-gray-900">Two-Factor Authentication</h3>
+                  <p className="mt-1 text-sm text-gray-600">
+                    Add an extra layer of security to your account by requiring a verification code
+                    in addition to your password when signing in.
+                  </p>
                 </div>
+                <TwoFactorSettings hasPassword={hasPassword} />
+              </div>
+            )}
 
-                {/* New Password */}
+            {activeTab === "notifications" && (
+              <NotificationsTabContent
+                emailNotifications={emailNotifications}
+                setEmailNotifications={setEmailNotifications}
+                emailDigest={emailDigest}
+                setEmailDigest={setEmailDigest}
+                notifyOnNewMessage={notifyOnNewMessage}
+                setNotifyOnNewMessage={setNotifyOnNewMessage}
+                notifyOnMention={notifyOnMention}
+                setNotifyOnMention={setNotifyOnMention}
+                notifyOnAIComplete={notifyOnAIComplete}
+                setNotifyOnAIComplete={setNotifyOnAIComplete}
+                isLoading={isNotificationsLoading}
+                onSubmit={handleNotificationsSubmit}
+              />
+            )}
+
+            {activeTab === "sessions" && (
+              <div className="space-y-4" aria-label="Session management section">
                 <div>
-                  <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700">
-                    New Password
-                  </label>
-                  <input
-                    id="newPassword"
-                    type="password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    required
-                    disabled={isLoading}
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 disabled:cursor-not-allowed disabled:bg-gray-100"
-                    placeholder="Enter new password"
-                    minLength={8}
-                    aria-required="true"
-                    aria-describedby="password-hint"
-                  />
-                  <p id="password-hint" className="mt-1 text-sm text-gray-500">
-                    Must be at least 8 characters
+                  <h3 className="text-lg font-medium text-gray-900">Active Sessions</h3>
+                  <p className="mt-1 text-sm text-gray-600">
+                    Manage devices where you are currently logged in. Revoke access to any session
+                    you do not recognize.
+                  </p>
+                </div>
+                <SessionsList />
+              </div>
+            )}
+
+            {activeTab === "appearance" && (
+              <div className="space-y-8" aria-label="Appearance settings section">
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                    Appearance
+                  </h3>
+                  <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                    Customize how InfiniStar looks. Choose a preset theme or create your own custom
+                    appearance.
                   </p>
                 </div>
 
-                {/* Confirm Password */}
-                <div>
-                  <label
-                    htmlFor="confirmPassword"
-                    className="block text-sm font-medium text-gray-700"
-                  >
-                    Confirm New Password
-                  </label>
-                  <input
-                    id="confirmPassword"
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    required
-                    disabled={isLoading}
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 disabled:cursor-not-allowed disabled:bg-gray-100"
-                    placeholder="Confirm new password"
-                    minLength={8}
-                    aria-required="true"
-                  />
-                </div>
+                <section>
+                  <h4 className="mb-4 text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                    Color Mode
+                  </h4>
+                  <div className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+                    <DarkModeToggle />
+                  </div>
+                </section>
 
-                {/* Submit Button */}
-                <div className="flex justify-end">
-                  <button
-                    type="submit"
-                    disabled={isLoading}
-                    aria-busy={isLoading}
-                    className="rounded-md bg-sky-600 px-4 py-2 text-white hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {isLoading ? "Changing..." : "Change Password"}
-                  </button>
-                </div>
-              </form>
+                <div className="border-t border-gray-200 dark:border-gray-700" />
+                <ThemeSelector />
+                <div className="border-t border-gray-200 dark:border-gray-700" />
+                <ThemeCustomizer />
+              </div>
+            )}
+
+            {activeTab === "auto-delete" && (
+              <div className="space-y-4" aria-label="Auto-delete settings section">
+                <AutoDeleteSettings />
+              </div>
+            )}
+
+            {activeTab === "account" && (
+              <AccountTabContent
+                deletionStatus={deletionStatus}
+                isDeletionLoading={isDeletionLoading}
+                onCancelDeletion={handleCancelDeletion}
+                onOpenDeleteModal={() => setIsDeleteModalOpen(true)}
+              />
             )}
           </div>
         </div>
       </div>
+
       <StatusModal isOpen={isStatusModalOpen} onClose={() => setIsStatusModalOpen(false)} />
+      <DeleteAccountModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          setIsDeleteModalOpen(false)
+          fetchDeletionStatus()
+        }}
+        hasPassword={hasPassword}
+      />
     </div>
   )
 }

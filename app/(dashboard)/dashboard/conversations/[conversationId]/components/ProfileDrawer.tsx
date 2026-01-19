@@ -1,6 +1,6 @@
 "use client"
 
-import { Fragment, useMemo, useState } from "react"
+import { Fragment, memo, useMemo, useState } from "react"
 import { Dialog, Transition } from "@headlessui/react"
 import axios, { isAxiosError } from "axios"
 import { format } from "date-fns"
@@ -14,6 +14,7 @@ import useActiveList from "@/app/(dashboard)/dashboard/hooks/useActiveList"
 import useOtherUser from "@/app/(dashboard)/dashboard/hooks/useOtherUser"
 import Avatar from "@/app/components/Avatar"
 import AvatarGroup from "@/app/components/AvatarGroup"
+import { useCsrfToken } from "@/app/hooks/useCsrfToken"
 import { type FullConversationType } from "@/app/types"
 
 import ConfirmModal from "./ConfirmModal"
@@ -24,12 +25,23 @@ interface ProfileDrawerProps {
   data: FullConversationType
 }
 
-const ProfileDrawer: React.FC<ProfileDrawerProps> = ({ isOpen, onClose, data }) => {
+/**
+ * ProfileDrawer component - Displays conversation/user profile in a slide-out drawer
+ *
+ * Wrapped with React.memo to prevent unnecessary re-renders when parent re-renders
+ * but the drawer props haven't changed.
+ */
+const ProfileDrawer: React.FC<ProfileDrawerProps> = memo(function ProfileDrawer({
+  isOpen,
+  onClose,
+  data,
+}) {
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [isArchiving, setIsArchiving] = useState(false)
   const [isPinning, setIsPinning] = useState(false)
   const [isMuting, setIsMuting] = useState(false)
   const session = useSession()
+  const { token: csrfToken } = useCsrfToken()
   const otherUser = useOtherUser(data)
 
   const joinedDate = useMemo(() => {
@@ -90,13 +102,14 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = ({ isOpen, onClose, data }) 
   const handleArchiveToggle = async () => {
     setIsArchiving(true)
     try {
+      const headers = csrfToken ? { "X-CSRF-Token": csrfToken } : {}
       if (isArchived) {
         // Unarchive
-        await axios.delete(`/api/conversations/${data.id}/archive`)
+        await axios.delete(`/api/conversations/${data.id}/archive`, { headers })
         toast.success("Conversation unarchived")
       } else {
         // Archive
-        await axios.post(`/api/conversations/${data.id}/archive`)
+        await axios.post(`/api/conversations/${data.id}/archive`, {}, { headers })
         toast.success("Conversation archived")
       }
     } catch (error) {
@@ -113,13 +126,14 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = ({ isOpen, onClose, data }) 
   const handlePinToggle = async () => {
     setIsPinning(true)
     try {
+      const headers = csrfToken ? { "X-CSRF-Token": csrfToken } : {}
       if (isPinned) {
         // Unpin
-        await axios.delete(`/api/conversations/${data.id}/pin`)
+        await axios.delete(`/api/conversations/${data.id}/pin`, { headers })
         toast.success("Conversation unpinned")
       } else {
         // Pin
-        await axios.post(`/api/conversations/${data.id}/pin`)
+        await axios.post(`/api/conversations/${data.id}/pin`, {}, { headers })
         toast.success("Conversation pinned")
       }
     } catch (error) {
@@ -136,13 +150,14 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = ({ isOpen, onClose, data }) 
   const handleMuteToggle = async () => {
     setIsMuting(true)
     try {
+      const headers = csrfToken ? { "X-CSRF-Token": csrfToken } : {}
       if (isMuted) {
         // Unmute
-        await axios.delete(`/api/conversations/${data.id}/mute`)
+        await axios.delete(`/api/conversations/${data.id}/mute`, { headers })
         toast.success("Conversation unmuted")
       } else {
         // Mute
-        await axios.post(`/api/conversations/${data.id}/mute`)
+        await axios.post(`/api/conversations/${data.id}/mute`, {}, { headers })
         toast.success("Conversation muted")
       }
     } catch (error) {
@@ -327,6 +342,6 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = ({ isOpen, onClose, data }) 
       </Transition.Root>
     </>
   )
-}
+})
 
 export default ProfileDrawer
