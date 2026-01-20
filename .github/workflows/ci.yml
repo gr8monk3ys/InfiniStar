@@ -95,7 +95,7 @@ jobs:
           ANTHROPIC_API_KEY: test
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v6
         with:
           name: build
           path: .next
