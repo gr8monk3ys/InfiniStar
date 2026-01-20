@@ -12,6 +12,8 @@ InfiniStar is an AI chatbot application built with Next.js 15 (App Router), feat
 - Real-time messaging with Pusher
 - Message editing and deletion (soft delete)
 - Conversation archiving (per-user archive status)
+- Conversation pinning (per-user pin status, max 5 pins)
+- **Auto-delete conversations** (per-user settings with configurable retention periods)
 - Email verification and password reset
 - User profile management with password changes
 - Stripe subscription management
@@ -35,10 +37,25 @@ npm run typecheck        # Run TypeScript type checking (no emit)
 npm run format:write     # Format code with Prettier
 npm run format:check     # Check code formatting
 
+# Testing
+npm test                 # Run all Jest tests
+npm run test:watch       # Run tests in watch mode
+npm run test:coverage    # Run tests with coverage report
+npm run test:e2e         # Run Playwright E2E tests
+npm run test:e2e:ui      # Run E2E tests with Playwright UI
+npm run test:e2e:headed  # Run E2E tests in headed browser
+
+# Run a single test file
+npx jest app/__tests__/lib/sanitize.test.ts
+
+# Run tests matching a pattern
+npx jest --testNamePattern="sanitizeMessage"
+
 # Database
 npx prisma generate      # Generate Prisma Client
 npx prisma db push       # Push schema changes to database (development)
 npx prisma studio        # Open Prisma Studio to view/edit data
+npm run seed             # Seed database with test data
 ```
 
 ## Architecture
@@ -72,14 +89,24 @@ The project uses Next.js 13+ App Router with route groups:
 - `auth/resend-verification/` - Resend verification link (rate-limited)
 - `auth/request-reset/` - Request password reset link (rate-limited, no user enumeration)
 - `auth/reset-password/` - Reset password with token
+- `auth/2fa/setup/` - Initialize 2FA setup, generate TOTP secret and QR code
+- `auth/2fa/verify/` - Verify TOTP code and enable 2FA, returns backup codes
+- `auth/2fa/disable/` - Disable 2FA (requires password and verification code)
+- `auth/2fa/backup-codes/` - Generate new backup codes (GET: count, POST: regenerate)
+- `auth/2fa/login-verify/` - Verify 2FA code during login flow
 - `csrf/` - CSRF token generation
 - `conversations/` - Create/list conversations
 - `conversations/[conversationId]/` - Delete conversation
 - `conversations/[conversationId]/seen/` - Mark messages as seen
 - `conversations/[conversationId]/archive/` - Archive (POST) or unarchive (DELETE) conversation
+- `conversations/[conversationId]/pin/` - Pin (POST) or unpin (DELETE) conversation (max 5 pins)
+- `conversations/[conversationId]/summarize/` - Generate (POST) or get (GET) AI summary of conversation
 - `messages/` - Send new messages
 - `messages/[messageId]/` - Edit (PATCH) or delete (DELETE) messages
 - `profile/` - Get (GET) or update (PATCH) user profile and password
+- `notifications/preferences/` - Get (GET) or update (PATCH) notification preferences
+- `sessions/` - List (GET), register (POST), or revoke all (DELETE) user sessions
+- `sessions/[sessionId]/` - Revoke (DELETE) or update (PATCH) specific session
 - `ai/chat/` - AI chat endpoint for single responses
 - `ai/chat-stream/` - Streaming AI responses with SSE
 - `ai/usage/` - Get AI usage statistics for current user
@@ -111,6 +138,13 @@ The project uses Next.js 13+ App Router with route groups:
   - Bcrypt password hashing with 12 rounds
   - Show/hide password toggle
   - Pages: `/forgot-password`, `/reset-password`
+- **Two-Factor Authentication (2FA)**: TOTP-based 2FA for enhanced security
+  - Uses `otplib` for TOTP generation/verification with 30-second window and 1-step tolerance
+  - TOTP secrets encrypted at rest using AES-256-GCM derived from NEXTAUTH_SECRET
+  - 10 single-use backup codes (hashed with SHA-256 for storage)
+  - QR code generation for authenticator app setup
+  - Rate-limited verification attempts (5 per 5 minutes)
+  - Pages: `/login/2fa` (login verification), Profile Settings > Security tab
 - **Security Features**:
   - CSRF protection on all state-changing endpoints
   - Rate limiting on authentication endpoints
@@ -162,10 +196,12 @@ Prisma models (MongoDB):
   - Includes email verification fields: `emailVerified`, `verificationToken`, `verificationTokenExpiry`
   - Includes password reset fields: `resetToken`, `resetTokenExpiry`
   - Includes AI usage tracking: `aiUsageCount`, `aiUsageResetDate`
+  - Includes notification preferences: `emailNotifications`, `emailDigest`, `notifyOnNewMessage`, `notifyOnMention`, `notifyOnAIComplete`, `mutedConversations`
 - `Account` - OAuth provider accounts (NextAuth)
 - `Session` - User sessions (NextAuth)
 - `Conversation` - Chat conversations (supports 1-on-1, group chats, and AI chats)
   - AI conversation fields: `isAI`, `aiModel`, `aiPersonality`, `aiSystemPrompt`
+  - Summary fields: `summary`, `summaryGeneratedAt`, `summaryMessageCount`
 - `Message` - Individual messages with sender, body, image, and seen status
 
 Key relationships:
@@ -294,6 +330,48 @@ try {
   - Real-time updates via Pusher `conversation:archive` and `conversation:unarchive` events on user-specific channel
   - UI features: Toggle button in ConversationList with archived count badge, archive/unarchive button in ProfileDrawer
   - Archived conversations are filtered from main view with option to show/hide via toggle
+- **Conversation Summarization**: AI-powered summary generation for conversations
+  - POST `/api/conversations/[conversationId]/summarize` - Generate new summary (with optional `forceRegenerate`)
+  - GET `/api/conversations/[conversationId]/summarize` - Get existing summary
+  - Summary includes: overview, key topics, decisions/action items, participants
+  - Requires minimum 5 messages in conversation
+  - Uses Claude 3.5 Sonnet for intelligent summarization
+  - Summary caching: stores `summary`, `summaryGeneratedAt`, `summaryMessageCount` in Conversation model
+  - Cache invalidation: regenerates only when message count changes or `forceRegenerate: true`
+  - Context limit: last 50 messages to stay within token limits
+  - Rate limited using `aiChatLimiter` (20 requests per minute)
+  - UI: "Summarize" button in conversation header with SummaryModal component
+- **Pinning Conversations**: Users can pin important conversations to the top of the list
+  - POST `/api/conversations/[conversationId]/pin` - Pin conversation for current user
+  - DELETE `/api/conversations/[conversationId]/pin` - Unpin conversation for current user
+  - Per-user pin status: Each user has their own pin state for shared conversations
+  - `pinnedBy` array stores user IDs who pinned the conversation
+  - `pinnedAt` timestamp tracks when first user pinned the conversation
+  - Maximum of 5 pinned conversations per user
+  - Real-time updates via Pusher `conversation:pin` and `conversation:unpin` events on user-specific channel
+  - UI features: Pin icon displayed on pinned conversations, separate "Pinned" section in ConversationList, pin/unpin button in ProfileDrawer
+  - Pinned conversations appear at the top of the conversation list in their own section
+- **Auto-Delete Conversations**: Users can automatically delete old conversations based on retention settings
+  - GET `/api/settings/auto-delete` - Get current auto-delete settings
+  - PATCH `/api/settings/auto-delete` - Update auto-delete settings
+  - POST `/api/settings/auto-delete/preview` - Preview conversations that would be deleted
+  - POST `/api/settings/auto-delete/run` - Manually trigger cleanup (rate-limited to once per hour)
+  - Per-user settings stored in User model:
+    - `autoDeleteEnabled` - Boolean toggle for the feature
+    - `autoDeleteAfterDays` - Retention period options: 7, 14, 30, 60, 90, 180, 365 days
+    - `autoDeleteArchived` - Whether to include archived conversations
+    - `autoDeleteExcludeTags` - Array of tag IDs to exclude from deletion
+    - `lastAutoDeleteRun` - Timestamp of last cleanup
+  - Deletion logic in `app/lib/auto-delete.ts`:
+    - `getAutoDeleteSettings(userId)` - Get user's auto-delete settings
+    - `updateAutoDeleteSettings(userId, settings)` - Update settings
+    - `getConversationsToDelete(userId)` - Get eligible conversations
+    - `getAutoDeletePreview(userId)` - Preview what would be deleted
+    - `deleteOldConversations(userId)` - Perform the deletion
+    - `runAutoDeleteForAllUsers()` - For cron job integration
+  - UI: "Auto-Delete" tab in Profile Settings page with toggle, retention period select, tag exclusion, preview modal
+  - Real-time updates via Pusher `conversation:auto-delete` event to all conversation participants
+  - **Cron Job**: For production, set up a scheduled function to call `runAutoDeleteForAllUsers()` daily
 
 ### Working with Messages
 
@@ -328,6 +406,30 @@ try {
   - Updates `hashedPassword` with bcrypt (12 rounds)
 - **Session Updates**: Profile changes update NextAuth session in real-time
 - **Validation**: Zod schemas validate all inputs (URL format, character limits, etc.)
+
+### Working with Sessions
+
+- **Session Management**: Users can view and manage active sessions at `/dashboard/profile` (Sessions tab)
+  - GET `/api/sessions` - List all active sessions for current user
+  - POST `/api/sessions` - Register a new session (called after login)
+  - DELETE `/api/sessions` - Revoke all other sessions except current
+  - DELETE `/api/sessions/[sessionId]` - Revoke a specific session
+- **Session Tracking**:
+  - Sessions stored in `UserSession` model with device/browser info
+  - IP addresses parsed from `x-forwarded-for` or `x-real-ip` headers
+  - User agent parsed with `ua-parser-js` for device type, browser, and OS
+  - Sessions expire after 30 days
+- **Security Features**:
+  - IP addresses partially masked when displayed (e.g., `192.168.x.x`)
+  - CSRF protection on all session management endpoints
+  - Sessions can be revoked individually or all at once
+  - Current session identified via `X-Session-Token` header
+  - Session tokens stored in localStorage (`infinistar_session_token`)
+- **UI Components**:
+  - `SessionsList` component displays all active sessions
+  - Shows device icon, browser, OS, masked IP, and last active time
+  - Current session badge identifies the active session
+  - Confirmation dialog before revoking sessions
 
 ### Working with AI Features
 
@@ -375,7 +477,8 @@ try {
 - **Email Verification**: Required for credentials login; OAuth users skip verification
 - **Password Reset Tokens**: Expire after 24 hours; use `isTokenExpired()` utility for validation
 - **Development Emails**: In development mode, email links are logged to console instead of being sent
-- **Rate Limiting**: Authentication endpoints limited to 5 requests per 5 minutes per identifier
+- **Rate Limiting**: Authentication endpoints limited to 5 requests per 5 minutes per identifier. 2FA verification limited to 5 attempts per 5 minutes. Uses in-memory rate limiter (see `IRateLimiter` interface in `app/lib/rate-limit.ts` for Redis implementation guide for production)
+- **Two-Factor Authentication**: Only available for accounts with passwords (not OAuth-only). TOTP secrets are encrypted with AES-256-GCM using keys derived from NEXTAUTH_SECRET. Backup codes are single-use and hashed with SHA-256.
 - **CSRF Protection**: All POST/PUT/DELETE endpoints should validate CSRF tokens
 - **AI Usage Tracking**: Free users limited to 10 AI messages per month; tracked via `User.aiUsageCount`
 - **Server Actions**: Next.js 15 server actions require `'use server'` directive at the top of the file
@@ -389,5 +492,7 @@ try {
 4. **Input Validation**: Use Zod schemas for all request body validation
 5. **Password Hashing**: Bcrypt with 12 rounds for all password storage
 6. **CSRF Protection**: Validate tokens on all state-changing operations
-7. **Sanitization**: Use DOMPurify for user-generated content before storage/display
+7. **Sanitization**: Use `sanitizeMessage()` from `app/lib/sanitize.ts` for user messages before storage. The sanitize library is server-safe (regex-based, no DOMPurify dependency issues)
 8. **Error Messages**: Provide helpful but secure error messages that don't leak sensitive information
+9. **2FA Secret Encryption**: TOTP secrets are encrypted at rest using AES-256-GCM with PBKDF2-derived keys (100,000 iterations)
+10. **Backup Codes**: Generated with crypto.randomBytes, hashed with SHA-256 for storage, single-use (removed after verification)

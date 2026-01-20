@@ -22,18 +22,38 @@ export function middleware(request: NextRequest) {
   const headers = response.headers
 
   // Content Security Policy
+  // Note: Next.js requires 'unsafe-inline' for styles and inline scripts
+  // In production, consider implementing nonce-based CSP with next-safe-headers
+  // or using Next.js built-in CSP support (experimental feature)
+  //
+  // Security trade-offs:
+  // - 'unsafe-eval': Required for Next.js development mode hot reload
+  // - 'unsafe-inline': Required for Next.js inline scripts and styled-jsx
+  //
+  // For stricter CSP in production:
+  // 1. Use nonce-based CSP (requires server-side nonce generation per request)
+  // 2. Or use 'strict-dynamic' with hash-based CSP for known inline scripts
+
+  const isDevelopment = process.env.NODE_ENV === "development"
+
+  // Use stricter CSP in production (no unsafe-eval)
+  const scriptSrc = isDevelopment
+    ? "script-src 'self' 'unsafe-eval' 'unsafe-inline'"
+    : "script-src 'self' 'unsafe-inline'" // Production: no unsafe-eval
+
   headers.set(
     "Content-Security-Policy",
     [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-eval' 'unsafe-inline'", // Next.js requires unsafe-eval in dev
-      "style-src 'self' 'unsafe-inline'",
+      scriptSrc,
+      "style-src 'self' 'unsafe-inline'", // Required for styled-jsx and inline styles
       "img-src 'self' data: https: blob:",
       "font-src 'self' data:",
-      "connect-src 'self' https:",
+      "connect-src 'self' https: wss:", // Added wss: for Pusher WebSocket connections
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
+      "upgrade-insecure-requests", // Force HTTPS for all requests
     ].join("; ")
   )
 
