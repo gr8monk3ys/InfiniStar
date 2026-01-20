@@ -1,10 +1,42 @@
-import { NextResponse } from "next/server"
+import { NextResponse, type NextRequest } from "next/server"
 
+import { verifyCsrfToken } from "@/app/lib/csrf"
 import prisma from "@/app/lib/prismadb"
 import { pusherServer } from "@/app/lib/pusher"
+import { apiLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 import getCurrentUser from "@/app/actions/getCurrentUser"
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  // CSRF Protection
+  const headerToken = request.headers.get("X-CSRF-Token")
+  const cookieHeader = request.headers.get("cookie")
+  let cookieToken: string | null = null
+
+  if (cookieHeader) {
+    const cookies = cookieHeader.split(";").reduce((acc, cookie) => {
+      const [key, value] = cookie.trim().split("=")
+      acc[key] = value
+      return acc
+    }, {} as Record<string, string>)
+    cookieToken = cookies["csrf-token"] || null
+  }
+
+  if (!verifyCsrfToken(headerToken, cookieToken)) {
+    return NextResponse.json(
+      { error: "Invalid CSRF token", code: "CSRF_TOKEN_INVALID" },
+      { status: 403 }
+    )
+  }
+
+  // Rate limiting
+  const identifier = getClientIdentifier(request)
+  if (!apiLimiter.check(identifier)) {
+    return NextResponse.json(
+      { error: "Too many requests. Please try again later." },
+      { status: 429, headers: { "Retry-After": "60" } }
+    )
+  }
+
   const currentUser = await getCurrentUser()
 
   if (!currentUser?.id || !currentUser?.email) {

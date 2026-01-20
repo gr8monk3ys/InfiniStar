@@ -32,7 +32,12 @@ export async function PATCH(request: NextRequest) {
     const { status, customStatus, customStatusEmoji } = validation.data
 
     // Build update data
-    const updateData: any = {
+    const updateData: {
+      presenceStatus: string
+      lastSeenAt: Date
+      customStatus?: string | null
+      customStatusEmoji?: string | null
+    } = {
       presenceStatus: status,
       lastSeenAt: new Date(),
     }
@@ -87,7 +92,7 @@ export async function PATCH(request: NextRequest) {
         customStatusEmoji: updatedUser.customStatusEmoji,
       },
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("PRESENCE_UPDATE_ERROR", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }

@@ -4,6 +4,7 @@ import { z } from "zod"
 import { verifyCsrfToken } from "@/app/lib/csrf"
 import prisma from "@/app/lib/prismadb"
 import { pusherServer } from "@/app/lib/pusher"
+import { sanitizeMessage } from "@/app/lib/sanitize"
 import getCurrentUser from "@/app/actions/getCurrentUser"
 
 // Validation schemas
@@ -80,11 +81,21 @@ export async function PATCH(
       return NextResponse.json({ error: "Cannot edit AI messages" }, { status: 400 })
     }
 
-    // Update the message
+    // Sanitize and update the message
+    const sanitizedBody = sanitizeMessage(validation.data.body)
+
+    // Ensure sanitized content is not empty
+    if (!sanitizedBody.trim()) {
+      return NextResponse.json(
+        { error: "Message cannot be empty after sanitization" },
+        { status: 400 }
+      )
+    }
+
     const updatedMessage = await prisma.message.update({
       where: { id: messageId },
       data: {
-        body: validation.data.body,
+        body: sanitizedBody,
         editedAt: new Date(),
       },
       include: {
@@ -101,7 +112,7 @@ export async function PATCH(
     )
 
     return NextResponse.json(updatedMessage)
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("MESSAGE_EDIT_ERROR", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
@@ -168,7 +179,7 @@ export async function DELETE(
     )
 
     return NextResponse.json(deletedMessage)
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("MESSAGE_DELETE_ERROR", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }

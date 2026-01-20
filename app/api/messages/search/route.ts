@@ -37,7 +37,11 @@ export async function GET(request: NextRequest) {
     const { query: searchQuery, conversationId: searchConversationId } = validation.data
 
     // Build where clause
-    const whereClause: any = {
+    const whereClause: {
+      body: { contains: string; mode: "insensitive" }
+      isDeleted: boolean
+      conversationId?: string | { in: string[] }
+    } = {
       body: {
         contains: searchQuery,
         mode: "insensitive",
@@ -122,7 +126,7 @@ export async function GET(request: NextRequest) {
       count: messages.length,
       query: searchQuery,
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("MESSAGE_SEARCH_ERROR", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }

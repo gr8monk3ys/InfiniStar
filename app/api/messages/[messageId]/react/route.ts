@@ -92,7 +92,7 @@ export async function POST(
     )
 
     return NextResponse.json(updatedMessage)
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("MESSAGE_REACTION_ERROR", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }

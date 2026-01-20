@@ -6,19 +6,26 @@ import prisma from "@/app/lib/prismadb"
 import { stripe } from "@/app/lib/stripe"
 
 export async function POST(req: Request) {
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
+  if (!webhookSecret) {
+    console.error("STRIPE_WEBHOOK_SECRET is not configured")
+    return new NextResponse("Webhook secret not configured", { status: 500 })
+  }
+
   const headersList = await headers()
-  const signature = headersList.get("Stripe-Signature") as string
+  const signature = headersList.get("Stripe-Signature")
+
+  if (!signature) {
+    return new NextResponse("Missing Stripe-Signature header", { status: 400 })
+  }
 
   let event: Stripe.Event
 
   try {
-    event = stripe.webhooks.constructEvent(
-      await req.text(),
-      signature,
-      process.env.STRIPE_WEBHOOK_SECRET!
-    )
-  } catch (error: any) {
-    return new NextResponse(`Webhook Error: ${error.message}`, { status: 400 })
+    event = stripe.webhooks.constructEvent(await req.text(), signature, webhookSecret)
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error"
+    return new NextResponse(`Webhook Error: ${message}`, { status: 400 })
   }
 
   if (event.type === "checkout.session.completed") {

@@ -100,7 +100,7 @@ export async function POST(
     )
 
     return NextResponse.json(updatedConversation)
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("CONVERSATION_ARCHIVE_ERROR", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
@@ -183,7 +183,7 @@ export async function DELETE(
     )
 
     return NextResponse.json(updatedConversation)
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("CONVERSATION_UNARCHIVE_ERROR", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }

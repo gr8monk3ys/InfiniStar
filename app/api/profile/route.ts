@@ -97,7 +97,14 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Build update data
-    const updateData: any = {}
+    const updateData: {
+      name?: string
+      image?: string | null
+      bio?: string | null
+      location?: string | null
+      website?: string | null
+      hashedPassword?: string
+    } = {}
     if (name !== undefined) updateData.name = name
     if (image !== undefined) updateData.image = image || null
     if (bio !== undefined) updateData.bio = bio || null
@@ -130,7 +137,7 @@ export async function PATCH(request: NextRequest) {
       message: "Profile updated successfully",
       user: updatedUser,
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("PROFILE_UPDATE_ERROR", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
@@ -156,6 +163,8 @@ export async function GET(_request: NextRequest) {
         location: true,
         website: true,
         emailVerified: true,
+        twoFactorEnabled: true,
+        hashedPassword: true, // Used to check if user has a password
         createdAt: true,
         updatedAt: true,
       },
@@ -165,8 +174,14 @@ export async function GET(_request: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
 
-    return NextResponse.json({ user })
-  } catch (error: any) {
+    // Return user without sensitive fields
+    const { hashedPassword, ...safeUser } = user
+    return NextResponse.json({
+      user: safeUser,
+      hasPassword: !!hashedPassword,
+      twoFactorEnabled: user.twoFactorEnabled,
+    })
+  } catch (error: unknown) {
     console.error("PROFILE_GET_ERROR", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }

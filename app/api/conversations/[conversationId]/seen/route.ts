@@ -36,10 +36,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<I
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Find existing conversation
-    const conversation = await prisma.conversation.findUnique({
+    // Find existing conversation and verify user is a participant
+    const conversation = await prisma.conversation.findFirst({
       where: {
         id: conversationId,
+        userIds: {
+          has: currentUser.id,
+        },
       },
       include: {
         messages: {
@@ -52,7 +55,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<I
     })
 
     if (!conversation) {
-      return new NextResponse("Invalid ID", { status: 400 })
+      return NextResponse.json(
+        { error: "Conversation not found or not authorized" },
+        { status: 404 }
+      )
     }
 
     // Find last message

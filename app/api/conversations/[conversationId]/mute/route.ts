@@ -72,7 +72,7 @@ export async function POST(
     await pusherServer.trigger(`user-${currentUser.id}`, "conversation:mute", updatedConversation)
 
     return NextResponse.json(updatedConversation)
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("CONVERSATION_MUTE_ERROR", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
@@ -146,7 +146,7 @@ export async function DELETE(
     await pusherServer.trigger(`user-${currentUser.id}`, "conversation:unmute", updatedConversation)
 
     return NextResponse.json(updatedConversation)
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("CONVERSATION_UNMUTE_ERROR", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
