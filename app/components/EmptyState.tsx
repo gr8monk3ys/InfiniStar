@@ -1,8 +1,8 @@
-'use client';
+"use client"
 
 const EmptyState = () => {
-  return ( 
-    <div 
+  return (
+    <div
       className="
         flex 
         h-full 
@@ -22,7 +22,7 @@ const EmptyState = () => {
         </h3>
       </div>
     </div>
-   );
+  )
 }
- 
-export default EmptyState;
+
+export default EmptyState

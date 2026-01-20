@@ -18,7 +18,7 @@ export interface ErrorResponse {
   error: {
     code: ErrorCode
     message: string
-    details?: Record<string, any>
+    details?: Record<string, unknown>
   }
 }
 
@@ -39,7 +39,7 @@ const ERROR_MESSAGES: Record<ErrorCode, string> = {
 export function createErrorResponse(
   code: ErrorCode,
   customMessage?: string,
-  details?: Record<string, any>
+  details?: Record<string, unknown>
 ): NextResponse<ErrorResponse> {
   const message = customMessage || ERROR_MESSAGES[code]
 
@@ -80,35 +80,35 @@ function getStatusCode(code: ErrorCode): number {
 
 // Convenience functions
 export const ApiError = {
-  unauthorized: (message?: string, details?: Record<string, any>) =>
+  unauthorized: (message?: string, details?: Record<string, unknown>) =>
     createErrorResponse(ErrorCode.UNAUTHORIZED, message, details),
 
-  forbidden: (message?: string, details?: Record<string, any>) =>
+  forbidden: (message?: string, details?: Record<string, unknown>) =>
     createErrorResponse(ErrorCode.FORBIDDEN, message, details),
 
-  notFound: (resource?: string, details?: Record<string, any>) =>
+  notFound: (resource?: string, details?: Record<string, unknown>) =>
     createErrorResponse(
       ErrorCode.NOT_FOUND,
       resource ? `${resource} not found` : undefined,
       details
     ),
 
-  badRequest: (message?: string, details?: Record<string, any>) =>
+  badRequest: (message?: string, details?: Record<string, unknown>) =>
     createErrorResponse(ErrorCode.BAD_REQUEST, message, details),
 
-  validation: (message?: string, details?: Record<string, any>) =>
+  validation: (message?: string, details?: Record<string, unknown>) =>
     createErrorResponse(ErrorCode.VALIDATION_ERROR, message, details),
 
-  rateLimit: (message?: string, details?: Record<string, any>) =>
+  rateLimit: (message?: string, details?: Record<string, unknown>) =>
     createErrorResponse(ErrorCode.RATE_LIMIT_EXCEEDED, message, details),
 
-  internal: (message?: string, details?: Record<string, any>) =>
+  internal: (message?: string, details?: Record<string, unknown>) =>
     createErrorResponse(ErrorCode.INTERNAL_ERROR, message, details),
 
-  database: (message?: string, details?: Record<string, any>) =>
+  database: (message?: string, details?: Record<string, unknown>) =>
     createErrorResponse(ErrorCode.DATABASE_ERROR, message, details),
 
-  externalApi: (service?: string, details?: Record<string, any>) =>
+  externalApi: (service?: string, details?: Record<string, unknown>) =>
     createErrorResponse(
       ErrorCode.EXTERNAL_API_ERROR,
       service ? `${service} API error` : undefined,

@@ -34,8 +34,8 @@ describe("Sanitization Functions", () => {
 
     it("should handle empty input", () => {
       expect(sanitizeHtml("")).toBe("")
-      expect(sanitizeHtml(null as any)).toBe("")
-      expect(sanitizeHtml(undefined as any)).toBe("")
+      expect(sanitizeHtml(null as unknown as string)).toBe("")
+      expect(sanitizeHtml(undefined as unknown as string)).toBe("")
     })
   })
 
@@ -54,7 +54,7 @@ describe("Sanitization Functions", () => {
 
     it("should handle empty input", () => {
       expect(sanitizePlainText("")).toBe("")
-      expect(sanitizePlainText(null as any)).toBe("")
+      expect(sanitizePlainText(null as unknown as string)).toBe("")
     })
   })
 
@@ -97,7 +97,7 @@ describe("Sanitization Functions", () => {
 
     it("should handle empty input", () => {
       expect(sanitizeUrl("")).toBe("")
-      expect(sanitizeUrl(null as any)).toBe("")
+      expect(sanitizeUrl(null as unknown as string)).toBe("")
     })
   })
 
@@ -122,7 +122,7 @@ describe("Sanitization Functions", () => {
 
     it("should handle empty input", () => {
       expect(sanitizeFilename("")).toBe("unnamed")
-      expect(sanitizeFilename(null as any)).toBe("unnamed")
+      expect(sanitizeFilename(null as unknown as string)).toBe("unnamed")
     })
   })
 
@@ -144,7 +144,7 @@ describe("Sanitization Functions", () => {
 
     it("should handle empty input", () => {
       expect(sanitizeEmail("")).toBe("")
-      expect(sanitizeEmail(null as any)).toBe("")
+      expect(sanitizeEmail(null as unknown as string)).toBe("")
     })
   })
 
@@ -161,7 +161,7 @@ describe("Sanitization Functions", () => {
 
     it("should handle empty input", () => {
       expect(escapeHtml("")).toBe("")
-      expect(escapeHtml(null as any)).toBe("")
+      expect(escapeHtml(null as unknown as string)).toBe("")
     })
   })
 })

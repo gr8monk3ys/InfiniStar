@@ -26,7 +26,7 @@ describe("CORS Configuration", () => {
 
   describe("getAllowedOrigins", () => {
     it("should return localhost origins in development", () => {
-      ;(process.env as any).NODE_ENV = "development"
+      ;(process.env as Record<string, string>).NODE_ENV = "development"
       const origins = getAllowedOrigins()
       expect(origins).toContain("http://localhost:3000")
       expect(origins).toContain("http://localhost:3001")
@@ -34,14 +34,14 @@ describe("CORS Configuration", () => {
     })
 
     it("should return app URL in production", () => {
-      ;(process.env as any).NODE_ENV = "production"
+      ;(process.env as Record<string, string>).NODE_ENV = "production"
       process.env.NEXT_PUBLIC_APP_URL = "https://example.com"
       const origins = getAllowedOrigins()
       expect(origins).toEqual(["https://example.com"])
     })
 
     it("should return empty array if no app URL in production", () => {
-      ;(process.env as any).NODE_ENV = "production"
+      ;(process.env as Record<string, string>).NODE_ENV = "production"
       delete process.env.NEXT_PUBLIC_APP_URL
       const origins = getAllowedOrigins()
       expect(origins).toEqual([])
@@ -54,38 +54,38 @@ describe("CORS Configuration", () => {
     })
 
     it("should allow localhost in development", () => {
-      ;(process.env as any).NODE_ENV = "development"
+      ;(process.env as Record<string, string>).NODE_ENV = "development"
       expect(isOriginAllowed("http://localhost:3000")).toBe(true)
       expect(isOriginAllowed("http://localhost:3001")).toBe(true)
       expect(isOriginAllowed("http://127.0.0.1:3000")).toBe(true)
     })
 
     it("should allow .local domains in development", () => {
-      ;(process.env as any).NODE_ENV = "development"
+      ;(process.env as Record<string, string>).NODE_ENV = "development"
       expect(isOriginAllowed("http://myapp.local")).toBe(true)
     })
 
     it("should reject non-localhost origins in development", () => {
-      ;(process.env as any).NODE_ENV = "development"
+      ;(process.env as Record<string, string>).NODE_ENV = "development"
       expect(isOriginAllowed("https://malicious.com")).toBe(false)
     })
 
     it("should only allow configured app URL in production", () => {
-      ;(process.env as any).NODE_ENV = "production"
+      ;(process.env as Record<string, string>).NODE_ENV = "production"
       process.env.NEXT_PUBLIC_APP_URL = "https://example.com"
       expect(isOriginAllowed("https://example.com")).toBe(true)
       expect(isOriginAllowed("https://other.com")).toBe(false)
     })
 
     it("should handle invalid URLs gracefully", () => {
-      ;(process.env as any).NODE_ENV = "development"
+      ;(process.env as Record<string, string>).NODE_ENV = "development"
       expect(isOriginAllowed("not-a-valid-url")).toBe(false)
     })
   })
 
   describe("getCorsHeaders", () => {
     it("should return CORS headers for allowed origin", () => {
-      ;(process.env as any).NODE_ENV = "development"
+      ;(process.env as Record<string, string>).NODE_ENV = "development"
       const headers = getCorsHeaders("http://localhost:3000")
 
       expect(headers["Access-Control-Allow-Origin"]).toBe("http://localhost:3000")
@@ -98,7 +98,7 @@ describe("CORS Configuration", () => {
     })
 
     it("should return empty object for disallowed origin", () => {
-      ;(process.env as any).NODE_ENV = "production"
+      ;(process.env as Record<string, string>).NODE_ENV = "production"
       process.env.NEXT_PUBLIC_APP_URL = "https://example.com"
       const headers = getCorsHeaders("https://malicious.com")
 
@@ -106,7 +106,7 @@ describe("CORS Configuration", () => {
     })
 
     it("should respect custom options", () => {
-      ;(process.env as any).NODE_ENV = "development"
+      ;(process.env as Record<string, string>).NODE_ENV = "development"
       const headers = getCorsHeaders("http://localhost:3000", {
         allowCredentials: false,
         maxAge: 3600,
@@ -123,7 +123,7 @@ describe("CORS Configuration", () => {
     })
 
     it("should set max-age header", () => {
-      ;(process.env as any).NODE_ENV = "development"
+      ;(process.env as Record<string, string>).NODE_ENV = "development"
       const headers = getCorsHeaders("http://localhost:3000")
 
       expect(headers["Access-Control-Max-Age"]).toBe("86400")
@@ -131,18 +131,16 @@ describe("CORS Configuration", () => {
   })
 
   describe("handleCorsPreflightRequest", () => {
-    // Skip these tests as they require Response global which isn't available in test environment
-    // The function is tested indirectly through middleware integration tests
-    it.skip("should return 204 for allowed origin", () => {
-      ;(process.env as any).NODE_ENV = "development"
+    it("should return 204 for allowed origin", () => {
+      ;(process.env as Record<string, string>).NODE_ENV = "development"
       const response = handleCorsPreflightRequest("http://localhost:3000")
 
       expect(response.status).toBe(204)
       expect(response.headers.get("Access-Control-Allow-Origin")).toBe("http://localhost:3000")
     })
 
-    it.skip("should return 403 for disallowed origin", () => {
-      ;(process.env as any).NODE_ENV = "production"
+    it("should return 403 for disallowed origin", () => {
+      ;(process.env as Record<string, string>).NODE_ENV = "production"
       process.env.NEXT_PUBLIC_APP_URL = "https://example.com"
       const response = handleCorsPreflightRequest("https://malicious.com")
 

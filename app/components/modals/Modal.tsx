@@ -1,13 +1,13 @@
-'use client';
+"use client"
 
-import { Dialog, Transition } from '@headlessui/react';
-import { Fragment } from 'react';
-import { IoClose } from 'react-icons/io5';
+import { Fragment } from "react"
+import { Dialog, Transition } from "@headlessui/react"
+import { IoClose } from "react-icons/io5"
 
 interface ModalProps {
-  isOpen?: boolean;
-  onClose: () => void;
-  children: React.ReactNode;
+  isOpen?: boolean
+  onClose: () => void
+  children: React.ReactNode
 }
 
 const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children }) => {
@@ -55,7 +55,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children }) => {
         </div>
       </Dialog>
     </Transition.Root>
-  );
-};
+  )
+}
 
-export default Modal;
+export default Modal

@@ -39,7 +39,13 @@ const Avatar: FC<AvatarProps> = ({ user, className, showPresence = true }) => {
 
   return (
     <div className={`relative size-11 overflow-hidden rounded-full ${className}`}>
-      <Image fill src={user?.image || "/placeholder.jpg"} alt={altText} className="object-cover" />
+      <Image
+        fill
+        sizes="44px"
+        src={user?.image || "/placeholder.jpg"}
+        alt={altText}
+        className="object-cover"
+      />
       {showPresence && user && (
         <span
           className={`absolute bottom-0 right-0 block size-3 rounded-full ring-2 ring-white ${getPresenceColor()}`}

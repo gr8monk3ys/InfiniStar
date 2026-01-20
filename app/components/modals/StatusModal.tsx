@@ -62,8 +62,9 @@ const StatusModal: React.FC<StatusModalProps> = ({ isOpen, onClose }) => {
 
       toast.success("Status updated successfully")
       onClose()
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || "Failed to update status")
+    } catch (error: unknown) {
+      const axiosError = error as { response?: { data?: { error?: string } } }
+      toast.error(axiosError.response?.data?.error || "Failed to update status")
     } finally {
       setIsLoading(false)
     }
@@ -92,8 +93,9 @@ const StatusModal: React.FC<StatusModalProps> = ({ isOpen, onClose }) => {
       setCustomStatusEmoji("")
       toast.success("Status cleared")
       onClose()
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || "Failed to clear status")
+    } catch (error: unknown) {
+      const axiosError = error as { response?: { data?: { error?: string } } }
+      toast.error(axiosError.response?.data?.error || "Failed to clear status")
     } finally {
       setIsLoading(false)
     }

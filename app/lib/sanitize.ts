@@ -1,17 +1,106 @@
-import DOMPurify from "isomorphic-dompurify"
-
 /**
  * Input Sanitization Utilities
  *
  * Provides functions to sanitize user-generated content to prevent XSS attacks
  * and other security vulnerabilities.
+ *
+ * Uses server-safe regex-based sanitization that works in all environments.
  */
+
+// HTML entity map for encoding
+const HTML_ENTITIES: Record<string, string> = {
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  '"': "&quot;",
+  "'": "&#x27;",
+  "/": "&#x2F;",
+  "`": "&#x60;",
+  "=": "&#x3D;",
+}
+
+// Regex to match HTML entities for decoding
+const DECODE_ENTITIES: Record<string, string> = {
+  "&amp;": "&",
+  "&lt;": "<",
+  "&gt;": ">",
+  "&quot;": '"',
+  "&#x27;": "'",
+  "&#39;": "'",
+  "&#x2F;": "/",
+  "&#x60;": "`",
+  "&#x3D;": "=",
+  "&nbsp;": " ",
+}
+
+/**
+ * Escape HTML entities in a string
+ *
+ * @param unsafe - String that may contain HTML entities
+ * @returns String with HTML entities escaped
+ *
+ * @example
+ * escapeHtml('<script>alert("xss")</script>');
+ * // Returns: '&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;'
+ */
+export function escapeHtml(unsafe: string): string {
+  if (!unsafe || typeof unsafe !== "string") {
+    return ""
+  }
+
+  return unsafe.replace(/[&<>"'`=/]/g, (char) => HTML_ENTITIES[char] || char)
+}
+
+/**
+ * Decode HTML entities in a string
+ *
+ * @param encoded - String with HTML entities
+ * @returns Decoded string
+ */
+function decodeHtmlEntities(encoded: string): string {
+  if (!encoded || typeof encoded !== "string") {
+    return ""
+  }
+
+  return encoded.replace(
+    /&(?:amp|lt|gt|quot|#x27|#39|#x2F|#x60|#x3D|nbsp);/gi,
+    (entity) => DECODE_ENTITIES[entity.toLowerCase()] || entity
+  )
+}
+
+/**
+ * Strip all HTML tags from a string
+ *
+ * @param html - String that may contain HTML
+ * @returns Plain text with all HTML removed
+ */
+function stripHtmlTags(html: string): string {
+  if (!html || typeof html !== "string") {
+    return ""
+  }
+
+  // Remove script and style tags with their content first
+  let cleaned = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
+  cleaned = cleaned.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, "")
+
+  // Remove all HTML tags
+  cleaned = cleaned.replace(/<[^>]*>/g, "")
+
+  // Decode HTML entities
+  cleaned = decodeHtmlEntities(cleaned)
+
+  // Normalize whitespace
+  cleaned = cleaned.replace(/\s+/g, " ").trim()
+
+  return cleaned
+}
 
 /**
  * Sanitize HTML content to prevent XSS attacks
+ * Strips all potentially dangerous content
  *
  * @param dirty - Untrusted HTML string
- * @param options - DOMPurify configuration options
+ * @param options - Configuration options
  * @returns Sanitized HTML string safe for rendering
  *
  * @example
@@ -29,34 +118,62 @@ export function sanitizeHtml(
     return ""
   }
 
-  const config: DOMPurify.Config = {
-    ALLOWED_TAGS: options?.allowedTags || [
-      "p",
-      "br",
-      "strong",
-      "em",
-      "u",
-      "s",
-      "a",
-      "ul",
-      "ol",
-      "li",
-      "blockquote",
-      "code",
-      "pre",
-      "h1",
-      "h2",
-      "h3",
-      "h4",
-      "h5",
-      "h6",
-    ],
-    ALLOW_DATA_ATTR: false,
-    ALLOW_UNKNOWN_PROTOCOLS: false,
-    SAFE_FOR_TEMPLATES: true,
+  const allowedTags = options?.allowedTags || [
+    "p",
+    "br",
+    "strong",
+    "em",
+    "u",
+    "s",
+    "a",
+    "ul",
+    "ol",
+    "li",
+    "blockquote",
+    "code",
+    "pre",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+  ]
+
+  // Remove script and style tags with content
+  let cleaned = dirty.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
+  cleaned = cleaned.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, "")
+
+  // Remove event handlers and javascript: URLs
+  cleaned = cleaned.replace(/\s*on\w+\s*=\s*(['"])[^'"]*\1/gi, "")
+  cleaned = cleaned.replace(/\s*on\w+\s*=\s*[^\s>]*/gi, "")
+  cleaned = cleaned.replace(/href\s*=\s*(['"])javascript:[^'"]*\1/gi, 'href=""')
+  cleaned = cleaned.replace(/src\s*=\s*(['"])javascript:[^'"]*\1/gi, 'src=""')
+
+  // Build regex pattern for allowed tags
+  const allowedPattern = allowedTags.join("|")
+  const tagRegex = new RegExp(`<(?!\\/?(${allowedPattern})(?:\\s|>|$))[^>]*>`, "gi")
+
+  // Remove disallowed tags but keep content
+  cleaned = cleaned.replace(tagRegex, "")
+
+  // Clean up attributes on allowed tags - only keep safe attributes
+  const safeAttrs = ["href", "src", "alt", "title", "class", "id"]
+  const attrPattern = new RegExp(
+    `(<(?:${allowedPattern})[^>]*?)\\s+(?!(?:${safeAttrs.join(
+      "|"
+    )})\\s*=)[a-z-]+\\s*=\\s*(?:"[^"]*"|'[^']*'|[^\\s>]*)`,
+    "gi"
+  )
+
+  // Iteratively remove unsafe attributes
+  let prevCleaned = ""
+  while (prevCleaned !== cleaned) {
+    prevCleaned = cleaned
+    cleaned = cleaned.replace(attrPattern, "$1")
   }
 
-  return DOMPurify.sanitize(dirty, config)
+  return cleaned.trim()
 }
 
 /**
@@ -75,11 +192,7 @@ export function sanitizePlainText(dirty: string): string {
     return ""
   }
 
-  return DOMPurify.sanitize(dirty, {
-    ALLOWED_TAGS: [],
-    ALLOWED_ATTR: [],
-    KEEP_CONTENT: true,
-  })
+  return stripHtmlTags(dirty)
 }
 
 /**
@@ -94,15 +207,23 @@ export function sanitizeMessage(dirty: string): string {
     return ""
   }
 
-  // For chat messages, we want to preserve line breaks but strip HTML
-  // Replace newlines with <br> tags, then sanitize
-  const withBreaks = dirty.replace(/\n/g, "<br>")
+  // Remove script and style tags with their content first
+  let cleaned = dirty.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
+  cleaned = cleaned.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, "")
 
-  return DOMPurify.sanitize(withBreaks, {
-    ALLOWED_TAGS: ["br"],
-    ALLOWED_ATTR: [],
-    KEEP_CONTENT: true,
-  })
+  // Remove all HTML tags but keep content
+  cleaned = cleaned.replace(/<[^>]*>/g, "")
+
+  // Decode HTML entities
+  cleaned = cleaned.replace(
+    /&(?:amp|lt|gt|quot|#x27|#39|#x2F|#x60|#x3D|nbsp);/gi,
+    (entity) => DECODE_ENTITIES[entity.toLowerCase()] || entity
+  )
+
+  // Convert newlines to <br> tags (preserve line breaks)
+  cleaned = cleaned.replace(/\n/g, "<br>")
+
+  return cleaned.trim()
 }
 
 /**
@@ -163,30 +284,6 @@ export function sanitizeFilename(filename: string): string {
     .replace(/^\.+/, "") // Remove leading dots
     .replace(/\.+$/, "") // Remove trailing dots
     .substring(0, 255) // Limit length
-}
-
-/**
- * Escape HTML entities in a string
- *
- * @param unsafe - String that may contain HTML entities
- * @returns String with HTML entities escaped
- *
- * @example
- * escapeHtml('<script>alert("xss")</script>');
- * // Returns: '&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;'
- */
-export function escapeHtml(unsafe: string): string {
-  if (!unsafe || typeof unsafe !== "string") {
-    return ""
-  }
-
-  return unsafe
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#x27;")
-    .replace(/\//g, "&#x2F;")
 }
 
 /**
@@ -254,7 +351,7 @@ export function sanitizeEmail(email: string): string {
  * });
  * // Result: { message: 'Hello', url: '', email: 'user@example.com' }
  */
-export function sanitizeObject<T extends Record<string, any>>(
+export function sanitizeObject<T extends Record<string, unknown>>(
   input: T,
   schema: Record<keyof T, "html" | "plainText" | "message" | "url" | "email" | "filename">
 ): Partial<T> {

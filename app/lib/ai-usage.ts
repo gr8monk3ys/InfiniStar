@@ -114,7 +114,11 @@ export async function getUserUsageStats(
     conversationId?: string
   }
 ) {
-  const where: any = { userId }
+  const where: {
+    userId: string
+    conversationId?: string
+    createdAt?: { gte?: Date; lte?: Date }
+  } = { userId }
 
   if (options?.conversationId) {
     where.conversationId = options.conversationId

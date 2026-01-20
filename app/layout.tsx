@@ -4,6 +4,7 @@ import { type Metadata, type Viewport } from "next"
 import { siteConfig } from "@/config/site"
 import { fontSans } from "@/app/lib/fonts"
 import { cn } from "@/app/lib/utils"
+import { ThemeCustomProvider } from "@/app/components/providers/ThemeCustomProvider"
 import { SiteHeader } from "@/app/components/site-header"
 import { TailwindIndicator } from "@/app/components/tailwind-indicator"
 import { ThemeProvider } from "@/app/components/theme-provider"
@@ -43,11 +44,13 @@ export default function RootLayout({ children }: RootLayoutProps) {
           <AuthContext>
             <ToasterContext />
             <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-              <div className="relative flex min-h-screen flex-col">
-                <SiteHeader />
-                <div className="flex-1">{children}</div>
-              </div>
-              <TailwindIndicator />
+              <ThemeCustomProvider>
+                <div className="theme-transition-bg relative flex min-h-screen flex-col">
+                  <SiteHeader />
+                  <div className="flex-1">{children}</div>
+                </div>
+                <TailwindIndicator />
+              </ThemeCustomProvider>
             </ThemeProvider>
           </AuthContext>
         </body>

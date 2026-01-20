@@ -22,6 +22,12 @@ const getConversations = async (): Promise<FullConversationType[]> => {
       },
       include: {
         users: true,
+        // Include tags that belong to the current user
+        tags: {
+          where: {
+            userId: currentUser.id,
+          },
+        },
         // Only fetch the last message for performance
         messages: {
           include: {

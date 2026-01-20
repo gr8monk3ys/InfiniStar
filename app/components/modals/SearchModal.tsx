@@ -69,8 +69,9 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose, conversation
       if (response.data.messages.length === 0) {
         toast.success("No messages found")
       }
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || "Search failed")
+    } catch (error: unknown) {
+      const axiosError = error as { response?: { data?: { error?: string } } }
+      toast.error(axiosError.response?.data?.error || "Search failed")
       setResults([])
     } finally {
       setIsSearching(false)
@@ -93,13 +94,13 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose, conversation
     return conversation.users[0]?.name || "Unknown"
   }
 
-  const highlightMatch = (text: string, query: string) => {
-    if (!query) return text
+  const highlightMatch = (text: string, searchQuery: string) => {
+    if (!searchQuery) return text
 
-    const parts = text.split(new RegExp(`(${query})`, "gi"))
-    return parts.map((part, index) =>
-      part.toLowerCase() === query.toLowerCase() ? (
-        <mark key={`${part}-${index}`} className="bg-yellow-200 font-medium">
+    const parts = text.split(new RegExp(`(${searchQuery})`, "gi"))
+    return parts.map((part) =>
+      part.toLowerCase() === searchQuery.toLowerCase() ? (
+        <mark key={`highlight-${part}-${Math.random()}`} className="bg-yellow-200 font-medium">
           {part}
         </mark>
       ) : (

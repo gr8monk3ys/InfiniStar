@@ -16,6 +16,12 @@ const getConversationById = async (conversationId: string) => {
       },
       include: {
         users: true,
+        // Include tags that belong to the current user
+        tags: {
+          where: {
+            userId: currentUser.id,
+          },
+        },
       },
     })
 

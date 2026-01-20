@@ -2,18 +2,25 @@
 
 import { useCallback, useRef, useState } from "react"
 
+interface TokenUsage {
+  inputTokens: number
+  outputTokens: number
+  totalTokens: number
+}
+
 interface StreamChunk {
   type: "chunk" | "done" | "error"
   content?: string
   messageId?: string
   error?: string
+  usage?: TokenUsage
 }
 
 interface UseAiChatStreamOptions {
   conversationId: string
   csrfToken: string | null
   onChunk?: (chunk: string) => void
-  onComplete?: (messageId: string) => void
+  onComplete?: (messageId: string, usage?: TokenUsage) => void
   onError?: (error: string) => void
 }
 
@@ -38,6 +45,7 @@ export function useAiChatStream(options: UseAiChatStreamOptions) {
   const [isStreaming, setIsStreaming] = useState(false)
   const [streamingContent, setStreamingContent] = useState("")
   const [error, setError] = useState<string | null>(null)
+  const [lastUsage, setLastUsage] = useState<TokenUsage | null>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
 
   const sendMessage = useCallback(
@@ -111,27 +119,29 @@ export function useAiChatStream(options: UseAiChatStreamOptions) {
                   setStreamingContent((prev) => prev + parsed.content)
                   onChunk?.(parsed.content)
                 } else if (parsed.type === "done" && parsed.messageId) {
-                  onComplete?.(parsed.messageId)
+                  if (parsed.usage) {
+                    setLastUsage(parsed.usage)
+                  }
+                  onComplete?.(parsed.messageId, parsed.usage)
                 } else if (parsed.type === "error") {
                   const errMsg = parsed.error || "Streaming error"
                   setError(errMsg)
                   onError?.(errMsg)
                 }
-              } catch (parseError) {
-                console.error("Failed to parse SSE data:", data, parseError)
+              } catch {
+                // Silent failure for malformed SSE data - expected during stream processing
               }
             }
           }
         }
       } catch (err) {
         if (err instanceof Error) {
-          if (err.name === "AbortError") {
-            console.log("Stream aborted")
-          } else {
-            console.error("Streaming error:", err)
+          if (err.name !== "AbortError") {
+            // Only report non-abort errors to the UI
             setError(err.message)
             onError?.(err.message)
           }
+          // Abort errors are expected when user cancels - silently ignore
         }
       } finally {
         setIsStreaming(false)
@@ -151,6 +161,7 @@ export function useAiChatStream(options: UseAiChatStreamOptions) {
   const resetStream = useCallback(() => {
     setStreamingContent("")
     setError(null)
+    setLastUsage(null)
   }, [])
 
   return {
@@ -158,7 +169,11 @@ export function useAiChatStream(options: UseAiChatStreamOptions) {
     streamingContent,
     isStreaming,
     error,
+    lastUsage,
     cancelStream,
     resetStream,
   }
 }
+
+// Export type for use in other components
+export type { TokenUsage }
