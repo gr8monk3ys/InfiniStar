@@ -1,20 +1,31 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { type User } from "@prisma/client"
 import clsx from "clsx"
 import { useSession } from "next-auth/react"
-import { HiArchiveBox, HiArchiveBoxXMark, HiMagnifyingGlass, HiSparkles } from "react-icons/hi2"
+import { BsPinAngleFill } from "react-icons/bs"
+import {
+  HiArchiveBox,
+  HiArchiveBoxXMark,
+  HiMagnifyingGlass,
+  HiOutlineTag,
+  HiSparkles,
+  HiXMark,
+} from "react-icons/hi2"
 import { MdOutlineGroupAdd } from "react-icons/md"
 
 import { pusherClient } from "@/app/lib/pusher"
+import { useGlobalSearchContext } from "@/app/(dashboard)/dashboard/components/GlobalSearchProvider"
+import { useKeyboardShortcutsContext } from "@/app/(dashboard)/dashboard/components/KeyboardShortcutsProvider"
 import useActiveList from "@/app/(dashboard)/dashboard/hooks/useActiveList"
 import useConversation from "@/app/(dashboard)/dashboard/hooks/useConversation"
 import GroupChatModal from "@/app/components/modals/GroupChatModal"
 import PersonalitySelectionModal from "@/app/components/modals/PersonalitySelectionModal"
-import SearchModal from "@/app/components/modals/SearchModal"
-import { type FullConversationType } from "@/app/types"
+import { TagBadge } from "@/app/components/tags"
+import { useTags } from "@/app/hooks/useTags"
+import { TAG_COLORS, type FullConversationType, type TagColor } from "@/app/types"
 
 import ConversationBox from "./ConversationBox"
 
@@ -28,8 +39,19 @@ const ConversationList: React.FC<ConversationListProps> = ({ initialItems, user 
   const [items, setItems] = useState(initialItems)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isPersonalityModalOpen, setIsPersonalityModalOpen] = useState(false)
-  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false)
   const [showArchived, setShowArchived] = useState(false)
+  const [selectedTagId, setSelectedTagId] = useState<string | null>(null)
+  const [showTagFilter, setShowTagFilter] = useState(false)
+
+  // Fetch user's tags for filtering
+  const { tags: userTags } = useTags()
+
+  // Use global search context for the search modal
+  const { open: openSearch } = useGlobalSearchContext()
+
+  // Use keyboard shortcuts context for navigation
+  const { selectedConversationIndex, setSelectedConversationIndex, setOpenNewAIConversation } =
+    useKeyboardShortcutsContext()
 
   const router = useRouter()
   const session = useSession()
@@ -44,14 +66,22 @@ const ConversationList: React.FC<ConversationListProps> = ({ initialItems, user 
     return session.data?.user?.id
   }, [session.data?.user?.id])
 
-  // Filter and sort conversations based on archive and pin status
+  // Filter and sort conversations based on archive, pin, and tag status
   const filteredItems = useMemo(() => {
     if (!currentUserId) return items
 
-    // Filter by archive status
+    // Filter by archive status and tag
     const filtered = items.filter((item) => {
       const isArchived = item.archivedBy?.includes(currentUserId) || false
-      return showArchived ? isArchived : !isArchived
+      const archiveMatch = showArchived ? isArchived : !isArchived
+
+      // Filter by tag if one is selected
+      let tagMatch = true
+      if (selectedTagId) {
+        tagMatch = item.tags?.some((tag) => tag.id === selectedTagId) || false
+      }
+
+      return archiveMatch && tagMatch
     })
 
     // Sort: pinned conversations first, then by lastMessageAt
@@ -67,13 +97,29 @@ const ConversationList: React.FC<ConversationListProps> = ({ initialItems, user 
       // Pinned conversations come first
       return aIsPinned ? -1 : 1
     })
-  }, [items, currentUserId, showArchived])
+  }, [items, currentUserId, showArchived, selectedTagId])
+
+  // Get the selected tag object for display
+  const selectedTag = useMemo(() => {
+    if (!selectedTagId) return null
+    return userTags.find((t) => t.id === selectedTagId) || null
+  }, [selectedTagId, userTags])
 
   // Count archived conversations
   const archivedCount = useMemo(() => {
     if (!currentUserId) return 0
     return items.filter((item) => item.archivedBy?.includes(currentUserId)).length
   }, [items, currentUserId])
+
+  // Separate pinned and unpinned conversations
+  const { pinnedItems, unpinnedItems } = useMemo(() => {
+    if (!currentUserId) return { pinnedItems: [], unpinnedItems: filteredItems }
+
+    const pinned = filteredItems.filter((item) => item.pinnedBy?.includes(currentUserId))
+    const unpinned = filteredItems.filter((item) => !item.pinnedBy?.includes(currentUserId))
+
+    return { pinnedItems: pinned, unpinnedItems: unpinned }
+  }, [filteredItems, currentUserId])
 
   useEffect(() => {
     if (!pusherKey || !currentUserId) {
@@ -257,6 +303,39 @@ const ConversationList: React.FC<ConversationListProps> = ({ initialItems, user 
     }
   }, [pusherKey, currentUserId, router])
 
+  // Register the open new AI conversation callback
+  const openNewAIConversationHandler = useCallback(() => {
+    setIsPersonalityModalOpen(true)
+  }, [])
+
+  useEffect(() => {
+    setOpenNewAIConversation(openNewAIConversationHandler)
+  }, [setOpenNewAIConversation, openNewAIConversationHandler])
+
+  // Handle keyboard navigation - navigate to conversation when Enter is pressed
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      // Only handle Enter key when a conversation is selected
+      if (event.key === "Enter" && selectedConversationIndex >= 0) {
+        const targetConversation = filteredItems[selectedConversationIndex]
+        if (targetConversation) {
+          event.preventDefault()
+          router.push(`/dashboard/conversations/${targetConversation.id}`)
+        }
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown)
+    return () => document.removeEventListener("keydown", handleKeyDown)
+  }, [selectedConversationIndex, filteredItems, router])
+
+  // Clamp selected index when conversations list changes
+  useEffect(() => {
+    if (selectedConversationIndex >= filteredItems.length) {
+      setSelectedConversationIndex(Math.max(0, filteredItems.length - 1))
+    }
+  }, [filteredItems.length, selectedConversationIndex, setSelectedConversationIndex])
+
   return (
     <>
       <GroupChatModal user={user} isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
@@ -264,7 +343,6 @@ const ConversationList: React.FC<ConversationListProps> = ({ initialItems, user 
         isOpen={isPersonalityModalOpen}
         onClose={() => setIsPersonalityModalOpen(false)}
       />
-      <SearchModal isOpen={isSearchModalOpen} onClose={() => setIsSearchModalOpen(false)} />
       <aside
         className={clsx(
           `
@@ -277,33 +355,35 @@ const ConversationList: React.FC<ConversationListProps> = ({ initialItems, user 
         lg:block
         overflow-y-auto
         border-r
-        border-gray-200
+        border-border
+        bg-background
       `,
           isOpen ? "hidden" : "block w-full left-0"
         )}
       >
         <div className="px-5">
           <div className="mb-4 flex justify-between pt-4">
-            <div className="text-2xl font-bold text-neutral-800">
+            <div className="text-2xl font-bold text-foreground">
               {showArchived ? "Archived" : "Messages"}
             </div>
             <div className="flex gap-2">
-              <div
-                onClick={() => setIsSearchModalOpen(true)}
+              <button
+                onClick={openSearch}
                 className="
                   cursor-pointer
                   rounded-full
-                  bg-gray-100
+                  bg-secondary
                   p-2
-                  text-gray-600
+                  text-secondary-foreground
                   transition
                   hover:opacity-75
                 "
-                title="Search Messages"
+                title="Search (Cmd+K)"
+                aria-label="Search conversations and messages (Cmd+K or Ctrl+K)"
               >
                 <HiMagnifyingGlass size={20} />
-              </div>
-              <div
+              </button>
+              <button
                 onClick={() => setIsPersonalityModalOpen(true)}
                 className="
                   cursor-pointer
@@ -315,24 +395,26 @@ const ConversationList: React.FC<ConversationListProps> = ({ initialItems, user 
                   hover:opacity-75
                 "
                 title="New AI Chat"
+                aria-label="Start new AI Chat"
               >
                 <HiSparkles size={20} />
-              </div>
-              <div
+              </button>
+              <button
                 onClick={() => setIsModalOpen(true)}
                 className="
                   cursor-pointer
                   rounded-full
-                  bg-gray-100
+                  bg-secondary
                   p-2
-                  text-gray-600
+                  text-secondary-foreground
                   transition
                   hover:opacity-75
                 "
                 title="New Group Chat"
+                aria-label="Create new Group Chat"
               >
                 <MdOutlineGroupAdd size={20} />
-              </div>
+              </button>
             </div>
           </div>
 
@@ -340,28 +422,147 @@ const ConversationList: React.FC<ConversationListProps> = ({ initialItems, user 
           {archivedCount > 0 && (
             <button
               onClick={() => setShowArchived(!showArchived)}
-              className="mb-4 flex w-full items-center justify-between rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 text-sm text-gray-700 transition hover:bg-gray-100"
+              className="mb-4 flex w-full items-center justify-between rounded-lg border border-border bg-secondary px-4 py-2 text-sm text-secondary-foreground transition hover:bg-accent"
+              aria-label={
+                showArchived ? "Show active conversations" : "Show archived conversations"
+              }
             >
               <div className="flex items-center gap-2">
                 {showArchived ? <HiArchiveBoxXMark size={18} /> : <HiArchiveBox size={18} />}
                 <span>{showArchived ? "Show Active" : "Show Archived"}</span>
               </div>
               {!showArchived && archivedCount > 0 && (
-                <span className="rounded-full bg-gray-300 px-2 py-0.5 text-xs font-medium text-gray-700">
+                <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
                   {archivedCount}
                 </span>
               )}
             </button>
           )}
 
+          {/* Tag filter */}
+          {userTags.length > 0 && (
+            <div className="mb-4">
+              {/* Show selected tag or filter button */}
+              {selectedTag ? (
+                <div className="flex items-center justify-between rounded-lg border border-border bg-secondary px-3 py-2">
+                  <div className="flex items-center gap-2 text-sm">
+                    <HiOutlineTag size={16} className="text-muted-foreground" />
+                    <span className="text-muted-foreground">Filtering by:</span>
+                    <TagBadge tag={selectedTag} size="sm" />
+                  </div>
+                  <button
+                    onClick={() => setSelectedTagId(null)}
+                    className="rounded-full p-1 text-muted-foreground transition hover:bg-accent hover:text-foreground"
+                    aria-label="Clear tag filter"
+                    title="Clear filter"
+                  >
+                    <HiXMark size={16} />
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <button
+                    onClick={() => setShowTagFilter(!showTagFilter)}
+                    className="flex w-full items-center justify-between rounded-lg border border-border bg-secondary px-4 py-2 text-sm text-secondary-foreground transition hover:bg-accent"
+                    aria-label="Filter by tag"
+                    aria-expanded={showTagFilter}
+                  >
+                    <div className="flex items-center gap-2">
+                      <HiOutlineTag size={18} />
+                      <span>Filter by Tag</span>
+                    </div>
+                    <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                      {userTags.length}
+                    </span>
+                  </button>
+
+                  {/* Tag filter dropdown */}
+                  {showTagFilter && (
+                    <div className="mt-2 max-h-48 overflow-y-auto rounded-lg border border-border bg-card p-2">
+                      {userTags.map((tag) => {
+                        const colorScheme = TAG_COLORS[tag.color as TagColor] || TAG_COLORS.gray
+                        return (
+                          <button
+                            key={tag.id}
+                            onClick={() => {
+                              setSelectedTagId(tag.id)
+                              setShowTagFilter(false)
+                            }}
+                            className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition hover:bg-accent"
+                          >
+                            <span
+                              className={clsx(
+                                "size-3 rounded-full border",
+                                colorScheme.bg,
+                                colorScheme.border
+                              )}
+                            />
+                            <span className="truncate">{tag.name}</span>
+                            <span className="ml-auto text-xs text-muted-foreground">
+                              {tag.conversationCount}
+                            </span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           {filteredItems.length === 0 ? (
-            <div className="mt-8 text-center text-sm text-gray-500">
-              {showArchived ? "No archived conversations" : "No active conversations"}
+            <div className="mt-8 text-center text-sm text-muted-foreground">
+              {selectedTagId
+                ? `No conversations with this tag${showArchived ? " in archived" : ""}`
+                : showArchived
+                ? "No archived conversations"
+                : "No active conversations"}
             </div>
           ) : (
-            filteredItems.map((item) => (
-              <ConversationBox key={item.id} data={item} selected={conversationId === item.id} />
-            ))
+            <>
+              {/* Pinned conversations section */}
+              {pinnedItems.length > 0 && (
+                <div className="mb-2">
+                  <div className="mb-2 flex items-center gap-2 px-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                    <BsPinAngleFill size={12} className="text-primary" />
+                    <span>Pinned</span>
+                    <span className="text-xs text-muted-foreground">({pinnedItems.length}/5)</span>
+                  </div>
+                  {pinnedItems.map((item, index) => (
+                    <ConversationBox
+                      key={item.id}
+                      data={item}
+                      selected={conversationId === item.id}
+                      keyboardSelected={selectedConversationIndex === index}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {/* Regular conversations section */}
+              {unpinnedItems.length > 0 && (
+                <div>
+                  {pinnedItems.length > 0 && (
+                    <div className="mb-2 mt-4 px-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                      All Conversations
+                    </div>
+                  )}
+                  {unpinnedItems.map((item, index) => {
+                    // Account for pinned items in the index calculation
+                    const absoluteIndex = pinnedItems.length + index
+                    return (
+                      <ConversationBox
+                        key={item.id}
+                        data={item}
+                        selected={conversationId === item.id}
+                        keyboardSelected={selectedConversationIndex === absoluteIndex}
+                      />
+                    )
+                  })}
+                </div>
+              )}
+            </>
           )}
         </div>
       </aside>

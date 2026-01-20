@@ -4,9 +4,9 @@ import getConversationById from "@/app/actions/getConversationById"
 import getMessages from "@/app/actions/getMessages"
 import EmptyState from "@/app/components/EmptyState"
 
-import Body from "./components/Body"
-import Form from "./components/Form"
+import ConversationContainer from "./components/ConversationContainer"
 import Header from "./components/Header"
+import { TokenUsageWrapper } from "./components/TokenUsageWrapper"
 
 export const metadata: Metadata = {
   title: "Chat",
@@ -36,8 +36,8 @@ export default async function ChatPage({
     <div className="h-full lg:pl-80">
       <div className="flex h-full flex-col">
         <Header conversation={{ ...conversation, messages }} />
-        <Body initialMessages={messages} />
-        <Form isAI={conversation.isAI || false} />
+        {conversation.isAI && <TokenUsageWrapper conversationId={conversationId} />}
+        <ConversationContainer initialMessages={messages} isAI={conversation.isAI || false} />
       </div>
     </div>
   )

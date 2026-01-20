@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { signIn } from "next-auth/react"
 import { useForm } from "react-hook-form"
 import { toast } from "react-hot-toast"
@@ -13,7 +13,10 @@ interface LoginFormData {
 
 const LoginPage = () => {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [isLoading, setIsLoading] = useState(false)
+
+  const returnUrl = searchParams.get("returnUrl") || "/dashboard"
 
   const {
     register,
@@ -35,8 +38,22 @@ const LoginPage = () => {
     })
       .then((callback) => {
         if (callback?.error) {
-          // Show the actual error message from the server
           const errorMessage = callback.error
+
+          // Check if 2FA is required
+          if (errorMessage.startsWith("2FA_REQUIRED:")) {
+            const twoFactorToken = errorMessage.replace("2FA_REQUIRED:", "")
+            // Redirect to 2FA verification page
+            const params = new URLSearchParams({
+              email: data.email,
+              token: twoFactorToken,
+              returnUrl,
+            })
+            router.push(`/login/2fa?${params.toString()}`)
+            return
+          }
+
+          // Show the actual error message from the server
           toast.error(errorMessage)
 
           // If the error is about email verification, show a link to resend
@@ -65,7 +82,7 @@ const LoginPage = () => {
 
         if (callback?.ok) {
           toast.success("Logged in!")
-          router.push("/dashboard")
+          router.push(returnUrl)
         }
       })
       .finally(() => setIsLoading(false))

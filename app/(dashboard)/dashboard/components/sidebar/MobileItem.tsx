@@ -22,20 +22,20 @@ const MobileItem: React.FC<MobileItemProps> = ({ href, icon: Icon, active, onCli
       href={href}
       className={clsx(
         `
-        group 
-        flex 
-        gap-x-3 
-        text-sm 
-        leading-6 
-        font-semibold 
-        w-full 
-        justify-center 
-        p-4 
-        text-gray-500 
-        hover:text-black 
-        hover:bg-gray-100
+        group
+        flex
+        gap-x-3
+        text-sm
+        leading-6
+        font-semibold
+        w-full
+        justify-center
+        p-4
+        text-muted-foreground
+        hover:text-foreground
+        hover:bg-accent
       `,
-        active && "bg-gray-100 text-black"
+        active && "bg-accent text-foreground"
       )}
     >
       <Icon className="size-6" aria-hidden="true" />

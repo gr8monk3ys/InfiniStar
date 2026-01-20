@@ -1,6 +1,6 @@
 "use client"
 
-import { memo, useState } from "react"
+import { memo, useCallback, useMemo, useState } from "react"
 import Image from "next/image"
 import axios, { isAxiosError } from "axios"
 import clsx from "clsx"
@@ -8,6 +8,7 @@ import { format } from "date-fns"
 import { useSession } from "next-auth/react"
 import toast from "react-hot-toast"
 import {
+  HiArrowPath,
   HiArrowUturnLeft,
   HiEllipsisVertical,
   HiFaceSmile,
@@ -15,6 +16,7 @@ import {
   HiTrash,
 } from "react-icons/hi2"
 
+import { MarkdownRenderer } from "@/app/components/ui/MarkdownRenderer"
 import Avatar from "@/app/components/Avatar"
 import { type FullMessageType } from "@/app/types"
 
@@ -25,9 +27,19 @@ interface MessageBoxProps {
   data: FullMessageType
   isLast?: boolean
   onReply?: (message: FullMessageType) => void
+  onRegenerate?: (messageId: string) => void
+  isRegenerating?: boolean
+  regeneratingMessageId?: string | null
 }
 
-const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({ data, isLast, onReply }) {
+const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
+  data,
+  isLast,
+  onReply,
+  onRegenerate,
+  isRegenerating = false,
+  regeneratingMessageId = null,
+}) {
   const session = useSession()
   const [imageModalOpen, setImageModalOpen] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
@@ -48,13 +60,26 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({ data, i
   const avatar = clsx(isOwn && "order-2")
   const body = clsx("flex flex-col gap-2", isOwn && "items-end")
 
+  // Check if message body contains code blocks (for AI messages)
+  const hasCodeBlocks = useMemo(() => {
+    if (!data.body) return false
+    return data.body.includes("```") || data.body.includes("`")
+  }, [data.body])
+
+  // AI messages with code blocks get special styling
+  const isAiWithCode = data.isAI && hasCodeBlocks
+
   const message = clsx(
     "text-sm w-fit overflow-hidden",
-    isOwn ? "bg-sky-500 text-white" : "bg-gray-100",
-    data.image ? "rounded-md p-0" : "rounded-full py-2 px-3"
+    isOwn ? "bg-sky-500 text-white" : "bg-secondary text-secondary-foreground",
+    data.image
+      ? "rounded-md p-0"
+      : isAiWithCode
+      ? "rounded-lg py-2 px-3 max-w-full sm:max-w-[80%] md:max-w-[70%]"
+      : "rounded-full py-2 px-3"
   )
 
-  const handleEdit = async () => {
+  const handleEdit = useCallback(async () => {
     if (!editedBody.trim() || editedBody === data.body) {
       setIsEditing(false)
       return
@@ -75,9 +100,9 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({ data, i
       toast.error(message)
       setEditedBody(data.body || "")
     }
-  }
+  }, [editedBody, data.body, data.id])
 
-  const handleDelete = async () => {
+  const handleDelete = useCallback(async () => {
     if (!confirm("Are you sure you want to delete this message?")) {
       return
     }
@@ -96,25 +121,28 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({ data, i
     } finally {
       setIsDeleting(false)
     }
-  }
+  }, [data.id])
 
-  const handleCancelEdit = () => {
+  const handleCancelEdit = useCallback(() => {
     setEditedBody(data.body || "")
     setIsEditing(false)
-  }
+  }, [data.body])
 
-  const handleReaction = async (emoji: string) => {
-    try {
-      await axios.post(`/api/messages/${data.id}/react`, { emoji })
-      setShowReactionPicker(false)
-    } catch (error) {
-      const message =
-        isAxiosError(error) && error.response?.data?.error
-          ? error.response.data.error
-          : "Failed to add reaction"
-      toast.error(message)
-    }
-  }
+  const handleReaction = useCallback(
+    async (emoji: string) => {
+      try {
+        await axios.post(`/api/messages/${data.id}/react`, { emoji })
+        setShowReactionPicker(false)
+      } catch (error) {
+        const message =
+          isAxiosError(error) && error.response?.data?.error
+            ? error.response.data.error
+            : "Failed to add reaction"
+        toast.error(message)
+      }
+    },
+    [data.id]
+  )
 
   // Parse reactions from JSON
   const reactions = (data.reactions as Record<string, string[]>) || {}
@@ -129,10 +157,12 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({ data, i
         </div>
         <div className={body}>
           <div className="flex items-center gap-1">
-            <div className="text-sm text-gray-500">{data.sender.name}</div>
-            <div className="text-xs text-gray-400">{format(new Date(data.createdAt), "p")}</div>
+            <div className="text-sm text-muted-foreground">{data.sender.name}</div>
+            <div className="text-xs text-muted-foreground">
+              {format(new Date(data.createdAt), "p")}
+            </div>
           </div>
-          <div className="rounded-full bg-gray-100 px-3 py-2 text-sm italic text-gray-500">
+          <div className="rounded-full bg-secondary px-3 py-2 text-sm italic text-muted-foreground">
             This message was deleted
           </div>
         </div>
@@ -147,16 +177,16 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({ data, i
       </div>
       <div className={body}>
         <div className="flex items-center gap-1">
-          <div className="text-sm text-gray-500">{data.sender.name}</div>
+          <div className="text-sm text-muted-foreground">{data.sender.name}</div>
           <div
-            className="text-xs text-gray-400"
+            className="text-xs text-muted-foreground"
             aria-label={`Sent at ${format(new Date(data.createdAt), "p")}`}
           >
             {format(new Date(data.createdAt), "p")}
           </div>
           {data.editedAt && (
             <div
-              className="text-xs italic text-gray-400"
+              className="text-xs italic text-muted-foreground"
               title={`Edited ${format(new Date(data.editedAt), "PPp")}`}
             >
               (edited)
@@ -170,7 +200,7 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({ data, i
               <textarea
                 value={editedBody}
                 onChange={(e) => setEditedBody(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 p-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                className="w-full rounded-lg border border-border bg-background p-2 text-sm text-foreground focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
                 rows={3}
                 autoFocus
                 onKeyDown={(e) => {
@@ -192,7 +222,7 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({ data, i
                 </button>
                 <button
                   onClick={handleCancelEdit}
-                  className="rounded border border-gray-300 px-3 py-1 text-sm text-gray-700 hover:bg-gray-50"
+                  className="rounded border border-border px-3 py-1 text-sm text-secondary-foreground hover:bg-accent"
                 >
                   Cancel
                 </button>
@@ -237,6 +267,8 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({ data, i
                     }}
                     aria-label="Click to view full-size image"
                   />
+                ) : data.isAI && data.body ? (
+                  <MarkdownRenderer content={data.body} />
                 ) : (
                   <div>{data.body}</div>
                 )}
@@ -246,7 +278,7 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({ data, i
               {onReply && !data.isDeleted && (
                 <button
                   onClick={() => onReply(data)}
-                  className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                  className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
                   aria-label="Reply to message"
                   title="Reply"
                 >
@@ -258,19 +290,19 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({ data, i
               <div className="relative">
                 <button
                   onClick={() => setShowReactionPicker(!showReactionPicker)}
-                  className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                  className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
                   aria-label="Add reaction"
                 >
                   <HiFaceSmile size={16} />
                 </button>
 
                 {showReactionPicker && (
-                  <div className="absolute left-0 z-10 mt-1 flex gap-1 rounded-md border border-gray-200 bg-white p-2 shadow-lg">
+                  <div className="absolute left-0 z-10 mt-1 flex gap-1 rounded-md border border-border bg-popover p-2 shadow-lg">
                     {commonEmojis.map((emoji) => (
                       <button
                         key={emoji}
                         onClick={() => handleReaction(emoji)}
-                        className="rounded p-1 text-xl hover:bg-gray-100"
+                        className="rounded p-1 text-xl hover:bg-accent"
                         title={`React with ${emoji}`}
                       >
                         {emoji}
@@ -280,25 +312,47 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({ data, i
                 )}
               </div>
 
+              {/* Regenerate button - only show for AI messages */}
+              {data.isAI && onRegenerate && !data.isDeleted && (
+                <button
+                  onClick={() => onRegenerate(data.id)}
+                  disabled={isRegenerating}
+                  className={clsx(
+                    "rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground",
+                    isRegenerating &&
+                      regeneratingMessageId === data.id &&
+                      "animate-spin text-purple-500"
+                  )}
+                  aria-label="Regenerate AI response"
+                  title={
+                    isRegenerating && regeneratingMessageId === data.id
+                      ? "Regenerating..."
+                      : "Regenerate response"
+                  }
+                >
+                  <HiArrowPath size={16} />
+                </button>
+              )}
+
               {/* Edit/Delete menu - only show for own messages and not AI messages */}
               {isOwn && !data.isAI && !data.image && (
                 <div className="relative">
                   <button
                     onClick={() => setShowMenu(!showMenu)}
-                    className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                    className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
                     aria-label="Message options"
                   >
                     <HiEllipsisVertical size={16} />
                   </button>
 
                   {showMenu && (
-                    <div className="absolute right-0 z-10 mt-1 w-32 rounded-md border border-gray-200 bg-white shadow-lg">
+                    <div className="absolute right-0 z-10 mt-1 w-32 rounded-md border border-border bg-popover shadow-lg">
                       <button
                         onClick={() => {
                           setIsEditing(true)
                           setShowMenu(false)
                         }}
-                        className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                        className="flex w-full items-center gap-2 px-3 py-2 text-sm text-popover-foreground hover:bg-accent"
                         disabled={isDeleting}
                       >
                         <HiPencil size={16} />
@@ -306,7 +360,7 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({ data, i
                       </button>
                       <button
                         onClick={handleDelete}
-                        className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50"
+                        className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-100 dark:hover:bg-red-900/20"
                         disabled={isDeleting}
                       >
                         <HiTrash size={16} />
@@ -331,28 +385,20 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({ data, i
                   onClick={() => handleReaction(emoji)}
                   className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-sm transition ${
                     hasReacted
-                      ? "border-sky-500 bg-sky-50"
-                      : "border-gray-200 bg-white hover:bg-gray-50"
+                      ? "border-sky-500 bg-sky-100 dark:bg-sky-900/30"
+                      : "border-border bg-background hover:bg-accent"
                   }`}
                   title={`${userIds.length} reaction${userIds.length > 1 ? "s" : ""}`}
                 >
                   <span>{emoji}</span>
-                  <span className="text-xs text-gray-600">{userIds.length}</span>
+                  <span className="text-xs text-muted-foreground">{userIds.length}</span>
                 </button>
               )
             })}
           </div>
         )}
         {isLast && isOwn && seenList.length > 0 && (
-          <div
-            className="
-              text-xs 
-              font-light 
-              text-gray-500
-            "
-          >
-            {`Seen by ${seenList}`}
-          </div>
+          <div className="text-xs font-light text-muted-foreground">{`Seen by ${seenList}`}</div>
         )}
       </div>
     </div>

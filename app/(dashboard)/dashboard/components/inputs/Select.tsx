@@ -1,18 +1,23 @@
 "use client"
 
-import ReactSelect from "react-select"
+import ReactSelect, { type MultiValue } from "react-select"
 
-import { type SelectProps } from "@/app/types"
+import { type SelectOption, type SelectProps } from "@/app/types"
 
 const Select: React.FC<SelectProps> = ({ label, value, onChange, options, disabled }) => {
+  const handleChange = (newValue: MultiValue<SelectOption>) => {
+    // Convert readonly array to mutable array for the callback
+    onChange([...newValue])
+  }
+
   return (
     <div className="z-[100]">
       <label
         className="
-          block 
-          text-sm 
-          font-medium 
-          leading-6 
+          block
+          text-sm
+          font-medium
+          leading-6
           text-gray-900
         "
       >
@@ -22,7 +27,7 @@ const Select: React.FC<SelectProps> = ({ label, value, onChange, options, disabl
         <ReactSelect
           isDisabled={disabled}
           value={value}
-          onChange={onChange}
+          onChange={handleChange}
           isMulti
           options={options}
           menuPortalTarget={document.body}

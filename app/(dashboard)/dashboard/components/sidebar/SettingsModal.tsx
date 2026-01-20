@@ -1,11 +1,12 @@
 "use client"
 
 import React, { useState } from "react"
+import dynamic from "next/dynamic"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { type User } from "@prisma/client"
 import axios from "axios"
-import { CldUploadButton, type CloudinaryUploadWidgetResults } from "next-cloudinary"
+import type { CloudinaryUploadWidgetResults } from "next-cloudinary"
 import { useForm, type FieldValues, type SubmitHandler } from "react-hook-form"
 import { toast } from "react-hot-toast"
 
@@ -14,6 +15,12 @@ import StatusModal from "@/app/components/modals/StatusModal"
 
 import Input from "../inputs/Input"
 import Modal from "../modals/Modal"
+
+// Dynamic import to avoid build-time Cloudinary validation
+const CldUploadButton = dynamic(
+  () => import("next-cloudinary").then((mod) => mod.CldUploadButton),
+  { ssr: false }
+)
 
 interface SettingsModalProps {
   isOpen?: boolean
