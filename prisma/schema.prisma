@@ -6,12 +6,11 @@ generator client {
 }
 
 datasource db {
-  provider = "mongodb"
-  url      = env("DATABASE_URL")
+  provider = "postgresql"
 }
 
 model User {
-  id             String    @id @default(auto()) @map("_id") @db.ObjectId
+  id             String    @id @default(uuid()) @db.Uuid
   name           String?
   email          String?   @unique
   emailVerified  DateTime?
@@ -56,13 +55,13 @@ model User {
   notifyOnNewMessage Boolean  @default(true) // Notify on new messages
   notifyOnMention    Boolean  @default(true) // Notify when mentioned
   notifyOnAIComplete Boolean  @default(true) // Notify when AI response completes
-  mutedConversations String[] @db.ObjectId // Conversation IDs to mute notifications for
+  mutedConversations String[] // Conversation IDs to mute notifications for
 
   // Auto-delete settings for conversations
   autoDeleteEnabled     Boolean   @default(false) // Whether auto-delete is enabled
   autoDeleteAfterDays   Int       @default(30) // Days after which to delete: 7, 14, 30, 60, 90, 180, 365
   autoDeleteArchived    Boolean   @default(false) // Whether to include archived conversations
-  autoDeleteExcludeTags String[]  @db.ObjectId // Tag IDs to exclude from auto-deletion
+  autoDeleteExcludeTags String[]  // Tag IDs to exclude from auto-deletion
   lastAutoDeleteRun     DateTime? // When auto-delete was last run
 
   stripeCustomerId       String?   @unique @map("stripe_customer_id")
@@ -70,11 +69,8 @@ model User {
   stripePriceId          String?   @map("stripe_price_id")
   stripeCurrentPeriodEnd DateTime? @map("stripe_current_period_end")
 
-  conversationIds String[]       @db.ObjectId
-  conversations   Conversation[] @relation(fields: [conversationIds], references: [id])
-
-  seenMessageIds String[]  @db.ObjectId
-  seenMessages   Message[] @relation("Seen", fields: [seenMessageIds], references: [id])
+  conversations Conversation[] @relation("UserConversations")
+  seenMessages  Message[]      @relation("Seen")
 
   messages Message[]
 
@@ -84,22 +80,26 @@ model User {
   tags             Tag[]
   aiMemories       AIMemory[]
   messageTemplates MessageTemplate[]
+  characters       Character[]
+  blocksInitiated  UserBlock[] @relation("BlocksInitiated")
+  blocksReceived   UserBlock[] @relation("BlocksReceived")
+  reportsFiled     ContentReport[]
 
   @@map("users")
 }
 
 model Account {
-  id                String  @id @default(auto()) @map("_id") @db.ObjectId
-  userId            String  @db.ObjectId
+  id                String  @id @default(uuid()) @db.Uuid
+  userId            String  @db.Uuid
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String? @db.String
-  access_token      String? @db.String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String? @db.String
+  id_token          String? @db.Text
   session_state     String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -109,9 +109,9 @@ model Account {
 }
 
 model Session {
-  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  id           String   @id @default(uuid()) @db.Uuid
   sessionToken String   @unique
-  userId       String   @db.ObjectId
+  userId       String   @db.Uuid
   expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -119,7 +119,7 @@ model Session {
 }
 
 model Conversation {
-  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  id             String   @id @default(uuid()) @db.Uuid
   createdAt      DateTime @default(now())
   lastMessageAt  DateTime @default(now())
   name           String?
@@ -128,17 +128,19 @@ model Conversation {
   aiModel        String? // e.g., "claude-3-5-sonnet-20241022"
   aiSystemPrompt String? // Custom system prompt for AI personality
   aiPersonality  String? // Preset personality: "assistant", "creative", "technical", "friendly", "professional", "custom"
+  characterId    String?  @db.Uuid
+  character      Character? @relation(fields: [characterId], references: [id], onDelete: SetNull)
 
   // Archiving functionality
-  archivedBy String[]  @db.ObjectId // Array of user IDs who archived this conversation
+  archivedBy String[] // Array of user IDs who archived this conversation
   archivedAt DateTime? // When conversation was first archived (by any user)
 
   // Pinning functionality
-  pinnedBy String[]  @db.ObjectId // Array of user IDs who pinned this conversation
+  pinnedBy String[] // Array of user IDs who pinned this conversation
   pinnedAt DateTime? // When conversation was first pinned (by any user)
 
   // Muting functionality
-  mutedBy String[]  @db.ObjectId // Array of user IDs who muted this conversation
+  mutedBy String[] // Array of user IDs who muted this conversation
   mutedAt DateTime? // When conversation was first muted (by any user)
 
   // Summary functionality
@@ -146,15 +148,12 @@ model Conversation {
   summaryGeneratedAt  DateTime? // When the summary was last generated
   summaryMessageCount Int? // Number of messages when summary was generated (for cache invalidation)
 
-  messageIds String[]  @db.ObjectId
-  messages   Message[]
+  messages Message[]
 
-  userIds String[] @db.ObjectId
-  users   User[]   @relation(fields: [userIds], references: [id])
+  users User[] @relation("UserConversations")
 
   // Tags for organizing conversations
-  tagIds String[] @db.ObjectId
-  tags   Tag[]    @relation(fields: [tagIds], references: [id])
+  tags Tag[] @relation("ConversationTags")
 
   // Shares for conversation sharing
   shares ConversationShare[]
@@ -162,11 +161,44 @@ model Conversation {
   // Performance indexes for search
   @@index([lastMessageAt])
   @@index([isAI])
+  @@index([characterId])
   @@map("conversations")
 }
 
+model Character {
+  id          String   @id @default(uuid()) @db.Uuid
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  name        String
+  slug        String   @unique
+  tagline     String?
+  description String?
+  greeting    String?
+  systemPrompt String
+  avatarUrl   String?
+  coverImageUrl String?
+  tags        String[] @default([])
+
+  isPublic    Boolean  @default(false)
+  featured    Boolean  @default(false)
+  viewCount   Int      @default(0)
+  usageCount  Int      @default(0)
+  lastUsedAt  DateTime?
+
+  createdById String   @db.Uuid
+  createdBy   User     @relation(fields: [createdById], references: [id], onDelete: Cascade)
+
+  conversations Conversation[]
+
+  @@index([isPublic, featured])
+  @@index([createdAt])
+  @@index([usageCount])
+  @@map("characters")
+}
+
 model Message {
-  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  id        String    @id @default(uuid()) @db.Uuid
   body      String?
   image     String?
   createdAt DateTime  @default(now())
@@ -184,17 +216,16 @@ model Message {
   reactions Json? @default("{}")
 
   // Reply/threading support
-  replyToId String?   @db.ObjectId
+  replyToId String?   @db.Uuid
   replyTo   Message?  @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   replies   Message[] @relation("MessageReplies")
 
-  seenIds String[] @db.ObjectId
-  seen    User[]   @relation("Seen", fields: [seenIds], references: [id])
+  seen User[] @relation("Seen")
 
-  conversationId String       @db.ObjectId
+  conversationId String       @db.Uuid
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
-  senderId String @db.ObjectId
+  senderId String @db.Uuid
   sender   User   @relation(fields: [senderId], references: [id], onDelete: Cascade)
 
   // Performance indexes for search and pagination
@@ -204,9 +235,9 @@ model Message {
 }
 
 model UserSession {
-  id           String @id @default(auto()) @map("_id") @db.ObjectId
+  id           String @id @default(uuid()) @db.Uuid
   sessionToken String @unique // JWT session identifier
-  userId       String @db.ObjectId
+  userId       String @db.Uuid
 
   // Device and browser information
   deviceType String? // "desktop", "mobile", "tablet"
@@ -232,12 +263,12 @@ model UserSession {
 }
 
 model AiUsage {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  id        String   @id @default(uuid()) @db.Uuid
   createdAt DateTime @default(now())
 
   // User and conversation references
-  userId         String @db.ObjectId
-  conversationId String @db.ObjectId
+  userId         String @db.Uuid
+  conversationId String @db.Uuid
 
   // Model information
   model String // e.g., "claude-3-5-sonnet-20241022"
@@ -263,19 +294,18 @@ model AiUsage {
 }
 
 model Tag {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  id        String   @id @default(uuid()) @db.Uuid
   name      String // Tag name (e.g., "Work", "Personal", "Important")
   color     String // Color code (e.g., "red", "blue", "green")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // User who owns this tag (tags are user-specific)
-  userId String @db.ObjectId
+  userId String @db.Uuid
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // Many-to-many relationship with conversations
-  conversationIds String[]       @db.ObjectId
-  conversations   Conversation[] @relation(fields: [conversationIds], references: [id])
+  conversations Conversation[] @relation("ConversationTags")
 
   @@unique([userId, name]) // Unique tag name per user
   @@index([userId])
@@ -283,12 +313,12 @@ model Tag {
 }
 
 model AIMemory {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  id        String   @id @default(uuid()) @db.Uuid
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // User who owns this memory
-  userId String @db.ObjectId
+  userId String @db.Uuid
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // Memory identifier (e.g., "user_preferences", "project_context", "favorite_color")
@@ -307,7 +337,7 @@ model AIMemory {
   expiresAt DateTime?
 
   // Source context - which conversation triggered this memory
-  sourceConversationId String? @db.ObjectId
+  sourceConversationId String? @db.Uuid
 
   @@unique([userId, key]) // Each user can only have one memory per key
   @@index([userId])
@@ -317,12 +347,12 @@ model AIMemory {
 }
 
 model MessageTemplate {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  id        String   @id @default(uuid()) @db.Uuid
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // User who owns this template
-  userId String @db.ObjectId
+  userId String @db.Uuid
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // Template details
@@ -353,16 +383,16 @@ enum MemoryCategory {
 
 // Conversation sharing functionality
 model ConversationShare {
-  id             String    @id @default(auto()) @map("_id") @db.ObjectId
+  id             String    @id @default(uuid()) @db.Uuid
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
   // Relation to conversation
-  conversationId String       @db.ObjectId
+  conversationId String       @db.Uuid
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
   // User who created the share
-  createdById String @db.ObjectId
+  createdById String @db.Uuid
 
   // Share token for public link sharing (cryptographically secure)
   shareToken String @unique
@@ -405,4 +435,68 @@ enum ShareType {
 enum SharePermission {
   VIEW        // Read-only access to conversation
   PARTICIPATE // Can send messages in conversation
+}
+
+model UserBlock {
+  id         String   @id @default(uuid()) @db.Uuid
+  createdAt  DateTime @default(now())
+  reason     String?
+
+  blockerId  String @db.Uuid
+  blockedId  String @db.Uuid
+
+  blocker User @relation("BlocksInitiated", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked User @relation("BlocksReceived", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerId, blockedId])
+  @@index([blockerId])
+  @@index([blockedId])
+  @@map("user_blocks")
+}
+
+model ContentReport {
+  id          String   @id @default(uuid()) @db.Uuid
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  reporterId  String @db.Uuid
+  reporter    User   @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+
+  targetType  ReportTargetType
+  targetId    String
+  reason      ReportReason
+  details     String?
+  status      ReportStatus @default(OPEN)
+
+  resolvedAt  DateTime?
+  resolvedBy  String?
+
+  @@index([reporterId])
+  @@index([targetType, targetId])
+  @@index([status])
+  @@map("content_reports")
+}
+
+enum ReportTargetType {
+  USER
+  MESSAGE
+  CONVERSATION
+  CHARACTER
+}
+
+enum ReportReason {
+  HARASSMENT
+  HATE
+  SEXUAL
+  VIOLENCE
+  SPAM
+  COPYRIGHT
+  OTHER
+}
+
+enum ReportStatus {
+  OPEN
+  REVIEWING
+  RESOLVED
+  DISMISSED
 }

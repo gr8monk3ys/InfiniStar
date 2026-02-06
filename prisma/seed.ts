@@ -1,10 +1,10 @@
 import { PrismaClient } from "@prisma/client"
-import bcrypt from "bcrypt"
+import bcrypt from "bcryptjs"
 
 const prisma = new PrismaClient()
 
 async function main() {
-  console.log("🌱 Starting database seed...")
+  console.warn("🌱 Starting database seed...")
 
   // Create test users
   const password = await bcrypt.hash("password123", 12)
@@ -42,7 +42,7 @@ async function main() {
     },
   })
 
-  console.log("✅ Created test users")
+  console.warn("✅ Created test users")
 
   // Create 1-on-1 conversation between Alice and Bob
   const conversation1 = await prisma.conversation.create({
@@ -87,7 +87,7 @@ async function main() {
     },
   })
 
-  console.log("✅ Created 1-on-1 conversation with messages")
+  console.warn("✅ Created 1-on-1 conversation with messages")
 
   // Create group conversation
   const groupConversation = await prisma.conversation.create({
@@ -133,7 +133,7 @@ async function main() {
     },
   })
 
-  console.log("✅ Created group conversation with messages")
+  console.warn("✅ Created group conversation with messages")
 
   // Create AI conversation for Alice
   const aiConversation = await prisma.conversation.create({
@@ -183,14 +183,14 @@ async function main() {
     },
   })
 
-  console.log("✅ Created AI conversation with sample messages")
+  console.warn("✅ Created AI conversation with sample messages")
 
-  console.log("\n🎉 Seeding completed successfully!")
-  console.log("\nTest accounts:")
-  console.log("  📧 alice@example.com / password123")
-  console.log("  📧 bob@example.com / password123")
-  console.log("  📧 charlie@example.com / password123")
-  console.log("\nYou can now log in with any of these accounts.")
+  console.warn("\n🎉 Seeding completed successfully!")
+  console.warn("\nTest accounts:")
+  console.warn("  📧 alice@example.com / password123")
+  console.warn("  📧 bob@example.com / password123")
+  console.warn("  📧 charlie@example.com / password123")
+  console.warn("\nYou can now log in with any of these accounts.")
 }
 
 main()

@@ -2,6 +2,7 @@ import { createEnv } from "@t3-oss/env-nextjs"
 import { z } from "zod"
 
 export const env = createEnv({
+  skipValidation: Boolean(process.env.SKIP_ENV_VALIDATION),
   server: {
     // See https://next-auth.js.org/deployment.
     NEXTAUTH_URL: z.string().url().optional(),
@@ -12,6 +13,7 @@ export const env = createEnv({
     GOOGLE_CLIENT_ID: z.string().min(1),
     GOOGLE_CLIENT_SECRET: z.string().min(1),
     DATABASE_URL: z.string().min(1),
+    DIRECT_URL: z.string().min(1).optional(),
     SMTP_FROM: z.string().min(1),
     POSTMARK_API_TOKEN: z.string().min(1),
     POSTMARK_SIGN_IN_TEMPLATE: z.string().min(1),
@@ -22,11 +24,19 @@ export const env = createEnv({
     PUSHER_APP_ID: z.string().min(1),
     PUSHER_SECRET: z.string().min(1),
     ANTHROPIC_API_KEY: z.string().min(1).optional(),
+    SENTRY_DSN: z.string().url().optional(),
+    SENTRY_ENVIRONMENT: z.string().min(1).optional(),
+    SENTRY_RELEASE: z.string().min(1).optional(),
+    SENTRY_ORG: z.string().min(1).optional(),
+    SENTRY_PROJECT: z.string().min(1).optional(),
+    SENTRY_AUTH_TOKEN: z.string().min(1).optional(),
+    CRON_SECRET: z.string().min(1).optional(),
   },
   client: {
     NEXT_PUBLIC_APP_URL: z.string().min(1),
     NEXT_PUBLIC_PUSHER_APP_KEY: z.string().min(1),
     NEXT_PUBLIC_PUSHER_CLUSTER: z.string().min(1).default("us2"),
+    NEXT_PUBLIC_SENTRY_DSN: z.string().url().optional(),
   },
   runtimeEnv: {
     NEXTAUTH_URL: process.env.NEXTAUTH_URL,
@@ -37,6 +47,7 @@ export const env = createEnv({
     GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
     GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
     DATABASE_URL: process.env.DATABASE_URL,
+    DIRECT_URL: process.env.DIRECT_URL,
     SMTP_FROM: process.env.SMTP_FROM,
     POSTMARK_API_TOKEN: process.env.POSTMARK_API_TOKEN,
     POSTMARK_SIGN_IN_TEMPLATE: process.env.POSTMARK_SIGN_IN_TEMPLATE,
@@ -47,8 +58,16 @@ export const env = createEnv({
     PUSHER_APP_ID: process.env.PUSHER_APP_ID,
     PUSHER_SECRET: process.env.PUSHER_SECRET,
     ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
+    SENTRY_DSN: process.env.SENTRY_DSN,
+    SENTRY_ENVIRONMENT: process.env.SENTRY_ENVIRONMENT,
+    SENTRY_RELEASE: process.env.SENTRY_RELEASE,
+    SENTRY_ORG: process.env.SENTRY_ORG,
+    SENTRY_PROJECT: process.env.SENTRY_PROJECT,
+    SENTRY_AUTH_TOKEN: process.env.SENTRY_AUTH_TOKEN,
+    CRON_SECRET: process.env.CRON_SECRET,
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
     NEXT_PUBLIC_PUSHER_APP_KEY: process.env.NEXT_PUBLIC_PUSHER_APP_KEY,
     NEXT_PUBLIC_PUSHER_CLUSTER: process.env.NEXT_PUBLIC_PUSHER_CLUSTER,
+    NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN,
   },
 })
