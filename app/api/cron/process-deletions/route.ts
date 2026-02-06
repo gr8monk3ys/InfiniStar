@@ -27,13 +27,11 @@ export async function GET(request: NextRequest) {
     // In production, always require the cron secret
     if (process.env.NODE_ENV === "production") {
       if (!cronSecret) {
-        // eslint-disable-next-line no-console -- Security logging
         console.error("[CRON] CRON_SECRET environment variable not set")
         return NextResponse.json({ error: "Server configuration error" }, { status: 500 })
       }
 
       if (authHeader !== `Bearer ${cronSecret}`) {
-        // eslint-disable-next-line no-console -- Security logging
         console.warn("[CRON] Unauthorized cron request attempt")
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
       }
@@ -48,8 +46,7 @@ export async function GET(request: NextRequest) {
     // Get stats after processing
     const statsAfter = await getDeletionStats()
 
-    // eslint-disable-next-line no-console -- Audit logging
-    console.log(
+    console.warn(
       `[CRON] Processed ${result.processed} deletions, ${result.failed} failed. ` +
         `Remaining: ${statsAfter.pendingDeletions} pending, ${statsAfter.overdueForDeletion} overdue.`
     )
@@ -65,7 +62,6 @@ export async function GET(request: NextRequest) {
       },
     })
   } catch (error: unknown) {
-    // eslint-disable-next-line no-console -- Error logging
     console.error("[CRON] Error processing deletions:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
