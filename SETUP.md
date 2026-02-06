@@ -4,8 +4,8 @@ This guide will help you set up and run InfiniStar, an AI chatbot application wi
 
 ## Prerequisites
 
-- Node.js 18+ and npm
-- MongoDB database (MongoDB Atlas recommended)
+- Node.js 18+ and Bun
+- Postgres database (Neon recommended)
 - Accounts for:
   - GitHub OAuth (optional)
   - Google OAuth (optional)
@@ -20,7 +20,7 @@ This guide will help you set up and run InfiniStar, an AI chatbot application wi
 ```bash
 git clone <your-repo-url>
 cd InfiniStar
-npm install
+bun install
 ```
 
 The `postinstall` script will automatically run `prisma generate`.
@@ -54,8 +54,9 @@ GITHUB_ACCESS_TOKEN=<your-github-token>
 GOOGLE_CLIENT_ID=<your-google-client-id>
 GOOGLE_CLIENT_SECRET=<your-google-client-secret>
 
-# Database
-DATABASE_URL="mongodb+srv://username:password@cluster.mongodb.net/infinistar?retryWrites=true&w=majority"
+# Database (Postgres / Neon)
+DATABASE_URL="postgresql://USER:PASSWORD@HOST/DATABASE?sslmode=require"
+DIRECT_URL="postgresql://USER:PASSWORD@HOST/DATABASE?sslmode=require"
 
 # Email (Postmark)
 SMTP_FROM=noreply@yourdomain.com
@@ -80,35 +81,34 @@ ANTHROPIC_API_KEY=<your-anthropic-api-key>
 
 ### 3. Database Setup
 
-Push the Prisma schema to your database:
+Create and apply migrations:
 
 ```bash
-npx prisma db push
+bunx prisma migrate dev
 ```
 
 (Optional) Open Prisma Studio to view your database:
 
 ```bash
-npx prisma studio
+bunx prisma studio
 ```
 
 ### 4. Run Development Server
 
 ```bash
-npm run dev
+bun run dev
 ```
 
 Visit [http://localhost:3000](http://localhost:3000)
 
 ## Service Setup Guides
 
-### MongoDB Atlas
+### Neon (Postgres)
 
-1. Go to [mongodb.com/cloud/atlas](https://www.mongodb.com/cloud/atlas)
-2. Create a free cluster
-3. Create a database user
-4. Whitelist your IP (or use 0.0.0.0/0 for development)
-5. Get your connection string and add to `DATABASE_URL`
+1. Go to [neon.tech](https://neon.tech)
+2. Create a project and database
+3. Copy the pooled connection string → `DATABASE_URL`
+4. Copy the direct connection string → `DIRECT_URL`
 
 ### Pusher (Real-time Features)
 
@@ -178,17 +178,34 @@ For production, add webhook endpoint in Stripe Dashboard:
 
 **Note:** The AI chat feature uses Claude 3.5 Sonnet by default. You can customize the model in the conversation creation.
 
+### Sentry (Monitoring)
+
+1. Create a Sentry project
+2. Add to `.env.local`:
+   - `SENTRY_DSN`
+   - `NEXT_PUBLIC_SENTRY_DSN`
+   - Optional: `SENTRY_ENVIRONMENT`, `SENTRY_RELEASE`
+3. For source map uploads (optional):
+   - `SENTRY_ORG`, `SENTRY_PROJECT`, `SENTRY_AUTH_TOKEN`
+
+### Cron (Account Deletions)
+
+1. Add a cron job that calls `/api/cron/process-deletions`
+2. Set `CRON_SECRET` in your environment
+3. Configure your cron runner to include:
+   - `Authorization: Bearer <CRON_SECRET>`
+
 ## Available Scripts
 
 ```bash
-npm run dev          # Start development server
-npm run build        # Build for production
-npm run start        # Start production server
-npm run typecheck    # Run TypeScript type checking
-npm run lint         # Run ESLint
-npm run lint:fix     # Fix ESLint errors
-npm run format:write # Format code with Prettier
-npm run format:check # Check code formatting
+bun run dev          # Start development server
+bun run build        # Build for production
+bun run start        # Start production server
+bun run typecheck    # Run TypeScript type checking
+bun run lint         # Run ESLint
+bun run lint:fix     # Fix ESLint errors
+bun run format:write # Format code with Prettier
+bun run format:check # Check code formatting
 ```
 
 ## Development Workflow
@@ -196,9 +213,9 @@ npm run format:check # Check code formatting
 ### Before Committing
 
 ```bash
-npm run typecheck    # Ensure no type errors
-npm run lint:fix     # Fix linting issues
-npm run format:write # Format code
+bun run typecheck    # Ensure no type errors
+bun run lint:fix     # Fix linting issues
+bun run format:write # Format code
 ```
 
 ### Database Changes
@@ -206,8 +223,8 @@ npm run format:write # Format code
 After modifying `prisma/schema.prisma`:
 
 ```bash
-npx prisma generate  # Regenerate Prisma Client
-npx prisma db push   # Push changes to database
+bunx prisma generate  # Regenerate Prisma Client
+bunx prisma migrate dev   # Create/apply migrations
 ```
 
 ### Adding New Environment Variables
@@ -246,14 +263,14 @@ InfiniStar/
 
 - Check that all required variables are set in `.env.local`
 - See `.env.local.example` for the complete list
-- Run `npm run dev` to see which variables are missing
+- Run `bun run dev` to see which variables are missing
 - Ensure there are no typos in variable names
 
 **Error: "Invalid DATABASE_URL"**
 
-- Check the MongoDB connection string format
+- Check the Postgres connection string format
 - Ensure password is URL-encoded if it contains special characters
-- Example: `mongodb+srv://user:pass@cluster.mongodb.net/dbname`
+- Example: `postgresql://user:pass@host/dbname?sslmode=require`
 
 **Missing NEXTAUTH_SECRET**
 
@@ -264,9 +281,9 @@ InfiniStar/
 
 **Error: "Cannot find module"**
 
-- Run `npm install`
-- Run `npx prisma generate`
-- Delete `node_modules` and `.next`, then run `npm install` again
+- Run `bun install`
+- Run `bunx prisma generate`
+- Delete `node_modules` and `.next`, then run `bun install` again
 
 **Error: "Options object must provide a cluster"**
 
@@ -275,7 +292,7 @@ InfiniStar/
 
 **Error: "Module not found: Can't resolve '@/app/lib/...'"**
 
-- Run `npx prisma generate` to regenerate Prisma Client
+- Run `bunx prisma generate` to regenerate Prisma Client
 - Check that all imports use the correct paths
 - Restart your dev server
 
@@ -284,7 +301,7 @@ InfiniStar/
 **Error: "Can't reach database server"**
 
 - Check `DATABASE_URL` is correct
-- Verify MongoDB Atlas IP whitelist
+- Verify Neon project/database is running
 - Ensure network connectivity
 
 **Error: "Authentication failed"**
@@ -323,9 +340,9 @@ Set all environment variables in your hosting platform (Vercel, Railway, etc.)
 
 ### Database
 
-1. Create production MongoDB database
-2. Update `DATABASE_URL` to production connection string
-3. Run migrations: `npx prisma db push`
+1. Create production Neon database
+2. Update `DATABASE_URL` and `DIRECT_URL` to production connection strings
+3. Run migrations: `bunx prisma migrate deploy`
 
 ### Stripe Webhooks
 

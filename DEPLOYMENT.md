@@ -19,7 +19,8 @@ NEXTAUTH_URL=https://yourdomain.com
 NEXTAUTH_SECRET=<generate-with-openssl-rand-base64-32>
 
 # Database
-DATABASE_URL=<mongodb-production-url>
+DATABASE_URL=<postgres-production-url>
+DIRECT_URL=<postgres-direct-url>
 
 # OAuth
 GITHUB_CLIENT_ID=<production-github-client-id>
@@ -49,6 +50,28 @@ NEXT_PUBLIC_PUSHER_CLUSTER=<your-cluster>
 ANTHROPIC_API_KEY=<production-anthropic-key>
 ```
 
+### CI Build Environment (Non-Production)
+
+For CI builds that only need to compile (not run production services), use the
+template in `.env.ci.example` with placeholder values. This avoids build-time
+env validation failures.
+
+Example:
+
+```bash
+cp .env.ci.example .env.local
+```
+
+If your CI does not load `.env.local`, inject the variables from that template
+directly in your CI environment configuration.
+
+You can also use the `ci:build` script, which loads `.env.ci.example` and runs
+the build with `SKIP_ENV_VALIDATION=1`:
+
+```bash
+bun run ci:build
+```
+
 ### 2. Security Checklist
 
 - [ ] Generated strong `NEXTAUTH_SECRET` using `openssl rand -base64 32`
@@ -64,23 +87,23 @@ ANTHROPIC_API_KEY=<production-anthropic-key>
 
 ```bash
 # Generate Prisma Client
-npx prisma generate
+bunx prisma generate
 
-# Push schema to production database
-npx prisma db push
+# Apply migrations to production database
+bunx prisma migrate deploy
 
 # (Optional) Seed initial data
-npm run seed
+bun run seed
 ```
 
 ### 4. Build Verification
 
 ```bash
 # Run all checks locally
-npm run typecheck
-npm run lint
-npm test
-npm run build
+bun run typecheck
+bun run lint
+bun run test
+bun run build
 
 # Verify build succeeded
 ls -la .next
@@ -99,7 +122,7 @@ Vercel provides the best experience for Next.js applications.
 1. **Install Vercel CLI** (optional):
 
    ```bash
-   npm i -g vercel
+   bun add -g vercel
    ```
 
 2. **Push to GitHub**:
@@ -130,10 +153,10 @@ Vercel auto-detects Next.js. Verify these settings:
 
 ```
 Framework Preset: Next.js
-Build Command: npm run build
+Build Command: bun run build
 Output Directory: .next
-Install Command: npm install
-Development Command: npm run dev
+Install Command: bun install
+Development Command: bun run dev
 ```
 
 #### Custom Domain
@@ -163,14 +186,14 @@ Deploy using Docker and Docker Compose.
 FROM node:20-alpine AS deps
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci
+RUN bun install --frozen-lockfile
 
 FROM node:20-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-RUN npx prisma generate
-RUN npm run build
+RUN bunx prisma generate
+RUN bun run build
 
 FROM node:20-alpine AS runner
 WORKDIR /app
@@ -203,22 +226,23 @@ services:
     env_file:
       - .env.production
     depends_on:
-      - mongodb
+      - postgres
     restart: unless-stopped
 
-  mongodb:
-    image: mongo:7
+  postgres:
+    image: postgres:16
     ports:
-      - "27017:27017"
+      - "5432:5432"
     volumes:
-      - mongodb_data:/data/db
+      - postgres_data:/var/lib/postgresql/data
     environment:
-      MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGODB_PASSWORD}
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: infinistar
     restart: unless-stopped
 
 volumes:
-  mongodb_data:
+  postgres_data:
 ```
 
 #### Deploy
@@ -236,7 +260,7 @@ docker-compose down
 
 ### Option 3: AWS (EC2 + RDS)
 
-Deploy to AWS using EC2 for the app and RDS for MongoDB.
+Deploy to AWS using EC2 for the app and RDS for Postgres.
 
 #### Prerequisites
 
@@ -265,7 +289,7 @@ Deploy to AWS using EC2 for the app and RDS for MongoDB.
    sudo apt install -y nodejs
 
    # Install PM2
-   sudo npm install -g pm2
+   bun add -g pm2
 
    # Install Nginx
    sudo apt install -y nginx
@@ -279,21 +303,21 @@ Deploy to AWS using EC2 for the app and RDS for MongoDB.
    cd InfiniStar
 
    # Install dependencies
-   npm ci
+   bun install --frozen-lockfile
 
    # Setup environment
    cp .env.template .env.production
    nano .env.production  # Add production values
 
    # Build
-   npm run build
+   bun run build
    ```
 
 4. **Start with PM2**:
 
    ```bash
    # Start app
-   pm2 start npm --name "infinistar" -- start
+   pm2 start bun --name "infinistar" -- run start
 
    # Save PM2 configuration
    pm2 save
@@ -370,8 +394,8 @@ Automatically enabled on Vercel deployments.
 #### Sentry (Error Tracking)
 
 ```bash
-npm install @sentry/nextjs
-npx @sentry/wizard -i nextjs
+bun install @sentry/nextjs
+bunx @sentry/wizard -i nextjs
 ```
 
 #### Uptime Monitoring
@@ -390,13 +414,10 @@ For static assets, use Vercel's built-in CDN or configure Cloudflare.
 
 #### Database Indexes
 
-Ensure indexes are created for common queries:
+Indexes are managed via Prisma migrations. Ensure you apply migrations in production:
 
-```javascript
-// In Prisma Studio or MongoDB shell
-db.conversations.createIndex({ userIds: 1 })
-db.messages.createIndex({ conversationId: 1, createdAt: -1 })
-db.users.createIndex({ email: 1 })
+```bash
+bunx prisma migrate deploy
 ```
 
 #### Caching
@@ -411,20 +432,19 @@ Consider adding Redis for:
 
 #### Database Backups
 
-**MongoDB Atlas (Recommended):**
+**Neon (Recommended):**
 
-- Automatic continuous backups
-- Point-in-time recovery
-- Configurable retention periods
+- Automatic backups and point-in-time recovery
+- Configurable retention in Neon console
 
-**Self-hosted MongoDB:**
+**Self-hosted Postgres:**
 
 ```bash
 # Backup script
-mongodump --uri="$DATABASE_URL" --out=/backups/$(date +%Y%m%d)
+pg_dump "$DATABASE_URL" > /backups/$(date +%Y%m%d).sql
 
 # Restore
-mongorestore --uri="$DATABASE_URL" /backups/20250105
+psql "$DATABASE_URL" < /backups/20250105.sql
 ```
 
 #### Configuration Backups
@@ -444,24 +464,24 @@ mongorestore --uri="$DATABASE_URL" /backups/20250105
 rm -rf .next
 
 # Clear node modules
-rm -rf node_modules package-lock.json
-npm install
+rm -rf node_modules bun.lock
+bun install
 
 # Regenerate Prisma Client
-npx prisma generate
+bunx prisma generate
 
 # Try build again
-npm run build
+bun run build
 ```
 
 ### Database Connection Issues
 
 ```bash
-# Test MongoDB connection
-node -e "const { MongoClient } = require('mongodb'); MongoClient.connect(process.env.DATABASE_URL).then(() => console.log('Connected')).catch(e => console.error(e))"
+# Test Postgres connection (requires psql)
+psql "$DATABASE_URL" -c "select 1"
 
 # Check Prisma connection
-npx prisma db push --preview-feature
+bunx prisma migrate deploy
 ```
 
 ### Environment Variable Issues
@@ -506,8 +526,8 @@ export async function checkRateLimit(key: string, limit: number, window: number)
 
 **Monthly:**
 
-- [ ] Update dependencies: `npm update`
-- [ ] Run security audit: `npm audit`
+- [ ] Update dependencies: `bun update`
+- [ ] Run security audit: `npm audit` (requires npm)
 - [ ] Review and rotate API keys
 - [ ] Check database backups
 
@@ -525,14 +545,14 @@ export async function checkRateLimit(key: string, limit: number, window: number)
 git pull origin main
 
 # Install dependencies
-npm install
+bun install
 
 # Run migrations
-npx prisma generate
-npx prisma db push
+bunx prisma generate
+bunx prisma migrate deploy
 
 # Rebuild
-npm run build
+bun run build
 
 # Restart (if using PM2)
 pm2 restart infinistar
@@ -561,7 +581,7 @@ pm2 stop infinistar
 git checkout <previous-commit-hash>
 
 # Rebuild
-npm run build
+bun run build
 
 # Start
 pm2 start infinistar
@@ -582,7 +602,7 @@ docker-compose up -d app:<previous-tag>
 - [Next.js Deployment Docs](https://nextjs.org/docs/deployment)
 - [Vercel Deployment Guide](https://vercel.com/docs)
 - [Prisma Production Best Practices](https://www.prisma.io/docs/guides/performance-and-optimization)
-- [MongoDB Atlas Documentation](https://docs.atlas.mongodb.com/)
+- [Neon Documentation](https://neon.tech/docs/)
 
 ---
 

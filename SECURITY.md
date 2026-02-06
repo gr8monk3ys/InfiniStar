@@ -71,7 +71,7 @@ const registerSchema = z.object({
 ### 5. Database Security
 
 - **Prisma ORM** prevents SQL injection
-- **MongoDB** with parameterized queries
+- **Postgres** with parameterized queries
 - **Connection string** stored in environment variables
 - **No direct query exposure** to client
 
@@ -120,7 +120,7 @@ await fetch("/api/messages", {
 
 ### 8. Security Headers ✅
 
-Comprehensive security headers configured via Next.js middleware:
+Comprehensive security headers configured via Next.js proxy:
 
 **Implemented Headers:**
 
@@ -132,7 +132,16 @@ Comprehensive security headers configured via Next.js middleware:
 - **Permissions-Policy**: Restricts browser features (camera, mic, etc.)
 - **Strict-Transport-Security (HSTS)**: Production only, 2 years max-age
 
-**Location:** [middleware.ts](middleware.ts)
+**Location:** [proxy.ts](proxy.ts)
+
+### 8.1 Cron Security ✅
+
+Account deletion processing is protected by a shared secret:
+
+- `CRON_SECRET` must be set in production
+- Cron requests must include `Authorization: Bearer <CRON_SECRET>`
+
+**Endpoint:** `/api/cron/process-deletions`
 
 ### 9. Input Sanitization ✅
 
@@ -196,14 +205,14 @@ Proper CORS configuration prevents unauthorized cross-origin access while allowi
 - `Access-Control-Expose-Headers`: X-CSRF-Token, rate limit headers
 - `Access-Control-Max-Age`: 86400 (24 hours preflight cache)
 
-**Location:** [app/lib/cors.ts](app/lib/cors.ts), [middleware.ts](middleware.ts)
+**Location:** [app/lib/cors.ts](app/lib/cors.ts), [proxy.ts](proxy.ts)
 
 **Test Coverage:** 17 passing tests for origin validation and header generation
 
 **Usage Example:**
 
 ```typescript
-// CORS is automatically applied via middleware
+// CORS is automatically applied via proxy
 // To configure allowed origins in production:
 // Set NEXT_PUBLIC_APP_URL=https://yourdomain.com
 

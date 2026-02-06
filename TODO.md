@@ -53,7 +53,7 @@ All 27 critical, high, and medium priority issues have been resolved:
 - ✅ Created comprehensive deployment guide (DEPLOYMENT.md)
 - ✅ Created security documentation (SECURITY.md)
 - ✅ Created AI integration guide (AI_INTEGRATION.md)
-- ✅ Added security headers middleware (CSP, HSTS, X-Frame-Options, etc.)
+- ✅ Added security headers proxy (CSP, HSTS, X-Frame-Options, etc.)
 - ✅ Created standardized error handling system (ApiError, ErrorCode)
 - ✅ Created comprehensive contributing guidelines (CONTRIBUTING.md)
 - ✅ Implemented CSRF protection with Double Submit Cookie pattern
@@ -228,10 +228,10 @@ Before deploying to production, validate all core functionality:
 
 **Code Quality**
 
-- [ ] Type checking passes: `npm run typecheck`
-- [ ] Build succeeds: `npm run build`
-- [ ] Linting passes: `npm run lint`
-- [ ] Formatting is consistent: `npm run format:check`
+- [ ] Type checking passes: `bun run typecheck`
+- [ ] Build succeeds: `bun run build`
+- [ ] Linting passes: `bun run lint`
+- [ ] Formatting is consistent: `bun run format:check`
 
 ---
 
@@ -247,7 +247,7 @@ Before deploying to production, validate all core functionality:
 - [x] Add service-specific setup instructions to SETUP.md
 - [x] Create example .env.local.example with fake values
 - [x] Document how to get credentials for each service:
-  - MongoDB Atlas setup steps
+  - Neon setup steps
   - Pusher account creation and app setup
   - Stripe test mode configuration
   - GitHub OAuth app creation
@@ -278,7 +278,7 @@ Before deploying to production, validate all core functionality:
 **Usage:**
 
 ```bash
-npm run seed  # Seeds database with test users and conversations
+bun run seed  # Seeds database with test users and conversations
 ```
 
 Test accounts:
@@ -351,7 +351,7 @@ Test accounts:
 - [ ] Add loading skeletons for conversations list
 - [ ] Implement virtualization for long message lists
 - [ ] Add pagination for conversations
-- [ ] Optimize bundle size (analyze with `npm run build`)
+- [ ] Optimize bundle size (analyze with `bun run build`)
 - [ ] Implement lazy loading for modals and drawers
 
 ### 6. Mobile Responsiveness
@@ -387,11 +387,11 @@ Test accounts:
 **Available Commands:**
 
 ```bash
-npm test              # Run unit tests
-npm run test:watch    # Run tests in watch mode
-npm run test:coverage # Generate coverage report
-npm run test:e2e      # Run E2E tests with Playwright
-npm run test:e2e:ui   # Run E2E tests with UI
+bun run test              # Run unit tests
+bun run test:watch    # Run tests in watch mode
+bun run test:coverage # Generate coverage report
+bun run test:e2e      # Run E2E tests with Playwright
+bun run test:e2e:ui   # Run E2E tests with UI
 ```
 
 ### 8. Documentation Improvements
@@ -450,7 +450,7 @@ npm run test:e2e:ui   # Run E2E tests with UI
 **Security Headers:**
 
 - CSP, HSTS, X-Frame-Options, X-Content-Type-Options
-- See [middleware.ts](middleware.ts) and [SECURITY.md](SECURITY.md) for details
+- See [proxy.ts](proxy.ts) and [SECURITY.md](SECURITY.md) for details
 
 **Input Sanitization:**
 
@@ -469,7 +469,7 @@ npm run test:e2e:ui   # Run E2E tests with UI
 - Credential support with Access-Control-Allow-Credentials
 - Configurable allowed methods, headers, and exposed headers
 - 17 passing tests for CORS logic
-- See [app/lib/cors.ts](app/lib/cors.ts) and [middleware.ts](middleware.ts)
+- See [app/lib/cors.ts](app/lib/cors.ts) and [proxy.ts](proxy.ts)
 
 **Email Verification:**
 
@@ -567,7 +567,7 @@ npm run test:e2e:ui   # Run E2E tests with UI
 
 **Tasks:**
 
-- [ ] Set up production MongoDB database
+- [ ] Set up production Postgres (Neon) database
 - [ ] Configure production environment variables
 - [ ] Set up production Stripe webhooks
 - [ ] Test Pusher in production environment
@@ -771,25 +771,20 @@ npm run test:e2e:ui   # Run E2E tests with UI
 **Recommended order:**
 
 1. **Complete testing checklist** (In Progress section)
-
    - Validate all features work as expected
    - Document any bugs found
 
 2. **Fix remaining warnings**
-
    - Next.js 15 metadata warnings
    - Tailwind CSS migration warning
 
 3. **Set up testing infrastructure**
-
    - Critical for maintaining quality as codebase grows
 
 4. **Implement AI chatbot integration**
-
    - Core feature mentioned in project description
 
 5. **Security enhancements**
-
    - Essential before production deployment
 
 6. **Deployment preparation**

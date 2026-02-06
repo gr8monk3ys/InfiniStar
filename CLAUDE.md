@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-InfiniStar is an AI chatbot application built with Next.js 15 (App Router), featuring subscription-based access via Stripe, real-time messaging with Pusher, and a conversational interface. The application uses MongoDB for data persistence via Prisma ORM and NextAuth.js for authentication.
+InfiniStar is an AI chatbot application built with Next.js 15 (App Router), featuring subscription-based access via Stripe, real-time messaging with Pusher, and a conversational interface. The application uses Postgres (Neon) for data persistence via Prisma ORM and NextAuth.js for authentication.
 
 **Key Features:**
 
@@ -25,25 +25,25 @@ InfiniStar is an AI chatbot application built with Next.js 15 (App Router), feat
 
 ```bash
 # Development
-npm run dev              # Start development server on localhost:3000
-npm run build            # Build for production
-npm run start            # Start production server
-npm run preview          # Build and start production server
+bun run dev              # Start development server on localhost:3000
+bun run build            # Build for production
+bun run start            # Start production server
+bun run preview          # Build and start production server
 
 # Code Quality
-npm run lint             # Run ESLint
-npm run lint:fix         # Fix ESLint errors automatically
-npm run typecheck        # Run TypeScript type checking (no emit)
-npm run format:write     # Format code with Prettier
-npm run format:check     # Check code formatting
+bun run lint             # Run ESLint
+bun run lint:fix         # Fix ESLint errors automatically
+bun run typecheck        # Run TypeScript type checking (no emit)
+bun run format:write     # Format code with Prettier
+bun run format:check     # Check code formatting
 
 # Testing
-npm test                 # Run all Jest tests
-npm run test:watch       # Run tests in watch mode
-npm run test:coverage    # Run tests with coverage report
-npm run test:e2e         # Run Playwright E2E tests
-npm run test:e2e:ui      # Run E2E tests with Playwright UI
-npm run test:e2e:headed  # Run E2E tests in headed browser
+bun run test                 # Run all Jest tests
+bun run test:watch           # Run tests in watch mode
+bun run test:coverage        # Run tests with coverage report
+bun run test:e2e             # Run Playwright E2E tests
+bun run test:e2e:ui          # Run E2E tests with Playwright UI
+bun run test:e2e:headed      # Run E2E tests in headed browser
 
 # Run a single test file
 npx jest app/__tests__/lib/sanitize.test.ts
@@ -55,7 +55,7 @@ npx jest --testNamePattern="sanitizeMessage"
 npx prisma generate      # Generate Prisma Client
 npx prisma db push       # Push schema changes to database (development)
 npx prisma studio        # Open Prisma Studio to view/edit data
-npm run seed             # Seed database with test data
+bun run seed             # Seed database with test data
 ```
 
 ## Architecture
@@ -190,7 +190,7 @@ The project uses Next.js 13+ App Router with route groups:
 
 ### Database Schema
 
-Prisma models (MongoDB):
+Prisma models (Postgres):
 
 - `User` - User accounts with authentication and Stripe subscription data
   - Includes email verification fields: `emailVerified`, `verificationToken`, `verificationTokenExpiry`
@@ -222,7 +222,8 @@ Environment validation is enforced via `env.mjs` using `@t3-oss/env-nextjs` and 
 
 **Database**:
 
-- `DATABASE_URL` - MongoDB connection string (MongoDB Atlas recommended)
+- `DATABASE_URL` - Postgres connection string (Neon recommended)
+- `DIRECT_URL` - Postgres direct connection string (used for migrations)
 
 **Email**:
 
@@ -451,11 +452,11 @@ try {
 - **Rate Limiting**: Apply to sensitive endpoints
 
   ```typescript
-  import { authLimiter, getClientIdentifier } from '@/app/lib/rate-limit';
+  import { authLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 
-  const identifier = getClientIdentifier(request);
+  const identifier = getClientIdentifier(request)
   if (!authLimiter.check(identifier)) {
-    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 })
   }
   ```
 
@@ -470,9 +471,9 @@ try {
 
 - **Prisma Client**: Use the singleton instance from `app/libs/prismadb.ts` (not `app/lib/prismadb.ts` - both exist, prefer `app/libs/`)
 - **Route Groups**: Parentheses in directory names like `(dashboard)` are Next.js route groups - they don't appear in URLs
-- **MongoDB ObjectIDs**: All IDs are MongoDB ObjectIDs, use `@db.ObjectId` in Prisma schema
+- **UUIDs**: All IDs are UUIDs, use `@db.Uuid` in Prisma schema
 - **Real-time**: Pusher channel naming follows pattern: `conversation-${conversationId}`
-- **Type Safety**: The project uses TypeScript strictly - always run `npm run typecheck` before committing
+- **Type Safety**: The project uses TypeScript strictly - always run `bun run typecheck` before committing
 - **API Client**: Always use the centralized API client (`app/lib/api-client.ts`) for frontend API requests instead of raw axios
 - **Email Verification**: Required for credentials login; OAuth users skip verification
 - **Password Reset Tokens**: Expire after 24 hours; use `isTokenExpired()` utility for validation

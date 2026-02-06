@@ -42,8 +42,8 @@ We are committed to providing a welcoming and inclusive environment for all cont
 ### Prerequisites
 
 - Node.js 18.x or 20.x
-- npm or yarn
-- MongoDB (local or Atlas)
+- Bun
+- Postgres (Neon recommended)
 - Git
 
 ### Initial Setup
@@ -66,7 +66,7 @@ We are committed to providing a welcoming and inclusive environment for all cont
 4. **Install dependencies**:
 
    ```bash
-   npm install
+   bun install
    ```
 
 5. **Set up environment**:
@@ -81,12 +81,12 @@ We are committed to providing a welcoming and inclusive environment for all cont
    ```bash
    npx prisma generate
    npx prisma db push
-   npm run seed  # Optional: Add test data
+   bun run seed  # Optional: Add test data
    ```
 
 7. **Start development server**:
    ```bash
-   npm run dev
+   bun run dev
    ```
 
 ---
@@ -184,9 +184,9 @@ git push origin feature/your-feature-name
 ```typescript
 // Good
 interface UserProfile {
-  id: string;
-  name: string;
-  email: string;
+  id: string
+  name: string
+  email: string
 }
 
 function updateProfile(userId: string, data: Partial<UserProfile>): Promise<UserProfile> {
@@ -313,9 +313,9 @@ import { UserProfile } from "./UserProfile"
 Run unit tests with Jest:
 
 ```bash
-npm test                # Run all tests
-npm run test:watch      # Watch mode
-npm run test:coverage   # Coverage report
+bun run test                # Run all tests
+bun run test:watch      # Watch mode
+bun run test:coverage   # Coverage report
 ```
 
 ### E2E Tests
@@ -323,9 +323,9 @@ npm run test:coverage   # Coverage report
 Run E2E tests with Playwright:
 
 ```bash
-npm run test:e2e         # Run E2E tests
-npm run test:e2e:ui      # Run with UI
-npm run test:e2e:headed  # Run in headed mode
+bun run test:e2e         # Run E2E tests
+bun run test:e2e:ui      # Run with UI
+bun run test:e2e:headed  # Run in headed mode
 ```
 
 ### Writing Tests
@@ -368,10 +368,10 @@ describe("Button", () => {
 1. **Run all checks**:
 
    ```bash
-   npm run typecheck
-   npm run lint
-   npm test
-   npm run build
+   bun run typecheck
+   bun run lint
+   bun run test
+   bun run build
    ```
 
 2. **Update documentation** if needed
@@ -502,8 +502,8 @@ Mockups, examples, or references
 We use Prettier for code formatting:
 
 ```bash
-npm run format:write  # Format all files
-npm run format:check  # Check formatting
+bun run format:write  # Format all files
+bun run format:check  # Check formatting
 ```
 
 ### Linting
@@ -511,8 +511,8 @@ npm run format:check  # Check formatting
 We use ESLint for code linting:
 
 ```bash
-npm run lint      # Check for issues
-npm run lint:fix  # Fix auto-fixable issues
+bun run lint      # Check for issues
+bun run lint:fix  # Fix auto-fixable issues
 ```
 
 ### Naming Conventions

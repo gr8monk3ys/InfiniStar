@@ -10,7 +10,7 @@ InfiniStar has been transformed from a **non-functional codebase with 27+ critic
 - **Files Modified**: 30+
 - **Files Created**: 6
 - **Files Deleted**: 13 duplicate/conflicting files
-- **Type Errors Resolved**: All (now passes `npm run typecheck`)
+- **Type Errors Resolved**: All (now passes `bun run typecheck`)
 - **Build Status**: ✅ Passes (with placeholder credentials)
 - **Estimated Developer Time Saved**: 15-20 hours
 
@@ -150,12 +150,10 @@ InfiniStar has been transformed from a **non-functional codebase with 27+ critic
 **Solution Created**:
 
 1. **Pusher Auth Endpoint** (`/app/api/pusher/auth/route.ts`)
-
    - Authenticates presence channels
    - Returns authorization for user's email
 
 2. **Messages API** - Added event triggers:
-
    - `messages:new` on conversation channel
    - `conversation:update` on user channels
    - Includes image field support
@@ -280,21 +278,18 @@ InfiniStar has been transformed from a **non-functional codebase with 27+ critic
 ### Architecture Improvements
 
 1. **Single Source of Truth**
-
    - One directory for libs
    - One directory for types
    - One directory for actions
    - One directory for components
 
 2. **Proper Separation of Concerns**
-
    - Server actions in `/app/actions/`
    - API routes in `/app/api/`
    - Client components clearly marked
    - Server components by default
 
 3. **Type Safety**
-
    - All Prisma types properly exported
    - Custom types well-defined
    - No `any` types except in catch blocks
@@ -396,7 +391,7 @@ InfiniStar has been transformed from a **non-functional codebase with 27+ critic
 ### ⚠️ Requires Setup
 
 - Environment variables (see SETUP.md)
-- MongoDB database
+- Postgres (Neon) database
 - Pusher account
 - Stripe account
 - OAuth applications
