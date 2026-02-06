@@ -11,6 +11,7 @@ const customJestConfig = {
   testEnvironment: "jest-environment-jsdom",
   moduleNameMapper: {
     "^@/(.*)$": "<rootDir>/$1",
+    "^otplib$": "<rootDir>/__mocks__/otplib.js",
   },
   collectCoverageFrom: [
     "app/**/*.{js,jsx,ts,tsx}",

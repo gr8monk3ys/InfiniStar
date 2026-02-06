@@ -39,3 +39,10 @@ if (typeof Response === "undefined") {
 
   global.Response = MockResponse
 }
+
+// Polyfill for TextEncoder/TextDecoder used by Prisma/crypto deps in Jest
+if (typeof TextEncoder === "undefined" || typeof TextDecoder === "undefined") {
+  const { TextEncoder, TextDecoder } = require("node:util")
+  global.TextEncoder = TextEncoder
+  global.TextDecoder = TextDecoder
+}
