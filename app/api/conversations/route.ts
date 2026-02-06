@@ -27,6 +27,7 @@ const createConversationSchema = z
     aiModel: z
       .enum(["claude-3-5-sonnet-20241022", "claude-3-5-haiku-20241022", "claude-3-opus-20240229"])
       .optional(),
+    characterId: z.string().uuid().optional(),
   })
   .refine(
     (data) => {
@@ -54,11 +55,14 @@ export async function POST(request: NextRequest) {
     let cookieToken: string | null = null
 
     if (cookieHeader) {
-      const cookies = cookieHeader.split(";").reduce((acc, cookie) => {
-        const [key, value] = cookie.trim().split("=")
-        acc[key] = value
-        return acc
-      }, {} as Record<string, string>)
+      const cookies = cookieHeader.split(";").reduce(
+        (acc, cookie) => {
+          const [key, value] = cookie.trim().split("=")
+          acc[key] = value
+          return acc
+        },
+        {} as Record<string, string>
+      )
       cookieToken = cookies["csrf-token"] || null
     }
 
@@ -78,21 +82,40 @@ export async function POST(request: NextRequest) {
     // Validate request body with Zod schema
     const validation = createConversationSchema.safeParse(body)
     if (!validation.success) {
-      return NextResponse.json({ error: validation.error.errors[0].message }, { status: 400 })
+      return NextResponse.json({ error: validation.error.issues[0].message }, { status: 400 })
     }
 
-    const { userId, isGroup, members, name, isAI, aiModel } = validation.data
+    const { userId, isGroup, members, name, isAI, aiModel, characterId } = validation.data
 
     // Sanitize conversation name if provided
     const sanitizedName = name ? sanitizePlainText(name) : null
 
     // Handle AI conversation creation
     if (isAI) {
+      let character = null
+
+      if (characterId) {
+        character = await prisma.character.findUnique({
+          where: { id: characterId },
+        })
+
+        if (!character) {
+          return NextResponse.json({ error: "Character not found" }, { status: 404 })
+        }
+
+        if (!character.isPublic && character.createdById !== currentUser.id) {
+          return NextResponse.json({ error: "Not authorized for this character" }, { status: 403 })
+        }
+      }
+
       const newConversation = await prisma.conversation.create({
         data: {
-          name: sanitizedName || "AI Assistant",
+          name: sanitizedName || character?.name || "AI Assistant",
           isAI: true,
           aiModel: aiModel || "claude-3-5-sonnet-20241022",
+          aiSystemPrompt: character?.systemPrompt,
+          aiPersonality: character ? "custom" : undefined,
+          characterId: character?.id,
           users: {
             connect: {
               id: currentUser.id,
@@ -109,6 +132,16 @@ export async function POST(request: NextRequest) {
           },
         },
       })
+
+      if (character) {
+        await prisma.character.update({
+          where: { id: character.id },
+          data: {
+            usageCount: { increment: 1 },
+            lastUsedAt: new Date(),
+          },
+        })
+      }
 
       // Trigger Pusher event for user
       if (currentUser.email) {
@@ -161,22 +194,17 @@ export async function POST(request: NextRequest) {
 
     const existingConversations = await prisma.conversation.findMany({
       where: {
-        OR: [
-          {
-            userIds: {
-              equals: [currentUser.id, userId],
-            },
-          },
-          {
-            userIds: {
-              equals: [userId, currentUser.id],
-            },
-          },
-        ],
+        isGroup: false,
+        AND: [{ users: { some: { id: currentUser.id } } }, { users: { some: { id: userId } } }],
+      },
+      include: {
+        users: true,
       },
     })
 
-    const singleConversation = existingConversations[0]
+    const singleConversation = existingConversations.find(
+      (conversation) => conversation.users.length === 2
+    )
 
     if (singleConversation) {
       return NextResponse.json(singleConversation)

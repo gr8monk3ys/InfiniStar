@@ -18,6 +18,7 @@ import {
   HiOutlineTag,
 } from "react-icons/hi2"
 
+import prisma from "@/app/lib/prismadb"
 import { cn } from "@/app/lib/utils"
 import { buttonVariants } from "@/app/components/ui/button"
 
@@ -25,6 +26,8 @@ export const metadata = {
   title: "Explore Features | InfiniStar",
   description: "Discover all the AI personalities and features InfiniStar has to offer",
 }
+
+export const dynamic = "force-dynamic"
 
 const personalities = [
   {
@@ -156,7 +159,13 @@ const features = [
   },
 ]
 
-export default function ExplorePage() {
+export default async function ExplorePage() {
+  const characters = await prisma.character.findMany({
+    where: { isPublic: true },
+    orderBy: [{ featured: "desc" }, { usageCount: "desc" }, { createdAt: "desc" }],
+    take: 9,
+  })
+
   return (
     <section className="container flex flex-col gap-12 py-8 md:py-12 lg:py-16">
       {/* Header */}
@@ -168,6 +177,40 @@ export default function ExplorePage() {
           Discover the AI personalities, smart features, and powerful tools that make InfiniStar
           your ultimate AI companion.
         </p>
+      </div>
+
+      {/* Featured Characters */}
+      <div>
+        <h2 className="mb-6 text-center text-2xl font-bold">Featured Characters</h2>
+        <p className="mx-auto mb-8 max-w-2xl text-center text-muted-foreground">
+          Browse community-built characters and start a conversation instantly.
+        </p>
+
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {characters.length === 0 ? (
+            <div className="col-span-full rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">
+              No public characters yet. Create one to get featured.
+            </div>
+          ) : (
+            characters.map((character) => (
+              <div
+                key={character.id}
+                className="flex flex-col rounded-xl border bg-background p-6 transition-all hover:border-primary/50 hover:shadow-md"
+              >
+                <h3 className="mb-2 text-lg font-semibold">{character.name}</h3>
+                {character.tagline && (
+                  <p className="mb-4 text-sm text-muted-foreground">{character.tagline}</p>
+                )}
+                <div className="mt-auto flex items-center justify-between text-xs text-muted-foreground">
+                  <span>{character.usageCount} chats</span>
+                  <Link href={`/characters/${character.slug}`} className="text-primary">
+                    View
+                  </Link>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       </div>
 
       {/* AI Personalities */}

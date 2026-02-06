@@ -7,7 +7,14 @@ import { format } from "date-fns"
 import { useSession } from "next-auth/react"
 import toast from "react-hot-toast"
 import { BsPinAngle, BsPinAngleFill } from "react-icons/bs"
-import { HiArchiveBox, HiArchiveBoxXMark, HiOutlineBell, HiOutlineBellSlash } from "react-icons/hi2"
+import {
+  HiArchiveBox,
+  HiArchiveBoxXMark,
+  HiOutlineBell,
+  HiOutlineBellSlash,
+  HiOutlineFlag,
+  HiOutlineShieldExclamation,
+} from "react-icons/hi2"
 import { IoClose, IoTrash } from "react-icons/io5"
 
 import useActiveList from "@/app/(dashboard)/dashboard/hooks/useActiveList"
@@ -53,7 +60,7 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = memo(function ProfileDrawer(
   }, [data.title, otherUser.name])
 
   const { members, getPresence } = useActiveList()
-  const isActive = members.indexOf(otherUser?.id!) !== -1
+  const isActive = otherUser?.id ? members.includes(otherUser.id) : false
   const presence = otherUser?.id ? getPresence(otherUser.id) : null
 
   const statusText = useMemo(() => {
@@ -168,6 +175,56 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = memo(function ProfileDrawer(
       toast.error(message)
     } finally {
       setIsMuting(false)
+    }
+  }
+
+  const handleBlockUser = async () => {
+    if (!otherUser?.id) return
+    const reason = window.prompt("Optional: Why are you blocking this user?") || undefined
+
+    try {
+      const headers = csrfToken ? { "X-CSRF-Token": csrfToken } : {}
+      await axios.post(
+        "/api/moderation/blocks",
+        {
+          blockedUserId: otherUser.id,
+          reason,
+        },
+        { headers }
+      )
+      toast.success("User blocked")
+    } catch (error) {
+      const message =
+        isAxiosError(error) && error.response?.data?.error
+          ? error.response.data.error
+          : "Failed to block user"
+      toast.error(message)
+    }
+  }
+
+  const handleReportUser = async () => {
+    if (!otherUser?.id) return
+    const details = window.prompt("Optional: Provide details for this report") || undefined
+
+    try {
+      const headers = csrfToken ? { "X-CSRF-Token": csrfToken } : {}
+      await axios.post(
+        "/api/moderation/reports",
+        {
+          targetType: "USER",
+          targetId: otherUser.id,
+          reason: "OTHER",
+          details,
+        },
+        { headers }
+      )
+      toast.success("Report submitted")
+    } catch (error) {
+      const message =
+        isAxiosError(error) && error.response?.data?.error
+          ? error.response.data.error
+          : "Failed to submit report"
+      toast.error(message)
     }
   }
 
@@ -293,6 +350,24 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = memo(function ProfileDrawer(
                               <div className="text-sm font-light text-neutral-600">Delete</div>
                             </div>
                           </div>
+                          {!data.isGroup && (
+                            <div className="flex items-center justify-center gap-3 pb-6">
+                              <button
+                                onClick={handleBlockUser}
+                                className="flex items-center gap-2 rounded-md border px-3 py-2 text-xs text-muted-foreground hover:border-foreground hover:text-foreground"
+                              >
+                                <HiOutlineShieldExclamation className="size-4" />
+                                Block
+                              </button>
+                              <button
+                                onClick={handleReportUser}
+                                className="flex items-center gap-2 rounded-md border px-3 py-2 text-xs text-muted-foreground hover:border-foreground hover:text-foreground"
+                              >
+                                <HiOutlineFlag className="size-4" />
+                                Report
+                              </button>
+                            </div>
+                          )}
                           <div className="w-full py-5 sm:px-0 sm:pt-0">
                             <dl className="space-y-8 px-4 sm:space-y-6 sm:px-6">
                               {data.isGroup && (
