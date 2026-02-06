@@ -1,8 +1,8 @@
 import "@/app/globals.css"
+
 import { type Metadata, type Viewport } from "next"
 
 import { siteConfig } from "@/config/site"
-import { fontSans } from "@/app/lib/fonts"
 import { cn } from "@/app/lib/utils"
 import { ThemeCustomProvider } from "@/app/components/providers/ThemeCustomProvider"
 import { SiteHeader } from "@/app/components/site-header"
@@ -40,7 +40,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
     <>
       <html lang="en" suppressHydrationWarning>
         <head />
-        <body className={cn("min-h-screen bg-background font-sans antialiased", fontSans.variable)}>
+        <body className={cn("min-h-screen bg-background font-sans antialiased")}>
           <AuthContext>
             <ToasterContext />
             <ThemeProvider attribute="class" defaultTheme="system" enableSystem>

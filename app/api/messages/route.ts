@@ -24,11 +24,14 @@ export async function POST(request: NextRequest) {
   let cookieToken: string | null = null
 
   if (cookieHeader) {
-    const cookies = cookieHeader.split(";").reduce((acc, cookie) => {
-      const [key, value] = cookie.trim().split("=")
-      acc[key] = value
-      return acc
-    }, {} as Record<string, string>)
+    const cookies = cookieHeader.split(";").reduce(
+      (acc, cookie) => {
+        const [key, value] = cookie.trim().split("=")
+        acc[key] = value
+        return acc
+      },
+      {} as Record<string, string>
+    )
     cookieToken = cookies["csrf-token"] || null
   }
 
@@ -75,7 +78,7 @@ export async function POST(request: NextRequest) {
     // Validate request body with Zod schema
     const validation = createMessageSchema.safeParse(body)
     if (!validation.success) {
-      return new NextResponse(JSON.stringify({ error: validation.error.errors[0].message }), {
+      return new NextResponse(JSON.stringify({ error: validation.error.issues[0].message }), {
         status: 400,
         headers: { "Content-Type": "application/json" },
       })
@@ -99,8 +102,10 @@ export async function POST(request: NextRequest) {
     const conversation = await prisma.conversation.findFirst({
       where: {
         id: conversationId,
-        userIds: {
-          has: currentUser.id,
+        users: {
+          some: {
+            id: currentUser.id,
+          },
         },
       },
       select: { id: true },

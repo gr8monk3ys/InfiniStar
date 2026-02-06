@@ -17,11 +17,14 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     let cookieToken: string | null = null
 
     if (cookieHeader) {
-      const cookies = cookieHeader.split(";").reduce((acc, cookie) => {
-        const [key, value] = cookie.trim().split("=")
-        acc[key] = value
-        return acc
-      }, {} as Record<string, string>)
+      const cookies = cookieHeader.split(";").reduce(
+        (acc, cookie) => {
+          const [key, value] = cookie.trim().split("=")
+          acc[key] = value
+          return acc
+        },
+        {} as Record<string, string>
+      )
       cookieToken = cookies["csrf-token"] || null
     }
 
@@ -52,8 +55,10 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     const deletedConversation = await prisma.conversation.deleteMany({
       where: {
         id: conversationId,
-        userIds: {
-          hasSome: [currentUser.id],
+        users: {
+          some: {
+            id: currentUser.id,
+          },
         },
       },
     })

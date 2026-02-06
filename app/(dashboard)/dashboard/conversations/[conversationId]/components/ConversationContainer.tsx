@@ -33,7 +33,7 @@ const ConversationContainer: React.FC<ConversationContainerProps> = ({ initialMe
   const session = useSession()
   const currentUserId = session.data?.user?.id
   const { token: csrfToken } = useCsrfToken()
-  const bottomRef = useRef<HTMLDivElement>(null)
+  const bottomRef = useRef<HTMLDivElement | null>(null)
 
   // Lift messages state to share with Form for suggestions
   const [messages, setMessages] = useState<FullMessageType[]>(initialMessages)

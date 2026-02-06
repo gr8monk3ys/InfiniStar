@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server"
-import bcrypt from "bcrypt"
+import bcrypt from "bcryptjs"
 import { z } from "zod"
 
 import { sendVerificationEmail } from "@/app/lib/email"
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
     const validationResult = registerSchema.safeParse(body)
 
     if (!validationResult.success) {
-      return new NextResponse(validationResult.error.errors[0].message, { status: 422 })
+      return new NextResponse(validationResult.error.issues[0].message, { status: 422 })
     }
 
     const { email, name, password } = validationResult.data

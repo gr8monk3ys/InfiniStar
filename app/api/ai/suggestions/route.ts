@@ -3,7 +3,7 @@ import { z } from "zod"
 
 import { verifyCsrfToken } from "@/app/lib/csrf"
 import prisma from "@/app/lib/prismadb"
-import { InMemoryRateLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
+import { getClientIdentifier, InMemoryRateLimiter } from "@/app/lib/rate-limit"
 import {
   generateSuggestions,
   getCachedSuggestions,
@@ -42,11 +42,14 @@ export async function POST(request: NextRequest) {
   let cookieToken: string | null = null
 
   if (cookieHeader) {
-    const cookies = cookieHeader.split(";").reduce((acc, cookie) => {
-      const [key, value] = cookie.trim().split("=")
-      acc[key] = value
-      return acc
-    }, {} as Record<string, string>)
+    const cookies = cookieHeader.split(";").reduce(
+      (acc, cookie) => {
+        const [key, value] = cookie.trim().split("=")
+        acc[key] = value
+        return acc
+      },
+      {} as Record<string, string>
+    )
     cookieToken = cookies["csrf-token"] || null
   }
 
@@ -105,8 +108,10 @@ export async function POST(request: NextRequest) {
     const conversation = await prisma.conversation.findFirst({
       where: {
         id: conversationId,
-        userIds: {
-          has: currentUser.id,
+        users: {
+          some: {
+            id: currentUser.id,
+          },
         },
       },
       include: {

@@ -37,11 +37,14 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     let cookieToken: string | null = null
 
     if (cookieHeader) {
-      const cookies = cookieHeader.split(";").reduce((acc, cookie) => {
-        const [key, value] = cookie.trim().split("=")
-        acc[key] = value
-        return acc
-      }, {} as Record<string, string>)
+      const cookies = cookieHeader.split(";").reduce(
+        (acc, cookie) => {
+          const [key, value] = cookie.trim().split("=")
+          acc[key] = value
+          return acc
+        },
+        {} as Record<string, string>
+      )
       cookieToken = cookies["csrf-token"] || null
     }
 
@@ -63,8 +66,12 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       },
       select: {
         id: true,
-        userIds: true,
-        tagIds: true,
+        users: {
+          select: { id: true },
+        },
+        tags: {
+          select: { id: true },
+        },
       },
     })
 
@@ -73,7 +80,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     }
 
     // Verify user is a participant
-    if (!conversation.userIds.includes(currentUser.id)) {
+    if (!conversation.users.some((user) => user.id === currentUser.id)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
     }
 
@@ -93,7 +100,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     }
 
     // Check if tag is attached to this conversation
-    if (!conversation.tagIds.includes(tagId)) {
+    if (!conversation.tags.some((tagItem) => tagItem.id === tagId)) {
       return NextResponse.json(
         { error: "Tag is not attached to this conversation" },
         { status: 400 }

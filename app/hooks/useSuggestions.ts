@@ -275,13 +275,16 @@ export function useSuggestions(options: UseSuggestionsOptions): UseSuggestionsRe
   /**
    * Initialize last AI message ID on first render
    */
+  const hasInitializedRef = useRef(false)
+
   useEffect(() => {
+    if (hasInitializedRef.current) return
     const lastAiMessage = [...messages].reverse().find((m) => m.isAI)
     if (lastAiMessage) {
       lastAiMessageIdRef.current = lastAiMessage.id
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []) // Only run on mount - intentionally exclude messages to prevent resetting on every update
+    hasInitializedRef.current = true
+  }, [messages])
 
   /**
    * Cleanup on unmount

@@ -17,11 +17,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<I
     let cookieToken: string | null = null
 
     if (cookieHeader) {
-      const cookies = cookieHeader.split(";").reduce((acc, cookie) => {
-        const [key, value] = cookie.trim().split("=")
-        acc[key] = value
-        return acc
-      }, {} as Record<string, string>)
+      const cookies = cookieHeader.split(";").reduce(
+        (acc, cookie) => {
+          const [key, value] = cookie.trim().split("=")
+          acc[key] = value
+          return acc
+        },
+        {} as Record<string, string>
+      )
       cookieToken = cookies["csrf-token"] || null
     }
 
@@ -40,8 +43,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<I
     const conversation = await prisma.conversation.findFirst({
       where: {
         id: conversationId,
-        userIds: {
-          has: currentUser.id,
+        users: {
+          some: {
+            id: currentUser.id,
+          },
         },
       },
       include: {
@@ -93,7 +98,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<I
     })
 
     // If user has already seen the message, no need to go further
-    if (lastMessage.seenIds.indexOf(currentUser.id) !== -1) {
+    if (lastMessage.seen.some((user) => user.id === currentUser.id)) {
       return NextResponse.json(conversation)
     }
 

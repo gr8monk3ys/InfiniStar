@@ -11,8 +11,8 @@ import { z } from "zod"
 
 import { authOptions } from "@/app/lib/auth"
 import {
-  RETENTION_PERIODS,
   getAutoDeleteSettings,
+  RETENTION_PERIODS,
   updateAutoDeleteSettings,
 } from "@/app/lib/auto-delete"
 import { verifyCsrfToken } from "@/app/lib/csrf"
@@ -74,11 +74,14 @@ export async function PATCH(request: NextRequest) {
     let cookieToken: string | null = null
 
     if (cookieHeader) {
-      const cookies = cookieHeader.split(";").reduce((acc, cookie) => {
-        const [key, value] = cookie.trim().split("=")
-        acc[key] = value
-        return acc
-      }, {} as Record<string, string>)
+      const cookies = cookieHeader.split(";").reduce(
+        (acc, cookie) => {
+          const [key, value] = cookie.trim().split("=")
+          acc[key] = value
+          return acc
+        },
+        {} as Record<string, string>
+      )
       cookieToken = cookies["csrf-token"] || null
     }
 
@@ -98,7 +101,7 @@ export async function PATCH(request: NextRequest) {
     // Validate input
     const validationResult = updateSettingsSchema.safeParse(body)
     if (!validationResult.success) {
-      return NextResponse.json({ error: validationResult.error.errors[0].message }, { status: 400 })
+      return NextResponse.json({ error: validationResult.error.issues[0].message }, { status: 400 })
     }
 
     const updatedSettings = await updateAutoDeleteSettings(currentUser.id, validationResult.data)

@@ -142,7 +142,7 @@ export async function getConversationsToDelete(
 
   // Build the query conditions
   const conditions: Record<string, unknown>[] = [
-    { userIds: { has: userId } },
+    { users: { some: { id: userId } } },
     { lastMessageAt: { lt: cutoffDate } },
   ]
 
@@ -157,7 +157,7 @@ export async function getConversationsToDelete(
   if (userSettings.autoDeleteExcludeTags.length > 0) {
     conditions.push({
       NOT: {
-        tagIds: { hasSome: userSettings.autoDeleteExcludeTags },
+        tags: { some: { id: { in: userSettings.autoDeleteExcludeTags } } },
       },
     })
   }
@@ -258,7 +258,7 @@ export async function deleteOldConversations(userId: string): Promise<AutoDelete
       // Get all users in the conversation before deletion
       const conv = await prisma.conversation.findUnique({
         where: { id: conversation.id },
-        select: { userIds: true },
+        select: { users: { select: { id: true } } },
       })
 
       // Delete the conversation and its messages
@@ -274,9 +274,9 @@ export async function deleteOldConversations(userId: string): Promise<AutoDelete
       ])
 
       // Notify all users in the conversation about the deletion via Pusher
-      if (conv?.userIds) {
-        for (const participantId of conv.userIds) {
-          await pusherServer.trigger(`user-${participantId}`, "conversation:auto-delete", {
+      if (conv?.users) {
+        for (const participant of conv.users) {
+          await pusherServer.trigger(`user-${participant.id}`, "conversation:auto-delete", {
             conversationId: conversation.id,
             reason: "auto-delete",
           })

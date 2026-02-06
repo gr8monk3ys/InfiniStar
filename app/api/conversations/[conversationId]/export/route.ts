@@ -134,7 +134,7 @@ export async function GET(
     }
 
     // Verify user is a participant in the conversation
-    const isParticipant = conversation.userIds.includes(currentUser.id)
+    const isParticipant = conversation.users.some((user) => user.id === currentUser.id)
     if (!isParticipant) {
       return NextResponse.json(
         { error: "You do not have permission to export this conversation", success: false },

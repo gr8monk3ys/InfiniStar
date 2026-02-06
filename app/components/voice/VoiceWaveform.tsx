@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState, type ReactElement } from "react"
 
 import { cn } from "@/app/lib/utils"
 import type { VoiceInputState } from "@/app/hooks/useVoiceInput"
@@ -55,7 +55,7 @@ export function VoiceWaveform({
   activeColor = "bg-red-500",
   realAudioEnabled = false,
   className,
-}: VoiceWaveformProps): JSX.Element {
+}: VoiceWaveformProps): ReactElement {
   const [audioLevels, setAudioLevels] = useState<number[]>(Array(barCount).fill(0.2))
   const animationFrameRef = useRef<number | null>(null)
   const analyserRef = useRef<AnalyserNode | null>(null)
@@ -223,7 +223,7 @@ export function VoiceWaveformDots({
 }: {
   state: VoiceInputState
   className?: string
-}): JSX.Element {
+}): ReactElement {
   return (
     <div
       className={cn("flex items-center gap-1", className)}

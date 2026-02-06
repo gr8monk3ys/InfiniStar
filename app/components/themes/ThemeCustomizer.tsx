@@ -118,10 +118,9 @@ export function ThemeCustomizer({ className }: ThemeCustomizerProps) {
         <div className="animate-pulse space-y-4">
           <div className="h-6 w-32 rounded bg-gray-200 dark:bg-gray-700" />
           <div className="space-y-2">
-            {Array.from({ length: 5 }).map((_, index) => (
-              // eslint-disable-next-line react/no-array-index-key -- Static skeleton placeholders
+            {["one", "two", "three", "four", "five"].map((key) => (
               <div
-                key={`skeleton-customizer-${index}`}
+                key={`skeleton-customizer-${key}`}
                 className="h-10 rounded bg-gray-200 dark:bg-gray-700"
               />
             ))}

@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useMemo, useState, type ReactElement } from "react"
 import { HiCheck, HiChevronUpDown, HiLanguage } from "react-icons/hi2"
 
 import { cn } from "@/app/lib/utils"
@@ -48,7 +48,7 @@ export function VoiceLanguageSelector({
   showNative = false,
   className,
   allowedLanguages,
-}: VoiceLanguageSelectorProps): JSX.Element {
+}: VoiceLanguageSelectorProps): ReactElement {
   const [isOpen, setIsOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [highlightedIndex, setHighlightedIndex] = useState(-1)
@@ -260,7 +260,7 @@ export function VoiceLanguageSelectorCompact({
   onLanguageChange,
   disabled = false,
   className,
-}: Omit<VoiceLanguageSelectorProps, "placeholder" | "showNative">): JSX.Element {
+}: Omit<VoiceLanguageSelectorProps, "placeholder" | "showNative">): ReactElement {
   const [isOpen, setIsOpen] = useState(false)
 
   const selectedLang = useMemo(

@@ -1,7 +1,15 @@
 "use client"
 
 import { useMemo } from "react"
-import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts"
+import {
+  Cell,
+  Legend,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  type PieLabelRenderProps,
+} from "recharts"
 
 import { cn } from "@/app/lib/utils"
 
@@ -102,14 +110,17 @@ export function ModelPieChart({ data, className, metric = "count" }: ModelPieCha
     innerRadius,
     outerRadius,
     percent,
-  }: {
-    cx: number
-    cy: number
-    midAngle: number
-    innerRadius: number
-    outerRadius: number
-    percent: number
-  }) => {
+  }: PieLabelRenderProps) => {
+    if (
+      typeof cx !== "number" ||
+      typeof cy !== "number" ||
+      typeof midAngle !== "number" ||
+      typeof innerRadius !== "number" ||
+      typeof outerRadius !== "number" ||
+      typeof percent !== "number"
+    ) {
+      return null
+    }
     if (percent < 0.05) return null // Don't show label for small slices
 
     const RADIAN = Math.PI / 180

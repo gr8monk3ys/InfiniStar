@@ -14,7 +14,7 @@ import { type TemplateVariables } from "@/app/types"
 
 // Validation schema for variables
 const useTemplateSchema = z.object({
-  variables: z.record(z.string()).optional(),
+  variables: z.record(z.string(), z.string()).optional(),
 })
 
 interface RouteParams {
@@ -42,11 +42,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     let cookieToken: string | null = null
 
     if (cookieHeader) {
-      const cookies = cookieHeader.split(";").reduce((acc, cookie) => {
-        const [key, value] = cookie.trim().split("=")
-        acc[key] = value
-        return acc
-      }, {} as Record<string, string>)
+      const cookies = cookieHeader.split(";").reduce(
+        (acc, cookie) => {
+          const [key, value] = cookie.trim().split("=")
+          acc[key] = value
+          return acc
+        },
+        {} as Record<string, string>
+      )
       cookieToken = cookies["csrf-token"] || null
     }
 

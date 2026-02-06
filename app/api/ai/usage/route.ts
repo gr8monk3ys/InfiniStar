@@ -62,12 +62,13 @@ export async function GET(request: NextRequest) {
         startDate = undefined
         endDate = undefined
         break
-      default:
-        // Custom date range from query params
+      default: // Custom date range from query params
+      {
         const startParam = searchParams.get("startDate")
         const endParam = searchParams.get("endDate")
         if (startParam) startDate = new Date(startParam)
         if (endParam) endDate = new Date(endParam)
+      }
     }
 
     // Get usage stats

@@ -261,8 +261,8 @@ export async function joinViaShare(
     await prisma.conversation.update({
       where: { id: share.conversationId },
       data: {
-        userIds: {
-          push: userId,
+        users: {
+          connect: { id: userId },
         },
       },
     })

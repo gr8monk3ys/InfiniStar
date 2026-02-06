@@ -4,11 +4,11 @@ import { getServerSession } from "next-auth"
 import { z } from "zod"
 
 import {
-  MAX_MEMORY_CONTENT_LENGTH,
-  MEMORY_CATEGORIES,
   canCreateMemory,
   getMemoryByKey,
   getUserMemories,
+  MAX_MEMORY_CONTENT_LENGTH,
+  MEMORY_CATEGORIES,
   saveMemory,
 } from "@/app/lib/ai-memory"
 import { authOptions } from "@/app/lib/auth"
@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
     })
 
     if (!queryResult.success) {
-      return NextResponse.json({ error: queryResult.error.errors[0].message }, { status: 400 })
+      return NextResponse.json({ error: queryResult.error.issues[0].message }, { status: 400 })
     }
 
     const { category, includeExpired } = queryResult.data
@@ -114,11 +114,14 @@ export async function POST(request: NextRequest) {
     let cookieToken: string | null = null
 
     if (cookieHeader) {
-      const cookies = cookieHeader.split(";").reduce((acc, cookie) => {
-        const [key, value] = cookie.trim().split("=")
-        acc[key] = value
-        return acc
-      }, {} as Record<string, string>)
+      const cookies = cookieHeader.split(";").reduce(
+        (acc, cookie) => {
+          const [key, value] = cookie.trim().split("=")
+          acc[key] = value
+          return acc
+        },
+        {} as Record<string, string>
+      )
       cookieToken = cookies["csrf-token"] || null
     }
 
@@ -138,7 +141,7 @@ export async function POST(request: NextRequest) {
     // Validate input
     const validationResult = createMemorySchema.safeParse(body)
     if (!validationResult.success) {
-      return NextResponse.json({ error: validationResult.error.errors[0].message }, { status: 400 })
+      return NextResponse.json({ error: validationResult.error.issues[0].message }, { status: 400 })
     }
 
     const { key, content, category, importance, expiresAt } = validationResult.data

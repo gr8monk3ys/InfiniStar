@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useRef } from "react"
+import { useCallback, useEffect, useRef, type ReactElement } from "react"
 import { HiXMark } from "react-icons/hi2"
 
 import { cn } from "@/app/lib/utils"
@@ -90,7 +90,7 @@ export function VoiceInput({
   silenceTimeout,
   onStateChange,
   onError,
-}: VoiceInputProps): JSX.Element | null {
+}: VoiceInputProps): ReactElement | null {
   const isSupported = isVoiceInputSupported()
   const browserInfo = getBrowserSupportInfo()
   const previewRef = useRef<HTMLDivElement>(null)
@@ -270,7 +270,7 @@ export function VoiceInputMinimal({
   language?: string
   disabled?: boolean
   className?: string
-}): JSX.Element | null {
+}): ReactElement | null {
   const isSupported = isVoiceInputSupported()
 
   const { state, errorMessage, toggleListening } = useVoiceInput({

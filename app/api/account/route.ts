@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server"
-import bcrypt from "bcrypt"
+import bcrypt from "bcryptjs"
 import { z } from "zod"
 
 import { verifyCsrfToken } from "@/app/lib/csrf"
@@ -28,11 +28,14 @@ function validateCsrf(request: NextRequest): boolean {
   let cookieToken: string | null = null
 
   if (cookieHeader) {
-    const cookies = cookieHeader.split(";").reduce((acc, cookie) => {
-      const [key, value] = cookie.trim().split("=")
-      acc[key] = value
-      return acc
-    }, {} as Record<string, string>)
+    const cookies = cookieHeader.split(";").reduce(
+      (acc, cookie) => {
+        const [key, value] = cookie.trim().split("=")
+        acc[key] = value
+        return acc
+      },
+      {} as Record<string, string>
+    )
     cookieToken = cookies["csrf-token"] || null
   }
 
@@ -91,7 +94,7 @@ export async function DELETE(request: NextRequest) {
 
     if (!validation.success) {
       return NextResponse.json(
-        { error: validation.error.errors[0].message, code: "VALIDATION_ERROR" },
+        { error: validation.error.issues[0].message, code: "VALIDATION_ERROR" },
         { status: 400 }
       )
     }

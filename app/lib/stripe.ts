@@ -1,6 +1,6 @@
 import Stripe from "stripe"
 
 export const stripe = new Stripe(process.env.STRIPE_API_KEY || "sk_test_placeholder", {
-  apiVersion: "2024-11-20.acacia",
+  apiVersion: "2026-01-28.clover",
   typescript: true,
 })

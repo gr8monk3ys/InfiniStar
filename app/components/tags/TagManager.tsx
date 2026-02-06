@@ -193,7 +193,6 @@ const TagManager: React.FC<TagManagerProps> = ({ className }) => {
                     createdAt: new Date(),
                     updatedAt: new Date(),
                     userId: "",
-                    conversationIds: [],
                   }}
                   size="md"
                 />
@@ -220,8 +219,8 @@ const TagManager: React.FC<TagManagerProps> = ({ className }) => {
                     ? "Updating..."
                     : "Creating..."
                   : editingTag
-                  ? "Update Tag"
-                  : "Create Tag"}
+                    ? "Update Tag"
+                    : "Create Tag"}
               </button>
             </div>
           </div>

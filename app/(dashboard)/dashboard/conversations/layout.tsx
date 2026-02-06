@@ -12,7 +12,6 @@ export default async function ConversationsLayout({ children }: { children: Reac
   const user = await getUsers()
 
   return (
-    // @ts-expect-error Server Component
     <Sidebar>
       <GlobalSearchProvider>
         <KeyboardShortcutsProvider>

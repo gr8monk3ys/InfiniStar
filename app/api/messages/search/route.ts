@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
     })
 
     if (!validation.success) {
-      return NextResponse.json({ error: validation.error.errors[0].message }, { status: 400 })
+      return NextResponse.json({ error: validation.error.issues[0].message }, { status: 400 })
     }
 
     const { query: searchQuery, conversationId: searchConversationId } = validation.data
@@ -55,8 +55,10 @@ export async function GET(request: NextRequest) {
       const conversation = await prisma.conversation.findFirst({
         where: {
           id: searchConversationId,
-          userIds: {
-            has: currentUser.id,
+          users: {
+            some: {
+              id: currentUser.id,
+            },
           },
         },
       })
@@ -73,8 +75,10 @@ export async function GET(request: NextRequest) {
       // Search across all user's conversations
       const userConversations = await prisma.conversation.findMany({
         where: {
-          userIds: {
-            has: currentUser.id,
+          users: {
+            some: {
+              id: currentUser.id,
+            },
           },
         },
         select: {

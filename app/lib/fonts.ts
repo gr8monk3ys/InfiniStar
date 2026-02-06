@@ -1,11 +1,6 @@
-import { JetBrains_Mono as FontMono, Inter as FontSans } from "next/font/google"
+// Use system font stacks to avoid build-time network fetches for Google Fonts.
+// If you later add local font files, switch to `next/font/local` here.
+type FontVariable = { variable: string }
 
-export const fontSans = FontSans({
-  subsets: ["latin"],
-  variable: "--font-sans",
-})
-
-export const fontMono = FontMono({
-  subsets: ["latin"],
-  variable: "--font-mono",
-})
+export const fontSans: FontVariable = { variable: "" }
+export const fontMono: FontVariable = { variable: "" }

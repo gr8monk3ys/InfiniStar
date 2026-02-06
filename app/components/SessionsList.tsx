@@ -12,7 +12,7 @@ import {
   HiTrash,
 } from "react-icons/hi2"
 
-import { ApiError, api, createLoadingToast } from "@/app/lib/api-client"
+import { api, ApiError, createLoadingToast } from "@/app/lib/api-client"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -174,12 +174,12 @@ function SessionItem({ session, onRevoke, isRevoking }: SessionItemProps) {
             <AlertDialogDescription>
               Are you sure you want to revoke this session? The device will be signed out and will
               need to log in again to access the application.
-              <div className="mt-3 rounded-md bg-gray-100 p-3 text-sm">
-                <strong>Device:</strong> {session.browser || "Unknown"} on {session.os || "Unknown"}
-                <br />
-                <strong>IP Address:</strong> {session.ipAddress}
-              </div>
             </AlertDialogDescription>
+            <div className="mt-3 rounded-md bg-gray-100 p-3 text-sm text-gray-700">
+              <strong>Device:</strong> {session.browser || "Unknown"} on {session.os || "Unknown"}
+              <br />
+              <strong>IP Address:</strong> {session.ipAddress}
+            </div>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
@@ -407,10 +407,10 @@ export default function SessionsList() {
               Are you sure you want to revoke all other sessions? This will sign out{" "}
               {otherSessionsCount} device{otherSessionsCount !== 1 ? "s" : ""} and they will need to
               log in again.
-              <div className="mt-3 text-sm font-medium text-gray-700">
-                Your current session will not be affected.
-              </div>
             </AlertDialogDescription>
+            <div className="mt-3 text-sm font-medium text-gray-700">
+              Your current session will not be affected.
+            </div>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>

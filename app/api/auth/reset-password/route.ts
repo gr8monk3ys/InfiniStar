@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server"
-import bcrypt from "bcrypt"
+import bcrypt from "bcryptjs"
 import { z } from "zod"
 
 import { isTokenExpired } from "@/app/lib/email-verification"
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     // Validate input
     const validation = resetPasswordSchema.safeParse(body)
     if (!validation.success) {
-      return NextResponse.json({ error: validation.error.errors[0].message }, { status: 400 })
+      return NextResponse.json({ error: validation.error.issues[0].message }, { status: 400 })
     }
 
     const { token, password } = validation.data

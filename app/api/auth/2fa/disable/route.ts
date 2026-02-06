@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server"
-import bcrypt from "bcrypt"
+import bcrypt from "bcryptjs"
 import { getServerSession } from "next-auth"
 import { z } from "zod"
 
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const body = await request.json()
     const validation = disableSchema.safeParse(body)
     if (!validation.success) {
-      return NextResponse.json({ error: validation.error.errors[0].message }, { status: 400 })
+      return NextResponse.json({ error: validation.error.issues[0].message }, { status: 400 })
     }
 
     const { password, code } = validation.data

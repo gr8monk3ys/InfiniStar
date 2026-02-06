@@ -24,9 +24,7 @@ import prisma from "@/app/lib/prismadb"
 
 // Anonymized values for deleted content
 const DELETED_MESSAGE_BODY = "[Deleted]"
-// Note: DELETED_USER_NAME can be used if you want to replace user names in the UI
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const _DELETED_USER_NAME = "Deleted User"
+// Note: If you want to replace user names in the UI, add a deleted user label here.
 
 /**
  * Process all accounts scheduled for deletion
@@ -71,13 +69,11 @@ export async function processScheduledDeletions(): Promise<{
       }
 
       processed++
-      // eslint-disable-next-line no-console -- Audit logging for GDPR compliance
-      console.log(`[ACCOUNT_DELETION] Successfully deleted user ${user.id}`)
+      console.warn(`[ACCOUNT_DELETION] Successfully deleted user ${user.id}`)
     } catch (error) {
       failed++
       const errorMessage = error instanceof Error ? error.message : "Unknown error"
       errors.push(`Failed to delete user ${user.id}: ${errorMessage}`)
-      // eslint-disable-next-line no-console -- Audit logging for GDPR compliance
       console.error(`[ACCOUNT_DELETION] Failed to delete user ${user.id}:`, error)
     }
   }
@@ -118,20 +114,22 @@ export async function deleteUserAccount(userId: string): Promise<void> {
     // First, get all messages the user has seen
     const messagesSeenByUser = await tx.message.findMany({
       where: {
-        seenIds: {
-          has: userId,
+        seen: {
+          some: {
+            id: userId,
+          },
         },
       },
-      select: { id: true, seenIds: true },
+      select: { id: true },
     })
 
-    // Update each message to remove the user from seenIds
+    // Update each message to remove the user from seen relation
     for (const message of messagesSeenByUser) {
       await tx.message.update({
         where: { id: message.id },
         data: {
-          seenIds: {
-            set: message.seenIds.filter((id) => id !== userId),
+          seen: {
+            disconnect: { id: userId },
           },
         },
       })
@@ -140,19 +138,21 @@ export async function deleteUserAccount(userId: string): Promise<void> {
     // 3. Remove user from all conversations
     const userConversations = await tx.conversation.findMany({
       where: {
-        userIds: {
-          has: userId,
+        users: {
+          some: {
+            id: userId,
+          },
         },
       },
-      select: { id: true, userIds: true },
+      select: { id: true },
     })
 
     for (const conversation of userConversations) {
       await tx.conversation.update({
         where: { id: conversation.id },
         data: {
-          userIds: {
-            set: conversation.userIds.filter((id) => id !== userId),
+          users: {
+            disconnect: { id: userId },
           },
         },
       })

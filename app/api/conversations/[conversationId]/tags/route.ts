@@ -39,7 +39,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         id: conversationId,
       },
       select: {
-        userIds: true,
+        users: {
+          select: { id: true },
+        },
         tags: {
           where: {
             userId: currentUser.id,
@@ -53,7 +55,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
 
     // Verify user is a participant
-    if (!conversation.userIds.includes(currentUser.id)) {
+    if (!conversation.users.some((user) => user.id === currentUser.id)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
     }
 
@@ -87,11 +89,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     let cookieToken: string | null = null
 
     if (cookieHeader) {
-      const cookies = cookieHeader.split(";").reduce((acc, cookie) => {
-        const [key, value] = cookie.trim().split("=")
-        acc[key] = value
-        return acc
-      }, {} as Record<string, string>)
+      const cookies = cookieHeader.split(";").reduce(
+        (acc, cookie) => {
+          const [key, value] = cookie.trim().split("=")
+          acc[key] = value
+          return acc
+        },
+        {} as Record<string, string>
+      )
       cookieToken = cookies["csrf-token"] || null
     }
 
@@ -111,7 +116,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     // Validate input
     const validationResult = addTagSchema.safeParse(body)
     if (!validationResult.success) {
-      return NextResponse.json({ error: validationResult.error.errors[0].message }, { status: 400 })
+      return NextResponse.json({ error: validationResult.error.issues[0].message }, { status: 400 })
     }
 
     const { tagId } = validationResult.data
@@ -123,8 +128,12 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       },
       select: {
         id: true,
-        userIds: true,
-        tagIds: true,
+        users: {
+          select: { id: true },
+        },
+        tags: {
+          select: { id: true },
+        },
       },
     })
 
@@ -133,7 +142,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     // Verify user is a participant
-    if (!conversation.userIds.includes(currentUser.id)) {
+    if (!conversation.users.some((user) => user.id === currentUser.id)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
     }
 
@@ -153,14 +162,16 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     // Check if tag is already attached
-    if (conversation.tagIds.includes(tagId)) {
+    if (conversation.tags.some((tagItem) => tagItem.id === tagId)) {
       return NextResponse.json({ error: "Tag already attached to conversation" }, { status: 409 })
     }
 
     // Check tag limit per conversation (max 5 tags)
     const userTagsOnConversation = await prisma.tag.count({
       where: {
-        id: { in: conversation.tagIds },
+        conversations: {
+          some: { id: conversationId },
+        },
         userId: currentUser.id,
       },
     })

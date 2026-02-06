@@ -9,6 +9,8 @@ import { getClientIdentifier, tagLimiter } from "@/app/lib/rate-limit"
 import { sanitizePlainText } from "@/app/lib/sanitize"
 import { TAG_COLORS, type TagColor } from "@/app/types"
 
+const TAG_COLOR_KEYS = Object.keys(TAG_COLORS) as TagColor[]
+
 // Validation schema for creating a tag
 const createTagSchema = z.object({
   name: z
@@ -16,9 +18,7 @@ const createTagSchema = z.object({
     .min(1, "Tag name is required")
     .max(30, "Tag name must be 30 characters or less")
     .trim(),
-  color: z.enum(Object.keys(TAG_COLORS) as [TagColor, ...TagColor[]], {
-    errorMap: () => ({ message: "Invalid tag color" }),
-  }),
+  color: z.enum(TAG_COLOR_KEYS as [TagColor, ...TagColor[]], { message: "Invalid tag color" }),
 })
 
 /**
@@ -85,11 +85,14 @@ export async function POST(request: NextRequest) {
     let cookieToken: string | null = null
 
     if (cookieHeader) {
-      const cookies = cookieHeader.split(";").reduce((acc, cookie) => {
-        const [key, value] = cookie.trim().split("=")
-        acc[key] = value
-        return acc
-      }, {} as Record<string, string>)
+      const cookies = cookieHeader.split(";").reduce(
+        (acc, cookie) => {
+          const [key, value] = cookie.trim().split("=")
+          acc[key] = value
+          return acc
+        },
+        {} as Record<string, string>
+      )
       cookieToken = cookies["csrf-token"] || null
     }
 
@@ -109,7 +112,7 @@ export async function POST(request: NextRequest) {
     // Validate input
     const validationResult = createTagSchema.safeParse(body)
     if (!validationResult.success) {
-      return NextResponse.json({ error: validationResult.error.errors[0].message }, { status: 400 })
+      return NextResponse.json({ error: validationResult.error.issues[0].message }, { status: 400 })
     }
 
     const { name, color } = validationResult.data

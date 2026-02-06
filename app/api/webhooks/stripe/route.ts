@@ -33,14 +33,24 @@ export async function POST(req: Request) {
     const subscription = await stripe.subscriptions.retrieve(session.subscription as string)
     const userId = session?.metadata?.userId
 
+    if ("deleted" in subscription && subscription.deleted) {
+      return new NextResponse("Subscription deleted", { status: 200 })
+    }
+
+    const activeSubscription = subscription as Stripe.Subscription
+
+    const currentPeriodEnd = activeSubscription.items.data[0]?.current_period_end
+      ? new Date(activeSubscription.items.data[0].current_period_end * 1000)
+      : null
+
     if (userId) {
       await prisma.user.update({
         where: { id: userId },
         data: {
-          stripeSubscriptionId: subscription.id,
-          stripeCustomerId: subscription.customer as string,
-          stripePriceId: subscription.items.data[0].price.id,
-          stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
+          stripeSubscriptionId: activeSubscription.id,
+          stripeCustomerId: activeSubscription.customer as string,
+          stripePriceId: activeSubscription.items.data[0].price.id,
+          stripeCurrentPeriodEnd: currentPeriodEnd,
         },
       })
     }
@@ -48,15 +58,31 @@ export async function POST(req: Request) {
 
   if (event.type === "invoice.payment_succeeded") {
     const invoice = event.data.object as Stripe.Invoice
-    const subscriptionId = invoice.subscription as string
+    const subscriptionRef = invoice.parent?.subscription_details?.subscription
+    const subscriptionId =
+      typeof subscriptionRef === "string" ? subscriptionRef : subscriptionRef?.id
+
+    if (!subscriptionId) {
+      return new NextResponse("Missing subscription reference", { status: 200 })
+    }
 
     // Get the subscription to find the customer
     const subscription = await stripe.subscriptions.retrieve(subscriptionId)
 
+    if ("deleted" in subscription && subscription.deleted) {
+      return new NextResponse("Subscription deleted", { status: 200 })
+    }
+
+    const activeSubscription = subscription as Stripe.Subscription
+
+    const currentPeriodEnd = activeSubscription.items.data[0]?.current_period_end
+      ? new Date(activeSubscription.items.data[0].current_period_end * 1000)
+      : null
+
     // Find user by Stripe customer ID
     const user = await prisma.user.findUnique({
       where: {
-        stripeCustomerId: subscription.customer as string,
+        stripeCustomerId: activeSubscription.customer as string,
       },
     })
 
@@ -66,8 +92,8 @@ export async function POST(req: Request) {
           id: user.id,
         },
         data: {
-          stripePriceId: subscription.items.data[0].price.id,
-          stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
+          stripePriceId: activeSubscription.items.data[0].price.id,
+          stripeCurrentPeriodEnd: currentPeriodEnd,
         },
       })
     }

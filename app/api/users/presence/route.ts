@@ -26,7 +26,7 @@ export async function PATCH(request: NextRequest) {
     const validation = presenceSchema.safeParse(body)
 
     if (!validation.success) {
-      return NextResponse.json({ error: validation.error.errors[0].message }, { status: 400 })
+      return NextResponse.json({ error: validation.error.issues[0].message }, { status: 400 })
     }
 
     const { status, customStatus, customStatusEmoji } = validation.data
@@ -60,8 +60,10 @@ export async function PATCH(request: NextRequest) {
     // Broadcast to all conversations the user is part of
     const userConversations = await prisma.conversation.findMany({
       where: {
-        userIds: {
-          has: currentUser.id,
+        users: {
+          some: {
+            id: currentUser.id,
+          },
         },
       },
       select: {

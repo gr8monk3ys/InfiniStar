@@ -1,4 +1,5 @@
 import {
+  type Character,
   type Conversation,
   type ConversationShare,
   type Message,
@@ -20,10 +21,10 @@ export type FullMessageType = Message & {
 export type FullConversationType = Conversation & {
   users: User[]
   messages: FullMessageType[]
+  character?: Character | null
   tags?: Tag[]
   title?: string
   isGroup: boolean
-  userIds?: string[]
   lastMessageAt?: Date
   archivedBy?: string[]
   archivedAt?: Date | null

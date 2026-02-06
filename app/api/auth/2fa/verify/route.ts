@@ -54,7 +54,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const body = await request.json()
     const validation = verifySchema.safeParse(body)
     if (!validation.success) {
-      return NextResponse.json({ error: validation.error.errors[0].message }, { status: 400 })
+      return NextResponse.json({ error: validation.error.issues[0].message }, { status: 400 })
     }
 
     const { code } = validation.data

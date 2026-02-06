@@ -6,13 +6,10 @@
  */
 
 import crypto from "crypto"
-import { authenticator } from "otplib"
+import { generateSecret, generateURI, verifySync } from "otplib"
 
-// TOTP Configuration
-authenticator.options = {
-  window: 1, // Allow 1 step tolerance (30 seconds before/after)
-  step: 30, // 30-second TOTP window
-}
+const TOTP_PERIOD_SECONDS = 30
+const TOTP_TOLERANCE_SECONDS = 30
 
 const ALGORITHM = "aes-256-gcm"
 const IV_LENGTH = 16 // 128 bits
@@ -83,7 +80,7 @@ export function decryptSecret(encryptedData: string): string {
  * Generate a new TOTP secret
  */
 export function generateTOTPSecret(): string {
-  return authenticator.generateSecret()
+  return generateSecret()
 }
 
 /**
@@ -94,7 +91,13 @@ export function generateTOTPAuthURL(
   email: string,
   issuer: string = "InfiniStar"
 ): string {
-  return authenticator.keyuri(email, issuer, secret)
+  return generateURI({
+    issuer,
+    label: email,
+    secret,
+    strategy: "totp",
+    period: TOTP_PERIOD_SECONDS,
+  })
 }
 
 /**
@@ -102,7 +105,13 @@ export function generateTOTPAuthURL(
  */
 export function verifyTOTPCode(token: string, secret: string): boolean {
   try {
-    return authenticator.verify({ token, secret })
+    return verifySync({
+      token,
+      secret,
+      strategy: "totp",
+      period: TOTP_PERIOD_SECONDS,
+      epochTolerance: TOTP_TOLERANCE_SECONDS,
+    }).valid
   } catch {
     return false
   }

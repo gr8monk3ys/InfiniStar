@@ -12,7 +12,7 @@ interface BodyProps {
   onRegenerate?: (messageId: string) => void
   isRegenerating?: boolean
   regeneratingMessageId?: string | null
-  bottomRef?: RefObject<HTMLDivElement>
+  bottomRef?: RefObject<HTMLDivElement | null>
 }
 
 /**
@@ -44,7 +44,7 @@ const Body: React.FC<BodyProps> = memo(function Body({
           regeneratingMessageId={regeneratingMessageId}
         />
       ))}
-      <div className="pt-24" ref={bottomRef as RefObject<HTMLDivElement>} />
+      <div className="pt-24" ref={bottomRef} />
     </div>
   )
 })

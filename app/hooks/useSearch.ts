@@ -344,8 +344,8 @@ export function useSearch() {
   // Trigger search when debounced query or filters change
   useEffect(() => {
     performSearch()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
+    performSearch,
     debouncedQuery,
     state.filters.type,
     state.filters.dateFrom,

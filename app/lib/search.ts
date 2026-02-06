@@ -7,8 +7,8 @@
 
 import prisma from "@/app/lib/prismadb"
 import type {
-  AIPersonality,
   AdvancedSearchFilters,
+  AIPersonality,
   ConversationSearchResult,
   MessageSearchResult,
   SearchFacets,
@@ -170,7 +170,7 @@ export async function searchConversations(
 
   // Build where clause
   const whereClause: Record<string, unknown> = {
-    userIds: { has: userId },
+    users: { some: { id: userId } },
     OR: [
       { name: { contains: escapedQuery, mode: "insensitive" as const } },
       {
@@ -201,7 +201,7 @@ export async function searchConversations(
 
   // Tag filter
   if (tagIds && tagIds.length > 0) {
-    whereClause.tagIds = { hasSome: tagIds }
+    whereClause.tags = { some: { id: { in: tagIds } } }
   }
 
   // Archive filter
@@ -304,10 +304,10 @@ export async function searchMessages(
   // Build where clause for messages
   const whereClause: Record<string, unknown> = {
     conversation: {
-      userIds: { has: userId },
+      users: { some: { id: userId } },
       ...(isAI !== undefined && { isAI }),
       ...(personality && { aiPersonality: personality }),
-      ...(tagIds && tagIds.length > 0 && { tagIds: { hasSome: tagIds } }),
+      ...(tagIds && tagIds.length > 0 && { tags: { some: { id: { in: tagIds } } } }),
       ...(!archived && { archivedBy: { isEmpty: true } }),
     },
     isDeleted: false,
@@ -399,7 +399,7 @@ export async function getSearchSuggestions(
   // Search conversation names
   const conversations = await prisma.conversation.findMany({
     where: {
-      userIds: { has: userId },
+      users: { some: { id: userId } },
       name: { contains: escapedQuery, mode: "insensitive" as const },
       archivedBy: { isEmpty: true },
     },
@@ -457,7 +457,7 @@ export async function getSearchSuggestions(
  */
 export async function getSearchFacets(userId: string, query?: string): Promise<SearchFacets> {
   const baseWhere: Record<string, unknown> = {
-    userIds: { has: userId },
+    users: { some: { id: userId } },
     archivedBy: { isEmpty: true },
   }
 
@@ -516,7 +516,7 @@ export async function getSearchFacets(userId: string, query?: string): Promise<S
       id: true,
       name: true,
       color: true,
-      conversationIds: true,
+      _count: { select: { conversations: true } },
     },
   })
 
@@ -524,7 +524,7 @@ export async function getSearchFacets(userId: string, query?: string): Promise<S
     id: tag.id,
     name: tag.name,
     color: tag.color,
-    count: tag.conversationIds.length,
+    count: tag._count.conversations,
   }))
 
   // Get date range counts

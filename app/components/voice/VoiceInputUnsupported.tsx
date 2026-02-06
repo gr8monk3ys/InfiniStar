@@ -1,5 +1,6 @@
 "use client"
 
+import { type ReactElement } from "react"
 import { HiExclamationTriangle, HiInformationCircle } from "react-icons/hi2"
 
 import { cn } from "@/app/lib/utils"
@@ -35,7 +36,7 @@ export function VoiceInputUnsupported({
   variant = "inline",
   showSuggestions = true,
   className,
-}: VoiceInputUnsupportedProps): JSX.Element {
+}: VoiceInputUnsupportedProps): ReactElement {
   const browserInfo = getBrowserSupportInfo()
 
   if (variant === "tooltip") {
