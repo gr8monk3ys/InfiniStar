@@ -1,3 +1,5 @@
+import { calculateTokenCost, MODEL_PRICING } from "@/app/lib/ai-usage"
+
 /**
  * AI Usage Tracking Tests
  *
@@ -6,7 +8,10 @@
  * should be tested via integration tests.
  */
 
-import { MODEL_PRICING, calculateTokenCost } from "@/app/lib/ai-usage"
+jest.mock("@/app/lib/prismadb", () => ({
+  __esModule: true,
+  default: {},
+}))
 
 describe("MODEL_PRICING", () => {
   it("should have pricing for Claude 3.5 Sonnet", () => {

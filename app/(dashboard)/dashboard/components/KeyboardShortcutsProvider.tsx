@@ -1,6 +1,7 @@
 "use client"
 
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react"
+import dynamic from "next/dynamic"
 import { useRouter } from "next/navigation"
 import { useTheme } from "next-themes"
 
@@ -10,10 +11,18 @@ import {
   type ShortcutBinding,
   type ShortcutCategory,
 } from "@/app/lib/shortcuts"
-import KeyboardShortcutsModal from "@/app/components/modals/KeyboardShortcutsModal"
 import { useKeyboardShortcuts, type ShortcutHandler } from "@/app/hooks/useKeyboardShortcuts"
 
 import { useGlobalSearchContext } from "./GlobalSearchProvider"
+
+// Lazy-load the shortcuts help modal -- only shown on user action (Cmd+/)
+const KeyboardShortcutsModal = dynamic(
+  () => import("@/app/components/modals/KeyboardShortcutsModal"),
+  {
+    ssr: false,
+    loading: () => null,
+  }
+)
 
 /**
  * Keyboard Shortcuts Context
@@ -295,7 +304,7 @@ export function KeyboardShortcutsProvider({ children }: KeyboardShortcutsProvide
   return (
     <KeyboardShortcutsContext.Provider value={contextValue}>
       {children}
-      <KeyboardShortcutsModal isOpen={isHelpOpen} onClose={closeHelp} />
+      {isHelpOpen && <KeyboardShortcutsModal isOpen={isHelpOpen} onClose={closeHelp} />}
     </KeyboardShortcutsContext.Provider>
   )
 }

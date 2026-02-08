@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { z } from "zod"
 
+import { verifyCsrfToken } from "@/app/lib/csrf"
 import prisma from "@/app/lib/prismadb"
 import { pusherServer } from "@/app/lib/pusher"
 import getCurrentUser from "@/app/actions/getCurrentUser"
@@ -15,6 +16,27 @@ const presenceSchema = z.object({
 // PATCH /api/users/presence - Update user presence status
 export async function PATCH(request: NextRequest) {
   try {
+    // CSRF Protection
+    const headerToken = request.headers.get("X-CSRF-Token")
+    const cookieHeader = request.headers.get("cookie")
+    let cookieToken: string | null = null
+
+    if (cookieHeader) {
+      const cookies = cookieHeader.split(";").reduce(
+        (acc, cookie) => {
+          const [key, value] = cookie.trim().split("=")
+          acc[key] = value
+          return acc
+        },
+        {} as Record<string, string>
+      )
+      cookieToken = cookies["csrf-token"] || null
+    }
+
+    if (!verifyCsrfToken(headerToken, cookieToken)) {
+      return NextResponse.json({ error: "Invalid CSRF token" }, { status: 403 })
+    }
+
     const currentUser = await getCurrentUser()
 
     if (!currentUser?.id || !currentUser?.email) {

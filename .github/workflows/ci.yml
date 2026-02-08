@@ -46,7 +46,6 @@ jobs:
 
       - name: Run tests
         run: bun run test
-        continue-on-error: true
         env:
           CI: true
 

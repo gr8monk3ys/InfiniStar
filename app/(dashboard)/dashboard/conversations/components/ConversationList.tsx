@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useState } from "react"
+import dynamic from "next/dynamic"
 import { useRouter } from "next/navigation"
 import { useAuth, useUser } from "@clerk/nextjs"
 import { type User } from "@prisma/client"
@@ -21,13 +22,25 @@ import { useGlobalSearchContext } from "@/app/(dashboard)/dashboard/components/G
 import { useKeyboardShortcutsContext } from "@/app/(dashboard)/dashboard/components/KeyboardShortcutsProvider"
 import useActiveList from "@/app/(dashboard)/dashboard/hooks/useActiveList"
 import useConversation from "@/app/(dashboard)/dashboard/hooks/useConversation"
-import GroupChatModal from "@/app/components/modals/GroupChatModal"
-import PersonalitySelectionModal from "@/app/components/modals/PersonalitySelectionModal"
 import { TagBadge } from "@/app/components/tags"
 import { useTags } from "@/app/hooks/useTags"
 import { TAG_COLORS, type FullConversationType, type TagColor } from "@/app/types"
 
 import ConversationBox from "./ConversationBox"
+
+// Lazy-load modals that are only shown on user interaction
+const GroupChatModal = dynamic(() => import("@/app/components/modals/GroupChatModal"), {
+  ssr: false,
+  loading: () => null,
+})
+
+const PersonalitySelectionModal = dynamic(
+  () => import("@/app/components/modals/PersonalitySelectionModal"),
+  {
+    ssr: false,
+    loading: () => null,
+  }
+)
 
 interface ConversationListProps {
   initialItems: FullConversationType[]
@@ -335,11 +348,15 @@ const ConversationList: React.FC<ConversationListProps> = ({ initialItems, user 
 
   return (
     <>
-      <GroupChatModal user={user} isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
-      <PersonalitySelectionModal
-        isOpen={isPersonalityModalOpen}
-        onClose={() => setIsPersonalityModalOpen(false)}
-      />
+      {isModalOpen && (
+        <GroupChatModal user={user} isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      )}
+      {isPersonalityModalOpen && (
+        <PersonalitySelectionModal
+          isOpen={isPersonalityModalOpen}
+          onClose={() => setIsPersonalityModalOpen(false)}
+        />
+      )}
       <aside
         className={clsx(
           `

@@ -5,7 +5,7 @@ import { useMemo } from "react"
 
 import { cn } from "@/app/lib/utils"
 
-import { CodeBlock } from "./CodeBlock"
+import { LazyCodeBlock as CodeBlock } from "./LazyCodeBlock"
 
 interface MarkdownRendererProps {
   content: string

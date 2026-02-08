@@ -11,10 +11,15 @@ import { useForm, type FieldValues, type SubmitHandler } from "react-hook-form"
 import { toast } from "react-hot-toast"
 
 import Button from "@/app/components/Button"
-import StatusModal from "@/app/components/modals/StatusModal"
 
 import Input from "../inputs/Input"
 import Modal from "../modals/Modal"
+
+// Lazy-load StatusModal -- only shown when user clicks "Edit Status"
+const StatusModal = dynamic(() => import("@/app/components/modals/StatusModal"), {
+  ssr: false,
+  loading: () => null,
+})
 
 // Dynamic import to avoid build-time Cloudinary validation
 const CldUploadButton = dynamic(
@@ -184,7 +189,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, currentU
           </Button>
         </div>
       </form>
-      <StatusModal isOpen={isStatusModalOpen} onClose={() => setIsStatusModalOpen(false)} />
+      {isStatusModalOpen && (
+        <StatusModal isOpen={isStatusModalOpen} onClose={() => setIsStatusModalOpen(false)} />
+      )}
     </Modal>
   )
 }

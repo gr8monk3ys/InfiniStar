@@ -1,13 +1,16 @@
 "use client"
 
-import ReactSelect, { type MultiValue } from "react-select"
+import type { ActionMeta, MultiValue } from "react-select"
 
+import { LazySelect } from "@/app/components/ui/LazySelect"
 import { type SelectOption, type SelectProps } from "@/app/types"
 
 const Select: React.FC<SelectProps> = ({ label, value, onChange, options, disabled }) => {
-  const handleChange = (newValue: MultiValue<SelectOption>) => {
+  const handleChange = (newValue: unknown, _actionMeta: ActionMeta<unknown>) => {
+    // Cast through unknown since LazySelect uses generic unknown type
+    const typedValue = newValue as MultiValue<SelectOption>
     // Convert readonly array to mutable array for the callback
-    onChange([...newValue])
+    onChange([...typedValue])
   }
 
   return (
@@ -24,7 +27,7 @@ const Select: React.FC<SelectProps> = ({ label, value, onChange, options, disabl
         {label}
       </label>
       <div className="mt-2">
-        <ReactSelect
+        <LazySelect
           isDisabled={disabled}
           value={value}
           onChange={handleChange}
@@ -32,7 +35,7 @@ const Select: React.FC<SelectProps> = ({ label, value, onChange, options, disabl
           options={options}
           menuPortalTarget={document.body}
           styles={{
-            menuPortal: (base) => ({ ...base, zIndex: 9999 }),
+            menuPortal: (base: Record<string, unknown>) => ({ ...base, zIndex: 9999 }),
           }}
           classNames={{
             control: () => "text-sm",

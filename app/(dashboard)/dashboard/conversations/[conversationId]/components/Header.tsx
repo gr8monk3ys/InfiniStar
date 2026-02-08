@@ -1,6 +1,7 @@
 "use client"
 
 import { memo, useMemo, useState } from "react"
+import dynamic from "next/dynamic"
 import Link from "next/link"
 import { HiChevronLeft } from "react-icons/hi"
 import { HiEllipsisHorizontal, HiMagnifyingGlass, HiOutlineDocumentText } from "react-icons/hi2"
@@ -9,14 +10,27 @@ import useActiveList from "@/app/(dashboard)/dashboard/hooks/useActiveList"
 import useOtherUser from "@/app/(dashboard)/dashboard/hooks/useOtherUser"
 import Avatar from "@/app/components/Avatar"
 import AvatarGroup from "@/app/components/AvatarGroup"
-import SearchModal from "@/app/components/modals/SearchModal"
-import SummaryModal from "@/app/components/modals/SummaryModal"
 import { ThemeToggleCompact } from "@/app/components/theme-toggle"
 import { type FullConversationType } from "@/app/types"
 
 import ExportDropdown from "./ExportDropdown"
-import ProfileDrawer from "./ProfileDrawer"
 import { TokenUsageCompact } from "./TokenUsageDisplay"
+
+// Lazy-load heavy overlays that are only visible on user interaction
+const ProfileDrawer = dynamic(() => import("./ProfileDrawer"), {
+  ssr: false,
+  loading: () => null,
+})
+
+const SearchModal = dynamic(() => import("@/app/components/modals/SearchModal"), {
+  ssr: false,
+  loading: () => null,
+})
+
+const SummaryModal = dynamic(() => import("@/app/components/modals/SummaryModal"), {
+  ssr: false,
+  loading: () => null,
+})
 
 interface HeaderProps {
   conversation: FullConversationType
@@ -47,7 +61,13 @@ const Header: React.FC<HeaderProps> = memo(function Header({ conversation }) {
 
   return (
     <>
-      <ProfileDrawer data={conversation} isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} />
+      {drawerOpen && (
+        <ProfileDrawer
+          data={conversation}
+          isOpen={drawerOpen}
+          onClose={() => setDrawerOpen(false)}
+        />
+      )}
       <div className="flex w-full items-center justify-between border-b border-border bg-background px-4 py-3 shadow-sm sm:px-4 lg:px-6">
         <div className="flex items-center gap-3">
           <Link
@@ -106,16 +126,20 @@ const Header: React.FC<HeaderProps> = memo(function Header({ conversation }) {
           </button>
         </div>
       </div>
-      <SearchModal
-        isOpen={searchModalOpen}
-        onClose={() => setSearchModalOpen(false)}
-        conversationId={conversation.id}
-      />
-      <SummaryModal
-        isOpen={summaryModalOpen}
-        onClose={() => setSummaryModalOpen(false)}
-        conversationId={conversation.id}
-      />
+      {searchModalOpen && (
+        <SearchModal
+          isOpen={searchModalOpen}
+          onClose={() => setSearchModalOpen(false)}
+          conversationId={conversation.id}
+        />
+      )}
+      {summaryModalOpen && (
+        <SummaryModal
+          isOpen={summaryModalOpen}
+          onClose={() => setSummaryModalOpen(false)}
+          conversationId={conversation.id}
+        />
+      )}
     </>
   )
 })

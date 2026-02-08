@@ -7,7 +7,7 @@
  * Note: Verification, password reset, and 2FA emails are now handled by Clerk.
  */
 
-/* eslint-disable no-console -- Development logging for email debugging is intentional */
+import logger from "@/app/lib/logger"
 
 import {
   getAccountDeletedEmailTemplate,
@@ -46,23 +46,15 @@ async function sendEmail({
 }): Promise<boolean> {
   const config = getEmailConfig()
 
-  // In development, log to console
+  // In development, log email details
   if (config.isDevelopment) {
-    console.log("=".repeat(80))
-    console.log(`📧 EMAIL: ${subject}`)
-    console.log("=".repeat(80))
-    console.log(`To: ${to}`)
-    console.log(`Subject: ${subject}`)
-    console.log("-".repeat(40))
-    console.log("Text Body:")
-    console.log(textBody)
-    console.log("=".repeat(80))
+    logger.info({ to, subject, textBody }, "Development email (not sent)")
     return true
   }
 
   // Check for API token
   if (!config.apiToken) {
-    console.error("POSTMARK_API_TOKEN is not configured")
+    logger.error("POSTMARK_API_TOKEN is not configured")
     return false
   }
 
@@ -86,13 +78,16 @@ async function sendEmail({
 
     if (!response.ok) {
       const error = await response.json()
-      console.error("Postmark API error:", error)
+      logger.error({ err: error }, "Postmark API error")
       return false
     }
 
     return true
   } catch (error) {
-    console.error("Failed to send email:", error)
+    logger.error(
+      { err: error instanceof Error ? error : new Error(String(error)) },
+      "Failed to send email"
+    )
     return false
   }
 }

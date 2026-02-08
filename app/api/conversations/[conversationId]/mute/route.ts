@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server"
 
+import { verifyCsrfToken } from "@/app/lib/csrf"
 import prisma from "@/app/lib/prismadb"
 import { pusherServer } from "@/app/lib/pusher"
 import getCurrentUser from "@/app/actions/getCurrentUser"
@@ -10,6 +11,27 @@ export async function POST(
   { params }: { params: Promise<{ conversationId: string }> }
 ) {
   try {
+    // CSRF Protection
+    const headerToken = request.headers.get("X-CSRF-Token")
+    const cookieHeader = request.headers.get("cookie")
+    let cookieToken: string | null = null
+
+    if (cookieHeader) {
+      const cookies = cookieHeader.split(";").reduce(
+        (acc, cookie) => {
+          const [key, value] = cookie.trim().split("=")
+          acc[key] = value
+          return acc
+        },
+        {} as Record<string, string>
+      )
+      cookieToken = cookies["csrf-token"] || null
+    }
+
+    if (!verifyCsrfToken(headerToken, cookieToken)) {
+      return NextResponse.json({ error: "Invalid CSRF token" }, { status: 403 })
+    }
+
     const currentUser = await getCurrentUser()
     const { conversationId } = await params
 
@@ -30,7 +52,9 @@ export async function POST(
     }
 
     // Check if user is part of the conversation
-    const isUserInConversation = conversation.users.some((user: { id: string }) => user.id === currentUser.id)
+    const isUserInConversation = conversation.users.some(
+      (user: { id: string }) => user.id === currentUser.id
+    )
 
     if (!isUserInConversation) {
       return NextResponse.json({ error: "You are not part of this conversation" }, { status: 403 })
@@ -84,6 +108,27 @@ export async function DELETE(
   { params }: { params: Promise<{ conversationId: string }> }
 ) {
   try {
+    // CSRF Protection
+    const headerToken = request.headers.get("X-CSRF-Token")
+    const cookieHeader = request.headers.get("cookie")
+    let cookieToken: string | null = null
+
+    if (cookieHeader) {
+      const cookies = cookieHeader.split(";").reduce(
+        (acc, cookie) => {
+          const [key, value] = cookie.trim().split("=")
+          acc[key] = value
+          return acc
+        },
+        {} as Record<string, string>
+      )
+      cookieToken = cookies["csrf-token"] || null
+    }
+
+    if (!verifyCsrfToken(headerToken, cookieToken)) {
+      return NextResponse.json({ error: "Invalid CSRF token" }, { status: 403 })
+    }
+
     const currentUser = await getCurrentUser()
     const { conversationId } = await params
 
@@ -104,7 +149,9 @@ export async function DELETE(
     }
 
     // Check if user is part of the conversation
-    const isUserInConversation = conversation.users.some((user: { id: string }) => user.id === currentUser.id)
+    const isUserInConversation = conversation.users.some(
+      (user: { id: string }) => user.id === currentUser.id
+    )
 
     if (!isUserInConversation) {
       return NextResponse.json({ error: "You are not part of this conversation" }, { status: 403 })

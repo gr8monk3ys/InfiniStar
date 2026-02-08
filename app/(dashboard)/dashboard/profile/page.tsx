@@ -18,8 +18,6 @@ import {
 } from "react-icons/hi2"
 
 import { api, ApiError, createLoadingToast } from "@/app/lib/api-client"
-import DeleteAccountModal from "@/app/components/modals/DeleteAccountModal"
-import StatusModal from "@/app/components/modals/StatusModal"
 import { DarkModeToggle, ThemeCustomizer, ThemeSelector } from "@/app/components/themes"
 
 import {
@@ -28,6 +26,17 @@ import {
   PasswordTabContent,
   ProfileTabContent,
 } from "./components"
+
+// Lazy-load modals that are only shown on user interaction
+const DeleteAccountModal = dynamic(() => import("@/app/components/modals/DeleteAccountModal"), {
+  ssr: false,
+  loading: () => null,
+})
+
+const StatusModal = dynamic(() => import("@/app/components/modals/StatusModal"), {
+  ssr: false,
+  loading: () => null,
+})
 
 // Dynamic imports for code splitting - only loaded when tab is active
 const SessionsList = dynamic(() => import("@/app/components/SessionsList"), {
@@ -495,15 +504,19 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      <StatusModal isOpen={isStatusModalOpen} onClose={() => setIsStatusModalOpen(false)} />
-      <DeleteAccountModal
-        isOpen={isDeleteModalOpen}
-        onClose={() => {
-          setIsDeleteModalOpen(false)
-          fetchDeletionStatus()
-        }}
-        hasPassword={hasPassword}
-      />
+      {isStatusModalOpen && (
+        <StatusModal isOpen={isStatusModalOpen} onClose={() => setIsStatusModalOpen(false)} />
+      )}
+      {isDeleteModalOpen && (
+        <DeleteAccountModal
+          isOpen={isDeleteModalOpen}
+          onClose={() => {
+            setIsDeleteModalOpen(false)
+            fetchDeletionStatus()
+          }}
+          hasPassword={hasPassword}
+        />
+      )}
     </div>
   )
 }

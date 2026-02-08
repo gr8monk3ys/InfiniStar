@@ -1,5 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server"
 
+import { apiLogger } from "@/app/lib/logger"
+import { getRedisClient } from "@/app/lib/redis"
+import { RedisRateLimiter } from "@/app/lib/redis-rate-limiter"
+
 /**
  * Rate Limiter Interface
  *
@@ -21,46 +25,8 @@ export interface IRateLimiter {
  * - Does not work correctly with multiple server instances (horizontal scaling)
  * - Memory usage grows with number of unique identifiers
  *
- * For production deployments with multiple instances, implement IRateLimiter
- * using a distributed store like Redis. Example Redis implementation:
- *
- * ```typescript
- * class RedisRateLimiter implements IRateLimiter {
- *   private redis: Redis
- *   private limit: number
- *   private windowMs: number
- *
- *   constructor(redis: Redis, limit: number, windowMs: number) {
- *     this.redis = redis
- *     this.limit = limit
- *     this.windowMs = windowMs
- *   }
- *
- *   async check(identifier: string): Promise<boolean> {
- *     const key = `ratelimit:${identifier}`
- *     const now = Date.now()
- *     const windowStart = now - this.windowMs
- *
- *     // Use Redis sorted set with timestamps as scores
- *     await this.redis.zremrangebyscore(key, 0, windowStart)
- *     const count = await this.redis.zcard(key)
- *
- *     if (count >= this.limit) return false
- *
- *     await this.redis.zadd(key, now, `${now}`)
- *     await this.redis.expire(key, Math.ceil(this.windowMs / 1000))
- *     return true
- *   }
- *
- *   async reset(identifier: string): Promise<void> {
- *     await this.redis.del(`ratelimit:${identifier}`)
- *   }
- *
- *   async cleanup(): Promise<void> {
- *     // Redis TTL handles cleanup automatically
- *   }
- * }
- * ```
+ * This class is used as the fallback when Redis is not available.
+ * When REDIS_URL is configured, RedisRateLimiter is used instead.
  */
 export class InMemoryRateLimiter implements IRateLimiter {
   private requests: Map<string, number[]> = new Map()
@@ -107,21 +73,49 @@ export class InMemoryRateLimiter implements IRateLimiter {
   }
 }
 
-// Different rate limiters for different endpoints
-// To use Redis in production, replace InMemoryRateLimiter with RedisRateLimiter
-export const apiLimiter = new InMemoryRateLimiter(60, 60000) // 60 requests per minute
-export const authLimiter = new InMemoryRateLimiter(5, 300000) // 5 requests per 5 minutes
-export const aiChatLimiter = new InMemoryRateLimiter(20, 60000) // 20 AI requests per minute
-export const accountDeletionLimiter = new InMemoryRateLimiter(3, 3600000) // 3 requests per hour
-export const twoFactorLimiter = new InMemoryRateLimiter(5, 300000) // 5 attempts per 5 minutes for 2FA verification
-export const tagLimiter = new InMemoryRateLimiter(30, 60000) // 30 tag operations per minute
-export const memoryLimiter = new InMemoryRateLimiter(30, 60000) // 30 memory operations per minute
-export const memoryExtractLimiter = new InMemoryRateLimiter(5, 60000) // 5 AI extraction requests per minute
-export const templateLimiter = new InMemoryRateLimiter(30, 60000) // 30 template operations per minute
-export const shareLimiter = new InMemoryRateLimiter(10, 60000) // 10 share operations per minute
-export const shareJoinLimiter = new InMemoryRateLimiter(5, 60000) // 5 join attempts per minute
+/**
+ * Factory function that creates either a Redis-backed or in-memory rate limiter
+ * depending on whether Redis is available.
+ *
+ * When REDIS_URL is set and Redis is reachable, returns a RedisRateLimiter
+ * that works correctly across multiple server instances and survives restarts.
+ *
+ * When Redis is unavailable, falls back to InMemoryRateLimiter.
+ */
+let rateLimiterBackendLogged = false
 
-// Cleanup old entries every 5 minutes
+function createRateLimiter(name: string, limit: number, windowMs: number): IRateLimiter {
+  const redis = getRedisClient()
+
+  if (redis) {
+    if (!rateLimiterBackendLogged) {
+      apiLogger.info("Using Redis-backed rate limiting")
+      rateLimiterBackendLogged = true
+    }
+    return new RedisRateLimiter(redis, name, limit, windowMs)
+  }
+
+  if (!rateLimiterBackendLogged) {
+    apiLogger.info("Using in-memory rate limiting (Redis not available)")
+    rateLimiterBackendLogged = true
+  }
+  return new InMemoryRateLimiter(limit, windowMs)
+}
+
+// Different rate limiters for different endpoints
+export const apiLimiter = createRateLimiter("api", 60, 60000) // 60 requests per minute
+export const authLimiter = createRateLimiter("auth", 5, 300000) // 5 requests per 5 minutes
+export const aiChatLimiter = createRateLimiter("aiChat", 20, 60000) // 20 AI requests per minute
+export const accountDeletionLimiter = createRateLimiter("accountDeletion", 3, 3600000) // 3 requests per hour
+export const twoFactorLimiter = createRateLimiter("twoFactor", 5, 300000) // 5 attempts per 5 minutes for 2FA verification
+export const tagLimiter = createRateLimiter("tag", 30, 60000) // 30 tag operations per minute
+export const memoryLimiter = createRateLimiter("memory", 30, 60000) // 30 memory operations per minute
+export const memoryExtractLimiter = createRateLimiter("memoryExtract", 5, 60000) // 5 AI extraction requests per minute
+export const templateLimiter = createRateLimiter("template", 30, 60000) // 30 template operations per minute
+export const shareLimiter = createRateLimiter("share", 10, 60000) // 10 share operations per minute
+export const shareJoinLimiter = createRateLimiter("shareJoin", 5, 60000) // 5 join attempts per minute
+
+// Cleanup old entries every 5 minutes (only relevant for in-memory limiters)
 setInterval(() => {
   apiLimiter.cleanup()
   authLimiter.cleanup()
@@ -151,7 +145,7 @@ export function getClientIdentifier(request: NextRequest): string {
 export function withRateLimit(
   limiter: IRateLimiter,
   handler: (request: NextRequest) => Promise<NextResponse>
-) {
+): (request: NextRequest) => Promise<NextResponse> {
   return async (request: NextRequest): Promise<NextResponse> => {
     const identifier = getClientIdentifier(request)
 
