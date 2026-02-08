@@ -18,12 +18,15 @@ const createCharacterSchema = z.object({
   coverImageUrl: z.string().url().optional(),
   tags: z.array(z.string().min(1).max(30)).max(10).optional(),
   isPublic: z.boolean().optional(),
+  category: z.string().max(50).optional(),
 })
 
 const listSchema = z.object({
   q: z.string().optional(),
   tag: z.string().optional(),
   featured: z.string().optional(),
+  category: z.string().optional(),
+  sort: z.enum(['popular', 'newest', 'liked']).optional(),
   limit: z.string().optional(),
   cursor: z.string().optional(),
 })
@@ -39,6 +42,7 @@ export async function GET(request: NextRequest) {
   const where: {
     isPublic: boolean
     featured?: boolean
+    category?: string
     OR?: Array<{
       name?: { contains: string; mode: "insensitive" }
       description?: { contains: string; mode: "insensitive" }
@@ -63,11 +67,30 @@ export async function GET(request: NextRequest) {
     where.tags = { has: params.tag }
   }
 
+  if (params.category && params.category !== 'all') {
+    where.category = params.category
+  }
+
+  let orderBy: Record<string, 'asc' | 'desc'>[]
+  switch (params.sort) {
+    case 'popular':
+      orderBy = [{ usageCount: 'desc' }, { createdAt: 'desc' }]
+      break
+    case 'newest':
+      orderBy = [{ createdAt: 'desc' }]
+      break
+    case 'liked':
+      orderBy = [{ likeCount: 'desc' }, { createdAt: 'desc' }]
+      break
+    default:
+      orderBy = [{ featured: 'desc' }, { usageCount: 'desc' }, { createdAt: 'desc' }]
+  }
+
   const characters = await prisma.character.findMany({
     where,
     take: limit + 1,
     ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
-    orderBy: [{ featured: "desc" }, { usageCount: "desc" }, { createdAt: "desc" }],
+    orderBy,
     include: {
       createdBy: {
         select: { id: true, name: true, image: true },
@@ -147,6 +170,7 @@ export async function POST(request: NextRequest) {
       coverImageUrl: data.coverImageUrl,
       tags: data.tags?.map((tag) => sanitizePlainText(tag)).filter(Boolean) as string[],
       isPublic: data.isPublic ?? false,
+      category: data.category ? sanitizePlainText(data.category) || 'general' : 'general',
       createdById: currentUser.id,
     },
   })

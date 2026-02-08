@@ -19,6 +19,7 @@ const updateCharacterSchema = z.object({
   tags: z.array(z.string().min(1).max(30)).max(10).optional(),
   isPublic: z.boolean().optional(),
   featured: z.boolean().optional(),
+  category: z.string().max(50).optional(),
 })
 
 interface RouteParams {
@@ -123,6 +124,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       tags: data.tags?.map((tag) => sanitizePlainText(tag)).filter(Boolean) as string[] | undefined,
       isPublic: data.isPublic,
       featured: data.featured,
+      category: data.category ? sanitizePlainText(data.category) || undefined : undefined,
     },
   })
 
