@@ -96,7 +96,7 @@ export async function processScheduledDeletions(): Promise<{
  */
 export async function deleteUserAccount(userId: string): Promise<void> {
   // Use a transaction to ensure all operations succeed or fail together
-  await prisma.$transaction(async (tx: typeof prisma) => {
+  await prisma.$transaction(async (tx) => {
     // 1. Anonymize all messages sent by this user
     // We set the body to "[Deleted]" to preserve conversation structure
     // while removing personal content

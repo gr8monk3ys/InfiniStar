@@ -152,7 +152,7 @@ export async function GET(
         aiPersonality: conversation.aiPersonality,
         users: conversation.users,
       },
-      conversation.messages.map((m: { id: string; body: string | null; createdAt: Date; isAI: boolean; isDeleted: boolean; sender: { id: string; name?: string | null; email?: string | null } }) => ({
+      conversation.messages.map((m: { id: string; body: string | null; createdAt: Date; isAI: boolean; isDeleted: boolean; sender: { id: string; name: string | null; email: string | null } }) => ({
         id: m.id,
         body: m.body,
         createdAt: m.createdAt,

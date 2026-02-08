@@ -240,7 +240,7 @@ export async function searchConversations(
     prisma.conversation.count({ where: whereClause }),
   ])
 
-  const items: ConversationSearchResult[] = conversations.map((conv: { id: string; name: string | null; isAI: boolean; isGroup: boolean; aiPersonality: string | null; createdAt: Date; lastMessageAt: Date; users: unknown[]; _count: { messages: number }; tags: unknown[]; archivedBy: string[]; isPinned?: boolean }) => {
+  const items: ConversationSearchResult[] = conversations.map((conv: { id: string; name: string | null; isAI: boolean; isGroup: boolean; aiPersonality: string | null; createdAt: Date; lastMessageAt: Date; users: { id: string; name: string | null; email: string | null; image: string | null }[]; _count: { messages: number }; tags: { id: string; name: string; color: string }[]; archivedBy: string[]; isPinned?: boolean }) => {
     const daysSinceActive = Math.floor(
       (Date.now() - conv.lastMessageAt.getTime()) / (1000 * 60 * 60 * 24)
     )
@@ -352,7 +352,7 @@ export async function searchMessages(
     prisma.message.count({ where: whereClause }),
   ])
 
-  const items: MessageSearchResult[] = messages.map((msg: { id: string; body: string | null; createdAt: Date; isAI: boolean; image: string | null; sender: unknown; conversation: unknown }) => {
+  const items: MessageSearchResult[] = messages.map((msg: { id: string; body: string | null; createdAt: Date; isAI: boolean; image: string | null; sender: { id: string; name: string | null; email: string | null; image: string | null }; conversation: { id: string; name: string | null; isAI: boolean; isGroup: boolean } }) => {
     const daysSinceCreated = Math.floor(
       (Date.now() - msg.createdAt.getTime()) / (1000 * 60 * 60 * 24)
     )

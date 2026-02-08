@@ -259,7 +259,7 @@ export async function POST(request: NextRequest) {
           })
 
           // Create new AI message and update conversation in a transaction for atomicity
-          const newAiMessage = await prisma.$transaction(async (tx: typeof prisma) => {
+          const newAiMessage = await prisma.$transaction(async (tx) => {
             const createdMessage = await tx.message.create({
               data: {
                 body: fullResponse,

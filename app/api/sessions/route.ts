@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
     })
 
     // Transform sessions for response (mask IP addresses)
-    const sessionList: UserSessionInfo[] = sessions.map((session: { id: string; deviceType: string | null; browser: string | null; os: string | null; ipAddress: string; createdAt: Date; lastActiveAt: Date; sessionToken: string }) => ({
+    const sessionList: UserSessionInfo[] = sessions.map((session) => ({
       id: session.id,
       deviceType: session.deviceType,
       browser: session.browser,

@@ -148,7 +148,7 @@ const ConversationBox: React.FC<ConversationBoxProps> = ({ data, selected, keybo
           {/* Display tags if any */}
           {data.tags && data.tags.length > 0 && (
             <div className="mt-1 flex flex-wrap gap-1">
-              {data.tags.slice(0, 3).map((tag: { id: string; name: string; color?: string | null }) => (
+              {data.tags.slice(0, 3).map((tag: { id: string; name: string; color: string | null }) => (
                 <TagBadge key={tag.id} tag={tag} size="sm" />
               ))}
               {data.tags.length > 3 && (

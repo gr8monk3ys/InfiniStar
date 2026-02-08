@@ -1,14 +1,13 @@
 "use client"
 
 import { memo } from "react"
-import { type Tag } from "@prisma/client"
 import { HiXMark } from "react-icons/hi2"
 
 import { cn } from "@/app/lib/utils"
 import { TAG_COLORS, type TagColor } from "@/app/types"
 
 interface TagBadgeProps {
-  tag: Tag
+  tag: { id: string; name: string; color: string | null }
   /** Whether to show a remove button */
   removable?: boolean
   /** Callback when remove button is clicked */

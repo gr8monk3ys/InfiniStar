@@ -190,9 +190,6 @@ const TagManager: React.FC<TagManagerProps> = ({ className }) => {
                     id: "preview",
                     name: formName.trim(),
                     color: formColor,
-                    createdAt: new Date(),
-                    updatedAt: new Date(),
-                    userId: "",
                   }}
                   size="md"
                 />
