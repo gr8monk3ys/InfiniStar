@@ -84,6 +84,7 @@ model User {
   blocksInitiated  UserBlock[] @relation("BlocksInitiated")
   blocksReceived   UserBlock[] @relation("BlocksReceived")
   reportsFiled     ContentReport[]
+  characterLikes   CharacterLike[]
 
   @@map("users")
 }
@@ -185,11 +186,14 @@ model Character {
   viewCount   Int      @default(0)
   usageCount  Int      @default(0)
   lastUsedAt  DateTime?
+  category    String   @default("general")
+  likeCount   Int      @default(0)
 
   createdById String   @db.Uuid
   createdBy   User     @relation(fields: [createdById], references: [id], onDelete: Cascade)
 
   conversations Conversation[]
+  likes       CharacterLike[]
 
   @@index([isPublic, featured])
   @@index([createdAt])
@@ -499,4 +503,20 @@ enum ReportStatus {
   REVIEWING
   RESOLVED
   DISMISSED
+}
+
+model CharacterLike {
+  id          String   @id @default(uuid()) @db.Uuid
+  createdAt   DateTime @default(now())
+
+  userId      String   @db.Uuid
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  characterId String   @db.Uuid
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, characterId])
+  @@index([characterId])
+  @@index([userId])
+  @@map("character_likes")
 }
