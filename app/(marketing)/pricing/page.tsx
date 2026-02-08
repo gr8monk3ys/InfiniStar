@@ -49,7 +49,7 @@ export default function PricingPage() {
           </ul>
 
           <Link
-            href="/login"
+            href="/sign-in"
             className={cn(buttonVariants({ variant: "outline", size: "lg" }), "w-full")}
           >
             Get Started Free
@@ -57,9 +57,9 @@ export default function PricingPage() {
         </div>
 
         {/* PRO Plan */}
-        <div className="relative flex flex-col rounded-xl border-2 border-primary bg-background p-8 shadow-lg">
+        <div className="glow-sm relative flex flex-col rounded-xl border-2 border-primary bg-background p-8 shadow-lg">
           <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-            <span className="inline-flex items-center gap-1 rounded-full bg-primary px-4 py-1 text-sm font-medium text-primary-foreground">
+            <span className="gradient-bg inline-flex items-center gap-1 rounded-full px-4 py-1 text-sm font-medium text-white">
               <HiOutlineSparkles className="size-4" />
               Most Popular
             </span>
@@ -86,7 +86,13 @@ export default function PricingPage() {
             ))}
           </ul>
 
-          <Link href="/login" className={cn(buttonVariants({ size: "lg" }), "w-full gap-2")}>
+          <Link
+            href="/sign-in"
+            className={cn(
+              buttonVariants({ size: "lg" }),
+              "gradient-bg w-full gap-2 border-0 text-white shadow-lg shadow-violet-500/25"
+            )}
+          >
             <HiOutlineBolt className="size-5" />
             Upgrade to PRO
           </Link>

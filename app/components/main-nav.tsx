@@ -15,7 +15,9 @@ export function MainNav({ items }: MainNavProps) {
     <div className="flex gap-6 md:gap-10">
       <Link href="/" className="flex items-center space-x-2">
         <Icons.logo className="size-6" />
-        <span className="inline-block font-bold">{siteConfig.name}</span>
+        <span className="font-heading gradient-text inline-block text-lg font-bold">
+          {siteConfig.name}
+        </span>
       </Link>
       {items?.length ? (
         <nav className="flex gap-6">
@@ -26,7 +28,7 @@ export function MainNav({ items }: MainNavProps) {
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    "flex items-center text-sm font-medium text-muted-foreground",
+                    "flex items-center text-sm font-medium text-muted-foreground transition-colors hover:text-foreground",
                     item.disabled && "cursor-not-allowed opacity-80"
                   )}
                 >

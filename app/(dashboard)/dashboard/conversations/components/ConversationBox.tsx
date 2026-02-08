@@ -135,17 +135,22 @@ const ConversationBox: React.FC<ConversationBoxProps> = ({ data, selected, keybo
               </p>
             )}
           </div>
-          <p
-            className={clsx(
-              `
-              truncate
-              text-sm
-              `,
-              hasSeen ? "text-muted-foreground" : "text-foreground font-medium"
+          <div className="flex items-center gap-2">
+            <p
+              className={clsx(
+                "flex-1 truncate text-sm",
+                hasSeen ? "text-muted-foreground" : "text-foreground font-medium"
+              )}
+            >
+              {lastMessageText}
+            </p>
+            {!hasSeen && lastMessage && (
+              <span
+                className="size-2 shrink-0 rounded-full bg-primary"
+                aria-label="Unread message"
+              />
             )}
-          >
-            {lastMessageText}
-          </p>
+          </div>
           {/* Display tags if any */}
           {data.tags && data.tags.length > 0 && (
             <div className="mt-1 flex flex-wrap gap-1">

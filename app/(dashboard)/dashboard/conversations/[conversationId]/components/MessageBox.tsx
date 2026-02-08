@@ -77,12 +77,12 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
 
   const message = clsx(
     "text-sm w-fit overflow-hidden",
-    isOwn ? "bg-sky-500 text-white" : "bg-secondary text-secondary-foreground",
+    isOwn ? "chat-bubble-user" : "chat-bubble-ai",
     data.image
       ? "rounded-md p-0"
       : isAiWithCode
-        ? "rounded-lg py-2 px-3 max-w-full sm:max-w-[80%] md:max-w-[70%]"
-        : "rounded-full py-2 px-3"
+        ? "rounded-2xl py-2.5 px-4 max-w-full sm:max-w-[80%] md:max-w-[70%]"
+        : "rounded-2xl py-2.5 px-4"
   )
 
   const handleEdit = useCallback(async () => {
@@ -252,7 +252,7 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
               <div className="flex gap-2">
                 <button
                   onClick={handleEdit}
-                  className="rounded bg-sky-500 px-3 py-1 text-sm text-white hover:bg-sky-600"
+                  className="rounded-lg bg-primary px-3 py-1 text-sm text-primary-foreground hover:bg-primary/90"
                 >
                   Save
                 </button>
@@ -421,7 +421,7 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
                   onClick={() => handleReaction(emoji)}
                   className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-sm transition ${
                     hasReacted
-                      ? "border-sky-500 bg-sky-100 dark:bg-sky-900/30"
+                      ? "border-primary bg-primary/10 dark:bg-primary/20"
                       : "border-border bg-background hover:bg-accent"
                   }`}
                   title={`${userIds.length} reaction${userIds.length > 1 ? "s" : ""}`}

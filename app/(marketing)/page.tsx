@@ -1,126 +1,69 @@
 import Link from "next/link"
 import {
-  HiOutlineArchiveBox,
   HiOutlineBolt,
-  HiOutlineChartBar,
   HiOutlineChatBubbleLeftRight,
-  HiOutlineMagnifyingGlass,
   HiOutlineShieldCheck,
   HiOutlineSparkles,
-  HiOutlineUserGroup,
 } from "react-icons/hi2"
 
-import { siteConfig } from "@/config/site"
 import { cn } from "@/app/lib/utils"
 import { buttonVariants } from "@/app/components/ui/button"
-
-const features = [
-  {
-    icon: HiOutlineSparkles,
-    title: "Multiple AI Personalities",
-    description:
-      "Choose from 7 distinct personalities: helpful, concise, creative, analytical, empathetic, professional, or create your own custom persona.",
-  },
-  {
-    icon: HiOutlineChatBubbleLeftRight,
-    title: "Real-Time Conversations",
-    description:
-      "Engage in seamless, streaming AI conversations with support for message editing, reactions, and threading.",
-  },
-  {
-    icon: HiOutlineShieldCheck,
-    title: "Enterprise Security",
-    description:
-      "Two-factor authentication, encrypted data storage, CSRF protection, rate limiting, and comprehensive session management.",
-  },
-  {
-    icon: HiOutlineBolt,
-    title: "Smart AI Features",
-    description:
-      "AI-powered suggestions, conversation summaries, memory system for context retention, and intelligent auto-complete.",
-  },
-  {
-    icon: HiOutlineUserGroup,
-    title: "Collaboration & Sharing",
-    description:
-      "Share conversations via secure links, collaborate with permission controls, and export in multiple formats.",
-  },
-  {
-    icon: HiOutlineChartBar,
-    title: "Usage Analytics",
-    description:
-      "Track your AI usage with detailed dashboards, token analytics, cost estimates, and activity heatmaps.",
-  },
-  {
-    icon: HiOutlineArchiveBox,
-    title: "Smart Organization",
-    description:
-      "Tag, archive, pin, and auto-delete conversations. Keep your workspace organized with powerful management tools.",
-  },
-  {
-    icon: HiOutlineMagnifyingGlass,
-    title: "Advanced Search",
-    description:
-      "Full-text search across all conversations with filters, faceted results, and intelligent suggestions.",
-  },
-]
-
-const aiModels = [
-  {
-    name: "Claude 3.5 Sonnet",
-    description: "Balanced performance and speed",
-    badge: "Recommended",
-  },
-  {
-    name: "Claude 3.5 Haiku",
-    description: "Fastest responses, cost-efficient",
-    badge: "Fast",
-  },
-  {
-    name: "Claude 3 Opus",
-    description: "Most capable, complex reasoning",
-    badge: "Powerful",
-  },
-]
 
 export default async function IndexPage() {
   return (
     <>
-      {/* Hero Section */}
-      <section className="relative overflow-hidden pb-8 pt-6 md:pb-12 md:pt-10 lg:py-32">
-        <div className="container flex max-w-6xl flex-col items-center gap-6 text-center">
-          <div className="flex items-center gap-2 rounded-full border border-border bg-muted/50 px-4 py-1.5 text-sm text-muted-foreground">
-            <HiOutlineSparkles className="size-4 text-primary" />
+      {/* Hero Section - Big impact, gradient glow background */}
+      <section className="relative overflow-hidden pb-16 pt-12 md:pb-24 md:pt-20 lg:pb-32 lg:pt-28">
+        {/* Background glow effects */}
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2">
+            <div className="h-[600px] w-[600px] rounded-full bg-gradient-to-br from-violet-600/20 to-blue-500/20 blur-[120px]" />
+          </div>
+        </div>
+
+        <div className="container relative flex max-w-5xl flex-col items-center gap-8 text-center">
+          {/* Badge */}
+          <div className="inline-flex animate-fade-in-up items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-sm text-primary">
+            <HiOutlineSparkles className="size-4" />
             <span>Powered by Claude AI</span>
           </div>
 
-          <h1 className="font-heading text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl">
-            Your Intelligent{" "}
-            <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-              AI Companion
-            </span>
+          {/* Main headline */}
+          <h1 className="font-heading animate-fade-in-up text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl">
+            Chat with <span className="gradient-text">AI Characters</span>
+            <br />
+            That Feel Alive
           </h1>
 
-          <p className="max-w-3xl text-lg leading-normal text-muted-foreground sm:text-xl sm:leading-8">
-            InfiniStar brings you advanced AI conversations with multiple personalities, real-time
-            streaming, smart memory, and enterprise-grade security. Experience the future of AI
-            interaction.
+          {/* Subtitle */}
+          <p className="max-w-2xl animate-fade-in-up text-lg text-muted-foreground sm:text-xl">
+            Create and chat with unique AI personalities. From helpful assistants to creative
+            companions — powered by the most advanced AI models.
           </p>
 
-          <div className="flex flex-col gap-4 sm:flex-row">
-            <Link href="/login" className={cn(buttonVariants({ size: "lg" }), "gap-2")}>
+          {/* CTA buttons */}
+          <div className="flex animate-fade-in-up flex-col gap-4 sm:flex-row">
+            <Link
+              href="/sign-in"
+              className={cn(
+                buttonVariants({ variant: "default", size: "lg" }),
+                "gradient-bg gap-2 border-0 text-white shadow-lg shadow-violet-500/25 hover:shadow-violet-500/40"
+              )}
+            >
               <HiOutlineChatBubbleLeftRight className="size-5" />
               Start Chatting Free
             </Link>
             <Link
-              href="/pricing"
-              className={cn(buttonVariants({ variant: "outline", size: "lg" }))}
+              href="/explore"
+              className={cn(buttonVariants({ variant: "outline", size: "lg" }), "gap-2")}
             >
-              View Pricing
+              <HiOutlineSparkles className="size-5" />
+              Explore Characters
             </Link>
           </div>
 
-          <div className="mt-4 flex flex-wrap items-center justify-center gap-6 text-sm text-muted-foreground">
+          {/* Trust badges */}
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-8 text-sm text-muted-foreground">
             <span className="flex items-center gap-2">
               <HiOutlineShieldCheck className="size-4 text-green-500" />
               No credit card required
@@ -130,178 +73,185 @@ export default async function IndexPage() {
               10 free messages/month
             </span>
             <span className="flex items-center gap-2">
-              <HiOutlineSparkles className="size-4 text-purple-500" />
+              <HiOutlineSparkles className="size-4 text-primary" />
               All personalities included
             </span>
           </div>
         </div>
       </section>
 
-      {/* AI Models Section */}
-      <section className="border-y bg-muted/30 py-12 md:py-16">
+      {/* Features Section - 3 large cards instead of 8 small ones */}
+      <section className="relative border-y border-border/50 py-16 md:py-24">
         <div className="container max-w-6xl">
-          <div className="text-center">
-            <h2 className="text-2xl font-bold md:text-3xl">Choose Your AI Model</h2>
-            <p className="mt-2 text-muted-foreground">
-              Select the Claude model that best fits your needs
+          <div className="mb-12 text-center">
+            <h2 className="font-heading text-3xl font-bold md:text-4xl">
+              Why Choose <span className="gradient-text">InfiniStar</span>
+            </h2>
+            <p className="mt-4 text-lg text-muted-foreground">
+              Everything you need for next-level AI conversations
             </p>
           </div>
 
-          <div className="mt-8 grid gap-4 sm:grid-cols-3">
-            {aiModels.map((model) => (
+          <div className="grid gap-6 md:grid-cols-3">
+            {[
+              {
+                icon: HiOutlineSparkles,
+                title: "Unique AI Personalities",
+                description:
+                  "Choose from 7 distinct personalities or create your own custom AI character with unique traits and conversation styles.",
+                gradient: "from-violet-500/10 to-purple-500/10",
+                iconColor: "text-violet-500",
+              },
+              {
+                icon: HiOutlineBolt,
+                title: "Smart Memory & Context",
+                description:
+                  "AI that remembers your conversations and builds context over time. Get smarter, more personalized responses.",
+                gradient: "from-blue-500/10 to-cyan-500/10",
+                iconColor: "text-blue-500",
+              },
+              {
+                icon: HiOutlineShieldCheck,
+                title: "Enterprise Security",
+                description:
+                  "2FA authentication, encrypted storage, CSRF protection, and rate limiting. Your data stays private and secure.",
+                gradient: "from-green-500/10 to-emerald-500/10",
+                iconColor: "text-green-500",
+              },
+            ].map((feature) => (
               <div
-                key={model.name}
-                className="relative rounded-lg border bg-background p-6 transition-shadow hover:shadow-md"
+                key={feature.title}
+                className={cn(
+                  "group relative overflow-hidden rounded-2xl border border-border/50 p-8",
+                  "bg-gradient-to-br",
+                  feature.gradient,
+                  "transition-all duration-300 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5"
+                )}
               >
-                <div className="mb-3 inline-block rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-                  {model.badge}
+                <div className={cn("mb-4 inline-flex rounded-xl p-3", "bg-background/80")}>
+                  <feature.icon className={cn("size-7", feature.iconColor)} />
                 </div>
-                <h3 className="font-semibold">{model.name}</h3>
-                <p className="mt-1 text-sm text-muted-foreground">{model.description}</p>
+                <h3 className="mb-3 text-xl font-semibold">{feature.title}</h3>
+                <p className="text-sm leading-relaxed text-muted-foreground">
+                  {feature.description}
+                </p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Features Section */}
-      <section id="features" className="container space-y-8 py-12 md:py-16 lg:py-24">
-        <div className="mx-auto flex max-w-3xl flex-col items-center space-y-4 text-center">
-          <h2 className="font-heading text-3xl font-bold leading-[1.1] md:text-4xl">
-            Everything You Need for AI Conversations
-          </h2>
-          <p className="max-w-2xl text-lg leading-normal text-muted-foreground">
-            InfiniStar combines powerful AI capabilities with intuitive design to give you the best
-            conversational AI experience.
-          </p>
-        </div>
-
-        <div className="mx-auto grid max-w-6xl gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {features.map((feature) => (
-            <div
-              key={feature.title}
-              className="group relative overflow-hidden rounded-lg border bg-background p-6 transition-all hover:border-primary/50 hover:shadow-md"
-            >
-              <div className="mb-4 inline-flex rounded-lg bg-primary/10 p-3 text-primary">
-                <feature.icon className="size-6" />
-              </div>
-              <h3 className="mb-2 font-semibold">{feature.title}</h3>
-              <p className="text-sm leading-relaxed text-muted-foreground">{feature.description}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Personalities Section */}
-      <section className="border-y bg-muted/30 py-12 md:py-16 lg:py-24">
+      {/* AI Models Section - Cleaner, more visual */}
+      <section className="py-16 md:py-24">
         <div className="container max-w-6xl">
-          <div className="grid gap-12 lg:grid-cols-2 lg:items-center">
+          <div className="grid items-center gap-12 lg:grid-cols-2">
             <div>
               <h2 className="font-heading text-3xl font-bold md:text-4xl">
-                7 Unique AI Personalities
+                Powered by the Best <span className="gradient-text">AI Models</span>
               </h2>
               <p className="mt-4 text-lg text-muted-foreground">
-                Every conversation is different. Choose the AI personality that matches your needs,
-                or create your own custom persona with specific instructions.
+                Choose the model that matches your needs. From lightning-fast responses to deep,
+                nuanced conversations.
               </p>
 
-              <ul className="mt-8 space-y-4">
+              <div className="mt-8 space-y-4">
                 {[
-                  { name: "Helpful", desc: "Friendly and balanced assistant" },
-                  { name: "Concise", desc: "Brief, to-the-point responses" },
-                  { name: "Creative", desc: "Imaginative and original thinking" },
-                  { name: "Analytical", desc: "Logical, structured analysis" },
-                  { name: "Empathetic", desc: "Understanding and compassionate" },
-                  { name: "Professional", desc: "Formal business communication" },
-                  { name: "Custom", desc: "Your own system prompts" },
-                ].map((personality) => (
-                  <li key={personality.name} className="flex items-start gap-3">
-                    <HiOutlineSparkles className="mt-0.5 size-5 shrink-0 text-primary" />
-                    <div>
-                      <span className="font-medium">{personality.name}</span>
-                      <span className="text-muted-foreground"> - {personality.desc}</span>
+                  {
+                    name: "Claude 3.5 Sonnet",
+                    desc: "Balanced performance and speed",
+                    badge: "Recommended",
+                    badgeClass: "bg-primary/10 text-primary",
+                  },
+                  {
+                    name: "Claude 3.5 Haiku",
+                    desc: "Fastest responses, cost-efficient",
+                    badge: "Fast",
+                    badgeClass: "bg-blue-500/10 text-blue-500",
+                  },
+                  {
+                    name: "Claude 3 Opus",
+                    desc: "Most capable, complex reasoning",
+                    badge: "Powerful",
+                    badgeClass: "bg-amber-500/10 text-amber-500",
+                  },
+                ].map((model) => (
+                  <div
+                    key={model.name}
+                    className="flex items-center gap-4 rounded-xl border border-border/50 bg-card p-4 transition-colors hover:border-primary/30"
+                  >
+                    <div
+                      className={cn(
+                        "shrink-0 rounded-lg px-2.5 py-1 text-xs font-medium",
+                        model.badgeClass
+                      )}
+                    >
+                      {model.badge}
                     </div>
-                  </li>
+                    <div>
+                      <div className="font-semibold">{model.name}</div>
+                      <div className="text-sm text-muted-foreground">{model.desc}</div>
+                    </div>
+                  </div>
                 ))}
-              </ul>
+              </div>
             </div>
 
+            {/* Mock chat preview */}
             <div className="relative">
-              <div className="rounded-lg border bg-background p-6 shadow-xl">
+              <div className="absolute -inset-4 rounded-3xl bg-gradient-to-br from-violet-600/10 to-blue-500/10 blur-2xl" />
+              <div className="relative rounded-2xl border border-border/50 bg-card p-6 shadow-2xl">
                 <div className="mb-4 flex items-center gap-3">
-                  <div className="size-10 rounded-full bg-gradient-to-br from-primary to-primary/60" />
+                  <div className="gradient-bg size-10 rounded-full" />
                   <div>
-                    <div className="font-medium">Creative AI</div>
-                    <div className="text-xs text-muted-foreground">Using Claude 3.5 Sonnet</div>
+                    <div className="font-semibold">Creative AI</div>
+                    <div className="text-xs text-muted-foreground">Claude 3.5 Sonnet</div>
                   </div>
                 </div>
                 <div className="space-y-3">
-                  <div className="rounded-lg bg-muted/50 p-3 text-sm">
-                    Tell me about quantum computing in a creative way
+                  <div className="ml-auto w-fit rounded-2xl bg-primary px-4 py-2.5 text-sm text-white">
+                    Tell me about quantum computing
                   </div>
-                  <div className="rounded-lg border bg-primary/5 p-3 text-sm">
+                  <div className="surface-2 w-fit rounded-2xl px-4 py-2.5 text-sm">
                     Imagine quantum bits as tiny dancers on an infinite stage, able to perform
-                    multiple moves simultaneously until the moment you observe them...
+                    multiple moves simultaneously...
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Security Section */}
-      <section className="container py-12 md:py-16 lg:py-24">
-        <div className="mx-auto max-w-3xl text-center">
-          <HiOutlineShieldCheck className="mx-auto size-12 text-green-500" />
-          <h2 className="font-heading mt-4 text-3xl font-bold md:text-4xl">
-            Enterprise-Grade Security
-          </h2>
-          <p className="mt-4 text-lg text-muted-foreground">
-            Your data is protected with industry-leading security measures
-          </p>
-
-          <div className="mt-8 grid gap-4 text-left sm:grid-cols-2">
-            {[
-              "Two-factor authentication (TOTP)",
-              "Encrypted TOTP secrets (AES-256-GCM)",
-              "CSRF protection on all endpoints",
-              "Rate limiting and abuse prevention",
-              "Session management with device tracking",
-              "Password hashing with bcrypt (12 rounds)",
-              "Input sanitization and validation",
-              "No-enumeration auth responses",
-            ].map((item) => (
-              <div key={item} className="flex items-center gap-2 text-sm">
-                <HiOutlineShieldCheck className="size-4 shrink-0 text-green-500" />
-                {item}
-              </div>
-            ))}
           </div>
         </div>
       </section>
 
       {/* CTA Section */}
-      <section className="border-t bg-muted/30 py-12 md:py-16 lg:py-24">
-        <div className="container flex max-w-4xl flex-col items-center justify-center gap-6 text-center">
+      <section className="relative overflow-hidden border-t border-border/50 py-16 md:py-24">
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2">
+            <div className="h-[400px] w-[400px] rounded-full bg-gradient-to-br from-violet-600/10 to-blue-500/10 blur-[100px]" />
+          </div>
+        </div>
+        <div className="container relative flex max-w-3xl flex-col items-center gap-6 text-center">
           <h2 className="font-heading text-3xl font-bold md:text-4xl">
-            Ready to Experience Intelligent AI Conversations?
+            Ready to Meet Your AI Companion?
           </h2>
-          <p className="max-w-2xl text-lg text-muted-foreground">
-            Join thousands of users who have transformed their productivity with InfiniStar. Start
-            with 10 free messages and upgrade anytime.
+          <p className="text-lg text-muted-foreground">
+            Join thousands of users creating and chatting with unique AI characters. Start free,
+            upgrade anytime.
           </p>
           <div className="flex flex-col gap-4 sm:flex-row">
-            <Link href="/login" className={cn(buttonVariants({ size: "lg" }), "gap-2")}>
+            <Link
+              href="/sign-in"
+              className={cn(
+                buttonVariants({ size: "lg" }),
+                "gradient-bg gap-2 border-0 text-white shadow-lg shadow-violet-500/25"
+              )}
+            >
               Get Started Free
             </Link>
             <Link
-              href={siteConfig.links.github}
-              target="_blank"
-              rel="noreferrer"
+              href="/pricing"
               className={cn(buttonVariants({ variant: "outline", size: "lg" }))}
             >
-              View on GitHub
+              View Pricing
             </Link>
           </div>
         </div>
