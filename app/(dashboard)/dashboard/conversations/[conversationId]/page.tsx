@@ -37,7 +37,12 @@ export default async function ChatPage({
       <div className="flex h-full flex-col">
         <Header conversation={{ ...conversation, messages }} />
         {conversation.isAI && <TokenUsageWrapper conversationId={conversationId} />}
-        <ConversationContainer initialMessages={messages} isAI={conversation.isAI || false} />
+        <ConversationContainer
+          initialMessages={messages}
+          isAI={conversation.isAI || false}
+          characterName={conversation.character?.name}
+          characterAvatar={conversation.character?.avatarUrl}
+        />
       </div>
     </div>
   )

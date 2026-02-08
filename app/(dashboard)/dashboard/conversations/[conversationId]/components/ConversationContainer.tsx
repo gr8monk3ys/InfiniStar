@@ -19,6 +19,8 @@ import TypingIndicator from "./TypingIndicator"
 interface ConversationContainerProps {
   initialMessages: FullMessageType[]
   isAI: boolean
+  characterName?: string | null
+  characterAvatar?: string | null
 }
 
 /**
@@ -28,7 +30,12 @@ interface ConversationContainerProps {
  * Displays typing indicators for both human users and AI responses.
  * Also manages messages state for AI suggestions feature.
  */
-const ConversationContainer: React.FC<ConversationContainerProps> = ({ initialMessages, isAI }) => {
+const ConversationContainer: React.FC<ConversationContainerProps> = ({
+  initialMessages,
+  isAI,
+  characterName,
+  characterAvatar,
+}) => {
   const { conversationId } = useConversation()
   const session = useSession()
   const currentUserId = session.data?.user?.id
@@ -141,6 +148,8 @@ const ConversationContainer: React.FC<ConversationContainerProps> = ({ initialMe
       <Body
         initialMessages={messages}
         isAI={isAI}
+        characterName={characterName}
+        characterAvatar={characterAvatar}
         onRegenerate={isAI ? handleRegenerate : undefined}
         isRegenerating={isRegenerating}
         regeneratingMessageId={regeneratingMessageId}

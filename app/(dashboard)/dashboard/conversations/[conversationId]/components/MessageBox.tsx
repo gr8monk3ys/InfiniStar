@@ -26,6 +26,8 @@ import ReplyPreview from "./ReplyPreview"
 interface MessageBoxProps {
   data: FullMessageType
   isLast?: boolean
+  characterName?: string | null
+  characterAvatar?: string | null
   onReply?: (message: FullMessageType) => void
   onRegenerate?: (messageId: string) => void
   isRegenerating?: boolean
@@ -35,6 +37,8 @@ interface MessageBoxProps {
 const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
   data,
   isLast,
+  characterName,
+  characterAvatar,
   onReply,
   onRegenerate,
   isRegenerating = false,
@@ -52,8 +56,8 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
 
   const isOwn = session.data?.user?.email === data?.sender?.email
   const seenList = (data.seen || [])
-    .filter((user) => user.email !== data?.sender?.email)
-    .map((user) => user.name)
+    .filter((user: { email?: string | null }) => user.email !== data?.sender?.email)
+    .map((user: { name?: string | null }) => user.name)
     .join(", ")
 
   const container = clsx("flex gap-3 p-4", isOwn && "justify-end")
@@ -153,11 +157,24 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
     return (
       <div className={container} role="article" aria-label="Deleted message">
         <div className={avatar}>
-          <Avatar user={data.sender} />
+          {data.isAI && characterAvatar ? (
+            <div className="relative size-9 overflow-hidden rounded-full">
+              <Image
+                src={characterAvatar}
+                alt={characterName || "AI"}
+                fill
+                className="object-cover"
+              />
+            </div>
+          ) : (
+            <Avatar user={data.sender} />
+          )}
         </div>
         <div className={body}>
           <div className="flex items-center gap-1">
-            <div className="text-sm text-muted-foreground">{data.sender.name}</div>
+            <div className="text-sm text-muted-foreground">
+              {data.isAI && characterName ? characterName : data.sender.name}
+            </div>
             <div className="text-xs text-muted-foreground">
               {format(new Date(data.createdAt), "p")}
             </div>
@@ -171,13 +188,30 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
   }
 
   return (
-    <div className={container} role="article" aria-label={`Message from ${data.sender.name}`}>
+    <div
+      className={container}
+      role="article"
+      aria-label={`Message from ${data.isAI && characterName ? characterName : data.sender.name}`}
+    >
       <div className={avatar}>
-        <Avatar user={data.sender} />
+        {data.isAI && characterAvatar ? (
+          <div className="relative size-9 overflow-hidden rounded-full">
+            <Image
+              src={characterAvatar}
+              alt={characterName || "AI"}
+              fill
+              className="object-cover"
+            />
+          </div>
+        ) : (
+          <Avatar user={data.sender} />
+        )}
       </div>
       <div className={body}>
         <div className="flex items-center gap-1">
-          <div className="text-sm text-muted-foreground">{data.sender.name}</div>
+          <div className="text-sm text-muted-foreground">
+            {data.isAI && characterName ? characterName : data.sender.name}
+          </div>
           <div
             className="text-xs text-muted-foreground"
             aria-label={`Sent at ${format(new Date(data.createdAt), "p")}`}

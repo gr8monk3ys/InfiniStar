@@ -9,6 +9,8 @@ import MessageBox from "./MessageBox"
 interface BodyProps {
   initialMessages: FullMessageType[]
   isAI?: boolean
+  characterName?: string | null
+  characterAvatar?: string | null
   onRegenerate?: (messageId: string) => void
   isRegenerating?: boolean
   regeneratingMessageId?: string | null
@@ -27,6 +29,8 @@ interface BodyProps {
 const Body: React.FC<BodyProps> = memo(function Body({
   initialMessages = [],
   isAI = false,
+  characterName,
+  characterAvatar,
   onRegenerate,
   isRegenerating = false,
   regeneratingMessageId,
@@ -39,6 +43,8 @@ const Body: React.FC<BodyProps> = memo(function Body({
           isLast={i === initialMessages.length - 1}
           key={message.id}
           data={message}
+          characterName={characterName}
+          characterAvatar={characterAvatar}
           onRegenerate={isAI ? onRegenerate : undefined}
           isRegenerating={isRegenerating}
           regeneratingMessageId={regeneratingMessageId}
