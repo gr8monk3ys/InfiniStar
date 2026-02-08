@@ -143,6 +143,29 @@ export async function POST(request: NextRequest) {
         })
       }
 
+      // Create greeting message if character has one
+      if (character?.greeting) {
+        const greetingMessage = await prisma.message.create({
+          data: {
+            body: character.greeting,
+            conversation: { connect: { id: newConversation.id } },
+            sender: { connect: { id: currentUser.id } },
+            seen: { connect: { id: currentUser.id } },
+            isAI: true,
+          },
+          include: { seen: true, sender: true },
+        })
+
+        // Update conversation lastMessageAt
+        await prisma.conversation.update({
+          where: { id: newConversation.id },
+          data: { lastMessageAt: new Date() },
+        })
+
+        // Trigger Pusher event for greeting
+        await pusherServer.trigger(newConversation.id, "messages:new", greetingMessage)
+      }
+
       // Trigger Pusher event for user
       if (currentUser.email) {
         pusherServer.trigger(currentUser.email, "conversation:new", newConversation)
@@ -175,7 +198,7 @@ export async function POST(request: NextRequest) {
       })
 
       // Trigger Pusher event for all users in the conversation
-      newConversation.users.forEach((user) => {
+      newConversation.users.forEach((user: { email?: string | null }) => {
         if (user.email) {
           pusherServer.trigger(user.email, "conversation:new", newConversation)
         }
@@ -203,7 +226,7 @@ export async function POST(request: NextRequest) {
     })
 
     const singleConversation = existingConversations.find(
-      (conversation) => conversation.users.length === 2
+      (conversation: { users: unknown[] }) => conversation.users.length === 2
     )
 
     if (singleConversation) {
@@ -235,7 +258,7 @@ export async function POST(request: NextRequest) {
     })
 
     // Trigger Pusher event for all users in the conversation
-    newConversation.users.forEach((user) => {
+    newConversation.users.forEach((user: { email?: string | null }) => {
       if (user.email) {
         pusherServer.trigger(user.email, "conversation:new", newConversation)
       }
