@@ -98,7 +98,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<I
     })
 
     // If user has already seen the message, no need to go further
-    if (lastMessage.seen.some((user) => user.id === currentUser.id)) {
+    if (lastMessage.seen.some((user: { id: string }) => user.id === currentUser.id)) {
       return NextResponse.json(conversation)
     }
 

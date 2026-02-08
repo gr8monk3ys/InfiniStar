@@ -154,7 +154,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<IP
     }
 
     // Add share URLs to each share
-    const sharesWithUrls = result.shares!.map((share) => ({
+    const sharesWithUrls = result.shares!.map((share: { shareToken: string; [key: string]: unknown }) => ({
       ...share,
       shareUrl: getShareUrl(share.shareToken),
     }))

@@ -192,7 +192,7 @@ export async function getConversationsToDelete(
 
   const now = new Date()
 
-  return conversations.map((conv) => ({
+  return conversations.map((conv: { id: string; name: string | null; isAI: boolean; lastMessageAt: Date; _count: { messages: number }; archivedBy: string[]; tags: unknown[] }) => ({
     id: conv.id,
     name: conv.name,
     isAI: conv.isAI,

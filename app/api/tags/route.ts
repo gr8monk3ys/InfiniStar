@@ -51,7 +51,7 @@ export async function GET() {
     })
 
     // Transform to include conversation count
-    const tagsWithCount = tags.map((tag) => ({
+    const tagsWithCount = tags.map((tag: { _count: { conversations: number }; [key: string]: unknown }) => ({
       ...tag,
       conversationCount: tag._count.conversations,
       _count: undefined,

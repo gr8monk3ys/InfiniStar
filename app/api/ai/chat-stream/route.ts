@@ -159,7 +159,7 @@ export async function POST(request: NextRequest) {
     await pusherServer.trigger(conversationId, "messages:new", userMessage)
 
     // Build conversation history for Claude
-    const conversationHistory = conversation.messages.map((msg) => ({
+    const conversationHistory = conversation.messages.map((msg: { isAI: boolean; body?: string | null }) => ({
       role: msg.isAI ? ("assistant" as const) : ("user" as const),
       content: msg.body || "",
     }))

@@ -376,7 +376,7 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = memo(function ProfileDrawer(
                                     Emails
                                   </dt>
                                   <dd className="mt-1 text-sm text-gray-900 sm:col-span-2">
-                                    {data.users.map((user) => user.email).join(", ")}
+                                    {data.users.map((user: { email?: string | null }) => user.email).join(", ")}
                                   </dd>
                                 </div>
                               )}

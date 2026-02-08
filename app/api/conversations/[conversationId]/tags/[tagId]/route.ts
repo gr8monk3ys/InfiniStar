@@ -80,7 +80,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     }
 
     // Verify user is a participant
-    if (!conversation.users.some((user) => user.id === currentUser.id)) {
+    if (!conversation.users.some((user: { id: string }) => user.id === currentUser.id)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
     }
 
@@ -100,7 +100,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     }
 
     // Check if tag is attached to this conversation
-    if (!conversation.tags.some((tagItem) => tagItem.id === tagId)) {
+    if (!conversation.tags.some((tagItem: { id: string }) => tagItem.id === tagId)) {
       return NextResponse.json(
         { error: "Tag is not attached to this conversation" },
         { status: 400 }

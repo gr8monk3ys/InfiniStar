@@ -128,7 +128,7 @@ export async function POST(
     }
 
     // Check if user is part of the conversation
-    const isUserInConversation = conversation.users.some((user) => user.id === currentUser.id)
+    const isUserInConversation = conversation.users.some((user: { id: string }) => user.id === currentUser.id)
 
     if (!isUserInConversation) {
       return NextResponse.json({ error: "You are not part of this conversation" }, { status: 403 })
@@ -167,7 +167,7 @@ export async function POST(
 
     // Build conversation context for Claude
     const conversationContext = messagesInOrder
-      .map((msg) => {
+      .map((msg: { isAI: boolean; body?: string | null; sender: { name?: string | null } }) => {
         const senderName = msg.isAI ? "AI Assistant" : msg.sender.name || "Unknown User"
         const content = msg.body || "[Image/Media]"
         return `${senderName}: ${content}`
@@ -176,8 +176,8 @@ export async function POST(
 
     // Get participant names
     const participantNames = conversation.users
-      .map((user) => user.name || user.email || "Unknown")
-      .filter((name, index, self) => self.indexOf(name) === index) // Remove duplicates
+      .map((user: { name?: string | null; email?: string | null }) => user.name || user.email || "Unknown")
+      .filter((name: string, index: number, self: string[]) => self.indexOf(name) === index) // Remove duplicates
 
     // Track request start time for latency measurement
     const startTime = Date.now()
@@ -288,7 +288,7 @@ export async function GET(
     }
 
     // Check if user is part of the conversation
-    const isUserInConversation = conversation.users.some((user) => user.id === currentUser.id)
+    const isUserInConversation = conversation.users.some((user: { id: string }) => user.id === currentUser.id)
 
     if (!isUserInConversation) {
       return NextResponse.json({ error: "You are not part of this conversation" }, { status: 403 })

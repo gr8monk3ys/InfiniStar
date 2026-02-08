@@ -470,7 +470,7 @@ export async function getUserTemplateCategories(userId: string): Promise<string[
     distinct: ["category"],
   })
 
-  return templates.map((t) => t.category).filter((c): c is string => c !== null)
+  return templates.map((t: { category: string | null }) => t.category).filter((c: string | null): c is string => c !== null)
 }
 
 /**

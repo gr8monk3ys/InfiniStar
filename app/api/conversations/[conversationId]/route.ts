@@ -63,7 +63,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
       },
     })
 
-    existingConversation.users.forEach((user) => {
+    existingConversation.users.forEach((user: { email?: string | null }) => {
       if (user.email) {
         pusherServer.trigger(user.email, "conversation:remove", existingConversation)
       }

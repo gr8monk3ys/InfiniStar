@@ -187,7 +187,7 @@ export async function POST(request: NextRequest) {
     await pusherServer.trigger(conversationId, "messages:new", newMessage)
 
     // Notify all users in the conversation
-    updatedConversation.users.forEach((user) => {
+    updatedConversation.users.forEach((user: { email?: string | null }) => {
       pusherServer.trigger(user.email!, "conversation:update", {
         id: conversationId,
         messages: [newMessage],

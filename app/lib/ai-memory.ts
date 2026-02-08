@@ -150,7 +150,7 @@ export async function getUserMemories(
     orderBy: { [orderBy]: order },
   })
 
-  return memories.map((memory) => ({
+  return memories.map((memory: { expiresAt: Date | null; [key: string]: unknown }) => ({
     ...memory,
     isExpired: memory.expiresAt ? memory.expiresAt < now : false,
   }))

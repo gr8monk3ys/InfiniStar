@@ -54,7 +54,7 @@ export async function POST(
     }
 
     // Check if user is part of the conversation
-    const isUserInConversation = conversation.users.some((user) => user.id === currentUser.id)
+    const isUserInConversation = conversation.users.some((user: { id: string }) => user.id === currentUser.id)
 
     if (!isUserInConversation) {
       return NextResponse.json({ error: "You are not part of this conversation" }, { status: 403 })
@@ -149,7 +149,7 @@ export async function DELETE(
     }
 
     // Check if user is part of the conversation
-    const isUserInConversation = conversation.users.some((user) => user.id === currentUser.id)
+    const isUserInConversation = conversation.users.some((user: { id: string }) => user.id === currentUser.id)
 
     if (!isUserInConversation) {
       return NextResponse.json({ error: "You are not part of this conversation" }, { status: 403 })
@@ -162,7 +162,7 @@ export async function DELETE(
     }
 
     // Remove user from pinnedBy array
-    const updatedPinnedBy = pinnedBy.filter((id) => id !== currentUser.id)
+    const updatedPinnedBy = pinnedBy.filter((id: string) => id !== currentUser.id)
 
     // Update conversation
     const updatedConversation = await prisma.conversation.update({

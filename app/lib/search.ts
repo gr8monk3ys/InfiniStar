@@ -240,7 +240,7 @@ export async function searchConversations(
     prisma.conversation.count({ where: whereClause }),
   ])
 
-  const items: ConversationSearchResult[] = conversations.map((conv) => {
+  const items: ConversationSearchResult[] = conversations.map((conv: { id: string; name: string | null; isAI: boolean; isGroup: boolean; aiPersonality: string | null; createdAt: Date; lastMessageAt: Date; users: unknown[]; _count: { messages: number }; tags: unknown[]; archivedBy: string[]; isPinned?: boolean }) => {
     const daysSinceActive = Math.floor(
       (Date.now() - conv.lastMessageAt.getTime()) / (1000 * 60 * 60 * 24)
     )
@@ -352,7 +352,7 @@ export async function searchMessages(
     prisma.message.count({ where: whereClause }),
   ])
 
-  const items: MessageSearchResult[] = messages.map((msg) => {
+  const items: MessageSearchResult[] = messages.map((msg: { id: string; body: string | null; createdAt: Date; isAI: boolean; image: string | null; sender: unknown; conversation: unknown }) => {
     const daysSinceCreated = Math.floor(
       (Date.now() - msg.createdAt.getTime()) / (1000 * 60 * 60 * 24)
     )
@@ -412,7 +412,7 @@ export async function getSearchSuggestions(
     orderBy: { lastMessageAt: "desc" },
   })
 
-  conversations.forEach((conv) => {
+  conversations.forEach((conv: { id: string; name: string | null; isAI: boolean }) => {
     if (conv.name) {
       suggestions.push({
         id: `conv-${conv.id}`,
@@ -438,7 +438,7 @@ export async function getSearchSuggestions(
     take: limit,
   })
 
-  tags.forEach((tag) => {
+  tags.forEach((tag: { id: string; name: string; color: string }) => {
     suggestions.push({
       id: `tag-${tag.id}`,
       type: "tag",
@@ -503,7 +503,7 @@ export async function getSearchFacets(userId: string, query?: string): Promise<S
     _count: true,
   })
 
-  personalityResults.forEach((result) => {
+  personalityResults.forEach((result: { aiPersonality: string | null; _count: number }) => {
     if (result.aiPersonality && result.aiPersonality in personalityCounts) {
       personalityCounts[result.aiPersonality as AIPersonality] = result._count
     }
@@ -520,7 +520,7 @@ export async function getSearchFacets(userId: string, query?: string): Promise<S
     },
   })
 
-  const tagCounts = tags.map((tag) => ({
+  const tagCounts = tags.map((tag: { id: string; name: string; color: string; _count: { conversations: number } }) => ({
     id: tag.id,
     name: tag.name,
     color: tag.color,

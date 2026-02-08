@@ -87,7 +87,7 @@ export async function GET(request: NextRequest) {
       })
 
       whereClause.conversationId = {
-        in: userConversations.map((c) => c.id),
+        in: userConversations.map((c: { id: string }) => c.id),
       }
     }
 

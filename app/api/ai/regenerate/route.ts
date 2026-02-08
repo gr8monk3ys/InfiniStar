@@ -154,7 +154,7 @@ export async function POST(request: NextRequest) {
 
     // Verify user is part of the conversation
     const isUserInConversation = message.conversation.users.some(
-      (user) => user.id === currentUser.id
+      (user: { id: string }) => user.id === currentUser.id
     )
 
     if (!isUserInConversation) {
@@ -176,7 +176,7 @@ export async function POST(request: NextRequest) {
     })
 
     // Build conversation history for Claude
-    const conversationHistory = conversationMessages.map((msg) => ({
+    const conversationHistory = conversationMessages.map((msg: { isAI: boolean; body?: string | null }) => ({
       role: msg.isAI ? ("assistant" as const) : ("user" as const),
       content: msg.body || "",
     }))
@@ -259,7 +259,7 @@ export async function POST(request: NextRequest) {
           })
 
           // Create new AI message and update conversation in a transaction for atomicity
-          const newAiMessage = await prisma.$transaction(async (tx) => {
+          const newAiMessage = await prisma.$transaction(async (tx: typeof prisma) => {
             const createdMessage = await tx.message.create({
               data: {
                 body: fullResponse,

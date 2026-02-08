@@ -292,7 +292,7 @@ async function getPersonalityUsageDistribution(
   })
 
   // Get unique conversation IDs
-  const conversationIds = [...new Set(usage.map((u) => u.conversationId))]
+  const conversationIds = [...new Set(usage.map((u: { conversationId: string }) => u.conversationId))]
 
   // Fetch personalities for these conversations
   const conversations = await prisma.conversation.findMany({
@@ -415,7 +415,7 @@ async function getAverageMessagesPerConversation(
 
   if (usage.length === 0) return 0
 
-  const uniqueConversations = new Set(usage.map((u) => u.conversationId))
+  const uniqueConversations = new Set(usage.map((u: { conversationId: string }) => u.conversationId))
   return Math.round((usage.length / uniqueConversations.size) * 10) / 10
 }
 

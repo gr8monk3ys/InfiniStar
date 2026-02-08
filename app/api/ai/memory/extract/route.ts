@@ -104,8 +104,8 @@ export async function POST(request: NextRequest) {
 
     // Filter out deleted messages and format for extraction
     const messages = conversation.messages
-      .filter((msg) => !msg.isDeleted && msg.body)
-      .map((msg) => ({
+      .filter((msg: { isDeleted?: boolean; body?: string | null }) => !msg.isDeleted && msg.body)
+      .map((msg: { isAI: boolean; body?: string | null }) => ({
         role: msg.isAI ? ("assistant" as const) : ("user" as const),
         content: msg.body || "",
       }))

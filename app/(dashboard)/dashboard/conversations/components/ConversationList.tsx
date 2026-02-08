@@ -78,7 +78,7 @@ const ConversationList: React.FC<ConversationListProps> = ({ initialItems, user 
       // Filter by tag if one is selected
       let tagMatch = true
       if (selectedTagId) {
-        tagMatch = item.tags?.some((tag) => tag.id === selectedTagId) || false
+        tagMatch = item.tags?.some((tag: { id: string }) => tag.id === selectedTagId) || false
       }
 
       return archiveMatch && tagMatch

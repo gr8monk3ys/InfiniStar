@@ -49,7 +49,7 @@ const ConversationBox: React.FC<ConversationBoxProps> = ({ data, selected, keybo
       return false
     }
 
-    return seenArray.filter((user) => user.email === userEmail).length !== 0
+    return seenArray.filter((user: { email?: string | null }) => user.email === userEmail).length !== 0
   }, [userEmail, lastMessage])
 
   const lastMessageText = useMemo(() => {
@@ -148,7 +148,7 @@ const ConversationBox: React.FC<ConversationBoxProps> = ({ data, selected, keybo
           {/* Display tags if any */}
           {data.tags && data.tags.length > 0 && (
             <div className="mt-1 flex flex-wrap gap-1">
-              {data.tags.slice(0, 3).map((tag) => (
+              {data.tags.slice(0, 3).map((tag: { id: string; name: string; color?: string | null }) => (
                 <TagBadge key={tag.id} tag={tag} size="sm" />
               ))}
               {data.tags.length > 3 && (

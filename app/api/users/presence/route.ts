@@ -73,7 +73,7 @@ export async function PATCH(request: NextRequest) {
 
     // Trigger presence update for each conversation
     await Promise.all(
-      userConversations.map((conversation) =>
+      userConversations.map((conversation: { id: string }) =>
         pusherServer.trigger(`conversation-${conversation.id}`, "user:presence", {
           userId: currentUser.id,
           presenceStatus: updatedUser.presenceStatus,
