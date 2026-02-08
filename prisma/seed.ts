@@ -1,21 +1,18 @@
 import { PrismaClient } from "@prisma/client"
-import bcrypt from "bcryptjs"
 
 const prisma = new PrismaClient()
 
 async function main() {
   console.warn("🌱 Starting database seed...")
 
-  // Create test users
-  const password = await bcrypt.hash("password123", 12)
-
+  // Create test users (using Clerk IDs for authentication)
   const alice = await prisma.user.upsert({
     where: { email: "alice@example.com" },
     update: {},
     create: {
       email: "alice@example.com",
       name: "Alice Johnson",
-      hashedPassword: password,
+      clerkId: "clerk_test_alice_001",
       image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Alice",
     },
   })
@@ -26,7 +23,7 @@ async function main() {
     create: {
       email: "bob@example.com",
       name: "Bob Smith",
-      hashedPassword: password,
+      clerkId: "clerk_test_bob_002",
       image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Bob",
     },
   })
@@ -37,7 +34,7 @@ async function main() {
     create: {
       email: "charlie@example.com",
       name: "Charlie Brown",
-      hashedPassword: password,
+      clerkId: "clerk_test_charlie_003",
       image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Charlie",
     },
   })
@@ -186,11 +183,11 @@ async function main() {
   console.warn("✅ Created AI conversation with sample messages")
 
   console.warn("\n🎉 Seeding completed successfully!")
-  console.warn("\nTest accounts:")
-  console.warn("  📧 alice@example.com / password123")
-  console.warn("  📧 bob@example.com / password123")
-  console.warn("  📧 charlie@example.com / password123")
-  console.warn("\nYou can now log in with any of these accounts.")
+  console.warn("\nTest accounts (authenticate via Clerk):")
+  console.warn("  📧 alice@example.com (clerkId: clerk_test_alice_001)")
+  console.warn("  📧 bob@example.com (clerkId: clerk_test_bob_002)")
+  console.warn("  📧 charlie@example.com (clerkId: clerk_test_charlie_003)")
+  console.warn("\nYou can now log in with any of these accounts via Clerk.")
 }
 
 main()

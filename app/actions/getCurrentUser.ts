@@ -1,18 +1,18 @@
-import prisma from "@/app/lib/prismadb"
+import { auth } from "@clerk/nextjs/server"
 
-import getSession from "./getSession"
+import prisma from "@/app/lib/prismadb"
 
 const getCurrentUser = async () => {
   try {
-    const session = await getSession()
+    const { userId } = await auth()
 
-    if (!session?.user?.email) {
+    if (!userId) {
       return null
     }
 
     const currentUser = await prisma.user.findUnique({
       where: {
-        email: session.user.email as string,
+        clerkId: userId,
       },
     })
 

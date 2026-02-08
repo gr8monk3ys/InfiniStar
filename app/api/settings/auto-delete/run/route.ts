@@ -7,12 +7,12 @@
  */
 
 import { NextResponse, type NextRequest } from "next/server"
-import { getServerSession } from "next-auth"
+import { auth } from "@clerk/nextjs/server"
 
-import { authOptions } from "@/app/lib/auth"
 import { deleteOldConversations, getAutoDeleteSettings } from "@/app/lib/auto-delete"
 import { verifyCsrfToken } from "@/app/lib/csrf"
-import { InMemoryRateLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
+import prisma from "@/app/lib/prismadb"
+import { getClientIdentifier, InMemoryRateLimiter } from "@/app/lib/rate-limit"
 
 // Special rate limiter for auto-delete run: 1 request per hour
 const autoDeleteRunLimiter = new InMemoryRateLimiter(1, 3600000) // 1 request per hour
@@ -45,11 +45,14 @@ export async function POST(request: NextRequest) {
     let cookieToken: string | null = null
 
     if (cookieHeader) {
-      const cookies = cookieHeader.split(";").reduce((acc, cookie) => {
-        const [key, value] = cookie.trim().split("=")
-        acc[key] = value
-        return acc
-      }, {} as Record<string, string>)
+      const cookies = cookieHeader.split(";").reduce(
+        (acc, cookie) => {
+          const [key, value] = cookie.trim().split("=")
+          acc[key] = value
+          return acc
+        },
+        {} as Record<string, string>
+      )
       cookieToken = cookies["csrf-token"] || null
     }
 
@@ -57,11 +60,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid CSRF token" }, { status: 403 })
     }
 
-    const session = await getServerSession(authOptions)
-    const currentUser = session?.user
+    const { userId } = await auth()
 
-    if (!currentUser?.id) {
+    if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const currentUser = await prisma.user.findUnique({
+      where: { clerkId: userId },
+      select: { id: true },
+    })
+    if (!currentUser) {
+      return NextResponse.json({ error: "User not found" }, { status: 401 })
     }
 
     // Check if auto-delete is enabled

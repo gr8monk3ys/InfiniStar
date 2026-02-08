@@ -1,21 +1,15 @@
-import Image from 'next/image'
-import Link from 'next/link'
-import { notFound } from 'next/navigation'
-import { getServerSession } from 'next-auth'
-import {
-  HiHeart,
-  HiChatBubbleLeftRight,
-  HiEye,
-  HiUser,
-} from 'react-icons/hi2'
+import Image from "next/image"
+import Link from "next/link"
+import { notFound } from "next/navigation"
+import { auth } from "@clerk/nextjs/server"
+import { HiChatBubbleLeftRight, HiEye, HiHeart, HiUser } from "react-icons/hi2"
 
-import { authOptions } from '@/app/lib/auth'
-import prisma from '@/app/lib/prismadb'
-import { getCategoryById } from '@/app/lib/character-categories'
-import { cn } from '@/app/lib/utils'
-import { CharacterStartChatButton } from '@/app/components/characters/CharacterStartChatButton'
-import { CharacterLikeButton } from '@/app/components/characters/CharacterLikeButton'
-import { CharacterCard } from '@/app/components/characters/CharacterCard'
+import { getCategoryById } from "@/app/lib/character-categories"
+import prisma from "@/app/lib/prismadb"
+import { cn } from "@/app/lib/utils"
+import { CharacterCard } from "@/app/components/characters/CharacterCard"
+import { CharacterLikeButton } from "@/app/components/characters/CharacterLikeButton"
+import { CharacterStartChatButton } from "@/app/components/characters/CharacterStartChatButton"
 
 interface SimilarCharacter {
   id: string
@@ -37,11 +31,9 @@ interface CharacterPageProps {
   params: Promise<{ slug: string }>
 }
 
-export const dynamic = 'force-dynamic'
+export const dynamic = "force-dynamic"
 
-export default async function CharacterPage({
-  params,
-}: CharacterPageProps) {
+export default async function CharacterPage({ params }: CharacterPageProps) {
   const { slug } = await params
 
   const character = await prisma.character.findUnique({
@@ -64,19 +56,26 @@ export default async function CharacterPage({
   })
 
   // Check if current user has liked this character
-  const session = await getServerSession(authOptions)
+  const { userId } = await auth()
   let hasLiked = false
 
-  if (session?.user?.id) {
-    const like = await prisma.characterLike.findUnique({
-      where: {
-        userId_characterId: {
-          userId: session.user.id,
-          characterId: character.id,
-        },
-      },
+  if (userId) {
+    const currentUser = await prisma.user.findUnique({
+      where: { clerkId: userId },
+      select: { id: true },
     })
-    hasLiked = !!like
+
+    if (currentUser) {
+      const like = await prisma.characterLike.findUnique({
+        where: {
+          userId_characterId: {
+            userId: currentUser.id,
+            characterId: character.id,
+          },
+        },
+      })
+      hasLiked = !!like
+    }
   }
 
   // Get category info
@@ -89,7 +88,7 @@ export default async function CharacterPage({
       category: character.category,
       id: { not: character.id },
     },
-    orderBy: [{ usageCount: 'desc' }, { createdAt: 'desc' }],
+    orderBy: [{ usageCount: "desc" }, { createdAt: "desc" }],
     take: 4,
     include: {
       createdBy: {
@@ -100,20 +99,19 @@ export default async function CharacterPage({
 
   // Determine gradient colors based on category
   const gradientMap: Record<string, string> = {
-    general: 'from-gray-600 to-gray-800',
-    anime: 'from-pink-500 to-purple-600',
-    fantasy: 'from-purple-500 to-indigo-700',
-    romance: 'from-rose-400 to-pink-600',
-    helper: 'from-blue-500 to-cyan-600',
-    roleplay: 'from-amber-500 to-orange-600',
-    education: 'from-green-500 to-emerald-700',
-    comedy: 'from-yellow-400 to-amber-600',
-    adventure: 'from-orange-500 to-red-600',
-    scifi: 'from-cyan-400 to-blue-700',
+    general: "from-gray-600 to-gray-800",
+    anime: "from-pink-500 to-purple-600",
+    fantasy: "from-purple-500 to-indigo-700",
+    romance: "from-rose-400 to-pink-600",
+    helper: "from-blue-500 to-cyan-600",
+    roleplay: "from-amber-500 to-orange-600",
+    education: "from-green-500 to-emerald-700",
+    comedy: "from-yellow-400 to-amber-600",
+    adventure: "from-orange-500 to-red-600",
+    scifi: "from-cyan-400 to-blue-700",
   }
 
-  const gradient =
-    gradientMap[character.category] || gradientMap.general
+  const gradient = gradientMap[character.category] || gradientMap.general
 
   return (
     <section className="pb-16">
@@ -122,9 +120,8 @@ export default async function CharacterPage({
         {/* Cover Image or Gradient Fallback */}
         <div
           className={cn(
-            'relative h-48 w-full sm:h-56 md:h-64',
-            !character.coverImageUrl &&
-              `bg-gradient-to-br ${gradient}`
+            "relative h-48 w-full sm:h-56 md:h-64",
+            !character.coverImageUrl && `bg-gradient-to-br ${gradient}`
           )}
           role="img"
           aria-label={`${character.name} cover image`}
@@ -158,9 +155,9 @@ export default async function CharacterPage({
             ) : (
               <div
                 className={cn(
-                  'flex size-28 items-center justify-center',
-                  'rounded-2xl border-4 border-background shadow-xl sm:size-32',
-                  'bg-gradient-to-br text-4xl font-bold text-white',
+                  "flex size-28 items-center justify-center",
+                  "rounded-2xl border-4 border-background shadow-xl sm:size-32",
+                  "bg-gradient-to-br text-4xl font-bold text-white",
                   gradient
                 )}
               >
@@ -177,24 +174,15 @@ export default async function CharacterPage({
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex-1 space-y-2">
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold sm:text-3xl">
-                {character.name}
-              </h1>
+              <h1 className="text-2xl font-bold sm:text-3xl">{character.name}</h1>
               {category && (
-                <span
-                  className={cn(
-                    'rounded-full px-3 py-1 text-xs font-medium',
-                    category.color
-                  )}
-                >
+                <span className={cn("rounded-full px-3 py-1 text-xs font-medium", category.color)}>
                   {category.emoji} {category.name}
                 </span>
               )}
             </div>
             {character.tagline && (
-              <p className="max-w-2xl text-lg text-muted-foreground">
-                {character.tagline}
-              </p>
+              <p className="max-w-2xl text-lg text-muted-foreground">{character.tagline}</p>
             )}
           </div>
 
@@ -210,19 +198,13 @@ export default async function CharacterPage({
         </div>
 
         {/* Stats Row */}
-        <div
-          className="flex items-center gap-6 border-y py-4"
-          aria-label="Character statistics"
-        >
+        <div className="flex items-center gap-6 border-y py-4" aria-label="Character statistics">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <HiChatBubbleLeftRight
-              className="size-5"
-              aria-hidden="true"
-            />
+            <HiChatBubbleLeftRight className="size-5" aria-hidden="true" />
             <span>
               <span className="font-semibold text-foreground">
                 {character.usageCount.toLocaleString()}
-              </span>{' '}
+              </span>{" "}
               chats
             </span>
           </div>
@@ -231,7 +213,7 @@ export default async function CharacterPage({
             <span>
               <span className="font-semibold text-foreground">
                 {character.likeCount.toLocaleString()}
-              </span>{' '}
+              </span>{" "}
               likes
             </span>
           </div>
@@ -240,7 +222,7 @@ export default async function CharacterPage({
             <span>
               <span className="font-semibold text-foreground">
                 {(character.viewCount + 1).toLocaleString()}
-              </span>{' '}
+              </span>{" "}
               views
             </span>
           </div>
@@ -263,9 +245,7 @@ export default async function CharacterPage({
             {/* Greeting Preview */}
             {character.greeting && (
               <div className="rounded-xl border bg-card p-6 shadow-sm">
-                <h2 className="mb-3 text-lg font-semibold">
-                  Greeting Preview
-                </h2>
+                <h2 className="mb-3 text-lg font-semibold">Greeting Preview</h2>
                 <div className="flex gap-3">
                   {/* Mini avatar */}
                   {character.avatarUrl ? (
@@ -281,9 +261,9 @@ export default async function CharacterPage({
                   ) : (
                     <div
                       className={cn(
-                        'flex size-8 shrink-0 items-center justify-center',
-                        'rounded-full text-xs font-bold text-white',
-                        'bg-gradient-to-br',
+                        "flex size-8 shrink-0 items-center justify-center",
+                        "rounded-full text-xs font-bold text-white",
+                        "bg-gradient-to-br",
                         gradient
                       )}
                       aria-hidden="true"
@@ -331,7 +311,7 @@ export default async function CharacterPage({
                   <div className="relative size-10 overflow-hidden rounded-full border">
                     <Image
                       src={character.createdBy.image}
-                      alt={character.createdBy.name || 'Creator'}
+                      alt={character.createdBy.name || "Creator"}
                       fill
                       className="object-cover"
                     />
@@ -343,11 +323,9 @@ export default async function CharacterPage({
                 )}
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">
-                    {character.createdBy?.name || 'Anonymous'}
+                    {character.createdBy?.name || "Anonymous"}
                   </p>
-                  <p className="text-xs text-muted-foreground">
-                    View profile
-                  </p>
+                  <p className="text-xs text-muted-foreground">View profile</p>
                 </div>
               </Link>
             </div>
@@ -357,15 +335,10 @@ export default async function CharacterPage({
         {/* Similar Characters */}
         {similarCharacters.length > 0 && (
           <div className="mt-4">
-            <h2 className="mb-4 text-lg font-semibold">
-              Similar Characters
-            </h2>
+            <h2 className="mb-4 text-lg font-semibold">Similar Characters</h2>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {similarCharacters.map((similar: SimilarCharacter) => (
-                <CharacterCard
-                  key={similar.id}
-                  character={similar}
-                />
+                <CharacterCard key={similar.id} character={similar} />
               ))}
             </div>
           </div>

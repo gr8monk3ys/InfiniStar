@@ -2,10 +2,10 @@
 
 import { memo, useCallback, useMemo, useState } from "react"
 import Image from "next/image"
+import { useAuth, useUser } from "@clerk/nextjs"
 import axios, { isAxiosError } from "axios"
 import clsx from "clsx"
 import { format } from "date-fns"
-import { useSession } from "next-auth/react"
 import toast from "react-hot-toast"
 import {
   HiArrowPath,
@@ -44,7 +44,8 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
   isRegenerating = false,
   regeneratingMessageId = null,
 }) {
-  const session = useSession()
+  const { user } = useUser()
+  const { userId } = useAuth()
   const [imageModalOpen, setImageModalOpen] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
@@ -54,7 +55,8 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
 
   const commonEmojis = ["👍", "❤️", "😄", "🎉", "🔥", "👏"]
 
-  const isOwn = session.data?.user?.email === data?.sender?.email
+  const userEmail = user?.emailAddresses[0]?.emailAddress
+  const isOwn = userEmail === data?.sender?.email
   const seenList = (data.seen || [])
     .filter((user: { email?: string | null }) => user.email !== data?.sender?.email)
     .map((user: { name?: string | null }) => user.name)
@@ -79,8 +81,8 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
     data.image
       ? "rounded-md p-0"
       : isAiWithCode
-      ? "rounded-lg py-2 px-3 max-w-full sm:max-w-[80%] md:max-w-[70%]"
-      : "rounded-full py-2 px-3"
+        ? "rounded-lg py-2 px-3 max-w-full sm:max-w-[80%] md:max-w-[70%]"
+        : "rounded-full py-2 px-3"
   )
 
   const handleEdit = useCallback(async () => {
@@ -150,7 +152,7 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
 
   // Parse reactions from JSON
   const reactions = (data.reactions as Record<string, string[]>) || {}
-  const currentUserId = session.data?.user?.id
+  const currentUserId = userId
 
   // Don't show deleted messages
   if (data.isDeleted) {

@@ -1,12 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server"
-import { getServerSession } from "next-auth"
+import { env } from "@/env.mjs"
+import { auth } from "@clerk/nextjs/server"
 
-import { authOptions } from "@/app/lib/auth"
 import { verifyCsrfToken } from "@/app/lib/csrf"
 import prisma from "@/app/lib/prismadb"
 import { apiLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 import { stripe } from "@/app/lib/stripe"
-import { env } from "@/env.mjs"
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
@@ -41,26 +40,22 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     // Authentication
-    const session = await getServerSession(authOptions)
-    const currentUser = session?.user
+    const { userId } = await auth()
 
-    if (!currentUser?.id || !currentUser?.email) {
+    if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
     // Look up user's Stripe customer ID
     const user = await prisma.user.findUnique({
-      where: { id: currentUser.id },
+      where: { clerkId: userId },
       select: {
         stripeCustomerId: true,
       },
     })
 
     if (!user?.stripeCustomerId) {
-      return NextResponse.json(
-        { error: "No billing account found" },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: "No billing account found" }, { status: 400 })
     }
 
     // Create Stripe billing portal session

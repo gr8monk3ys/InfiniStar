@@ -1,23 +1,20 @@
 /**
  * Email Sending Utilities
  *
- * Provides email sending functionality for verification and notifications
+ * Provides email sending functionality for account management notifications
  * using Postmark as the email service provider.
+ *
+ * Note: Verification, password reset, and 2FA emails are now handled by Clerk.
  */
 
 /* eslint-disable no-console -- Development logging for email debugging is intentional */
 
 import {
-  get2FADisabledEmailTemplate,
-  get2FAEnabledEmailTemplate,
   getAccountDeletedEmailTemplate,
   getAccountDeletionCancelledEmailTemplate,
   getAccountDeletionPendingEmailTemplate,
-  getPasswordResetEmailTemplate,
-  getVerificationEmailTemplate,
   getWelcomeEmailTemplate,
 } from "./email-templates"
-import { getResetPasswordUrl, getVerificationUrl } from "./email-verification"
 
 const POSTMARK_API_URL = "https://api.postmarkapp.com/email"
 
@@ -101,44 +98,6 @@ async function sendEmail({
 }
 
 /**
- * Send verification email
- */
-export async function sendVerificationEmail(
-  email: string,
-  name: string,
-  token: string
-): Promise<boolean> {
-  const verificationUrl = getVerificationUrl(token)
-  const template = getVerificationEmailTemplate({ name, verificationUrl })
-
-  return sendEmail({
-    to: email,
-    subject: template.subject,
-    htmlBody: template.html,
-    textBody: template.text,
-  })
-}
-
-/**
- * Send password reset email
- */
-export async function sendPasswordResetEmail(
-  email: string,
-  name: string,
-  token: string
-): Promise<boolean> {
-  const resetUrl = getResetPasswordUrl(token)
-  const template = getPasswordResetEmailTemplate({ name, resetUrl })
-
-  return sendEmail({
-    to: email,
-    subject: template.subject,
-    htmlBody: template.html,
-    textBody: template.text,
-  })
-}
-
-/**
  * Send welcome email (after verification)
  */
 export async function sendWelcomeEmail(email: string, name: string): Promise<boolean> {
@@ -208,38 +167,6 @@ export async function sendAccountDeletionCancelledEmail(
  */
 export async function sendAccountDeletedEmail(email: string, name: string): Promise<boolean> {
   const template = getAccountDeletedEmailTemplate({ name })
-
-  return sendEmail({
-    to: email,
-    subject: template.subject,
-    htmlBody: template.html,
-    textBody: template.text,
-  })
-}
-
-/**
- * Send 2FA enabled notification email
- */
-export async function send2FAEnabledEmail(email: string, name: string): Promise<boolean> {
-  const config = getEmailConfig()
-  const profileUrl = `${config.appUrl}/dashboard/profile`
-  const template = get2FAEnabledEmailTemplate({ name, profileUrl })
-
-  return sendEmail({
-    to: email,
-    subject: template.subject,
-    htmlBody: template.html,
-    textBody: template.text,
-  })
-}
-
-/**
- * Send 2FA disabled notification email
- */
-export async function send2FADisabledEmail(email: string, name: string): Promise<boolean> {
-  const config = getEmailConfig()
-  const profileUrl = `${config.appUrl}/dashboard/profile`
-  const template = get2FADisabledEmailTemplate({ name, profileUrl })
 
   return sendEmail({
     to: email,

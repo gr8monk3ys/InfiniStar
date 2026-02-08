@@ -1,15 +1,16 @@
-import type { Metadata } from 'next'
-import Link from 'next/link'
-import { getServerSession } from 'next-auth'
-import { redirect } from 'next/navigation'
-import { HiOutlineHeart } from 'react-icons/hi2'
+import type { Metadata } from "next"
+import Link from "next/link"
+import { redirect } from "next/navigation"
+import { auth } from "@clerk/nextjs/server"
+import { HiOutlineHeart } from "react-icons/hi2"
 
-import { authOptions } from '@/app/lib/auth'
-import prisma from '@/app/lib/prismadb'
-import { cn } from '@/app/lib/utils'
-import { buttonVariants } from '@/app/components/ui/button'
+import prisma from "@/app/lib/prismadb"
+import { cn } from "@/app/lib/utils"
+import { buttonVariants } from "@/app/components/ui/button"
 
-import FavoritesGrid from './FavoritesGrid'
+import FavoritesGrid from "./FavoritesGrid"
+
+export const dynamic = "force-dynamic"
 
 interface CharacterLikeWithCharacter {
   createdAt: Date
@@ -32,16 +33,22 @@ interface CharacterLikeWithCharacter {
 }
 
 export const metadata: Metadata = {
-  title: 'Favorites | InfiniStar',
-  description: 'Your favorite AI characters',
+  title: "Favorites | InfiniStar",
+  description: "Your favorite AI characters",
 }
 
 export default async function FavoritesPage() {
-  const session = await getServerSession(authOptions)
-  if (!session?.user?.id) redirect('/login')
+  const { userId } = await auth()
+  if (!userId) redirect("/login")
+
+  const currentUser = await prisma.user.findUnique({
+    where: { clerkId: userId },
+    select: { id: true },
+  })
+  if (!currentUser) redirect("/login")
 
   const likes = await prisma.characterLike.findMany({
-    where: { userId: session.user.id },
+    where: { userId: currentUser.id },
     include: {
       character: {
         include: {
@@ -51,7 +58,7 @@ export default async function FavoritesPage() {
         },
       },
     },
-    orderBy: { createdAt: 'desc' },
+    orderBy: { createdAt: "desc" },
   })
 
   const characters = likes.map((like: CharacterLikeWithCharacter) => ({
@@ -67,13 +74,10 @@ export default async function FavoritesPage() {
             <h1 className="text-2xl font-bold">Favorites</h1>
             <p className="text-sm text-muted-foreground">
               {characters.length} character
-              {characters.length !== 1 ? 's' : ''}
+              {characters.length !== 1 ? "s" : ""}
             </p>
           </div>
-          <Link
-            href="/explore"
-            className={cn(buttonVariants({ variant: 'outline' }))}
-          >
+          <Link href="/explore" className={cn(buttonVariants({ variant: "outline" }))}>
             Discover More
           </Link>
         </div>
@@ -84,17 +88,12 @@ export default async function FavoritesPage() {
               <HiOutlineHeart className="size-12 text-muted-foreground" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold">
-                No favorites yet
-              </h2>
+              <h2 className="text-lg font-semibold">No favorites yet</h2>
               <p className="text-sm text-muted-foreground">
                 Like characters to save them here for quick access.
               </p>
             </div>
-            <Link
-              href="/explore"
-              className={cn(buttonVariants())}
-            >
+            <Link href="/explore" className={cn(buttonVariants())}>
               Explore Characters
             </Link>
           </div>

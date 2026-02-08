@@ -1,15 +1,15 @@
 import { useEffect, useRef } from "react"
+import { useAuth } from "@clerk/nextjs"
 import axios from "axios"
-import { useSession } from "next-auth/react"
 
 // Track user activity and update presence status
 export default function usePresence() {
-  const { data: session } = useSession()
+  const { userId } = useAuth()
   const awayTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const isActiveRef = useRef(true)
 
   useEffect(() => {
-    if (!session?.user?.id) return
+    if (!userId) return
 
     // Update presence to online when component mounts
     const setOnline = async () => {
@@ -64,9 +64,12 @@ export default function usePresence() {
       }
 
       // Set timer for 5 minutes of inactivity
-      awayTimeoutRef.current = setTimeout(() => {
-        setAway()
-      }, 5 * 60 * 1000) // 5 minutes
+      awayTimeoutRef.current = setTimeout(
+        () => {
+          setAway()
+        },
+        5 * 60 * 1000
+      ) // 5 minutes
     }
 
     // Activity event handlers
@@ -110,5 +113,5 @@ export default function usePresence() {
       })
       document.removeEventListener("visibilitychange", handleVisibilityChange)
     }
-  }, [session?.user?.id])
+  }, [userId])
 }

@@ -1,6 +1,6 @@
 import { useMemo } from "react"
 import { usePathname } from "next/navigation"
-import { signOut } from "next-auth/react"
+import { useClerk } from "@clerk/nextjs"
 import { HiChat } from "react-icons/hi"
 import { HiArrowLeftOnRectangle, HiOutlineSparkles, HiUser } from "react-icons/hi2"
 
@@ -9,6 +9,7 @@ import useConversation from "./useConversation"
 const useRoutes = () => {
   const pathname = usePathname()
   const { conversationId } = useConversation()
+  const { signOut } = useClerk()
 
   const routes = useMemo(
     () => [
@@ -32,12 +33,12 @@ const useRoutes = () => {
       },
       {
         label: "Logout",
-        onClick: () => signOut(),
+        onClick: () => signOut({ redirectUrl: "/" }),
         href: "#",
         icon: HiArrowLeftOnRectangle,
       },
     ],
-    [pathname, conversationId]
+    [pathname, conversationId, signOut]
   )
 
   return routes

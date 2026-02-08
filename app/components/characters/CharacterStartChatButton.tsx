@@ -1,7 +1,7 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { useSession } from "next-auth/react"
+import { useAuth } from "@clerk/nextjs"
 import toast from "react-hot-toast"
 
 import { Button } from "@/app/components/ui/button"
@@ -9,11 +9,11 @@ import { useCsrfToken } from "@/app/hooks/useCsrfToken"
 
 export function CharacterStartChatButton({ characterId }: { characterId: string }) {
   const router = useRouter()
-  const { data: session } = useSession()
+  const { userId, isSignedIn } = useAuth()
   const { token } = useCsrfToken()
 
   const handleStart = async () => {
-    if (!session?.user?.id) {
+    if (!isSignedIn || !userId) {
       router.push("/login")
       return
     }

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react"
 import dynamic from "next/dynamic"
 import { useRouter } from "next/navigation"
-import { useSession } from "next-auth/react"
+import { useUser } from "@clerk/nextjs"
 import type { CloudinaryUploadWidgetResults } from "next-cloudinary"
 import toast from "react-hot-toast"
 import {
@@ -17,7 +17,7 @@ import {
   HiUser,
 } from "react-icons/hi2"
 
-import { ApiError, api, createLoadingToast } from "@/app/lib/api-client"
+import { api, ApiError, createLoadingToast } from "@/app/lib/api-client"
 import DeleteAccountModal from "@/app/components/modals/DeleteAccountModal"
 import StatusModal from "@/app/components/modals/StatusModal"
 import { DarkModeToggle, ThemeCustomizer, ThemeSelector } from "@/app/components/themes"
@@ -73,7 +73,7 @@ type TabType =
   | "account"
 
 export default function ProfilePage() {
-  const { data: session, update } = useSession()
+  const { user, isLoaded } = useUser()
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [activeTab, setActiveTab] = useState<TabType>("profile")
@@ -155,13 +155,13 @@ export default function ProfilePage() {
   }, [])
 
   useEffect(() => {
-    if (session?.user) {
-      setName(session.user.name || "")
+    if (isLoaded && user) {
+      setName(user.fullName || user.firstName || "")
       fetchDeletionStatus()
       checkHasPassword()
       fetchNotificationPreferences()
     }
-  }, [session, fetchDeletionStatus, checkHasPassword, fetchNotificationPreferences])
+  }, [isLoaded, user, fetchDeletionStatus, checkHasPassword, fetchNotificationPreferences])
 
   const handleAvatarUpload = async (result: CloudinaryUploadWidgetResults) => {
     if (!result.info || typeof result.info === "string" || !result.info.secure_url) {
@@ -173,7 +173,7 @@ export default function ProfilePage() {
     const loader = createLoadingToast("Uploading avatar...")
 
     try {
-      const response = await api.patch<{ message: string; user: { image: string } }>(
+      await api.patch<{ message: string; user: { image: string } }>(
         "/api/profile",
         { image: imageUrl },
         { retries: 1, showErrorToast: false }
@@ -181,10 +181,8 @@ export default function ProfilePage() {
 
       loader.success("Avatar updated successfully")
 
-      await update({
-        ...session,
-        user: { ...session?.user, image: response.user.image },
-      })
+      // Reload Clerk user data to reflect the updated avatar
+      await user?.reload()
     } catch (error) {
       const message = error instanceof ApiError ? error.message : "Failed to update avatar"
       loader.error(message)
@@ -211,10 +209,8 @@ export default function ProfilePage() {
 
       loader.success(response.message)
 
-      await update({
-        ...session,
-        user: { ...session?.user, name: response.user.name },
-      })
+      // Reload Clerk user data to reflect the updated name
+      await user?.reload()
     } catch (error) {
       const message = error instanceof ApiError ? error.message : "Failed to update profile"
       loader.error(message)
@@ -373,7 +369,15 @@ export default function ProfilePage() {
           <div className="p-6">
             {activeTab === "profile" && (
               <ProfileTabContent
-                user={session?.user}
+                user={
+                  user
+                    ? {
+                        name: user.fullName || user.firstName || undefined,
+                        email: user.emailAddresses[0]?.emailAddress,
+                        image: user.imageUrl,
+                      }
+                    : undefined
+                }
                 name={name}
                 setName={setName}
                 bio={bio}

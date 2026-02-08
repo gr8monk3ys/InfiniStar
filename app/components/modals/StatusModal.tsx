@@ -1,8 +1,8 @@
 "use client"
 
 import { useState } from "react"
+import { useUser } from "@clerk/nextjs"
 import axios from "axios"
-import { useSession } from "next-auth/react"
 import toast from "react-hot-toast"
 import { HiOutlineXMark } from "react-icons/hi2"
 
@@ -33,9 +33,11 @@ const COMMON_EMOJIS = [
 ]
 
 const StatusModal: React.FC<StatusModalProps> = ({ isOpen, onClose }) => {
-  const { data: session, update } = useSession()
-  const [customStatus, setCustomStatus] = useState(session?.user?.customStatus || "")
-  const [customStatusEmoji, setCustomStatusEmoji] = useState(session?.user?.customStatusEmoji || "")
+  const { user } = useUser()
+  // TODO: customStatus and customStatusEmoji are not stored in Clerk.
+  // These should be fetched from the Prisma user object instead of the session.
+  const [customStatus, setCustomStatus] = useState("")
+  const [customStatusEmoji, setCustomStatusEmoji] = useState("")
   const [isLoading, setIsLoading] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -50,15 +52,9 @@ const StatusModal: React.FC<StatusModalProps> = ({ isOpen, onClose }) => {
         customStatusEmoji: customStatusEmoji || null,
       })
 
-      // Update session
-      await update({
-        ...session,
-        user: {
-          ...session?.user,
-          customStatus: customStatus || null,
-          customStatusEmoji: customStatusEmoji || null,
-        },
-      })
+      // TODO: Clerk's useUser() has no update method for custom fields.
+      // Custom status is persisted via the API call above; consider using
+      // a local state store or refetching from the Prisma user object.
 
       toast.success("Status updated successfully")
       onClose()
@@ -80,14 +76,9 @@ const StatusModal: React.FC<StatusModalProps> = ({ isOpen, onClose }) => {
         customStatusEmoji: null,
       })
 
-      await update({
-        ...session,
-        user: {
-          ...session?.user,
-          customStatus: null,
-          customStatusEmoji: null,
-        },
-      })
+      // TODO: Clerk's useUser() has no update method for custom fields.
+      // Custom status is persisted via the API call above; consider using
+      // a local state store or refetching from the Prisma user object.
 
       setCustomStatus("")
       setCustomStatusEmoji("")

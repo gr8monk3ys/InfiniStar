@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { SignedIn, SignedOut, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs"
 
 import { siteConfig } from "@/config/site"
 import { Button, buttonVariants } from "@/app/components/ui/button"
@@ -25,9 +26,19 @@ export function SiteHeader() {
               </div>
             </Link>
             <ThemeToggle />
-            <Button asChild>
-              <Link href="/login">Login</Link>
-            </Button>
+            <SignedOut>
+              <SignInButton mode="modal">
+                <Button variant="ghost" size="sm">
+                  Sign In
+                </Button>
+              </SignInButton>
+              <SignUpButton mode="modal">
+                <Button size="sm">Sign Up</Button>
+              </SignUpButton>
+            </SignedOut>
+            <SignedIn>
+              <UserButton afterSignOutUrl="/" />
+            </SignedIn>
           </nav>
         </div>
       </div>

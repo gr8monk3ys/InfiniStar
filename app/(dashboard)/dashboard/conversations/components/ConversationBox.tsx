@@ -2,9 +2,9 @@
 
 import { memo, useCallback, useMemo } from "react"
 import { useRouter } from "next/navigation"
+import { useAuth, useUser } from "@clerk/nextjs"
 import clsx from "clsx"
 import { format } from "date-fns"
-import { useSession } from "next-auth/react"
 import { BsPinAngleFill } from "react-icons/bs"
 import { HiOutlineBellSlash } from "react-icons/hi2"
 
@@ -23,7 +23,8 @@ interface ConversationBoxProps {
 
 const ConversationBox: React.FC<ConversationBoxProps> = ({ data, selected, keyboardSelected }) => {
   const otherUser = useOtherUser(data)
-  const session = useSession()
+  const { user } = useUser()
+  const { userId } = useAuth()
   const router = useRouter()
 
   const handleClick = useCallback(() => {
@@ -36,7 +37,7 @@ const ConversationBox: React.FC<ConversationBoxProps> = ({ data, selected, keybo
     return messages[messages.length - 1]
   }, [data.messages])
 
-  const userEmail = useMemo(() => session.data?.user?.email, [session.data?.user?.email])
+  const userEmail = useMemo(() => user?.emailAddresses[0]?.emailAddress, [user?.emailAddresses])
 
   const hasSeen = useMemo(() => {
     if (!lastMessage) {
@@ -49,7 +50,9 @@ const ConversationBox: React.FC<ConversationBoxProps> = ({ data, selected, keybo
       return false
     }
 
-    return seenArray.filter((user: { email?: string | null }) => user.email === userEmail).length !== 0
+    return (
+      seenArray.filter((user: { email?: string | null }) => user.email === userEmail).length !== 0
+    )
   }, [userEmail, lastMessage])
 
   const lastMessageText = useMemo(() => {
@@ -65,16 +68,14 @@ const ConversationBox: React.FC<ConversationBoxProps> = ({ data, selected, keybo
   }, [lastMessage])
 
   const isMuted = useMemo(() => {
-    const currentUserId = session.data?.user?.id
-    if (!currentUserId) return false
-    return data.mutedBy?.includes(currentUserId) || false
-  }, [data.mutedBy, session.data?.user?.id])
+    if (!userId) return false
+    return data.mutedBy?.includes(userId) || false
+  }, [data.mutedBy, userId])
 
   const isPinned = useMemo(() => {
-    const currentUserId = session.data?.user?.id
-    if (!currentUserId) return false
-    return data.pinnedBy?.includes(currentUserId) || false
-  }, [data.pinnedBy, session.data?.user?.id])
+    if (!userId) return false
+    return data.pinnedBy?.includes(userId) || false
+  }, [data.pinnedBy, userId])
 
   return (
     <div
@@ -148,9 +149,11 @@ const ConversationBox: React.FC<ConversationBoxProps> = ({ data, selected, keybo
           {/* Display tags if any */}
           {data.tags && data.tags.length > 0 && (
             <div className="mt-1 flex flex-wrap gap-1">
-              {data.tags.slice(0, 3).map((tag: { id: string; name: string; color: string | null }) => (
-                <TagBadge key={tag.id} tag={tag} size="sm" />
-              ))}
+              {data.tags
+                .slice(0, 3)
+                .map((tag: { id: string; name: string; color: string | null }) => (
+                  <TagBadge key={tag.id} tag={tag} size="sm" />
+                ))}
               {data.tags.length > 3 && (
                 <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
                   +{data.tags.length - 3}

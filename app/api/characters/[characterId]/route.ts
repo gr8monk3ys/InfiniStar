@@ -1,8 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server"
-import { getServerSession } from "next-auth"
+import { auth } from "@clerk/nextjs/server"
 import { z } from "zod"
 
-import { authOptions } from "@/app/lib/auth"
 import { verifyCsrfToken } from "@/app/lib/csrf"
 import prisma from "@/app/lib/prismadb"
 import { sanitizePlainText } from "@/app/lib/sanitize"
@@ -40,9 +39,15 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
   }
 
   if (!character.isPublic) {
-    const session = await getServerSession(authOptions)
-    const currentUser = session?.user
-    if (!currentUser?.id || character.createdById !== currentUser.id) {
+    const { userId } = await auth()
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
+    }
+    const currentUser = await prisma.user.findUnique({
+      where: { clerkId: userId },
+      select: { id: true },
+    })
+    if (!currentUser || character.createdById !== currentUser.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
     }
   }
@@ -51,11 +56,18 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
 }
 
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
-  const session = await getServerSession(authOptions)
-  const currentUser = session?.user
+  const { userId } = await auth()
 
-  if (!currentUser?.id) {
+  if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
+  const currentUser = await prisma.user.findUnique({
+    where: { clerkId: userId },
+    select: { id: true },
+  })
+  if (!currentUser) {
+    return NextResponse.json({ error: "User not found" }, { status: 401 })
   }
 
   const headerToken = request.headers.get("X-CSRF-Token")
@@ -132,11 +144,18 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 }
 
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
-  const session = await getServerSession(authOptions)
-  const currentUser = session?.user
+  const { userId } = await auth()
 
-  if (!currentUser?.id) {
+  if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
+  const currentUser = await prisma.user.findUnique({
+    where: { clerkId: userId },
+    select: { id: true },
+  })
+  if (!currentUser) {
+    return NextResponse.json({ error: "User not found" }, { status: 401 })
   }
 
   const headerToken = request.headers.get("X-CSRF-Token")

@@ -5,6 +5,8 @@ import { buttonVariants } from "@/app/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/app/components/ui/card"
 import getCharactersForUser from "@/app/actions/getCharactersForUser"
 
+export const dynamic = "force-dynamic"
+
 export const metadata = {
   title: "Characters | InfiniStar",
 }

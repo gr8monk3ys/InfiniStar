@@ -1,8 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server"
-import { getServerSession } from "next-auth"
+import { auth } from "@clerk/nextjs/server"
 import { z } from "zod"
 
-import { authOptions } from "@/app/lib/auth"
 import { verifyCsrfToken } from "@/app/lib/csrf"
 import prisma from "@/app/lib/prismadb"
 import { pusherServer } from "@/app/lib/pusher"
@@ -66,11 +65,18 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const session = await getServerSession(authOptions)
-    const currentUser = session?.user
+    const { userId } = await auth()
 
-    if (!currentUser?.id || !currentUser?.email) {
+    if (!userId) {
       return new NextResponse("Unauthorized", { status: 401 })
+    }
+
+    const currentUser = await prisma.user.findUnique({
+      where: { clerkId: userId },
+      select: { id: true, email: true },
+    })
+    if (!currentUser) {
+      return new NextResponse("User not found", { status: 401 })
     }
 
     const body = await request.json()

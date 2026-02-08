@@ -1,8 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server"
-import { getServerSession } from "next-auth"
+import { auth } from "@clerk/nextjs/server"
 import { z } from "zod"
 
-import { authOptions } from "@/app/lib/auth"
 import { verifyCsrfToken } from "@/app/lib/csrf"
 import prisma from "@/app/lib/prismadb"
 import { pusherServer } from "@/app/lib/pusher"
@@ -70,11 +69,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid CSRF token" }, { status: 403 })
     }
 
-    const session = await getServerSession(authOptions)
-    const currentUser = session?.user
+    const { userId } = await auth()
 
-    if (!currentUser?.id || !currentUser?.email) {
+    if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const currentUser = await prisma.user.findUnique({
+      where: { clerkId: userId },
+      select: { id: true, email: true },
+    })
+    if (!currentUser) {
+      return NextResponse.json({ error: "User not found" }, { status: 401 })
     }
 
     const body = await request.json()
@@ -85,7 +91,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: validation.error.issues[0].message }, { status: 400 })
     }
 
-    const { userId, isGroup, members, name, isAI, aiModel, characterId } = validation.data
+    const {
+      userId: targetUserId,
+      isGroup,
+      members,
+      name,
+      isAI,
+      aiModel,
+      characterId,
+    } = validation.data
 
     // Sanitize conversation name if provided
     const sanitizedName = name ? sanitizePlainText(name) : null
@@ -208,7 +222,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Direct 1-on-1 conversation requires userId
-    if (!userId) {
+    if (!targetUserId) {
       return NextResponse.json(
         { error: "User ID is required for direct conversations" },
         { status: 400 }
@@ -218,7 +232,10 @@ export async function POST(request: NextRequest) {
     const existingConversations = await prisma.conversation.findMany({
       where: {
         isGroup: false,
-        AND: [{ users: { some: { id: currentUser.id } } }, { users: { some: { id: userId } } }],
+        AND: [
+          { users: { some: { id: currentUser.id } } },
+          { users: { some: { id: targetUserId } } },
+        ],
       },
       include: {
         users: true,
@@ -241,7 +258,7 @@ export async function POST(request: NextRequest) {
               id: currentUser.id,
             },
             {
-              id: userId,
+              id: targetUserId,
             },
           ],
         },

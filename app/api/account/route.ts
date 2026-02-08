@@ -1,5 +1,4 @@
 import { NextResponse, type NextRequest } from "next/server"
-import bcrypt from "bcryptjs"
 import { z } from "zod"
 
 import { verifyCsrfToken } from "@/app/lib/csrf"
@@ -13,7 +12,6 @@ const DELETION_GRACE_PERIOD_DAYS = 30
 
 // Validation schema for account deletion request
 const deleteAccountSchema = z.object({
-  password: z.string().optional(), // Required for credential users
   confirmationText: z.string().refine((val) => val === "DELETE", {
     message: 'You must type "DELETE" to confirm',
   }),
@@ -47,6 +45,7 @@ function validateCsrf(request: NextRequest): boolean {
  *
  * GDPR-compliant account deletion with 30-day grace period.
  * User can cancel during grace period.
+ * Authentication is managed by Clerk -- no password verification needed.
  */
 export async function DELETE(request: NextRequest) {
   try {
@@ -97,33 +96,6 @@ export async function DELETE(request: NextRequest) {
         { error: validation.error.issues[0].message, code: "VALIDATION_ERROR" },
         { status: 400 }
       )
-    }
-
-    const { password } = validation.data
-
-    // Get user with hashed password to check if credential user
-    const userWithPassword = await prisma.user.findUnique({
-      where: { id: currentUser.id },
-      select: { hashedPassword: true },
-    })
-
-    // If user has a password (credential account), verify it
-    if (userWithPassword?.hashedPassword) {
-      if (!password) {
-        return NextResponse.json(
-          { error: "Password is required to delete your account", code: "PASSWORD_REQUIRED" },
-          { status: 400 }
-        )
-      }
-
-      const isCorrectPassword = await bcrypt.compare(password, userWithPassword.hashedPassword)
-
-      if (!isCorrectPassword) {
-        return NextResponse.json(
-          { error: "Incorrect password", code: "PASSWORD_INCORRECT" },
-          { status: 400 }
-        )
-      }
     }
 
     // Calculate deletion date (30 days from now)

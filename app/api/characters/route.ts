@@ -1,8 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server"
-import { getServerSession } from "next-auth"
+import { auth } from "@clerk/nextjs/server"
 import { z } from "zod"
 
-import { authOptions } from "@/app/lib/auth"
 import { verifyCsrfToken } from "@/app/lib/csrf"
 import prisma from "@/app/lib/prismadb"
 import { sanitizePlainText } from "@/app/lib/sanitize"
@@ -26,7 +25,7 @@ const listSchema = z.object({
   tag: z.string().optional(),
   featured: z.string().optional(),
   category: z.string().optional(),
-  sort: z.enum(['popular', 'newest', 'liked']).optional(),
+  sort: z.enum(["popular", "newest", "liked"]).optional(),
   limit: z.string().optional(),
   cursor: z.string().optional(),
 })
@@ -67,23 +66,23 @@ export async function GET(request: NextRequest) {
     where.tags = { has: params.tag }
   }
 
-  if (params.category && params.category !== 'all') {
+  if (params.category && params.category !== "all") {
     where.category = params.category
   }
 
-  let orderBy: Record<string, 'asc' | 'desc'>[]
+  let orderBy: Record<string, "asc" | "desc">[]
   switch (params.sort) {
-    case 'popular':
-      orderBy = [{ usageCount: 'desc' }, { createdAt: 'desc' }]
+    case "popular":
+      orderBy = [{ usageCount: "desc" }, { createdAt: "desc" }]
       break
-    case 'newest':
-      orderBy = [{ createdAt: 'desc' }]
+    case "newest":
+      orderBy = [{ createdAt: "desc" }]
       break
-    case 'liked':
-      orderBy = [{ likeCount: 'desc' }, { createdAt: 'desc' }]
+    case "liked":
+      orderBy = [{ likeCount: "desc" }, { createdAt: "desc" }]
       break
     default:
-      orderBy = [{ featured: 'desc' }, { usageCount: 'desc' }, { createdAt: 'desc' }]
+      orderBy = [{ featured: "desc" }, { usageCount: "desc" }, { createdAt: "desc" }]
   }
 
   const characters = await prisma.character.findMany({
@@ -108,11 +107,18 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const session = await getServerSession(authOptions)
-  const currentUser = session?.user
+  const { userId } = await auth()
 
-  if (!currentUser?.id) {
+  if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
+  const currentUser = await prisma.user.findUnique({
+    where: { clerkId: userId },
+    select: { id: true },
+  })
+  if (!currentUser) {
+    return NextResponse.json({ error: "User not found" }, { status: 401 })
   }
 
   const headerToken = request.headers.get("X-CSRF-Token")
@@ -170,7 +176,7 @@ export async function POST(request: NextRequest) {
       coverImageUrl: data.coverImageUrl,
       tags: data.tags?.map((tag) => sanitizePlainText(tag)).filter(Boolean) as string[],
       isPublic: data.isPublic ?? false,
-      category: data.category ? sanitizePlainText(data.category) || 'general' : 'general',
+      category: data.category ? sanitizePlainText(data.category) || "general" : "general",
       createdById: currentUser.id,
     },
   })

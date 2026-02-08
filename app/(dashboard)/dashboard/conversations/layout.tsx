@@ -7,6 +7,8 @@ import PresenceProvider from "../components/PresenceProvider"
 import Sidebar from "../components/sidebar/Sidebar"
 import ConversationList from "./components/ConversationList"
 
+export const dynamic = "force-dynamic"
+
 export default async function ConversationsLayout({ children }: { children: React.ReactNode }) {
   const conversations = await getConversations()
   const user = await getUsers()

@@ -1,17 +1,17 @@
 import { NextResponse, type NextRequest } from "next/server"
-import { getServerSession } from "next-auth"
+import { auth } from "@clerk/nextjs/server"
 
-import { authOptions } from "@/app/lib/auth"
 import { verifyCsrfToken } from "@/app/lib/csrf"
+import prisma from "@/app/lib/prismadb"
 import { apiLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 import { advancedSearch, getSearchFacets, getSearchSuggestions } from "@/app/lib/search"
 import {
   DEFAULT_SEARCH_FILTERS,
   MAX_SEARCH_LIMIT,
   MIN_QUERY_LENGTH,
-  type AIPersonality,
   type AdvancedSearchFilters,
   type AdvancedSearchResponse,
+  type AIPersonality,
   type SearchResultType,
   type SearchSortBy,
   type SearchSuggestionsResponse,
@@ -63,14 +63,27 @@ export async function GET(request: NextRequest): Promise<NextResponse<AdvancedSe
 
   try {
     // Authentication
-    const session = await getServerSession(authOptions)
-    const currentUser = session?.user
+    const { userId } = await auth()
 
-    if (!currentUser?.id || !currentUser?.email) {
+    if (!userId) {
       return NextResponse.json(
         {
           success: false,
           error: "Unauthorized. Please log in to search.",
+        },
+        { status: 401 }
+      )
+    }
+
+    const currentUser = await prisma.user.findUnique({
+      where: { clerkId: userId },
+      select: { id: true },
+    })
+    if (!currentUser) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "User not found.",
         },
         { status: 401 }
       )
@@ -246,11 +259,14 @@ export async function POST(request: NextRequest): Promise<NextResponse<SearchSug
   let cookieToken: string | null = null
 
   if (cookieHeader) {
-    const cookies = cookieHeader.split(";").reduce((acc, cookie) => {
-      const [key, value] = cookie.trim().split("=")
-      acc[key] = value
-      return acc
-    }, {} as Record<string, string>)
+    const cookies = cookieHeader.split(";").reduce(
+      (acc, cookie) => {
+        const [key, value] = cookie.trim().split("=")
+        acc[key] = value
+        return acc
+      },
+      {} as Record<string, string>
+    )
     cookieToken = cookies["csrf-token"] || null
   }
 
@@ -277,14 +293,27 @@ export async function POST(request: NextRequest): Promise<NextResponse<SearchSug
 
   try {
     // Authentication
-    const session = await getServerSession(authOptions)
-    const currentUser = session?.user
+    const { userId } = await auth()
 
-    if (!currentUser?.id || !currentUser?.email) {
+    if (!userId) {
       return NextResponse.json(
         {
           success: false,
           error: "Unauthorized. Please log in.",
+        },
+        { status: 401 }
+      )
+    }
+
+    const currentUser = await prisma.user.findUnique({
+      where: { clerkId: userId },
+      select: { id: true },
+    })
+    if (!currentUser) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "User not found.",
         },
         { status: 401 }
       )

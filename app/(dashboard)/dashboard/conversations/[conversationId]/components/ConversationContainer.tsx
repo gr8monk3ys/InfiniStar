@@ -1,8 +1,8 @@
 "use client"
 
 import React, { useCallback, useEffect, useRef, useState } from "react"
+import { useAuth } from "@clerk/nextjs"
 import axios from "axios"
-import { useSession } from "next-auth/react"
 import toast from "react-hot-toast"
 
 import { pusherClient } from "@/app/lib/pusher"
@@ -37,8 +37,8 @@ const ConversationContainer: React.FC<ConversationContainerProps> = ({
   characterAvatar,
 }) => {
   const { conversationId } = useConversation()
-  const session = useSession()
-  const currentUserId = session.data?.user?.id
+  const { userId } = useAuth()
+  const currentUserId = userId ?? undefined
   const { token: csrfToken } = useCsrfToken()
   const bottomRef = useRef<HTMLDivElement | null>(null)
 

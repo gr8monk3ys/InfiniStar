@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
+import { useAuth, useUser } from "@clerk/nextjs"
 import { type User } from "@prisma/client"
 import clsx from "clsx"
-import { useSession } from "next-auth/react"
 import { BsPinAngleFill } from "react-icons/bs"
 import {
   HiArchiveBox,
@@ -54,17 +54,14 @@ const ConversationList: React.FC<ConversationListProps> = ({ initialItems, user 
     useKeyboardShortcutsContext()
 
   const router = useRouter()
-  const session = useSession()
+  const { user: clerkUser } = useUser()
+  const { userId: currentUserId } = useAuth()
 
   const { conversationId, isOpen } = useConversation()
 
   const pusherKey = useMemo(() => {
-    return session.data?.user?.email
-  }, [session.data?.user?.email])
-
-  const currentUserId = useMemo(() => {
-    return session.data?.user?.id
-  }, [session.data?.user?.id])
+    return clerkUser?.emailAddresses[0]?.emailAddress
+  }, [clerkUser?.emailAddresses])
 
   // Filter and sort conversations based on archive, pin, and tag status
   const filteredItems = useMemo(() => {
@@ -516,8 +513,8 @@ const ConversationList: React.FC<ConversationListProps> = ({ initialItems, user 
               {selectedTagId
                 ? `No conversations with this tag${showArchived ? " in archived" : ""}`
                 : showArchived
-                ? "No archived conversations"
-                : "No active conversations"}
+                  ? "No archived conversations"
+                  : "No active conversations"}
             </div>
           ) : (
             <>

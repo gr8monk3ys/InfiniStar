@@ -1,7 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server"
-import { getToken } from "next-auth/jwt"
+import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server"
 
 import { getCorsHeaders, handleCorsPreflightRequest } from "@/app/lib/cors"
+
+const isProtectedRoute = createRouteMatcher(["/dashboard(.*)"])
 
 export async function proxy(request: NextRequest) {
   const origin = request.headers.get("origin")
@@ -11,21 +13,21 @@ export async function proxy(request: NextRequest) {
     return handleCorsPreflightRequest(origin)
   }
 
-  // Protect dashboard routes - redirect to login if not authenticated
-  const { pathname } = request.nextUrl
-  if (pathname.startsWith("/dashboard")) {
-    const token = await getToken({
-      req: request,
-      secret: process.env.NEXTAUTH_SECRET,
-    })
-
-    if (!token) {
-      const loginUrl = new URL("/login", request.url)
-      return NextResponse.redirect(loginUrl)
+  // Run Clerk middleware for auth protection
+  const clerkHandler = clerkMiddleware(async (auth, req) => {
+    if (isProtectedRoute(req)) {
+      await auth.protect()
     }
+  })
+
+  const clerkResponse = await clerkHandler(request, {} as never)
+
+  // If Clerk returned a redirect (unauthenticated), use it
+  if (clerkResponse?.status === 307 || clerkResponse?.status === 302) {
+    return clerkResponse
   }
 
-  const response = NextResponse.next()
+  const response = clerkResponse || NextResponse.next()
 
   // Add CORS headers
   const corsHeaders = getCorsHeaders(origin)
@@ -37,18 +39,6 @@ export async function proxy(request: NextRequest) {
   const headers = response.headers
 
   // Content Security Policy
-  // Note: Next.js requires 'unsafe-inline' for styles and inline scripts
-  // In production, consider implementing nonce-based CSP with next-safe-headers
-  // or using Next.js built-in CSP support (experimental feature)
-  //
-  // Security trade-offs:
-  // - 'unsafe-eval': Required for Next.js development mode hot reload
-  // - 'unsafe-inline': Required for Next.js inline scripts and styled-jsx
-  //
-  // For stricter CSP in production:
-  // 1. Use nonce-based CSP (requires server-side nonce generation per request)
-  // 2. Or use 'strict-dynamic' with hash-based CSP for known inline scripts
-
   const isDevelopment = process.env.NODE_ENV === "development"
 
   // Use stricter CSP in production (no unsafe-eval)

@@ -11,11 +11,11 @@ datasource db {
 
 model User {
   id             String    @id @default(uuid()) @db.Uuid
+  clerkId        String?   @unique // Clerk external user ID
   name           String?
   email          String?   @unique
   emailVerified  DateTime?
   image          String?
-  hashedPassword String?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
@@ -29,19 +29,6 @@ model User {
   lastSeenAt        DateTime? // Last time user was active
   customStatus      String? // Custom status message
   customStatusEmoji String? // Emoji for custom status
-
-  // Email verification
-  verificationToken       String?   @unique
-  verificationTokenExpiry DateTime?
-
-  // Password reset
-  resetToken       String?   @unique
-  resetTokenExpiry DateTime?
-
-  // Two-Factor Authentication (2FA)
-  twoFactorEnabled     Boolean  @default(false)
-  twoFactorSecret      String? // Encrypted TOTP secret
-  twoFactorBackupCodes String[] // Hashed backup codes
 
   // GDPR Account Deletion
   deletionRequested    Boolean   @default(false)
@@ -74,9 +61,6 @@ model User {
 
   messages Message[]
 
-  accounts         Account[]
-  sessions         Session[]
-  userSessions     UserSession[]     @relation("UserSessions")
   tags             Tag[]
   aiMemories       AIMemory[]
   messageTemplates MessageTemplate[]
@@ -89,35 +73,6 @@ model User {
   @@map("users")
 }
 
-model Account {
-  id                String  @id @default(uuid()) @db.Uuid
-  userId            String  @db.Uuid
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String? @db.Text
-  session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([provider, providerAccountId])
-  @@map("accounts")
-}
-
-model Session {
-  id           String   @id @default(uuid()) @db.Uuid
-  sessionToken String   @unique
-  userId       String   @db.Uuid
-  expires      DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("sessions")
-}
 
 model Conversation {
   id             String   @id @default(uuid()) @db.Uuid
@@ -238,33 +193,6 @@ model Message {
   @@map("messages")
 }
 
-model UserSession {
-  id           String @id @default(uuid()) @db.Uuid
-  sessionToken String @unique // JWT session identifier
-  userId       String @db.Uuid
-
-  // Device and browser information
-  deviceType String? // "desktop", "mobile", "tablet"
-  browser    String? // e.g., "Chrome 120", "Safari 17"
-  os         String? // e.g., "Windows 11", "macOS 14"
-
-  // IP and location
-  ipAddress String? // IP address (will be partially masked when displayed)
-
-  // Timestamps
-  createdAt    DateTime @default(now())
-  lastActiveAt DateTime @default(now())
-  expiresAt    DateTime // When the session expires
-
-  // Status
-  isRevoked Boolean   @default(false)
-  revokedAt DateTime?
-
-  user User @relation("UserSessions", fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@map("user_sessions")
-}
 
 model AiUsage {
   id        String   @id @default(uuid()) @db.Uuid

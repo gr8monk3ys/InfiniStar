@@ -1,6 +1,7 @@
 import "@/app/globals.css"
 
 import { type Metadata, type Viewport } from "next"
+import { ClerkProvider } from "@clerk/nextjs"
 
 import { siteConfig } from "@/config/site"
 import { cn } from "@/app/lib/utils"
@@ -8,7 +9,6 @@ import { ThemeCustomProvider } from "@/app/components/providers/ThemeCustomProvi
 import { SiteHeader } from "@/app/components/site-header"
 import { TailwindIndicator } from "@/app/components/tailwind-indicator"
 import { ThemeProvider } from "@/app/components/theme-provider"
-import AuthContext from "@/app/context/AuthContext"
 import ToasterContext from "@/app/context/ToasterContext"
 
 export const metadata: Metadata = {
@@ -37,24 +37,22 @@ interface RootLayoutProps {
 
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
-    <>
+    <ClerkProvider>
       <html lang="en" suppressHydrationWarning>
         <head />
         <body className={cn("min-h-screen bg-background font-sans antialiased")}>
-          <AuthContext>
-            <ToasterContext />
-            <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-              <ThemeCustomProvider>
-                <div className="theme-transition-bg relative flex min-h-screen flex-col">
-                  <SiteHeader />
-                  <div className="flex-1">{children}</div>
-                </div>
-                <TailwindIndicator />
-              </ThemeCustomProvider>
-            </ThemeProvider>
-          </AuthContext>
+          <ToasterContext />
+          <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+            <ThemeCustomProvider>
+              <div className="theme-transition-bg relative flex min-h-screen flex-col">
+                <SiteHeader />
+                <div className="flex-1">{children}</div>
+              </div>
+              <TailwindIndicator />
+            </ThemeCustomProvider>
+          </ThemeProvider>
         </body>
       </html>
-    </>
+    </ClerkProvider>
   )
 }

@@ -1,8 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server"
-import { getServerSession } from "next-auth"
+import { auth } from "@clerk/nextjs/server"
 import { z } from "zod"
 
-import { authOptions } from "@/app/lib/auth"
 import { verifyCsrfToken } from "@/app/lib/csrf"
 import prisma from "@/app/lib/prismadb"
 import { getClientIdentifier, tagLimiter } from "@/app/lib/rate-limit"
@@ -27,11 +26,18 @@ const createTagSchema = z.object({
  */
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions)
-    const currentUser = session?.user
+    const { userId } = await auth()
 
-    if (!currentUser?.id) {
+    if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const currentUser = await prisma.user.findUnique({
+      where: { clerkId: userId },
+      select: { id: true },
+    })
+    if (!currentUser) {
+      return NextResponse.json({ error: "User not found" }, { status: 401 })
     }
 
     const tags = await prisma.tag.findMany({
@@ -51,11 +57,13 @@ export async function GET() {
     })
 
     // Transform to include conversation count
-    const tagsWithCount = tags.map((tag: { _count: { conversations: number }; [key: string]: unknown }) => ({
-      ...tag,
-      conversationCount: tag._count.conversations,
-      _count: undefined,
-    }))
+    const tagsWithCount = tags.map(
+      (tag: { _count: { conversations: number }; [key: string]: unknown }) => ({
+        ...tag,
+        conversationCount: tag._count.conversations,
+        _count: undefined,
+      })
+    )
 
     return NextResponse.json({ tags: tagsWithCount })
   } catch (error) {
@@ -100,11 +108,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid CSRF token" }, { status: 403 })
     }
 
-    const session = await getServerSession(authOptions)
-    const currentUser = session?.user
+    const { userId } = await auth()
 
-    if (!currentUser?.id) {
+    if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const currentUser = await prisma.user.findUnique({
+      where: { clerkId: userId },
+      select: { id: true },
+    })
+    if (!currentUser) {
+      return NextResponse.json({ error: "User not found" }, { status: 401 })
     }
 
     const body = await request.json()

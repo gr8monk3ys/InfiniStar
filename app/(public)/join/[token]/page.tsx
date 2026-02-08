@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
+import { useAuth } from "@clerk/nextjs"
 import { formatDistanceToNow } from "date-fns"
 import {
   AlertCircle,
@@ -14,7 +15,6 @@ import {
   Pencil,
   Users,
 } from "lucide-react"
-import { useSession } from "next-auth/react"
 import toast from "react-hot-toast"
 
 import { api } from "@/app/lib/api-client"
@@ -42,7 +42,7 @@ interface ShareInfo {
 export default function JoinPage() {
   const params = useParams()
   const router = useRouter()
-  const { data: session, status: sessionStatus } = useSession()
+  const { isSignedIn, isLoaded } = useAuth()
   const token = params.token as string
 
   const [shareInfo, setShareInfo] = useState<ShareInfo | null>(null)
@@ -76,7 +76,7 @@ export default function JoinPage() {
 
   // Handle join
   const handleJoin = async () => {
-    if (!session) {
+    if (!isSignedIn) {
       // Redirect to login with callback URL
       const callbackUrl = encodeURIComponent(`/join/${token}`)
       router.push(`/login?callbackUrl=${callbackUrl}`)
@@ -125,7 +125,7 @@ export default function JoinPage() {
   }
 
   // Loading state
-  if (isLoading || sessionStatus === "loading") {
+  if (isLoading || !isLoaded) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
         <Card className="w-full max-w-md">
@@ -264,7 +264,7 @@ export default function JoinPage() {
         </CardContent>
 
         <CardFooter className="flex-col gap-3">
-          {session ? (
+          {isSignedIn ? (
             <Button onClick={handleJoin} disabled={isJoining} className="w-full" size="lg">
               {isJoining ? (
                 <>

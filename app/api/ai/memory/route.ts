@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server"
+import { auth } from "@clerk/nextjs/server"
 import { MemoryCategory } from "@prisma/client"
-import { getServerSession } from "next-auth"
 import { z } from "zod"
 
 import {
@@ -11,8 +11,8 @@ import {
   MEMORY_CATEGORIES,
   saveMemory,
 } from "@/app/lib/ai-memory"
-import { authOptions } from "@/app/lib/auth"
 import { verifyCsrfToken } from "@/app/lib/csrf"
+import prisma from "@/app/lib/prismadb"
 import { getClientIdentifier, memoryLimiter } from "@/app/lib/rate-limit"
 import { sanitizePlainText } from "@/app/lib/sanitize"
 
@@ -47,11 +47,18 @@ const listMemoriesSchema = z.object({
  */
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    const currentUser = session?.user
+    const { userId } = await auth()
 
-    if (!currentUser?.id) {
+    if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const currentUser = await prisma.user.findUnique({
+      where: { clerkId: userId },
+      select: { id: true },
+    })
+    if (!currentUser) {
+      return NextResponse.json({ error: "User not found" }, { status: 401 })
     }
 
     // Parse query parameters
@@ -129,11 +136,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid CSRF token" }, { status: 403 })
     }
 
-    const session = await getServerSession(authOptions)
-    const currentUser = session?.user
+    const { userId } = await auth()
 
-    if (!currentUser?.id) {
+    if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const currentUser = await prisma.user.findUnique({
+      where: { clerkId: userId },
+      select: { id: true },
+    })
+    if (!currentUser) {
+      return NextResponse.json({ error: "User not found" }, { status: 401 })
     }
 
     const body = await request.json()

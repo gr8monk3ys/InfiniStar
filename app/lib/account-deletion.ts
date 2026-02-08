@@ -87,10 +87,9 @@ export async function processScheduledDeletions(): Promise<{
  * This performs the following operations:
  * 1. Anonymize all messages sent by the user
  * 2. Remove user from all conversations
- * 3. Delete all OAuth accounts linked to user
- * 4. Delete all sessions
- * 5. Delete AI usage records
- * 6. Delete the user record
+ * 3. Remove user from "seen" relationship on all messages
+ * 4. Delete AI usage records
+ * 5. Delete the user record
  *
  * @param userId The ID of the user to delete
  */
@@ -158,22 +157,12 @@ export async function deleteUserAccount(userId: string): Promise<void> {
       })
     }
 
-    // 4. Delete all OAuth accounts linked to user
-    await tx.account.deleteMany({
-      where: { userId },
-    })
-
-    // 5. Delete all sessions
-    await tx.session.deleteMany({
-      where: { userId },
-    })
-
-    // 6. Delete AI usage records
+    // 4. Delete AI usage records
     await tx.aiUsage.deleteMany({
       where: { userId },
     })
 
-    // 7. Finally, delete the user record
+    // 5. Finally, delete the user record
     await tx.user.delete({
       where: { id: userId },
     })

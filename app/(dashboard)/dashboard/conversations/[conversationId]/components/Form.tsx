@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import dynamic from "next/dynamic"
+import { useAuth } from "@clerk/nextjs"
 import axios from "axios"
-import { useSession } from "next-auth/react"
 import type { CloudinaryUploadWidgetResults } from "next-cloudinary"
 import { useForm, type FieldValues, type SubmitHandler } from "react-hook-form"
 import toast from "react-hot-toast"
@@ -11,7 +11,7 @@ import { HiPaperAirplane, HiPhoto } from "react-icons/hi2"
 
 import useConversation from "@/app/(dashboard)/dashboard/hooks/useConversation"
 import { SuggestionChips } from "@/app/components/suggestions"
-import { VoiceInput, isVoiceInputSupported, type VoiceInputMode } from "@/app/components/voice"
+import { isVoiceInputSupported, VoiceInput, type VoiceInputMode } from "@/app/components/voice"
 import { useAiChatStream, type TokenUsage } from "@/app/hooks/useAiChatStream"
 import { useCsrfToken } from "@/app/hooks/useCsrfToken"
 import { useSuggestionPreferences, useSuggestions } from "@/app/hooks/useSuggestions"
@@ -51,8 +51,8 @@ const Form: React.FC<FormProps> = ({
   const { conversationId } = useConversation()
   const [isLoading, setIsLoading] = useState(false)
   const { token: csrfToken } = useCsrfToken()
-  const session = useSession()
-  const currentUserId = session.data?.user?.id
+  const { userId } = useAuth()
+  const currentUserId = userId ?? undefined
 
   // Check if voice input is supported
   const voiceSupported = isVoiceInputSupported()

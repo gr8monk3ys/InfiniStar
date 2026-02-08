@@ -1,10 +1,10 @@
 "use client"
 
 import { Fragment, memo, useMemo, useState } from "react"
+import { useAuth } from "@clerk/nextjs"
 import { Dialog, Transition } from "@headlessui/react"
 import axios, { isAxiosError } from "axios"
 import { format } from "date-fns"
-import { useSession } from "next-auth/react"
 import toast from "react-hot-toast"
 import { BsPinAngle, BsPinAngleFill } from "react-icons/bs"
 import {
@@ -47,7 +47,7 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = memo(function ProfileDrawer(
   const [isArchiving, setIsArchiving] = useState(false)
   const [isPinning, setIsPinning] = useState(false)
   const [isMuting, setIsMuting] = useState(false)
-  const session = useSession()
+  const { userId } = useAuth()
   const { token: csrfToken } = useCsrfToken()
   const otherUser = useOtherUser(data)
 
@@ -89,22 +89,19 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = memo(function ProfileDrawer(
   }, [data, isActive, presence])
 
   const isArchived = useMemo(() => {
-    const currentUserId = session.data?.user?.id
-    if (!currentUserId) return false
-    return data.archivedBy?.includes(currentUserId) || false
-  }, [data.archivedBy, session.data?.user?.id])
+    if (!userId) return false
+    return data.archivedBy?.includes(userId) || false
+  }, [data.archivedBy, userId])
 
   const isPinned = useMemo(() => {
-    const currentUserId = session.data?.user?.id
-    if (!currentUserId) return false
-    return data.pinnedBy?.includes(currentUserId) || false
-  }, [data.pinnedBy, session.data?.user?.id])
+    if (!userId) return false
+    return data.pinnedBy?.includes(userId) || false
+  }, [data.pinnedBy, userId])
 
   const isMuted = useMemo(() => {
-    const currentUserId = session.data?.user?.id
-    if (!currentUserId) return false
-    return data.mutedBy?.includes(currentUserId) || false
-  }, [data.mutedBy, session.data?.user?.id])
+    if (!userId) return false
+    return data.mutedBy?.includes(userId) || false
+  }, [data.mutedBy, userId])
 
   const handleArchiveToggle = async () => {
     setIsArchiving(true)
@@ -376,7 +373,9 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = memo(function ProfileDrawer(
                                     Emails
                                   </dt>
                                   <dd className="mt-1 text-sm text-gray-900 sm:col-span-2">
-                                    {data.users.map((user: { email?: string | null }) => user.email).join(", ")}
+                                    {data.users
+                                      .map((user: { email?: string | null }) => user.email)
+                                      .join(", ")}
                                   </dd>
                                 </div>
                               )}
