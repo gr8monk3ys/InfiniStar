@@ -22,9 +22,7 @@ const getConversationById = async (conversationId: string) => {
             userId: currentUser.id,
           },
         },
-        character: {
-          select: { id: true, name: true, avatarUrl: true, greeting: true },
-        },
+        character: true,
       },
     })
 
