@@ -10,14 +10,14 @@ datasource db {
 }
 
 model User {
-  id             String    @id @default(uuid()) @db.Uuid
-  clerkId        String?   @unique // Clerk external user ID
-  name           String?
-  email          String?   @unique
-  emailVerified  DateTime?
-  image          String?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  id            String    @id @default(uuid()) @db.Uuid
+  clerkId       String?   @unique // Clerk external user ID
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   // Profile fields
   bio      String? // User bio/about me
@@ -48,7 +48,7 @@ model User {
   autoDeleteEnabled     Boolean   @default(false) // Whether auto-delete is enabled
   autoDeleteAfterDays   Int       @default(30) // Days after which to delete: 7, 14, 30, 60, 90, 180, 365
   autoDeleteArchived    Boolean   @default(false) // Whether to include archived conversations
-  autoDeleteExcludeTags String[]  // Tag IDs to exclude from auto-deletion
+  autoDeleteExcludeTags String[] // Tag IDs to exclude from auto-deletion
   lastAutoDeleteRun     DateTime? // When auto-delete was last run
 
   stripeCustomerId       String?   @unique @map("stripe_customer_id")
@@ -65,26 +65,29 @@ model User {
   aiMemories       AIMemory[]
   messageTemplates MessageTemplate[]
   characters       Character[]
-  blocksInitiated  UserBlock[] @relation("BlocksInitiated")
-  blocksReceived   UserBlock[] @relation("BlocksReceived")
+  blocksInitiated  UserBlock[]       @relation("BlocksInitiated")
+  blocksReceived   UserBlock[]       @relation("BlocksReceived")
   reportsFiled     ContentReport[]
   characterLikes   CharacterLike[]
+  tipsGiven        CreatorTip[]          @relation("CreatorTipsGiven")
+  tipsReceived     CreatorTip[]          @relation("CreatorTipsReceived")
+  subscriptionsGiven    CreatorSubscription[] @relation("CreatorSubscriptionsGiven")
+  subscriptionsReceived CreatorSubscription[] @relation("CreatorSubscriptionsReceived")
 
   @@map("users")
 }
 
-
 model Conversation {
-  id             String   @id @default(uuid()) @db.Uuid
-  createdAt      DateTime @default(now())
-  lastMessageAt  DateTime @default(now())
+  id             String     @id @default(uuid()) @db.Uuid
+  createdAt      DateTime   @default(now())
+  lastMessageAt  DateTime   @default(now())
   name           String?
-  isGroup        Boolean  @default(false)
-  isAI           Boolean  @default(false)
+  isGroup        Boolean    @default(false)
+  isAI           Boolean    @default(false)
   aiModel        String? // e.g., "claude-3-5-sonnet-20241022"
   aiSystemPrompt String? // Custom system prompt for AI personality
   aiPersonality  String? // Preset personality: "assistant", "creative", "technical", "friendly", "professional", "custom"
-  characterId    String?  @db.Uuid
+  characterId    String?    @db.Uuid
   character      Character? @relation(fields: [characterId], references: [id], onDelete: SetNull)
 
   // Archiving functionality
@@ -122,33 +125,33 @@ model Conversation {
 }
 
 model Character {
-  id          String   @id @default(uuid()) @db.Uuid
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(uuid()) @db.Uuid
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  name        String
-  slug        String   @unique
-  tagline     String?
-  description String?
-  greeting    String?
-  systemPrompt String
-  avatarUrl   String?
+  name          String
+  slug          String   @unique
+  tagline       String?
+  description   String?
+  greeting      String?
+  systemPrompt  String
+  avatarUrl     String?
   coverImageUrl String?
-  tags        String[] @default([])
+  tags          String[] @default([])
 
-  isPublic    Boolean  @default(false)
-  featured    Boolean  @default(false)
-  viewCount   Int      @default(0)
-  usageCount  Int      @default(0)
-  lastUsedAt  DateTime?
-  category    String   @default("general")
-  likeCount   Int      @default(0)
+  isPublic   Boolean   @default(false)
+  featured   Boolean   @default(false)
+  viewCount  Int       @default(0)
+  usageCount Int       @default(0)
+  lastUsedAt DateTime?
+  category   String    @default("general")
+  likeCount  Int       @default(0)
 
-  createdById String   @db.Uuid
-  createdBy   User     @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  createdById String @db.Uuid
+  createdBy   User   @relation(fields: [createdById], references: [id], onDelete: Cascade)
 
   conversations Conversation[]
-  likes       CharacterLike[]
+  likes         CharacterLike[]
 
   @@index([isPublic, featured])
   @@index([createdAt])
@@ -192,7 +195,6 @@ model Message {
   @@index([isDeleted])
   @@map("messages")
 }
-
 
 model AiUsage {
   id        String   @id @default(uuid()) @db.Uuid
@@ -294,8 +296,8 @@ model MessageTemplate {
   category String? // Optional category for organization (e.g., "Greetings", "Business", "Personal")
 
   // Usage tracking
-  usageCount   Int       @default(0) // Track how often this template is used
-  lastUsedAt   DateTime? // When the template was last used
+  usageCount Int       @default(0) // Track how often this template is used
+  lastUsedAt DateTime? // When the template was last used
 
   @@unique([userId, shortcut]) // Unique shortcut per user (shortcuts are optional but must be unique when set)
   @@unique([userId, name]) // Unique template name per user
@@ -306,18 +308,18 @@ model MessageTemplate {
 }
 
 enum MemoryCategory {
-  PREFERENCE  // User preferences (e.g., "prefers dark mode", "likes concise answers")
-  FACT        // Facts about the user (e.g., "works as software engineer", "lives in NYC")
-  CONTEXT     // Project or work context (e.g., "working on React app", "uses TypeScript")
+  PREFERENCE // User preferences (e.g., "prefers dark mode", "likes concise answers")
+  FACT // Facts about the user (e.g., "works as software engineer", "lives in NYC")
+  CONTEXT // Project or work context (e.g., "working on React app", "uses TypeScript")
   INSTRUCTION // Standing instructions (e.g., "always use metric units", "avoid jargon")
   RELATIONSHIP // Relationship info (e.g., "has a dog named Max", "married to Sarah")
 }
 
 // Conversation sharing functionality
 model ConversationShare {
-  id             String    @id @default(uuid()) @db.Uuid
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  id        String   @id @default(uuid()) @db.Uuid
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relation to conversation
   conversationId String       @db.Uuid
@@ -360,22 +362,22 @@ model ConversationShare {
 }
 
 enum ShareType {
-  LINK   // Public link that anyone can use
+  LINK // Public link that anyone can use
   INVITE // Invite-only, restricted to specific emails
 }
 
 enum SharePermission {
-  VIEW        // Read-only access to conversation
+  VIEW // Read-only access to conversation
   PARTICIPATE // Can send messages in conversation
 }
 
 model UserBlock {
-  id         String   @id @default(uuid()) @db.Uuid
-  createdAt  DateTime @default(now())
-  reason     String?
+  id        String   @id @default(uuid()) @db.Uuid
+  createdAt DateTime @default(now())
+  reason    String?
 
-  blockerId  String @db.Uuid
-  blockedId  String @db.Uuid
+  blockerId String @db.Uuid
+  blockedId String @db.Uuid
 
   blocker User @relation("BlocksInitiated", fields: [blockerId], references: [id], onDelete: Cascade)
   blocked User @relation("BlocksReceived", fields: [blockedId], references: [id], onDelete: Cascade)
@@ -387,21 +389,21 @@ model UserBlock {
 }
 
 model ContentReport {
-  id          String   @id @default(uuid()) @db.Uuid
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(uuid()) @db.Uuid
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  reporterId  String @db.Uuid
-  reporter    User   @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  reporterId String @db.Uuid
+  reporter   User   @relation(fields: [reporterId], references: [id], onDelete: Cascade)
 
-  targetType  ReportTargetType
-  targetId    String
-  reason      ReportReason
-  details     String?
-  status      ReportStatus @default(OPEN)
+  targetType ReportTargetType
+  targetId   String
+  reason     ReportReason
+  details    String?
+  status     ReportStatus     @default(OPEN)
 
-  resolvedAt  DateTime?
-  resolvedBy  String?
+  resolvedAt DateTime?
+  resolvedBy String?
 
   @@index([reporterId])
   @@index([targetType, targetId])
@@ -434,17 +436,105 @@ enum ReportStatus {
 }
 
 model CharacterLike {
-  id          String   @id @default(uuid()) @db.Uuid
-  createdAt   DateTime @default(now())
+  id        String   @id @default(uuid()) @db.Uuid
+  createdAt DateTime @default(now())
 
-  userId      String   @db.Uuid
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  characterId String   @db.Uuid
+  characterId String    @db.Uuid
   character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
 
   @@unique([userId, characterId])
   @@index([characterId])
   @@index([userId])
   @@map("character_likes")
+}
+
+model AffiliateClick {
+  id              String   @id @default(uuid()) @db.Uuid
+  createdAt       DateTime @default(now())
+  partnerId       String
+  source          String
+  destinationUrl  String
+  destinationHost String
+  referrer        String?
+  userAgent       String?
+  clientIp        String?
+
+  @@index([createdAt])
+  @@index([partnerId, createdAt])
+  @@index([source, createdAt])
+  @@index([destinationHost, createdAt])
+  @@map("affiliate_clicks")
+}
+
+model CreatorTip {
+  id        String   @id @default(uuid()) @db.Uuid
+  createdAt DateTime @default(now())
+
+  supporterId String @db.Uuid
+  supporter   User   @relation("CreatorTipsGiven", fields: [supporterId], references: [id], onDelete: Cascade)
+
+  creatorId String @db.Uuid
+  creator   User   @relation("CreatorTipsReceived", fields: [creatorId], references: [id], onDelete: Cascade)
+
+  amountCents Int
+  currency    String                  @default("USD")
+  note        String?
+  status      CreatorTransactionStatus @default(PENDING)
+  stripeCheckoutSessionId String?      @unique @map("stripe_checkout_session_id")
+  stripePaymentIntentId   String?      @unique @map("stripe_payment_intent_id")
+
+  @@index([creatorId, createdAt])
+  @@index([supporterId, createdAt])
+  @@index([creatorId, status])
+  @@map("creator_tips")
+}
+
+model CreatorSubscription {
+  id        String   @id @default(uuid()) @db.Uuid
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  supporterId String @db.Uuid
+  supporter   User   @relation("CreatorSubscriptionsGiven", fields: [supporterId], references: [id], onDelete: Cascade)
+
+  creatorId String @db.Uuid
+  creator   User   @relation("CreatorSubscriptionsReceived", fields: [creatorId], references: [id], onDelete: Cascade)
+
+  tierName    String
+  amountCents Int
+  currency    String                      @default("USD")
+  interval    CreatorSubscriptionInterval @default(MONTHLY)
+  status      CreatorSubscriptionStatus   @default(ACTIVE)
+  stripeSubscriptionId String?            @unique @map("stripe_subscription_id")
+  stripeCheckoutSessionId String?         @unique @map("stripe_checkout_session_id")
+  stripeCustomerId      String?           @map("stripe_customer_id")
+  stripeCurrentPeriodEnd DateTime?        @map("stripe_current_period_end")
+  startedAt   DateTime                    @default(now())
+  canceledAt  DateTime?
+
+  @@unique([supporterId, creatorId])
+  @@index([creatorId, status])
+  @@index([supporterId, status])
+  @@map("creator_subscriptions")
+}
+
+enum CreatorTransactionStatus {
+  PENDING
+  COMPLETED
+  REFUNDED
+  FAILED
+}
+
+enum CreatorSubscriptionInterval {
+  MONTHLY
+  YEARLY
+}
+
+enum CreatorSubscriptionStatus {
+  ACTIVE
+  CANCELED
+  PAUSED
 }
