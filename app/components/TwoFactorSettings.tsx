@@ -13,7 +13,7 @@ import {
   HiShieldExclamation,
 } from "react-icons/hi2"
 
-import { ApiError, api, createLoadingToast } from "@/app/lib/api-client"
+import { api, ApiError, createLoadingToast } from "@/app/lib/api-client"
 
 interface TwoFactorSettingsProps {
   initialEnabled?: boolean

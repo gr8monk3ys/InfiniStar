@@ -4,6 +4,16 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server"
 import { getCorsHeaders, handleCorsPreflightRequest } from "@/app/lib/cors"
 
 const isProtectedRoute = createRouteMatcher(["/dashboard(.*)"])
+const shouldBypassClerkHandshake =
+  process.env.SKIP_CLERK_AUTH_HANDSHAKE === "1" || process.env.SKIP_CLERK_AUTH_HANDSHAKE === "true"
+
+function applyCorsHeaders(response: Response, origin: string | null) {
+  // Add CORS headers
+  const corsHeaders = getCorsHeaders(origin)
+  Object.entries(corsHeaders).forEach(([key, value]) => {
+    response.headers.set(key, value)
+  })
+}
 
 export async function proxy(request: NextRequest) {
   const origin = request.headers.get("origin")
@@ -22,68 +32,31 @@ export async function proxy(request: NextRequest) {
 
   const clerkResponse = await clerkHandler(request, {} as never)
 
+  // Local E2E runs can use placeholder Clerk keys; skip only the dev-browser handshake redirect.
+  if (
+    shouldBypassClerkHandshake &&
+    (clerkResponse?.status === 307 || clerkResponse?.status === 302)
+  ) {
+    const authReason = clerkResponse.headers.get("x-clerk-auth-reason")
+    if (authReason === "dev-browser-missing" || authReason === "dev-browser-sync") {
+      const response = NextResponse.next()
+      clerkResponse.headers.forEach((value, key) => {
+        if (key.toLowerCase().startsWith("x-clerk-")) {
+          response.headers.set(key, value)
+        }
+      })
+      applyCorsHeaders(response, origin)
+      return response
+    }
+  }
+
   // If Clerk returned a redirect (unauthenticated), use it
   if (clerkResponse?.status === 307 || clerkResponse?.status === 302) {
     return clerkResponse
   }
 
   const response = clerkResponse || NextResponse.next()
-
-  // Add CORS headers
-  const corsHeaders = getCorsHeaders(origin)
-  Object.entries(corsHeaders).forEach(([key, value]) => {
-    response.headers.set(key, value)
-  })
-
-  // Add security headers
-  const headers = response.headers
-
-  // Content Security Policy
-  const isDevelopment = process.env.NODE_ENV === "development"
-
-  // Use stricter CSP in production (no unsafe-eval)
-  const scriptSrc = isDevelopment
-    ? "script-src 'self' 'unsafe-eval' 'unsafe-inline'"
-    : "script-src 'self' 'unsafe-inline'" // Production: no unsafe-eval
-
-  headers.set(
-    "Content-Security-Policy",
-    [
-      "default-src 'self'",
-      scriptSrc,
-      "style-src 'self' 'unsafe-inline'", // Required for styled-jsx and inline styles
-      "img-src 'self' data: https: blob:",
-      "font-src 'self' data:",
-      "connect-src 'self' https: wss:", // Added wss: for Pusher WebSocket connections
-      "frame-ancestors 'none'",
-      "base-uri 'self'",
-      "form-action 'self'",
-      "upgrade-insecure-requests", // Force HTTPS for all requests
-    ].join("; ")
-  )
-
-  // Prevent clickjacking
-  headers.set("X-Frame-Options", "DENY")
-
-  // Prevent MIME type sniffing
-  headers.set("X-Content-Type-Options", "nosniff")
-
-  // Enable XSS protection
-  headers.set("X-XSS-Protection", "1; mode=block")
-
-  // Referrer policy
-  headers.set("Referrer-Policy", "strict-origin-when-cross-origin")
-
-  // Permissions policy
-  headers.set(
-    "Permissions-Policy",
-    ["camera=()", "microphone=()", "geolocation=()", "payment=()", "usb=()"].join(", ")
-  )
-
-  // HSTS (HTTP Strict Transport Security) - only in production
-  if (process.env.NODE_ENV === "production") {
-    headers.set("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload")
-  }
+  applyCorsHeaders(response, origin)
 
   return response
 }

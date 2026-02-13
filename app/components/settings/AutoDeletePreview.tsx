@@ -103,8 +103,8 @@ export function AutoDeletePreview({
                       {totalCount === 0
                         ? "No conversations match the deletion criteria"
                         : totalCount === 1
-                        ? "1 conversation will be deleted"
-                        : `${totalCount} conversations will be deleted`}
+                          ? "1 conversation will be deleted"
+                          : `${totalCount} conversations will be deleted`}
                     </span>
                   </div>
                   <p className="mt-2 text-sm text-yellow-700">

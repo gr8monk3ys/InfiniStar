@@ -6,7 +6,7 @@ import { Dialog } from "@headlessui/react"
 import toast from "react-hot-toast"
 import { HiExclamationTriangle, HiEye, HiEyeSlash } from "react-icons/hi2"
 
-import { ApiError, api, createLoadingToast } from "@/app/lib/api-client"
+import { api, ApiError, createLoadingToast } from "@/app/lib/api-client"
 
 import Modal from "./Modal"
 
