@@ -1,5 +1,5 @@
-import crypto from "crypto"
 import { headers } from "next/headers"
+import crypto from "crypto"
 
 /**
  * CSRF Token Management
@@ -60,11 +60,14 @@ export async function getCsrfTokenFromCookies(): Promise<string | null> {
     return null
   }
 
-  const cookies = cookieHeader.split(";").reduce((acc, cookie) => {
-    const [key, value] = cookie.trim().split("=")
-    acc[key] = value
-    return acc
-  }, {} as Record<string, string>)
+  const cookies = cookieHeader.split(";").reduce(
+    (acc, cookie) => {
+      const [key, value] = cookie.trim().split("=")
+      acc[key] = value
+      return acc
+    },
+    {} as Record<string, string>
+  )
 
   return cookies[CSRF_COOKIE_NAME] || null
 }
@@ -125,11 +128,14 @@ export function withCsrfProtection<T>(
 
     let cookieToken: string | null = null
     if (cookieHeader) {
-      const cookies = cookieHeader.split(";").reduce((acc, cookie) => {
-        const [key, value] = cookie.trim().split("=")
-        acc[key] = value
-        return acc
-      }, {} as Record<string, string>)
+      const cookies = cookieHeader.split(";").reduce(
+        (acc, cookie) => {
+          const [key, value] = cookie.trim().split("=")
+          acc[key] = value
+          return acc
+        },
+        {} as Record<string, string>
+      )
       cookieToken = cookies[CSRF_COOKIE_NAME] || null
     }
 

@@ -24,6 +24,11 @@ interface UseAiChatStreamOptions {
   onError?: (error: string) => void
 }
 
+interface SendAiMessageInput {
+  message?: string
+  image?: string
+}
+
 /**
  * Hook to handle streaming AI chat responses
  *
@@ -37,7 +42,7 @@ interface UseAiChatStreamOptions {
  *   onComplete: (messageId) => console.log('Done:', messageId)
  * });
  *
- * await sendMessage('Hello, AI!');
+ * await sendMessage({ message: "Hello, AI!" });
  */
 export function useAiChatStream(options: UseAiChatStreamOptions) {
   const { conversationId, csrfToken, onChunk, onComplete, onError } = options
@@ -49,23 +54,26 @@ export function useAiChatStream(options: UseAiChatStreamOptions) {
   const abortControllerRef = useRef<AbortController | null>(null)
 
   const sendMessage = useCallback(
-    async (message: string) => {
+    async (input: SendAiMessageInput): Promise<boolean> => {
       if (!csrfToken) {
         const err = "CSRF token not available"
         setError(err)
         onError?.(err)
-        return
+        return false
       }
 
       // Reset state
       setIsStreaming(true)
       setStreamingContent("")
       setError(null)
+      let streamErrored = false
 
       // Create abort controller for cancellation
       abortControllerRef.current = new AbortController()
 
       try {
+        const trimmedMessage = input.message?.trim() || ""
+
         const response = await fetch("/api/ai/chat-stream", {
           method: "POST",
           headers: {
@@ -73,7 +81,8 @@ export function useAiChatStream(options: UseAiChatStreamOptions) {
             "X-CSRF-Token": csrfToken,
           },
           body: JSON.stringify({
-            message,
+            message: trimmedMessage || undefined,
+            image: input.image || undefined,
             conversationId,
           }),
           signal: abortControllerRef.current.signal,
@@ -127,6 +136,7 @@ export function useAiChatStream(options: UseAiChatStreamOptions) {
                   const errMsg = parsed.error || "Streaming error"
                   setError(errMsg)
                   onError?.(errMsg)
+                  streamErrored = true
                 }
               } catch {
                 // Silent failure for malformed SSE data - expected during stream processing
@@ -134,6 +144,7 @@ export function useAiChatStream(options: UseAiChatStreamOptions) {
             }
           }
         }
+        return !streamErrored
       } catch (err) {
         if (err instanceof Error) {
           if (err.name !== "AbortError") {
@@ -143,6 +154,7 @@ export function useAiChatStream(options: UseAiChatStreamOptions) {
           }
           // Abort errors are expected when user cancels - silently ignore
         }
+        return false
       } finally {
         setIsStreaming(false)
         abortControllerRef.current = null

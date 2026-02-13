@@ -1,6 +1,6 @@
-import { NextResponse } from 'next/server'
+import { NextResponse } from "next/server"
 
-import prisma from '@/app/lib/prismadb'
+import prisma from "@/app/lib/prismadb"
 
 export async function GET(): Promise<NextResponse> {
   const timestamp = new Date().toISOString()
@@ -10,19 +10,19 @@ export async function GET(): Promise<NextResponse> {
 
     return NextResponse.json(
       {
-        status: 'ok',
+        status: "ok",
         timestamp,
-        database: 'connected',
+        database: "connected",
       },
       { status: 200 }
     )
   } catch {
     return NextResponse.json(
       {
-        status: 'degraded',
+        status: "degraded",
         timestamp,
-        database: 'disconnected',
-        error: 'Database unreachable',
+        database: "disconnected",
+        error: "Database unreachable",
       },
       { status: 503 }
     )

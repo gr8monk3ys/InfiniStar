@@ -10,6 +10,7 @@ import { BsPinAngleFill } from "react-icons/bs"
 import {
   HiArchiveBox,
   HiArchiveBoxXMark,
+  HiChatBubbleLeftRight,
   HiMagnifyingGlass,
   HiOutlineTag,
   HiSparkles,
@@ -42,6 +43,11 @@ const PersonalitySelectionModal = dynamic(
   }
 )
 
+const SceneChatModal = dynamic(() => import("@/app/components/modals/SceneChatModal"), {
+  ssr: false,
+  loading: () => null,
+})
+
 interface ConversationListProps {
   initialItems: FullConversationType[]
   user: User[]
@@ -52,6 +58,7 @@ const ConversationList: React.FC<ConversationListProps> = ({ initialItems, user 
   const [items, setItems] = useState(initialItems)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isPersonalityModalOpen, setIsPersonalityModalOpen] = useState(false)
+  const [isSceneModalOpen, setIsSceneModalOpen] = useState(false)
   const [showArchived, setShowArchived] = useState(false)
   const [selectedTagId, setSelectedTagId] = useState<string | null>(null)
   const [showTagFilter, setShowTagFilter] = useState(false)
@@ -357,6 +364,9 @@ const ConversationList: React.FC<ConversationListProps> = ({ initialItems, user 
           onClose={() => setIsPersonalityModalOpen(false)}
         />
       )}
+      {isSceneModalOpen && (
+        <SceneChatModal isOpen={isSceneModalOpen} onClose={() => setIsSceneModalOpen(false)} />
+      )}
       <aside
         className={clsx(
           `
@@ -412,6 +422,22 @@ const ConversationList: React.FC<ConversationListProps> = ({ initialItems, user 
                 aria-label="Start new AI Chat"
               >
                 <HiSparkles size={20} />
+              </button>
+              <button
+                onClick={() => setIsSceneModalOpen(true)}
+                className="
+                  cursor-pointer
+                  rounded-full
+                  bg-secondary
+                  p-2
+                  text-secondary-foreground
+                  transition
+                  hover:opacity-75
+                "
+                title="New Scene Chat"
+                aria-label="Create new Scene Chat"
+              >
+                <HiChatBubbleLeftRight size={20} />
               </button>
               <button
                 onClick={() => setIsModalOpen(true)}

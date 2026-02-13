@@ -1,6 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server"
 import Anthropic from "@anthropic-ai/sdk"
 
+import { getAiAccessDecision } from "@/app/lib/ai-access"
+import { buildAiConversationHistory, buildAiMessageContent } from "@/app/lib/ai-message-content"
 import {
   getDefaultPersonality,
   getSystemPrompt,
@@ -8,10 +10,14 @@ import {
 } from "@/app/lib/ai-personalities"
 import { trackAiUsage } from "@/app/lib/ai-usage"
 import { verifyCsrfToken } from "@/app/lib/csrf"
+import {
+  buildModerationDetails,
+  moderateText,
+  moderationReasonFromCategories,
+} from "@/app/lib/moderation"
 import prisma from "@/app/lib/prismadb"
 import { pusherServer } from "@/app/lib/pusher"
 import { aiChatLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
-import { sanitizePlainText } from "@/app/lib/sanitize"
 import getCurrentUser from "@/app/actions/getCurrentUser"
 
 const anthropic = new Anthropic({
@@ -25,11 +31,14 @@ export async function POST(request: NextRequest) {
   let cookieToken: string | null = null
 
   if (cookieHeader) {
-    const cookies = cookieHeader.split(";").reduce((acc, cookie) => {
-      const [key, value] = cookie.trim().split("=")
-      acc[key] = value
-      return acc
-    }, {} as Record<string, string>)
+    const cookies = cookieHeader.split(";").reduce(
+      (acc, cookie) => {
+        const [key, value] = cookie.trim().split("=")
+        acc[key] = value
+        return acc
+      },
+      {} as Record<string, string>
+    )
     cookieToken = cookies["csrf-token"] || null
   }
 
@@ -70,24 +79,36 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { message, conversationId } = body
-
-    if (!message) {
-      return new NextResponse("Message is required", { status: 400 })
-    }
+    const { message, image, conversationId } = body
 
     if (!conversationId) {
       return new NextResponse("Conversation ID is required", { status: 400 })
     }
 
-    // Sanitize user input to prevent XSS attacks
-    const sanitizedMessage = sanitizePlainText(message)
+    const builtUserContent = buildAiMessageContent(message ?? null, image ?? null)
+    const sanitizedMessage = builtUserContent.sanitizedText
+    const sanitizedImage = builtUserContent.sanitizedImage
 
-    if (!sanitizedMessage || sanitizedMessage.trim().length === 0) {
-      return new NextResponse(JSON.stringify({ error: "Valid message content is required" }), {
+    if (!builtUserContent.content) {
+      return new NextResponse(JSON.stringify({ error: "Message text or image is required" }), {
         status: 400,
         headers: { "Content-Type": "application/json" },
       })
+    }
+
+    const moderationResult = sanitizedMessage ? moderateText(sanitizedMessage) : null
+    if (moderationResult?.shouldBlock) {
+      return new NextResponse(
+        JSON.stringify({
+          error: "Message was blocked by safety filters.",
+          code: "CONTENT_BLOCKED",
+          categories: moderationResult.categories,
+        }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        }
+      )
     }
 
     // Verify the conversation exists and is an AI conversation
@@ -109,10 +130,41 @@ export async function POST(request: NextRequest) {
       return new NextResponse("Not an AI conversation", { status: 400 })
     }
 
+    const accessDecision = await getAiAccessDecision(currentUser.id)
+    if (!accessDecision.allowed) {
+      return new NextResponse(
+        JSON.stringify({
+          error:
+            accessDecision.message ??
+            "AI access is unavailable for this account right now. Please try again.",
+          code: accessDecision.code,
+          limits: accessDecision.limits,
+        }),
+        {
+          status: 402,
+          headers: { "Content-Type": "application/json" },
+        }
+      )
+    }
+
+    if (moderationResult?.shouldReview) {
+      await prisma.contentReport.create({
+        data: {
+          reporterId: currentUser.id,
+          targetType: "CONVERSATION",
+          targetId: conversationId,
+          reason: moderationReasonFromCategories(moderationResult.categories),
+          details: buildModerationDetails(moderationResult, "ai-chat-input"),
+          status: "OPEN",
+        },
+      })
+    }
+
     // Create user message with sanitized content
     const userMessage = await prisma.message.create({
       data: {
-        body: sanitizedMessage,
+        body: sanitizedMessage || null,
+        image: sanitizedImage,
         conversation: {
           connect: { id: conversationId },
         },
@@ -134,15 +186,12 @@ export async function POST(request: NextRequest) {
     await pusherServer.trigger(conversationId, "messages:new", userMessage)
 
     // Build conversation history for Claude
-    const conversationHistory = conversation.messages.map((msg: { isAI: boolean; body?: string | null }) => ({
-      role: msg.isAI ? ("assistant" as const) : ("user" as const),
-      content: msg.body || "",
-    }))
+    const conversationHistory = buildAiConversationHistory(conversation.messages)
 
     // Add the new user message to history
     conversationHistory.push({
       role: "user" as const,
-      content: message,
+      content: builtUserContent.content,
     })
 
     // Track request start time for latency measurement

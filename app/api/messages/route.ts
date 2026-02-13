@@ -3,6 +3,11 @@ import { auth } from "@clerk/nextjs/server"
 import { z } from "zod"
 
 import { verifyCsrfToken } from "@/app/lib/csrf"
+import {
+  buildModerationDetails,
+  moderateText,
+  moderationReasonFromCategories,
+} from "@/app/lib/moderation"
 import prisma from "@/app/lib/prismadb"
 import { pusherServer } from "@/app/lib/pusher"
 import { apiLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
@@ -104,6 +109,21 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    const moderationResult = moderateText(sanitizedMessage)
+    if (moderationResult.shouldBlock) {
+      return new NextResponse(
+        JSON.stringify({
+          error: "Message was blocked by safety filters.",
+          code: "CONTENT_BLOCKED",
+          categories: moderationResult.categories,
+        }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        }
+      )
+    }
+
     // Verify user is a participant in this conversation
     const conversation = await prisma.conversation.findFirst({
       where: {
@@ -164,6 +184,19 @@ export async function POST(request: NextRequest) {
         },
       },
     })
+
+    if (moderationResult.shouldReview) {
+      await prisma.contentReport.create({
+        data: {
+          reporterId: currentUser.id,
+          targetType: "MESSAGE",
+          targetId: newMessage.id,
+          reason: moderationReasonFromCategories(moderationResult.categories),
+          details: buildModerationDetails(moderationResult, "message"),
+          status: "OPEN",
+        },
+      })
+    }
 
     // Update conversation's lastMessageAt - only select users for notifications
     // Avoid N+1 query by not loading all messages

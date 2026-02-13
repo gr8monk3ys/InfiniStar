@@ -13,8 +13,8 @@ import {
 
 import { TAG_COLORS, type TagColor, type TagWithCount } from "@/app/types"
 import type {
-  AIPersonality,
   AdvancedSearchFilters,
+  AIPersonality,
   SearchResultType,
   SearchSortBy,
 } from "@/app/types/search"

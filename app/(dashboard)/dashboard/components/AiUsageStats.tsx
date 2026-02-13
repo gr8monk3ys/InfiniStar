@@ -139,8 +139,8 @@ const AiUsageStats = () => {
               quota.percentage > 90
                 ? "bg-red-500"
                 : quota.percentage > 70
-                ? "bg-yellow-500"
-                : "bg-gradient-to-r from-purple-500 to-pink-500"
+                  ? "bg-yellow-500"
+                  : "bg-gradient-to-r from-purple-500 to-pink-500"
             }`}
             style={{ width: `${Math.min(quota.percentage, 100)}%` }}
           />

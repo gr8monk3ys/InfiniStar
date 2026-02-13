@@ -276,14 +276,17 @@ export function formatShortcut(shortcut: KeyboardShortcut): string {
 export function getShortcutsByCategory(
   shortcuts: KeyboardShortcut[]
 ): Record<string, KeyboardShortcut[]> {
-  return shortcuts.reduce((acc, shortcut) => {
-    const category = shortcut.category
-    if (!acc[category]) {
-      acc[category] = []
-    }
-    acc[category].push(shortcut)
-    return acc
-  }, {} as Record<string, KeyboardShortcut[]>)
+  return shortcuts.reduce(
+    (acc, shortcut) => {
+      const category = shortcut.category
+      if (!acc[category]) {
+        acc[category] = []
+      }
+      acc[category].push(shortcut)
+      return acc
+    },
+    {} as Record<string, KeyboardShortcut[]>
+  )
 }
 
 /**

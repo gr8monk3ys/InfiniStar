@@ -141,7 +141,27 @@ export async function getUserUsageStats(
 
   // Calculate aggregated stats
   const stats = usage.reduce(
-    (acc: { totalRequests: number; totalInputTokens: number; totalOutputTokens: number; totalTokens: number; totalCost: number; totalInputCost: number; totalOutputCost: number; averageLatency: number }, record: { inputTokens: number; outputTokens: number; totalTokens: number; totalCost: number; inputCost: number; outputCost: number; latencyMs: number | null }) => ({
+    (
+      acc: {
+        totalRequests: number
+        totalInputTokens: number
+        totalOutputTokens: number
+        totalTokens: number
+        totalCost: number
+        totalInputCost: number
+        totalOutputCost: number
+        averageLatency: number
+      },
+      record: {
+        inputTokens: number
+        outputTokens: number
+        totalTokens: number
+        totalCost: number
+        inputCost: number
+        outputCost: number
+        latencyMs: number | null
+      }
+    ) => ({
       totalRequests: acc.totalRequests + 1,
       totalInputTokens: acc.totalInputTokens + record.inputTokens,
       totalOutputTokens: acc.totalOutputTokens + record.outputTokens,
@@ -193,23 +213,31 @@ export async function getUsageByDateRange(userId: string, startDate: Date, endDa
   })
 
   // Group by date
-  const byDate = usage.reduce((acc: Record<string, { date: string; requests: number; tokens: number; cost: number }>, record: { createdAt: Date; totalTokens: number; totalCost: number }) => {
-    const date = record.createdAt.toISOString().split("T")[0]
-    if (!acc[date]) {
-      acc[date] = {
-        date,
-        requests: 0,
-        tokens: 0,
-        cost: 0,
+  const byDate = usage.reduce(
+    (
+      acc: Record<string, { date: string; requests: number; tokens: number; cost: number }>,
+      record: { createdAt: Date; totalTokens: number; totalCost: number }
+    ) => {
+      const date = record.createdAt.toISOString().split("T")[0]
+      if (!acc[date]) {
+        acc[date] = {
+          date,
+          requests: 0,
+          tokens: 0,
+          cost: 0,
+        }
       }
-    }
-    acc[date].requests += 1
-    acc[date].tokens += record.totalTokens
-    acc[date].cost += record.totalCost
-    return acc
-  }, {} as Record<string, { date: string; requests: number; tokens: number; cost: number }>)
+      acc[date].requests += 1
+      acc[date].tokens += record.totalTokens
+      acc[date].cost += record.totalCost
+      return acc
+    },
+    {} as Record<string, { date: string; requests: number; tokens: number; cost: number }>
+  )
 
-  return (Object.values(byDate) as { date: string; requests: number; tokens: number; cost: number }[]).map((day) => ({
+  return (
+    Object.values(byDate) as { date: string; requests: number; tokens: number; cost: number }[]
+  ).map((day) => ({
     ...day,
     cost: Math.round(day.cost * 100) / 100,
   }))

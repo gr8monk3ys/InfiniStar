@@ -1,38 +1,47 @@
-/**
- * Authentication fixtures for E2E tests
- *
- * Provides authenticated test context and helper functions
- * for testing protected routes and user interactions.
- */
-
-import { test as base, expect, type Page } from "@playwright/test"
+import { expect, type Page } from "@playwright/test"
 
 // Test user credentials - configure via environment or use test account
 const TEST_USER = {
-  email: process.env.E2E_TEST_EMAIL || "test@example.com",
-  password: process.env.E2E_TEST_PASSWORD || "testpassword123",
+  email: process.env.E2E_TEST_EMAIL,
+  password: process.env.E2E_TEST_PASSWORD,
 }
+
+export const hasE2EAuthCredentials = Boolean(TEST_USER.email && TEST_USER.password)
 
 /**
  * Login to the application
  */
 export async function login(
   page: Page,
-  email: string = TEST_USER.email,
-  password: string = TEST_USER.password
+  email: string | undefined = TEST_USER.email,
+  password: string | undefined = TEST_USER.password
 ): Promise<boolean> {
-  try {
-    await page.goto("/login")
+  if (!email || !password) {
+    return false
+  }
 
-    // Fill login form
-    await page.fill('input[name="email"], input[type="email"]', email)
-    await page.fill('input[name="password"], input[type="password"]', password)
+  try {
+    await page.goto("/sign-in?redirect_url=%2Fdashboard%2Fconversations")
+
+    // Clerk can use identifier/email depending on config.
+    const identifierInput = page
+      .locator('input[name="identifier"], input[name="emailAddress"], input[type="email"]')
+      .first()
+    await identifierInput.waitFor({ timeout: 7000 })
+    await identifierInput.fill(email)
+
+    const passwordInput = page.locator('input[name="password"], input[type="password"]').first()
+    await passwordInput.fill(password)
 
     // Submit
-    await page.click('button[type="submit"]')
+    const submitButton = page
+      .getByRole("button", { name: /continue|sign in/i })
+      .first()
+      .or(page.locator('button[type="submit"]').first())
+    await submitButton.click()
 
     // Wait for redirect to dashboard (or error)
-    await page.waitForURL("**/dashboard/**", { timeout: 15000 })
+    await page.waitForURL(/\/dashboard(\/|$)/, { timeout: 15000 })
 
     return true
   } catch {
@@ -40,70 +49,18 @@ export async function login(
   }
 }
 
-/**
- * Check if user is logged in by looking for dashboard elements
- */
-export async function isLoggedIn(page: Page): Promise<boolean> {
-  try {
-    const url = page.url()
-    return url.includes("/dashboard")
-  } catch {
-    return false
+export async function requireLogin(page: Page, reason = "E2E login failed"): Promise<void> {
+  const success = await login(page)
+  expect(success, reason).toBe(true)
+}
+
+export function getMissingAuthCredentialNames(): string[] {
+  const missing: string[] = []
+  if (!TEST_USER.email) {
+    missing.push("E2E_TEST_EMAIL")
   }
-}
-
-/**
- * Logout from the application
- */
-export async function logout(page: Page): Promise<void> {
-  // Look for user menu / settings
-  const userMenu = page
-    .locator('[data-testid="user-menu"]')
-    .or(page.locator('button:has([data-testid="avatar"])'))
-
-  if (await userMenu.isVisible()) {
-    await userMenu.click()
-    const logoutButton = page.getByText(/log ?out|sign ?out/i)
-    if (await logoutButton.isVisible()) {
-      await logoutButton.click()
-    }
+  if (!TEST_USER.password) {
+    missing.push("E2E_TEST_PASSWORD")
   }
+  return missing
 }
-
-/**
- * Extended test fixture with authentication helpers
- */
-type AuthFixtures = {
-  login: () => Promise<boolean>
-  logout: () => Promise<void>
-  isLoggedIn: () => Promise<boolean>
-  authenticatedPage: Page
-}
-
-/**
- * Extended test with auth fixtures
- */
-export const test = base.extend<AuthFixtures>({
-  login: async ({ page }, use) => {
-    await use(() => login(page))
-  },
-
-  logout: async ({ page }, use) => {
-    await use(() => logout(page))
-  },
-
-  isLoggedIn: async ({ page }, use) => {
-    await use(() => isLoggedIn(page))
-  },
-
-  // Pre-authenticated page fixture
-  authenticatedPage: async ({ page }, use) => {
-    const success = await login(page)
-    if (!success) {
-      test.skip(true, "Login failed - skipping authenticated tests")
-    }
-    await use(page)
-  },
-})
-
-export { expect }

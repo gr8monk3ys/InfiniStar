@@ -120,19 +120,18 @@ await fetch("/api/messages", {
 
 ### 8. Security Headers ✅
 
-Comprehensive security headers configured via Next.js proxy:
+Comprehensive security headers configured via Next.js `headers()` in config, with CSP override/report-only support through environment variables.
 
 **Implemented Headers:**
 
-- **Content-Security-Policy (CSP)**: Restricts resource loading
+- **Content-Security-Policy (CSP)** or **Content-Security-Policy-Report-Only**
 - **X-Frame-Options**: DENY - prevents clickjacking
 - **X-Content-Type-Options**: nosniff - prevents MIME sniffing
-- **X-XSS-Protection**: 1; mode=block - enables XSS filter
 - **Referrer-Policy**: strict-origin-when-cross-origin
-- **Permissions-Policy**: Restricts browser features (camera, mic, etc.)
-- **Strict-Transport-Security (HSTS)**: Production only, 2 years max-age
+- **Permissions-Policy**: Restricts browser features (camera, mic, geolocation)
+- **Strict-Transport-Security (HSTS)**: 2 years max-age, include subdomains, preload
 
-**Location:** [proxy.ts](proxy.ts)
+**Location:** [next.config.mjs](next.config.mjs)
 
 ### 8.1 Cron Security ✅
 

@@ -1,16 +1,40 @@
 import Link from "next/link"
-import { HiCheck, HiOutlineBolt, HiOutlineSparkles } from "react-icons/hi2"
+import { auth } from "@clerk/nextjs/server"
+import { HiCheck, HiOutlineSparkles } from "react-icons/hi2"
 
 import { freePlan, proPlan } from "@/config/subscriptions"
+import { monetizationConfig } from "@/app/lib/monetization"
+import prisma from "@/app/lib/prismadb"
+import { getUserSubscriptionPlan } from "@/app/lib/subscription"
 import { cn } from "@/app/lib/utils"
 import { buttonVariants } from "@/app/components/ui/button"
+import { PricingCtaButton } from "@/app/(marketing)/pricing/PricingCtaButton"
+import { AdSenseUnit } from "@/app/components/monetization/AdSenseUnit"
+import { AffiliatePartnersSection } from "@/app/components/monetization/AffiliatePartnersSection"
 
 export const metadata = {
   title: "Pricing | InfiniStar",
   description: "Simple, transparent pricing for AI conversations",
 }
 
-export default function PricingPage() {
+export default async function PricingPage() {
+  const { userId } = await auth()
+  const isSignedIn = Boolean(userId)
+
+  let isPro = false
+
+  if (userId) {
+    const user = await prisma.user.findUnique({
+      where: { clerkId: userId },
+      select: { id: true },
+    })
+
+    if (user) {
+      const plan = await getUserSubscriptionPlan(user.id)
+      isPro = plan.isPro
+    }
+  }
+
   return (
     <section className="container flex flex-col gap-8 py-8 md:max-w-6xl md:py-12 lg:py-24">
       {/* Header */}
@@ -49,10 +73,10 @@ export default function PricingPage() {
           </ul>
 
           <Link
-            href="/sign-in"
+            href={isSignedIn ? "/dashboard" : "/sign-in"}
             className={cn(buttonVariants({ variant: "outline", size: "lg" }), "w-full")}
           >
-            Get Started Free
+            {isSignedIn ? "Go to Dashboard" : "Get Started Free"}
           </Link>
         </div>
 
@@ -86,18 +110,24 @@ export default function PricingPage() {
             ))}
           </ul>
 
-          <Link
-            href="/sign-in"
+          <PricingCtaButton
+            isSignedIn={isSignedIn}
+            isPro={isPro}
             className={cn(
-              buttonVariants({ size: "lg" }),
               "gradient-bg w-full gap-2 border-0 text-white shadow-lg shadow-violet-500/25"
             )}
-          >
-            <HiOutlineBolt className="size-5" />
-            Upgrade to PRO
-          </Link>
+          />
         </div>
       </div>
+
+      {monetizationConfig.enableAdSense && monetizationConfig.adSenseSlots.pricingInline ? (
+        <div className="mx-auto w-full max-w-4xl rounded-xl border border-border/50 bg-card/40 p-4 md:p-6">
+          <p className="mb-3 text-xs uppercase tracking-wide text-muted-foreground">Sponsored</p>
+          <AdSenseUnit slot={monetizationConfig.adSenseSlots.pricingInline} />
+        </div>
+      ) : null}
+
+      <AffiliatePartnersSection sourcePage="pricing" />
 
       {/* FAQ Section */}
       <div className="mx-auto mt-8 w-full max-w-3xl">

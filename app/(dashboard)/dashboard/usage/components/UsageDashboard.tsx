@@ -221,8 +221,8 @@ export function UsageDashboard() {
                 {period === "day"
                   ? "Last 24 hours"
                   : period === "week"
-                  ? "Last 7 days"
-                  : "Last 30 days"}
+                    ? "Last 7 days"
+                    : "Last 30 days"}
               </CardDescription>
             </div>
             <MetricToggle

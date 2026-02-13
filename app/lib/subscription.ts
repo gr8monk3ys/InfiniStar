@@ -22,8 +22,8 @@ export async function getUserSubscriptionPlan(userId: string): Promise<UserSubsc
   // Check if user is on a pro plan.
   const isPro = Boolean(
     user.stripePriceId &&
-      user.stripeCurrentPeriodEnd &&
-      user.stripeCurrentPeriodEnd.getTime() + 86_400_000 > Date.now()
+    user.stripeCurrentPeriodEnd &&
+    user.stripeCurrentPeriodEnd.getTime() + 86_400_000 > Date.now()
   )
 
   const plan = isPro ? proPlan : freePlan

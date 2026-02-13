@@ -2,12 +2,13 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import dynamic from "next/dynamic"
+import Image from "next/image"
 import { useAuth } from "@clerk/nextjs"
 import axios from "axios"
 import type { CloudinaryUploadWidgetResults } from "next-cloudinary"
 import { useForm, type FieldValues, type SubmitHandler } from "react-hook-form"
 import toast from "react-hot-toast"
-import { HiPaperAirplane, HiPhoto } from "react-icons/hi2"
+import { HiPaperAirplane, HiPhoto, HiXMark } from "react-icons/hi2"
 
 import useConversation from "@/app/(dashboard)/dashboard/hooks/useConversation"
 import { SuggestionChips } from "@/app/components/suggestions"
@@ -50,6 +51,7 @@ const Form: React.FC<FormProps> = ({
 }) => {
   const { conversationId } = useConversation()
   const [isLoading, setIsLoading] = useState(false)
+  const [pendingImage, setPendingImage] = useState<string | null>(null)
   const { token: csrfToken } = useCsrfToken()
   const { userId } = useAuth()
   const currentUserId = userId ?? undefined
@@ -248,6 +250,15 @@ const Form: React.FC<FormProps> = ({
       return
     }
 
+    const rawMessage = typeof data.message === "string" ? data.message : ""
+    const trimmedMessage = rawMessage.trim()
+    const queuedImage = pendingImage
+
+    if (isAI && !trimmedMessage && !queuedImage) {
+      toast.error("Add text or an image before sending")
+      return
+    }
+
     // Clear typing indicator when message is sent
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current)
@@ -262,9 +273,17 @@ const Form: React.FC<FormProps> = ({
     }
 
     if (isAI) {
+      setPendingImage(null)
+
       // Use streaming for AI if enabled
       if (enableStreaming) {
-        await sendStreamingMessage(data.message)
+        const success = await sendStreamingMessage({
+          message: trimmedMessage || undefined,
+          image: queuedImage || undefined,
+        })
+        if (!success && queuedImage) {
+          setPendingImage(queuedImage)
+        }
       } else {
         // Fallback to non-streaming endpoint
         setIsLoading(true)
@@ -272,12 +291,16 @@ const Form: React.FC<FormProps> = ({
           await axios.post(
             "/api/ai/chat",
             {
-              message: data.message,
+              message: trimmedMessage || undefined,
+              image: queuedImage || undefined,
               conversationId: conversationId,
             },
             { headers }
           )
         } catch (error) {
+          if (queuedImage) {
+            setPendingImage(queuedImage)
+          }
           console.error("AI chat error:", error)
           toast.error("Failed to send message to AI")
         } finally {
@@ -309,21 +332,26 @@ const Form: React.FC<FormProps> = ({
     }
 
     if (result.info && typeof result.info !== "string" && result.info.secure_url) {
-      axios
-        .post(
-          "/api/messages",
-          {
-            image: result.info.secure_url,
-            conversationId: conversationId,
-          },
-          {
-            headers: { "X-CSRF-Token": csrfToken },
-          }
-        )
-        .catch((error) => {
-          console.error("Image upload error:", error)
-          toast.error("Failed to upload image")
-        })
+      if (isAI) {
+        setPendingImage(result.info.secure_url)
+        toast.success("Image added to prompt")
+      } else {
+        axios
+          .post(
+            "/api/messages",
+            {
+              image: result.info.secure_url,
+              conversationId: conversationId,
+            },
+            {
+              headers: { "X-CSRF-Token": csrfToken },
+            }
+          )
+          .catch((error) => {
+            console.error("Image upload error:", error)
+            toast.error("Failed to upload image")
+          })
+      }
     }
   }
 
@@ -334,6 +362,10 @@ const Form: React.FC<FormProps> = ({
     showSuggestions &&
     (suggestions.length > 0 || suggestionsLoading) &&
     currentMessage.length === 0
+  const canSubmit =
+    (isAI ? Boolean(currentMessage.trim() || pendingImage) : Boolean(currentMessage.trim())) &&
+    !isLoading &&
+    !isStreaming
 
   return (
     <div
@@ -355,22 +387,41 @@ const Form: React.FC<FormProps> = ({
         </div>
       )}
 
+      {isAI && pendingImage && (
+        <div className="mx-4 mt-2 flex items-start gap-3 rounded-lg border border-border/70 bg-muted/40 p-3">
+          <Image
+            src={pendingImage}
+            alt="Pending prompt upload"
+            width={56}
+            height={56}
+            className="size-14 rounded-md border border-border object-cover"
+          />
+          <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
+            <p className="text-xs text-muted-foreground">
+              Image will be sent with your next prompt.
+            </p>
+            <button
+              type="button"
+              className="rounded-full p-1 text-muted-foreground transition hover:bg-accent hover:text-foreground"
+              onClick={() => setPendingImage(null)}
+              aria-label="Remove pending image"
+            >
+              <HiXMark size={16} />
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="flex w-full items-center gap-2 p-4">
-        {!isAI && (
-          <CldUploadButton
-            options={{ maxFiles: 1 }}
-            onUpload={handleUpload}
-            uploadPreset="pgc9ehd5"
-          >
-            <HiPhoto
-              size={30}
-              className="text-sky-500"
-              aria-label="Upload image"
-              role="button"
-              tabIndex={0}
-            />
-          </CldUploadButton>
-        )}
+        <CldUploadButton options={{ maxFiles: 1 }} onUpload={handleUpload} uploadPreset="pgc9ehd5">
+          <HiPhoto
+            size={30}
+            className="text-sky-500"
+            aria-label="Upload image"
+            role="button"
+            tabIndex={0}
+          />
+        </CldUploadButton>
         <form
           ref={formRef}
           onSubmit={handleSubmit(onSubmit)}
@@ -381,7 +432,7 @@ const Form: React.FC<FormProps> = ({
             id="message"
             register={register}
             errors={errors}
-            required
+            required={!isAI}
             placeholder={isAI ? "Ask me anything..." : "Write a message"}
             onInputChange={handleInputChange}
             onModifierEnter={handleModifierEnterSubmit}
@@ -406,10 +457,10 @@ const Form: React.FC<FormProps> = ({
 
           <button
             type="submit"
-            disabled={isLoading || isStreaming}
+            disabled={!canSubmit}
             aria-label={isAI ? "Send message to AI" : "Send message"}
             aria-busy={isLoading || isStreaming}
-            aria-disabled={isLoading || isStreaming}
+            aria-disabled={!canSubmit}
             className={`
               cursor-pointer
               rounded-full
@@ -417,7 +468,7 @@ const Form: React.FC<FormProps> = ({
               p-2
               transition
               ${isAI ? "hover:opacity-75" : "hover:bg-sky-600"}
-              ${isLoading || isStreaming ? "cursor-not-allowed opacity-50" : ""}
+              ${!canSubmit ? "cursor-not-allowed opacity-50" : ""}
             `}
           >
             <HiPaperAirplane

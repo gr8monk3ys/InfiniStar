@@ -136,6 +136,8 @@ Visit [http://localhost:3000](http://localhost:3000)
 # Install Stripe CLI
 stripe listen --forward-to localhost:3000/api/webhooks/stripe
 # Copy the webhook secret to STRIPE_WEBHOOK_SECRET
+# Optional: verify signature handling end-to-end
+npm run ops:stripe:webhook:verify -- --url=http://localhost:3000/api/webhooks/stripe
 ```
 
 For production, add webhook endpoint in Stripe Dashboard:
@@ -187,6 +189,8 @@ For production, add webhook endpoint in Stripe Dashboard:
    - Optional: `SENTRY_ENVIRONMENT`, `SENTRY_RELEASE`
 3. For source map uploads (optional):
    - `SENTRY_ORG`, `SENTRY_PROJECT`, `SENTRY_AUTH_TOKEN`
+4. Audit issue alert coverage:
+   - `npm run ops:sentry:alerts:audit`
 
 ### Cron (Account Deletions)
 
@@ -206,7 +210,38 @@ bun run lint         # Run ESLint
 bun run lint:fix     # Fix ESLint errors
 bun run format:write # Format code with Prettier
 bun run format:check # Check code formatting
+bun run ci:release:gate # Format/lint/typecheck/tests/build release gate
+bun run ops:stripe:webhook:verify # Verify Stripe webhook signature behavior
+bun run ops:sentry:alerts:audit # Validate Sentry issue alert rule coverage
+bun run ops:db:backup-restore:drill # Execute DB backup/restore drill (requires DB URLs)
+bun run test:e2e:auth # Run authenticated E2E suites (requires E2E_TEST_EMAIL/E2E_TEST_PASSWORD)
+bun run test:e2e:live-ai # Run live AI-response tests (requires E2E_RUN_LIVE_AI=true)
+bun run test:e2e:redirects # Run protected-route redirect assertions (requires real Clerk setup)
 ```
+
+### E2E Auth Configuration
+
+To execute authenticated E2E coverage, set these env vars in `.env.local`:
+
+```bash
+E2E_TEST_EMAIL=<test-user-email>
+E2E_TEST_PASSWORD=<test-user-password>
+E2E_ASSERT_AUTH_REDIRECTS=true
+```
+
+For live AI-response E2E checks, also set:
+
+```bash
+E2E_RUN_LIVE_AI=true
+```
+
+For strict unauthenticated redirect assertions, run:
+
+```bash
+bun run test:e2e:redirects
+```
+
+This script sets `SKIP_CLERK_AUTH_HANDSHAKE=0`, so it should be used only with a real Clerk auth configuration.
 
 ## Development Workflow
 

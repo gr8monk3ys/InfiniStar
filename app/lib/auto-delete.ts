@@ -192,18 +192,28 @@ export async function getConversationsToDelete(
 
   const now = new Date()
 
-  return conversations.map((conv: { id: string; name: string | null; isAI: boolean; lastMessageAt: Date; _count: { messages: number }; archivedBy: string[]; tags: { id: string; name: string; color: string }[] }) => ({
-    id: conv.id,
-    name: conv.name,
-    isAI: conv.isAI,
-    lastMessageAt: conv.lastMessageAt,
-    messageCount: conv._count.messages,
-    isArchived: conv.archivedBy.includes(userId),
-    tags: conv.tags,
-    daysSinceLastMessage: Math.floor(
-      (now.getTime() - conv.lastMessageAt.getTime()) / (1000 * 60 * 60 * 24)
-    ),
-  }))
+  return conversations.map(
+    (conv: {
+      id: string
+      name: string | null
+      isAI: boolean
+      lastMessageAt: Date
+      _count: { messages: number }
+      archivedBy: string[]
+      tags: { id: string; name: string; color: string }[]
+    }) => ({
+      id: conv.id,
+      name: conv.name,
+      isAI: conv.isAI,
+      lastMessageAt: conv.lastMessageAt,
+      messageCount: conv._count.messages,
+      isArchived: conv.archivedBy.includes(userId),
+      tags: conv.tags,
+      daysSinceLastMessage: Math.floor(
+        (now.getTime() - conv.lastMessageAt.getTime()) / (1000 * 60 * 60 * 24)
+      ),
+    })
+  )
 }
 
 /**

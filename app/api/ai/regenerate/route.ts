@@ -2,6 +2,8 @@ import { type NextRequest } from "next/server"
 import Anthropic from "@anthropic-ai/sdk"
 import { z } from "zod"
 
+import { getAiAccessDecision } from "@/app/lib/ai-access"
+import { buildAiConversationHistory } from "@/app/lib/ai-message-content"
 import {
   getDefaultPersonality,
   getSystemPrompt,
@@ -164,6 +166,23 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    const accessDecision = await getAiAccessDecision(currentUser.id)
+    if (!accessDecision.allowed) {
+      return new Response(
+        JSON.stringify({
+          error:
+            accessDecision.message ??
+            "AI access is unavailable for this account right now. Please try again.",
+          code: accessDecision.code,
+          limits: accessDecision.limits,
+        }),
+        {
+          status: 402,
+          headers: { "Content-Type": "application/json" },
+        }
+      )
+    }
+
     // Get all messages in the conversation up to (but not including) the AI message being regenerated
     const conversationMessages = await prisma.message.findMany({
       where: {
@@ -176,10 +195,7 @@ export async function POST(request: NextRequest) {
     })
 
     // Build conversation history for Claude
-    const conversationHistory = conversationMessages.map((msg: { isAI: boolean; body?: string | null }) => ({
-      role: msg.isAI ? ("assistant" as const) : ("user" as const),
-      content: msg.body || "",
-    }))
+    const conversationHistory = buildAiConversationHistory(conversationMessages)
 
     // Soft delete the existing AI message
     const deletedMessage = await prisma.message.update({

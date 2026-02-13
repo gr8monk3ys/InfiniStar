@@ -35,11 +35,14 @@ function validateCsrf(request: NextRequest): boolean {
   let cookieToken: string | null = null
 
   if (cookieHeader) {
-    const cookies = cookieHeader.split(";").reduce((acc, cookie) => {
-      const [key, value] = cookie.trim().split("=")
-      acc[key] = value
-      return acc
-    }, {} as Record<string, string>)
+    const cookies = cookieHeader.split(";").reduce(
+      (acc, cookie) => {
+        const [key, value] = cookie.trim().split("=")
+        acc[key] = value
+        return acc
+      },
+      {} as Record<string, string>
+    )
     cookieToken = cookies["csrf-token"] || null
   }
 

@@ -6,8 +6,11 @@ import {
   HiOutlineSparkles,
 } from "react-icons/hi2"
 
+import { monetizationConfig } from "@/app/lib/monetization"
 import { cn } from "@/app/lib/utils"
 import { buttonVariants } from "@/app/components/ui/button"
+import { AdSenseUnit } from "@/app/components/monetization/AdSenseUnit"
+import { AffiliatePartnersSection } from "@/app/components/monetization/AffiliatePartnersSection"
 
 export default async function IndexPage() {
   return (
@@ -221,6 +224,17 @@ export default async function IndexPage() {
           </div>
         </div>
       </section>
+
+      <AffiliatePartnersSection sourcePage="homepage" />
+
+      {monetizationConfig.enableAdSense && monetizationConfig.adSenseSlots.homeInline ? (
+        <section className="container pb-8 md:pb-14">
+          <div className="mx-auto max-w-4xl rounded-xl border border-border/50 bg-card/40 p-4 md:p-6">
+            <p className="mb-3 text-xs uppercase tracking-wide text-muted-foreground">Sponsored</p>
+            <AdSenseUnit slot={monetizationConfig.adSenseSlots.homeInline} />
+          </div>
+        </section>
+      ) : null}
 
       {/* CTA Section */}
       <section className="relative overflow-hidden border-t border-border/50 py-16 md:py-24">

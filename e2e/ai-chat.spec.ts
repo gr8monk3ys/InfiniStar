@@ -1,201 +1,86 @@
 /**
- * AI Chat E2E Tests
+ * AI Chat E2E tests.
  *
- * Tests for the AI conversation feature including
- * creating conversations, sending messages, and receiving AI responses.
- *
- * Note: Most tests are skipped by default as they require:
- * 1. Valid test credentials (E2E_TEST_EMAIL, E2E_TEST_PASSWORD env vars)
- * 2. AI API access with valid quota
+ * Authenticated suites only register when E2E credentials are provided.
+ * Live response tests are additionally gated by E2E_RUN_LIVE_AI=true.
  */
 
-import { expect, test } from "@playwright/test"
+import { expect, test, type Page } from "@playwright/test"
 
-import { login } from "./fixtures/auth"
+import { hasE2EAuthCredentials, requireLogin } from "./fixtures/auth"
 
-test.describe("AI Chat Feature", () => {
-  test.describe("AI Conversation Creation", () => {
+const runLiveAI = process.env.E2E_RUN_LIVE_AI === "true"
+
+async function openConversationList(page: Page): Promise<void> {
+  await page.goto("/dashboard/conversations")
+  await expect(page).toHaveURL(/\/dashboard\/conversations/)
+}
+
+async function openAiCreationModal(page: Page): Promise<void> {
+  await openConversationList(page)
+
+  const aiButton = page
+    .getByRole("button", { name: /start new ai chat/i })
+    .or(page.locator('button[title="New AI Chat"]').first())
+
+  await expect(aiButton.first()).toBeVisible()
+  await aiButton.first().click()
+
+  await expect(page.getByRole("heading", { name: /create ai conversation/i })).toBeVisible()
+}
+
+async function createAiConversation(page: Page): Promise<void> {
+  await openAiCreationModal(page)
+
+  await page.getByRole("button", { name: /create ai chat/i }).click()
+  await page.waitForURL(/\/dashboard\/conversations\/[a-zA-Z0-9-]+/, { timeout: 20000 })
+}
+
+if (hasE2EAuthCredentials) {
+  test.describe("AI Chat Feature", () => {
     test.beforeEach(async ({ page }) => {
-      const success = await login(page)
-      if (!success) {
-        test.skip(true, "Could not login - skipping authenticated tests")
-      }
+      await requireLogin(page, "E2E AI chat tests require valid credentials")
     })
 
-    test("should have AI chat button in conversations", async ({ page }) => {
-      await page.goto("/dashboard/conversations")
-
-      // Look for AI chat button (sparkle icon or "AI" label)
-      const aiButton = page.locator(
-        'button:has-text("AI"), [title*="AI"], [aria-label*="AI"], button:has(svg[data-icon="sparkles"])'
-      )
-
-      // There should be some way to create AI conversations
-      const buttonCount = await aiButton.count()
-      expect(buttonCount).toBeGreaterThanOrEqual(0) // May be 0 if not in UI yet
+    test("should open AI creation modal from conversations", async ({ page }) => {
+      await openAiCreationModal(page)
     })
 
-    test.skip("should create new AI conversation", async ({ page }) => {
-      await page.goto("/dashboard/conversations")
+    test("should allow choosing a model when creating AI chat", async ({ page }) => {
+      await openAiCreationModal(page)
 
-      // Look for AI chat button
-      const aiButton = page.locator('[title*="AI"], button:has-text("AI")').first()
-
-      if (await aiButton.isVisible()) {
-        await aiButton.click()
-
-        // Should navigate to new AI conversation
-        await page.waitForURL(/\/conversations\/[a-zA-Z0-9]+/, { timeout: 10000 })
-
-        // Check for AI-specific UI elements
-        const messageInput = page.locator(
-          'input[placeholder*="message"], textarea[placeholder*="message"]'
-        )
-        await expect(messageInput.first()).toBeVisible()
-      }
-    })
-  })
-
-  test.describe("AI Message Interaction", () => {
-    test.beforeEach(async ({ page }) => {
-      const success = await login(page)
-      if (!success) {
-        test.skip(true, "Could not login - skipping authenticated tests")
-      }
+      const modelLabel = page.getByText(/AI Model/i).first()
+      await expect(modelLabel).toBeVisible()
+      await expect(page.getByText(/Recommended/i).first()).toBeVisible()
     })
 
-    test.skip("should send message to AI and receive response", async ({ page }) => {
-      await page.goto("/dashboard/conversations")
+    test("should create a new AI conversation", async ({ page }) => {
+      await createAiConversation(page)
 
-      // Find or create AI conversation
-      const aiButton = page.locator('[title*="AI"], button:has-text("AI")').first()
-
-      if (await aiButton.isVisible()) {
-        await aiButton.click()
-        await page.waitForURL(/\/conversations\/[a-zA-Z0-9]+/)
-
-        // Send a message
-        const messageInput = page
-          .locator('input[placeholder*="message"], textarea[placeholder*="message"]')
-          .first()
-        await messageInput.fill("Hello, AI assistant! Please say 'test response'.")
-        await page.locator('button[type="submit"]').click()
-
-        // Wait for AI response (this might take several seconds)
-        await page.waitForSelector('[data-testid="ai-message"], .ai-response', {
-          timeout: 30000,
-        })
-
-        // Verify sent message appears in chat
-        await expect(page.locator('text="Hello, AI assistant!"')).toBeVisible()
-      }
-    })
-
-    test.skip("should display typing indicator while AI responds", async ({ page }) => {
-      await page.goto("/dashboard/conversations")
-
-      const aiButton = page.locator('[title*="AI"], button:has-text("AI")').first()
-
-      if (await aiButton.isVisible()) {
-        await aiButton.click()
-        await page.waitForURL(/\/conversations\/[a-zA-Z0-9]+/)
-
-        // Send a message
-        const messageInput = page
-          .locator('input[placeholder*="message"], textarea[placeholder*="message"]')
-          .first()
-        await messageInput.fill("Hello!")
-        await page.locator('button[type="submit"]').click()
-
-        // Check for typing indicator (should appear while AI is responding)
-        const typingIndicator = page.locator(
-          '[data-testid="typing-indicator"], .typing-indicator, text=/typing|thinking/i'
-        )
-
-        // Typing indicator might be brief, so we use a short timeout
-        const wasVisible = await typingIndicator.isVisible({ timeout: 5000 }).catch(() => false)
-        // We don't assert here as it might be too fast to catch
-      }
-    })
-  })
-
-  test.describe("AI Conversation List", () => {
-    test.beforeEach(async ({ page }) => {
-      const success = await login(page)
-      if (!success) {
-        test.skip(true, "Could not login - skipping authenticated tests")
-      }
-    })
-
-    test("should display conversation list sidebar", async ({ page }) => {
-      await page.goto("/dashboard/conversations")
-
-      // Look for conversation list
-      const sidebar = page.locator(
-        'aside, [data-testid="conversation-list"], nav:has(a[href*="/conversations/"])'
-      )
-
-      await expect(sidebar.first()).toBeVisible()
-    })
-
-    test.skip("should show AI indicator on AI conversations", async ({ page }) => {
-      await page.goto("/dashboard/conversations")
-
-      // AI conversations should have a visual indicator
-      const aiConversation = page.locator(
-        '[data-ai="true"], .ai-conversation, [class*="ai"], a:has(svg[data-icon="sparkles"])'
-      )
-
-      // There might be AI conversations or not
-      const count = await aiConversation.count()
-      // Just verify we can search for them without error
-    })
-  })
-
-  test.describe("AI Chat UI Elements", () => {
-    test.beforeEach(async ({ page }) => {
-      const success = await login(page)
-      if (!success) {
-        test.skip(true, "Could not login - skipping authenticated tests")
-      }
-    })
-
-    test("should have AI chat styling (purple gradient)", async ({ page }) => {
-      await page.goto("/dashboard/conversations")
-
-      // AI button should have distinctive styling
-      const aiButton = page
-        .locator('button:has-text("AI")')
-        .or(page.locator('[title*="AI"]'))
+      const messageInput = page
+        .locator('textarea[placeholder*="Ask me anything"], textarea[placeholder*="message"]')
         .first()
-
-      if (await aiButton.isVisible()) {
-        // Check for gradient or purple coloring
-        const bgClass = await aiButton.getAttribute("class")
-        const hasGradient = bgClass?.includes("gradient") || bgClass?.includes("purple")
-        // Style may vary, so we just verify we can check for it
-      }
-    })
-
-    test("should have model selector for AI chat", async ({ page }) => {
-      await page.goto("/dashboard/conversations")
-
-      // Try to open AI conversation
-      const aiButton = page.locator('[title*="AI"], button:has-text("AI")').first()
-
-      if (await aiButton.isVisible()) {
-        await aiButton.click()
-        await page.waitForURL(/\/conversations\/[a-zA-Z0-9]+/, { timeout: 5000 }).catch(() => {})
-
-        // Look for model selector
-        const modelSelector = page.locator(
-          '[data-testid="model-selector"], select:has-text("Claude"), button:has-text("Claude")'
-        )
-
-        // Model selector might be in header or settings
-        const selectorCount = await modelSelector.count()
-        // Just verify we can look for it
-      }
+      await expect(messageInput).toBeVisible()
     })
   })
-})
+}
+
+if (hasE2EAuthCredentials && runLiveAI) {
+  test.describe("AI Chat Live Interaction", () => {
+    test.beforeEach(async ({ page }) => {
+      await requireLogin(page, "Live AI tests require valid credentials and runtime AI access")
+    })
+
+    test("should send a message and eventually render AI output", async ({ page }) => {
+      await createAiConversation(page)
+
+      const messageInput = page
+        .locator('textarea[placeholder*="Ask me anything"], textarea[placeholder*="message"]')
+        .first()
+      await messageInput.fill("Respond with the exact phrase: e2e-live-ai-ok")
+      await page.getByRole("button", { name: /send message to ai/i }).click()
+
+      await expect(page.getByText(/e2e-live-ai-ok/i).first()).toBeVisible({ timeout: 45000 })
+    })
+  })
+}

@@ -21,7 +21,8 @@ import { POST } from "@/app/api/webhooks/stripe/route"
 jest.mock("@/app/lib/prismadb", () => ({
   __esModule: true,
   default: {
-    user: { findUnique: jest.fn(), update: jest.fn() },
+    user: { findFirst: jest.fn(), update: jest.fn() },
+    creatorSubscription: { updateMany: jest.fn(), upsert: jest.fn() },
   },
 }))
 
@@ -77,7 +78,11 @@ const mockSubscription = {
 
 beforeEach(() => {
   jest.clearAllMocks()
-  process.env = { ...originalEnv, STRIPE_WEBHOOK_SECRET: "whsec_test" }
+  process.env = {
+    ...originalEnv,
+    STRIPE_WEBHOOK_SECRET: "whsec_test",
+    STRIPE_PRO_MONTHLY_PLAN_ID: "price_pro",
+  }
   ;(headers as jest.Mock).mockResolvedValue({
     get: (name: string) => {
       if (name === "Stripe-Signature") return "sig_test_123"
@@ -159,7 +164,8 @@ describe("POST /api/webhooks/stripe", () => {
       },
     })
     ;(stripe.subscriptions.retrieve as jest.Mock).mockResolvedValue(mockSubscription)
-    ;(prisma.user.findUnique as jest.Mock).mockResolvedValue({
+    ;(prisma.creatorSubscription.updateMany as jest.Mock).mockResolvedValue({ count: 1 })
+    ;(prisma.user.findFirst as jest.Mock).mockResolvedValue({
       id: "user-1",
       stripeCustomerId: "cus_123",
     })
@@ -188,7 +194,8 @@ describe("POST /api/webhooks/stripe", () => {
         },
       },
     })
-    ;(prisma.user.findUnique as jest.Mock).mockResolvedValue({
+    ;(prisma.creatorSubscription.updateMany as jest.Mock).mockResolvedValue({ count: 1 })
+    ;(prisma.user.findFirst as jest.Mock).mockResolvedValue({
       id: "user-1",
       stripeCustomerId: "cus_123",
     })

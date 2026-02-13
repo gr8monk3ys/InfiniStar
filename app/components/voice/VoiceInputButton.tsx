@@ -68,7 +68,8 @@ const LoadingSpinner = () => (
  * Props for the VoiceInputButton component
  */
 export interface VoiceInputButtonProps
-  extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "onClick">,
+  extends
+    Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "onClick">,
     VariantProps<typeof voiceButtonVariants> {
   /** Current voice input state */
   voiceState: VoiceInputState

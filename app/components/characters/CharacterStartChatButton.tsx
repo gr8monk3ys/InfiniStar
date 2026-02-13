@@ -14,7 +14,7 @@ export function CharacterStartChatButton({ characterId }: { characterId: string 
 
   const handleStart = async () => {
     if (!isSignedIn || !userId) {
-      router.push("/login")
+      router.push("/sign-in")
       return
     }
 

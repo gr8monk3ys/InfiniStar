@@ -134,7 +134,9 @@ export async function GET(
     }
 
     // Verify user is a participant in the conversation
-    const isParticipant = conversation.users.some((user: { id: string }) => user.id === currentUser.id)
+    const isParticipant = conversation.users.some(
+      (user: { id: string }) => user.id === currentUser.id
+    )
     if (!isParticipant) {
       return NextResponse.json(
         { error: "You do not have permission to export this conversation", success: false },
@@ -152,14 +154,23 @@ export async function GET(
         aiPersonality: conversation.aiPersonality,
         users: conversation.users,
       },
-      conversation.messages.map((m: { id: string; body: string | null; createdAt: Date; isAI: boolean; isDeleted: boolean; sender: { id: string; name: string | null; email: string | null } }) => ({
-        id: m.id,
-        body: m.body,
-        createdAt: m.createdAt,
-        isAI: m.isAI,
-        isDeleted: m.isDeleted,
-        sender: m.sender,
-      })),
+      conversation.messages.map(
+        (m: {
+          id: string
+          body: string | null
+          createdAt: Date
+          isAI: boolean
+          isDeleted: boolean
+          sender: { id: string; name: string | null; email: string | null }
+        }) => ({
+          id: m.id,
+          body: m.body,
+          createdAt: m.createdAt,
+          isAI: m.isAI,
+          isDeleted: m.isDeleted,
+          sender: m.sender,
+        })
+      ),
       currentUser.id
     )
 

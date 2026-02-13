@@ -37,9 +37,9 @@ function logBackend(usingRedis: boolean): void {
   if (backendLogged) return
   backendLogged = true
   if (usingRedis) {
-    console.info("[2FA Tokens] Using Redis-backed token storage.")
+    console.warn("[2FA Tokens] Using Redis-backed token storage.")
   } else {
-    console.info("[2FA Tokens] Using in-memory token storage (Redis not available).")
+    console.warn("[2FA Tokens] Using in-memory token storage (Redis not available).")
   }
 }
 

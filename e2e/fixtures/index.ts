@@ -4,4 +4,5 @@
  * Re-exports all test fixtures for convenient importing.
  */
 
-export { test, expect, login, logout, isLoggedIn } from "./auth"
+export { expect, test } from "@playwright/test"
+export { getMissingAuthCredentialNames, hasE2EAuthCredentials, login, requireLogin } from "./auth"

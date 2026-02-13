@@ -151,11 +151,14 @@ export function useTypingIndicator(options: UseTypingIndicatorOptions): UseTypin
 
       try {
         // Get CSRF token from cookie
-        const cookies = document.cookie.split(";").reduce((acc, cookie) => {
-          const [key, value] = cookie.trim().split("=")
-          acc[key] = value
-          return acc
-        }, {} as Record<string, string>)
+        const cookies = document.cookie.split(";").reduce(
+          (acc, cookie) => {
+            const [key, value] = cookie.trim().split("=")
+            acc[key] = value
+            return acc
+          },
+          {} as Record<string, string>
+        )
 
         const csrfToken = cookies["csrf-token"]
 
