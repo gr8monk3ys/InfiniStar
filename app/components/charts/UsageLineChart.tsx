@@ -137,8 +137,8 @@ export function UsageLineChart({ data, className, metric = "requests" }: UsageLi
               metric === "cost"
                 ? `$${value.toFixed(2)}`
                 : value >= 1000
-                ? `${(value / 1000).toFixed(1)}k`
-                : value.toString()
+                  ? `${(value / 1000).toFixed(1)}k`
+                  : value.toString()
             }
           />
           <Tooltip content={<CustomTooltip />} />

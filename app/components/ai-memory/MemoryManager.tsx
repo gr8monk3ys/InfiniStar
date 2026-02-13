@@ -206,8 +206,8 @@ const MemoryManager: React.FC<MemoryManagerProps> = ({ className }) => {
                 capacity.remaining <= 5
                   ? "bg-destructive"
                   : capacity.remaining <= 15
-                  ? "bg-yellow-500"
-                  : "bg-primary"
+                    ? "bg-yellow-500"
+                    : "bg-primary"
               )}
               style={{ width: `${(capacity.current / capacity.limit) * 100}%` }}
             />
@@ -350,8 +350,8 @@ const MemoryManager: React.FC<MemoryManagerProps> = ({ className }) => {
                     ? "Updating..."
                     : "Creating..."
                   : editingMemory
-                  ? "Update Memory"
-                  : "Add Memory"}
+                    ? "Update Memory"
+                    : "Add Memory"}
               </button>
             </div>
           </div>

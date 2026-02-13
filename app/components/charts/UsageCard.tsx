@@ -43,8 +43,8 @@ export function UsageCard({
     const colorClass = isPositive
       ? "text-green-600 dark:text-green-400"
       : isNegative
-      ? "text-red-600 dark:text-red-400"
-      : "text-muted-foreground"
+        ? "text-red-600 dark:text-red-400"
+        : "text-muted-foreground"
 
     return (
       <div className={cn("flex items-center gap-1 text-xs", colorClass)}>

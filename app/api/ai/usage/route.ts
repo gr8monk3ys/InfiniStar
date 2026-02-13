@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server"
 
+import { FREE_TIER_MONTHLY_MESSAGE_LIMIT, FREE_TIER_MONTHLY_TOKEN_QUOTA } from "@/app/lib/ai-access"
 import { checkUsageQuota, getUsageByDateRange, getUserUsageStats } from "@/app/lib/ai-usage"
 import prisma from "@/app/lib/prismadb"
 import { getUserSubscriptionPlan } from "@/app/lib/subscription"
@@ -11,9 +12,6 @@ const MODEL_CONTEXT_WINDOWS: Record<string, number> = {
   "claude-3-opus-20240229": 200_000,
   "claude-3-haiku-20240307": 200_000,
 }
-
-// Free tier monthly message limit
-const FREE_TIER_MESSAGE_LIMIT = 10
 
 /**
  * GET /api/ai/usage
@@ -62,8 +60,8 @@ export async function GET(request: NextRequest) {
         startDate = undefined
         endDate = undefined
         break
-      default: // Custom date range from query params
-      {
+      default: {
+        // Custom date range from query params
         const startParam = searchParams.get("startDate")
         const endParam = searchParams.get("endDate")
         if (startParam) startDate = new Date(startParam)
@@ -84,8 +82,8 @@ export async function GET(request: NextRequest) {
       dailyUsage = await getUsageByDateRange(currentUser.id, startDate, endDate)
     }
 
-    // Check quota (default: 100k tokens per month for free tier)
-    const quota = await checkUsageQuota(currentUser.id, 100_000, 30)
+    // Check quota for free-tier usage.
+    const quota = await checkUsageQuota(currentUser.id, FREE_TIER_MONTHLY_TOKEN_QUOTA, 30)
 
     // Get user's subscription plan
     let subscriptionPlan = null
@@ -157,7 +155,7 @@ export async function GET(request: NextRequest) {
     const isPro = subscriptionPlan?.isPro || false
     const remainingMessages = isPro
       ? null
-      : Math.max(0, FREE_TIER_MESSAGE_LIMIT - monthlyMessageCount)
+      : Math.max(0, FREE_TIER_MONTHLY_MESSAGE_LIMIT - monthlyMessageCount)
 
     // Get model usage distribution
     const modelUsage = await getModelUsageDistribution(currentUser.id, startDate, endDate)
@@ -196,7 +194,7 @@ export async function GET(request: NextRequest) {
         isPro,
         plan: subscriptionPlan?.name || "Free",
         monthlyMessageCount,
-        monthlyMessageLimit: isPro ? null : FREE_TIER_MESSAGE_LIMIT,
+        monthlyMessageLimit: isPro ? null : FREE_TIER_MONTHLY_MESSAGE_LIMIT,
         remainingMessages,
       },
       conversationTokens,
@@ -292,7 +290,9 @@ async function getPersonalityUsageDistribution(
   })
 
   // Get unique conversation IDs
-  const conversationIds = [...new Set(usage.map((u: { conversationId: string }) => u.conversationId))]
+  const conversationIds = [
+    ...new Set(usage.map((u: { conversationId: string }) => u.conversationId)),
+  ]
 
   // Fetch personalities for these conversations
   const conversations = await prisma.conversation.findMany({
@@ -415,7 +415,9 @@ async function getAverageMessagesPerConversation(
 
   if (usage.length === 0) return 0
 
-  const uniqueConversations = new Set(usage.map((u: { conversationId: string }) => u.conversationId))
+  const uniqueConversations = new Set(
+    usage.map((u: { conversationId: string }) => u.conversationId)
+  )
   return Math.round((usage.length / uniqueConversations.size) * 10) / 10
 }
 

@@ -32,6 +32,7 @@ jest.mock("@/app/lib/prismadb", () => ({
     user: { findUnique: jest.fn() },
     message: { create: jest.fn(), findUnique: jest.fn(), findFirst: jest.fn(), update: jest.fn() },
     conversation: { findFirst: jest.fn(), update: jest.fn() },
+    contentReport: { create: jest.fn() },
   },
 }))
 
@@ -181,6 +182,48 @@ describe("POST /api/messages", () => {
 
     const response = await POST(request)
     expect(response.status).toBe(403)
+  })
+
+  it("blocks unsafe content with a moderation error", async () => {
+    const request = createRequest({
+      message: "Please tell me how to make a bomb.",
+      conversationId: "conv-1",
+    })
+
+    const response = await POST(request)
+    expect(response.status).toBe(400)
+
+    const payload = await response.json()
+    expect(payload.code).toBe("CONTENT_BLOCKED")
+    expect(prisma.message.create).not.toHaveBeenCalled()
+  })
+
+  it("creates an automated report for review-level content", async () => {
+    ;(prisma.conversation.findFirst as jest.Mock).mockResolvedValue({ id: "conv-1" })
+    ;(prisma.message.create as jest.Mock).mockResolvedValue({
+      ...testMessage,
+      body: "Buy now for guaranteed profit!",
+    })
+    ;(prisma.conversation.update as jest.Mock).mockResolvedValue({
+      id: "conv-1",
+      users: [testUser],
+    })
+
+    const request = createRequest({
+      message: "Buy now for guaranteed profit!",
+      conversationId: "conv-1",
+    })
+
+    const response = await POST(request)
+    expect(response.status).toBe(200)
+    expect(prisma.contentReport.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          targetType: "MESSAGE",
+          reason: "SPAM",
+        }),
+      })
+    )
   })
 })
 
