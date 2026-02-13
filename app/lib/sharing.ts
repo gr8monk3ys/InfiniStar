@@ -80,7 +80,9 @@ export async function createShareLink(
       return { success: false, error: "Conversation not found" }
     }
 
-    const isUserInConversation = conversation.users.some((user: { id: string }) => user.id === userId)
+    const isUserInConversation = conversation.users.some(
+      (user: { id: string }) => user.id === userId
+    )
 
     if (!isUserInConversation) {
       return { success: false, error: "You are not part of this conversation" }
@@ -246,7 +248,9 @@ export async function joinViaShare(
     }
 
     // Check if user is already in conversation
-    const isAlreadyMember = share.conversation.users.some((user: { id: string }) => user.id === userId)
+    const isAlreadyMember = share.conversation.users.some(
+      (user: { id: string }) => user.id === userId
+    )
 
     if (isAlreadyMember) {
       // User is already a member, just return success
@@ -313,7 +317,9 @@ export async function revokeShare(
     }
 
     // Check if user is part of the conversation
-    const isUserInConversation = share.conversation.users.some((user: { id: string }) => user.id === userId)
+    const isUserInConversation = share.conversation.users.some(
+      (user: { id: string }) => user.id === userId
+    )
 
     if (!isUserInConversation) {
       return { success: false, error: "You cannot revoke this share" }
@@ -368,7 +374,9 @@ export async function updateShare(
     }
 
     // Check if user is part of the conversation
-    const isUserInConversation = share.conversation.users.some((user: { id: string }) => user.id === userId)
+    const isUserInConversation = share.conversation.users.some(
+      (user: { id: string }) => user.id === userId
+    )
 
     if (!isUserInConversation) {
       return { success: false, error: "You cannot update this share" }
@@ -418,7 +426,9 @@ export async function getSharesForConversation(
       return { success: false, error: "Conversation not found" }
     }
 
-    const isUserInConversation = conversation.users.some((user: { id: string }) => user.id === userId)
+    const isUserInConversation = conversation.users.some(
+      (user: { id: string }) => user.id === userId
+    )
 
     if (!isUserInConversation) {
       return { success: false, error: "You are not part of this conversation" }
@@ -461,7 +471,9 @@ export async function deleteShare(
     }
 
     // Check if user is part of the conversation
-    const isUserInConversation = share.conversation.users.some((user: { id: string }) => user.id === userId)
+    const isUserInConversation = share.conversation.users.some(
+      (user: { id: string }) => user.id === userId
+    )
 
     if (!isUserInConversation) {
       return { success: false, error: "You cannot delete this share" }

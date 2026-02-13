@@ -30,8 +30,8 @@ function Avatar({ name, email, image, className = "", size = "md" }: AvatarProps
   const altText = name
     ? `${name}'s profile picture`
     : email
-    ? `${email}'s profile picture`
-    : "User profile picture"
+      ? `${email}'s profile picture`
+      : "User profile picture"
 
   return (
     <div className={`relative shrink-0 overflow-hidden rounded-full ${sizeClasses} ${className}`}>

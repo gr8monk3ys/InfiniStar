@@ -3,7 +3,13 @@ import { auth } from "@clerk/nextjs/server"
 import { z } from "zod"
 
 import { verifyCsrfToken } from "@/app/lib/csrf"
+import {
+  buildModerationDetails,
+  moderateText,
+  moderationReasonFromCategories,
+} from "@/app/lib/moderation"
 import prisma from "@/app/lib/prismadb"
+import { getRecommendationSignalsForUser, rankCharactersForUser } from "@/app/lib/recommendations"
 import { sanitizePlainText } from "@/app/lib/sanitize"
 import { slugify } from "@/app/lib/slug"
 
@@ -25,7 +31,7 @@ const listSchema = z.object({
   tag: z.string().optional(),
   featured: z.string().optional(),
   category: z.string().optional(),
-  sort: z.enum(["popular", "newest", "liked"]).optional(),
+  sort: z.enum(["popular", "newest", "liked", "recommended"]).optional(),
   limit: z.string().optional(),
   cursor: z.string().optional(),
 })
@@ -70,6 +76,11 @@ export async function GET(request: NextRequest) {
     where.category = params.category
   }
 
+  const { userId } = await auth()
+  const currentUser = userId
+    ? await prisma.user.findUnique({ where: { clerkId: userId }, select: { id: true } })
+    : null
+
   let orderBy: Record<string, "asc" | "desc">[]
   switch (params.sort) {
     case "popular":
@@ -81,8 +92,40 @@ export async function GET(request: NextRequest) {
     case "liked":
       orderBy = [{ likeCount: "desc" }, { createdAt: "desc" }]
       break
+    case "recommended":
+      orderBy = [{ featured: "desc" }, { usageCount: "desc" }, { createdAt: "desc" }]
+      break
     default:
       orderBy = [{ featured: "desc" }, { usageCount: "desc" }, { createdAt: "desc" }]
+  }
+
+  if (params.sort === "recommended" && currentUser?.id) {
+    const candidates = await prisma.character.findMany({
+      where,
+      take: Math.max(limit * 4, 80),
+      orderBy,
+      select: {
+        id: true,
+        slug: true,
+        name: true,
+        tagline: true,
+        avatarUrl: true,
+        category: true,
+        usageCount: true,
+        likeCount: true,
+        featured: true,
+        createdAt: true,
+        createdById: true,
+        createdBy: {
+          select: { id: true, name: true, image: true },
+        },
+      },
+    })
+
+    const signals = await getRecommendationSignalsForUser(currentUser.id)
+    const ranked = rankCharactersForUser(candidates, signals).slice(0, limit)
+
+    return NextResponse.json({ characters: ranked, nextCursor: null })
   }
 
   const characters = await prisma.character.findMany({
@@ -155,6 +198,28 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid name" }, { status: 400 })
   }
 
+  const moderationPayload = [
+    sanitizedName,
+    data.tagline ? sanitizePlainText(data.tagline) : "",
+    data.description ? sanitizePlainText(data.description) : "",
+    data.greeting ? sanitizePlainText(data.greeting) : "",
+    data.systemPrompt,
+  ]
+    .filter(Boolean)
+    .join("\n")
+
+  const moderationResult = moderateText(moderationPayload)
+  if (moderationResult.shouldBlock) {
+    return NextResponse.json(
+      {
+        error: "Character content was blocked by safety filters.",
+        code: "CONTENT_BLOCKED",
+        categories: moderationResult.categories,
+      },
+      { status: 400 }
+    )
+  }
+
   const baseSlug = slugify(sanitizedName)
   let slug = baseSlug
   let suffix = 1
@@ -180,6 +245,19 @@ export async function POST(request: NextRequest) {
       createdById: currentUser.id,
     },
   })
+
+  if (moderationResult.shouldReview) {
+    await prisma.contentReport.create({
+      data: {
+        reporterId: currentUser.id,
+        targetType: "CHARACTER",
+        targetId: character.id,
+        reason: moderationReasonFromCategories(moderationResult.categories),
+        details: buildModerationDetails(moderationResult, "character-create"),
+        status: "OPEN",
+      },
+    })
+  }
 
   return NextResponse.json(character, { status: 201 })
 }

@@ -28,7 +28,12 @@ jest.mock("@/app/lib/prismadb", () => ({
   default: {
     user: { findUnique: jest.fn() },
     conversation: { create: jest.fn(), findMany: jest.fn(), update: jest.fn() },
-    character: { findUnique: jest.fn(), update: jest.fn() },
+    character: {
+      findUnique: jest.fn(),
+      findMany: jest.fn(),
+      update: jest.fn(),
+      updateMany: jest.fn(),
+    },
     message: { create: jest.fn() },
   },
 }))
@@ -77,6 +82,7 @@ beforeEach(() => {
   ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(testUser)
   ;(auth as unknown as jest.Mock).mockResolvedValue({ userId: "clerk_123" })
   ;(verifyCsrfToken as jest.Mock).mockReturnValue(true)
+  ;(prisma.character.findMany as jest.Mock).mockResolvedValue([])
 })
 
 describe("POST /api/conversations", () => {
@@ -186,12 +192,95 @@ describe("POST /api/conversations", () => {
     expect(prisma.character.update).toHaveBeenCalled()
   })
 
+  it("creates AI scene conversation with multiple characters", async () => {
+    const characterOneId = "550e8400-e29b-41d4-a716-446655440000"
+    const characterTwoId = "550e8400-e29b-41d4-a716-446655440001"
+
+    ;(prisma.character.findMany as jest.Mock).mockResolvedValue([
+      {
+        id: characterOneId,
+        name: "Guide",
+        tagline: "Calm strategist",
+        description: "Thinks three steps ahead.",
+        greeting: "Welcome to the mission.",
+        systemPrompt: "You are a calm strategist.",
+      },
+      {
+        id: characterTwoId,
+        name: "Scout",
+        tagline: "Fast and curious",
+        description: "Finds shortcuts and opportunities.",
+        greeting: "I'm already surveying the route.",
+        systemPrompt: "You are energetic and observant.",
+      },
+    ])
+    ;(prisma.conversation.create as jest.Mock).mockResolvedValue({
+      ...testConversation,
+      id: "scene-conv-1",
+      isAI: true,
+      name: "Scene: Guide + Scout",
+      users: [testUser],
+    })
+    ;(prisma.character.updateMany as jest.Mock).mockResolvedValue({ count: 2 })
+    ;(prisma.message.create as jest.Mock).mockResolvedValue({
+      id: "scene-greeting",
+      body: "Guide: Welcome to the mission.\n\nScout: I'm already surveying the route.",
+      isAI: true,
+      sender: testUser,
+      seen: [testUser],
+    })
+    ;(prisma.conversation.update as jest.Mock).mockResolvedValue({})
+
+    const request = createRequest({
+      isAI: true,
+      sceneCharacterIds: [characterOneId, characterTwoId],
+      sceneScenario: "Two specialists preparing for a rescue mission.",
+    })
+
+    const response = await POST(request)
+    expect(response.status).toBe(200)
+    expect(prisma.character.updateMany).toHaveBeenCalled()
+    expect(prisma.conversation.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          isAI: true,
+          aiPersonality: "custom",
+          aiSystemPrompt: expect.stringContaining("Scene setup provided by the user"),
+        }),
+      })
+    )
+  })
+
   it("returns 404 for non-existent character", async () => {
     ;(prisma.character.findUnique as jest.Mock).mockResolvedValue(null)
 
     const request = createRequest({
       isAI: true,
       characterId: "550e8400-e29b-41d4-a716-446655440000",
+    })
+
+    const response = await POST(request)
+    expect(response.status).toBe(404)
+  })
+
+  it("returns 404 when a scene character is missing", async () => {
+    const characterOneId = "550e8400-e29b-41d4-a716-446655440000"
+    const characterTwoId = "550e8400-e29b-41d4-a716-446655440001"
+
+    ;(prisma.character.findMany as jest.Mock).mockResolvedValue([
+      {
+        id: characterOneId,
+        name: "Guide",
+        tagline: null,
+        description: null,
+        greeting: null,
+        systemPrompt: "You are a calm strategist.",
+      },
+    ])
+
+    const request = createRequest({
+      isAI: true,
+      sceneCharacterIds: [characterOneId, characterTwoId],
     })
 
     const response = await POST(request)

@@ -18,11 +18,14 @@ function validateCsrf(request: NextRequest): boolean {
   let cookieToken: string | null = null
 
   if (cookieHeader) {
-    const cookies = cookieHeader.split(";").reduce((acc, cookie) => {
-      const [key, value] = cookie.trim().split("=")
-      acc[key] = value
-      return acc
-    }, {} as Record<string, string>)
+    const cookies = cookieHeader.split(";").reduce(
+      (acc, cookie) => {
+        const [key, value] = cookie.trim().split("=")
+        acc[key] = value
+        return acc
+      },
+      {} as Record<string, string>
+    )
     cookieToken = cookies["csrf-token"] || null
   }
 
@@ -128,7 +131,9 @@ export async function POST(
     }
 
     // Check if user is part of the conversation
-    const isUserInConversation = conversation.users.some((user: { id: string }) => user.id === currentUser.id)
+    const isUserInConversation = conversation.users.some(
+      (user: { id: string }) => user.id === currentUser.id
+    )
 
     if (!isUserInConversation) {
       return NextResponse.json({ error: "You are not part of this conversation" }, { status: 403 })
@@ -176,7 +181,10 @@ export async function POST(
 
     // Get participant names
     const participantNames = conversation.users
-      .map((user: { name?: string | null; email?: string | null }) => user.name || user.email || "Unknown")
+      .map(
+        (user: { name?: string | null; email?: string | null }) =>
+          user.name || user.email || "Unknown"
+      )
       .filter((name: string, index: number, self: string[]) => self.indexOf(name) === index) // Remove duplicates
 
     // Track request start time for latency measurement
@@ -288,7 +296,9 @@ export async function GET(
     }
 
     // Check if user is part of the conversation
-    const isUserInConversation = conversation.users.some((user: { id: string }) => user.id === currentUser.id)
+    const isUserInConversation = conversation.users.some(
+      (user: { id: string }) => user.id === currentUser.id
+    )
 
     if (!isUserInConversation) {
       return NextResponse.json({ error: "You are not part of this conversation" }, { status: 403 })

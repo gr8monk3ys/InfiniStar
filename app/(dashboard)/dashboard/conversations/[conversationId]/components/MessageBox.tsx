@@ -1,6 +1,6 @@
 "use client"
 
-import { memo, useCallback, useMemo, useState } from "react"
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Image from "next/image"
 import { useAuth, useUser } from "@clerk/nextjs"
 import axios, { isAxiosError } from "axios"
@@ -13,6 +13,8 @@ import {
   HiEllipsisVertical,
   HiFaceSmile,
   HiPencil,
+  HiSpeakerWave,
+  HiStopCircle,
   HiTrash,
 } from "react-icons/hi2"
 
@@ -52,6 +54,9 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
   const [editedBody, setEditedBody] = useState(data.body || "")
   const [isDeleting, setIsDeleting] = useState(false)
   const [showReactionPicker, setShowReactionPicker] = useState(false)
+  const [isSpeechSupported, setIsSpeechSupported] = useState(false)
+  const [isSpeaking, setIsSpeaking] = useState(false)
+  const speechUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null)
 
   const commonEmojis = ["👍", "❤️", "😄", "🎉", "🔥", "👏"]
 
@@ -149,6 +154,66 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
     },
     [data.id]
   )
+
+  const stopSpeech = useCallback(() => {
+    if (!isSpeechSupported || typeof window === "undefined") {
+      return
+    }
+
+    window.speechSynthesis.cancel()
+    speechUtteranceRef.current = null
+    setIsSpeaking(false)
+  }, [isSpeechSupported])
+
+  const handleToggleSpeech = useCallback(() => {
+    if (!isSpeechSupported || !data.isAI || !data.body || typeof window === "undefined") {
+      return
+    }
+
+    if (isSpeaking) {
+      stopSpeech()
+      return
+    }
+
+    const utterance = new SpeechSynthesisUtterance(data.body)
+    utterance.rate = 1
+    utterance.pitch = 1
+
+    utterance.onend = () => {
+      if (speechUtteranceRef.current === utterance) {
+        speechUtteranceRef.current = null
+        setIsSpeaking(false)
+      }
+    }
+
+    utterance.onerror = () => {
+      if (speechUtteranceRef.current === utterance) {
+        speechUtteranceRef.current = null
+        setIsSpeaking(false)
+        toast.error("Text-to-speech failed")
+      }
+    }
+
+    speechUtteranceRef.current = utterance
+    window.speechSynthesis.cancel()
+    window.speechSynthesis.speak(utterance)
+    setIsSpeaking(true)
+  }, [isSpeechSupported, data.isAI, data.body, isSpeaking, stopSpeech])
+
+  useEffect(() => {
+    const supported =
+      typeof window !== "undefined" &&
+      "speechSynthesis" in window &&
+      typeof SpeechSynthesisUtterance !== "undefined"
+    setIsSpeechSupported(supported)
+
+    return () => {
+      if (speechUtteranceRef.current && typeof window !== "undefined") {
+        window.speechSynthesis.cancel()
+        speechUtteranceRef.current = null
+      }
+    }
+  }, [])
 
   // Parse reactions from JSON
   const reactions = (data.reactions as Record<string, string[]>) || {}
@@ -367,6 +432,21 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
                   }
                 >
                   <HiArrowPath size={16} />
+                </button>
+              )}
+
+              {/* Text-to-speech button for AI responses */}
+              {data.isAI && data.body && isSpeechSupported && (
+                <button
+                  onClick={handleToggleSpeech}
+                  className={clsx(
+                    "rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground",
+                    isSpeaking && "text-primary"
+                  )}
+                  aria-label={isSpeaking ? "Stop reading message aloud" : "Read message aloud"}
+                  title={isSpeaking ? "Stop reading aloud" : "Read aloud"}
+                >
+                  {isSpeaking ? <HiStopCircle size={16} /> : <HiSpeakerWave size={16} />}
                 </button>
               )}
 

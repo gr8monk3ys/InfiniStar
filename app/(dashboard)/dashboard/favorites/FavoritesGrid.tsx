@@ -1,10 +1,10 @@
-'use client'
+"use client"
 
-import { useCallback, useState } from 'react'
-import toast from 'react-hot-toast'
+import { useCallback, useState } from "react"
+import toast from "react-hot-toast"
 
-import { useCsrfToken } from '@/app/hooks/useCsrfToken'
-import { CharacterCard } from '@/app/components/characters/CharacterCard'
+import { CharacterCard } from "@/app/components/characters/CharacterCard"
+import { useCsrfToken } from "@/app/hooks/useCsrfToken"
 
 interface FavoriteCharacter {
   id: string
@@ -27,48 +27,36 @@ interface FavoritesGridProps {
   characters: FavoriteCharacter[]
 }
 
-export default function FavoritesGrid({
-  characters: initialCharacters,
-}: FavoritesGridProps) {
-  const [characters, setCharacters] =
-    useState<FavoriteCharacter[]>(initialCharacters)
+export default function FavoritesGrid({ characters: initialCharacters }: FavoritesGridProps) {
+  const [characters, setCharacters] = useState<FavoriteCharacter[]>(initialCharacters)
   const { token } = useCsrfToken()
 
   const handleUnlike = useCallback(
     async (characterId: string): Promise<void> => {
       // Optimistic removal
       const prevCharacters = characters
-      setCharacters((current) =>
-        current.filter((c) => c.id !== characterId)
-      )
+      setCharacters((current) => current.filter((c) => c.id !== characterId))
 
       try {
-        const res = await fetch(
-          `/api/characters/${characterId}/like`,
-          {
-            method: 'DELETE',
-            headers: {
-              'X-CSRF-Token': token || '',
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({}),
-          }
-        )
+        const res = await fetch(`/api/characters/${characterId}/like`, {
+          method: "DELETE",
+          headers: {
+            "X-CSRF-Token": token || "",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({}),
+        })
 
         if (!res.ok) {
           const data = await res.json()
-          throw new Error(data.error || 'Failed to unlike')
+          throw new Error(data.error || "Failed to unlike")
         }
 
-        toast.success('Removed from favorites')
+        toast.success("Removed from favorites")
       } catch (error) {
         // Revert on error
         setCharacters(prevCharacters)
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : 'Failed to remove favorite'
-        )
+        toast.error(error instanceof Error ? error.message : "Failed to remove favorite")
       }
     },
     [characters, token]

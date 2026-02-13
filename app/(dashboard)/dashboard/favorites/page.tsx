@@ -39,13 +39,13 @@ export const metadata: Metadata = {
 
 export default async function FavoritesPage() {
   const { userId } = await auth()
-  if (!userId) redirect("/login")
+  if (!userId) redirect("/sign-in")
 
   const currentUser = await prisma.user.findUnique({
     where: { clerkId: userId },
     select: { id: true },
   })
-  if (!currentUser) redirect("/login")
+  if (!currentUser) redirect("/sign-in")
 
   const likes = await prisma.characterLike.findMany({
     where: { userId: currentUser.id },

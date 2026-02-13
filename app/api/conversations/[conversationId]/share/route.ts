@@ -10,7 +10,7 @@ import { z } from "zod"
 
 import { verifyCsrfToken } from "@/app/lib/csrf"
 import { getClientIdentifier, shareLimiter } from "@/app/lib/rate-limit"
-import { createShareLink, getShareUrl, getSharesForConversation } from "@/app/lib/sharing"
+import { createShareLink, getSharesForConversation, getShareUrl } from "@/app/lib/sharing"
 import getCurrentUser from "@/app/actions/getCurrentUser"
 
 // Validation schema for creating a share
@@ -35,11 +35,14 @@ function validateCsrf(request: NextRequest): boolean {
   let cookieToken: string | null = null
 
   if (cookieHeader) {
-    const cookies = cookieHeader.split(";").reduce((acc, cookie) => {
-      const [key, value] = cookie.trim().split("=")
-      acc[key] = value
-      return acc
-    }, {} as Record<string, string>)
+    const cookies = cookieHeader.split(";").reduce(
+      (acc, cookie) => {
+        const [key, value] = cookie.trim().split("=")
+        acc[key] = value
+        return acc
+      },
+      {} as Record<string, string>
+    )
     cookieToken = cookies["csrf-token"] || null
   }
 
@@ -154,10 +157,12 @@ export async function GET(request: NextRequest, { params }: { params: Promise<IP
     }
 
     // Add share URLs to each share
-    const sharesWithUrls = result.shares!.map((share: { shareToken: string; [key: string]: unknown }) => ({
-      ...share,
-      shareUrl: getShareUrl(share.shareToken),
-    }))
+    const sharesWithUrls = result.shares!.map(
+      (share: { shareToken: string; [key: string]: unknown }) => ({
+        ...share,
+        shareUrl: getShareUrl(share.shareToken),
+      })
+    )
 
     return NextResponse.json({ shares: sharesWithUrls })
   } catch (error) {

@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server"
 
 import prisma from "@/app/lib/prismadb"
+import { getRecommendationSignalsForUser, rankCharactersForUser } from "@/app/lib/recommendations"
 
 import ExploreClient from "./ExploreClient"
 
@@ -18,9 +19,12 @@ const CHARACTER_SELECT = {
   name: true,
   tagline: true,
   avatarUrl: true,
+  createdAt: true,
+  createdById: true,
   category: true,
   usageCount: true,
   likeCount: true,
+  featured: true,
   createdBy: {
     select: {
       id: true,
@@ -38,12 +42,12 @@ export default async function ExplorePage() {
     ? await prisma.user.findUnique({ where: { clerkId: userId }, select: { id: true } })
     : null
 
-  const [featured, trending, all, likedRecords] = await Promise.all([
+  const [featuredRaw, trendingRaw, allRaw, likedRecords] = await Promise.all([
     // Featured characters
     prisma.character.findMany({
       where: { isPublic: true, featured: true },
       orderBy: { usageCount: "desc" },
-      take: 6,
+      take: 24,
       select: CHARACTER_SELECT,
     }),
 
@@ -51,7 +55,7 @@ export default async function ExplorePage() {
     prisma.character.findMany({
       where: { isPublic: true },
       orderBy: { usageCount: "desc" },
-      take: 12,
+      take: 80,
       select: CHARACTER_SELECT,
     }),
 
@@ -59,7 +63,7 @@ export default async function ExplorePage() {
     prisma.character.findMany({
       where: { isPublic: true },
       orderBy: { createdAt: "desc" },
-      take: 24,
+      take: 120,
       select: CHARACTER_SELECT,
     }),
 
@@ -71,6 +75,22 @@ export default async function ExplorePage() {
         })
       : Promise.resolve([]),
   ])
+
+  const recommendationSignals = currentUser?.id
+    ? await getRecommendationSignalsForUser(currentUser.id)
+    : null
+
+  const featured = recommendationSignals
+    ? rankCharactersForUser(featuredRaw, recommendationSignals).slice(0, 6)
+    : featuredRaw.slice(0, 6)
+
+  const trending = recommendationSignals
+    ? rankCharactersForUser(trendingRaw, recommendationSignals).slice(0, 12)
+    : trendingRaw.slice(0, 12)
+
+  const all = recommendationSignals
+    ? rankCharactersForUser(allRaw, recommendationSignals).slice(0, 24)
+    : allRaw.slice(0, 24)
 
   const likedIds = likedRecords.map((r: { characterId: string }) => r.characterId)
 

@@ -2,7 +2,12 @@ import { useMemo } from "react"
 import { usePathname } from "next/navigation"
 import { useClerk } from "@clerk/nextjs"
 import { HiChat } from "react-icons/hi"
-import { HiArrowLeftOnRectangle, HiOutlineSparkles, HiUser } from "react-icons/hi2"
+import {
+  HiArrowLeftOnRectangle,
+  HiCurrencyDollar,
+  HiOutlineSparkles,
+  HiUser,
+} from "react-icons/hi2"
 
 import useConversation from "./useConversation"
 
@@ -15,9 +20,9 @@ const useRoutes = () => {
     () => [
       {
         label: "Chat",
-        href: "/conversations",
+        href: "/dashboard/conversations",
         icon: HiChat,
-        active: pathname === "/conversations" || !!conversationId,
+        active: pathname?.startsWith("/dashboard/conversations") || !!conversationId,
       },
       {
         label: "Characters",
@@ -26,10 +31,16 @@ const useRoutes = () => {
         active: pathname?.startsWith("/dashboard/characters"),
       },
       {
-        label: "user",
-        href: "/user",
+        label: "Profile",
+        href: "/dashboard/profile",
         icon: HiUser,
-        active: pathname === "/user",
+        active: pathname?.startsWith("/dashboard/profile"),
+      },
+      {
+        label: "Earnings",
+        href: "/dashboard/creator-earnings",
+        icon: HiCurrencyDollar,
+        active: pathname?.startsWith("/dashboard/creator-earnings"),
       },
       {
         label: "Logout",

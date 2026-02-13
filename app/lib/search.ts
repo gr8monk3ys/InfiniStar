@@ -240,33 +240,48 @@ export async function searchConversations(
     prisma.conversation.count({ where: whereClause }),
   ])
 
-  const items: ConversationSearchResult[] = conversations.map((conv: { id: string; name: string | null; isAI: boolean; isGroup: boolean; aiPersonality: string | null; createdAt: Date; lastMessageAt: Date; users: { id: string; name: string | null; email: string | null; image: string | null }[]; _count: { messages: number }; tags: { id: string; name: string; color: string }[]; archivedBy: string[]; isPinned?: boolean }) => {
-    const daysSinceActive = Math.floor(
-      (Date.now() - conv.lastMessageAt.getTime()) / (1000 * 60 * 60 * 24)
-    )
+  const items: ConversationSearchResult[] = conversations.map(
+    (conv: {
+      id: string
+      name: string | null
+      isAI: boolean
+      isGroup: boolean
+      aiPersonality: string | null
+      createdAt: Date
+      lastMessageAt: Date
+      users: { id: string; name: string | null; email: string | null; image: string | null }[]
+      _count: { messages: number }
+      tags: { id: string; name: string; color: string }[]
+      archivedBy: string[]
+      isPinned?: boolean
+    }) => {
+      const daysSinceActive = Math.floor(
+        (Date.now() - conv.lastMessageAt.getTime()) / (1000 * 60 * 60 * 24)
+      )
 
-    return {
-      id: conv.id,
-      name: conv.name,
-      isAI: conv.isAI,
-      isGroup: conv.isGroup,
-      aiPersonality: conv.aiPersonality,
-      createdAt: conv.createdAt.toISOString(),
-      lastMessageAt: conv.lastMessageAt.toISOString(),
-      users: conv.users,
-      messageCount: conv._count.messages,
-      tags: conv.tags,
-      isArchived: conv.archivedBy.includes(userId),
-      relevanceScore:
-        sortBy === "relevance"
-          ? calculateRelevanceScore(conv.name || "", query, {
-              isTitle: true,
-              recency: daysSinceActive,
-              messageCount: conv._count.messages,
-            })
-          : undefined,
+      return {
+        id: conv.id,
+        name: conv.name,
+        isAI: conv.isAI,
+        isGroup: conv.isGroup,
+        aiPersonality: conv.aiPersonality,
+        createdAt: conv.createdAt.toISOString(),
+        lastMessageAt: conv.lastMessageAt.toISOString(),
+        users: conv.users,
+        messageCount: conv._count.messages,
+        tags: conv.tags,
+        isArchived: conv.archivedBy.includes(userId),
+        relevanceScore:
+          sortBy === "relevance"
+            ? calculateRelevanceScore(conv.name || "", query, {
+                isTitle: true,
+                recency: daysSinceActive,
+                messageCount: conv._count.messages,
+              })
+            : undefined,
+      }
     }
-  })
+  )
 
   // Sort by relevance if needed
   if (sortBy === "relevance") {
@@ -352,28 +367,38 @@ export async function searchMessages(
     prisma.message.count({ where: whereClause }),
   ])
 
-  const items: MessageSearchResult[] = messages.map((msg: { id: string; body: string | null; createdAt: Date; isAI: boolean; image: string | null; sender: { id: string; name: string | null; email: string | null; image: string | null }; conversation: { id: string; name: string | null; isAI: boolean; isGroup: boolean } }) => {
-    const daysSinceCreated = Math.floor(
-      (Date.now() - msg.createdAt.getTime()) / (1000 * 60 * 60 * 24)
-    )
+  const items: MessageSearchResult[] = messages.map(
+    (msg: {
+      id: string
+      body: string | null
+      createdAt: Date
+      isAI: boolean
+      image: string | null
+      sender: { id: string; name: string | null; email: string | null; image: string | null }
+      conversation: { id: string; name: string | null; isAI: boolean; isGroup: boolean }
+    }) => {
+      const daysSinceCreated = Math.floor(
+        (Date.now() - msg.createdAt.getTime()) / (1000 * 60 * 60 * 24)
+      )
 
-    return {
-      id: msg.id,
-      body: msg.body || "",
-      highlightedBody: highlightSearchTerm(msg.body || "", query),
-      createdAt: msg.createdAt.toISOString(),
-      isAI: msg.isAI,
-      hasImage: !!msg.image,
-      sender: msg.sender,
-      conversation: msg.conversation,
-      relevanceScore:
-        sortBy === "relevance"
-          ? calculateRelevanceScore(msg.body || "", query, {
-              recency: daysSinceCreated,
-            })
-          : undefined,
+      return {
+        id: msg.id,
+        body: msg.body || "",
+        highlightedBody: highlightSearchTerm(msg.body || "", query),
+        createdAt: msg.createdAt.toISOString(),
+        isAI: msg.isAI,
+        hasImage: !!msg.image,
+        sender: msg.sender,
+        conversation: msg.conversation,
+        relevanceScore:
+          sortBy === "relevance"
+            ? calculateRelevanceScore(msg.body || "", query, {
+                recency: daysSinceCreated,
+              })
+            : undefined,
+      }
     }
-  })
+  )
 
   // Sort by relevance if needed
   if (sortBy === "relevance") {
@@ -520,12 +545,14 @@ export async function getSearchFacets(userId: string, query?: string): Promise<S
     },
   })
 
-  const tagCounts = tags.map((tag: { id: string; name: string; color: string; _count: { conversations: number } }) => ({
-    id: tag.id,
-    name: tag.name,
-    color: tag.color,
-    count: tag._count.conversations,
-  }))
+  const tagCounts = tags.map(
+    (tag: { id: string; name: string; color: string; _count: { conversations: number } }) => ({
+      id: tag.id,
+      name: tag.name,
+      color: tag.color,
+      count: tag._count.conversations,
+    })
+  )
 
   // Get date range counts
   const now = new Date()

@@ -4,7 +4,12 @@ import { memo, useMemo, useState } from "react"
 import dynamic from "next/dynamic"
 import Link from "next/link"
 import { HiChevronLeft } from "react-icons/hi"
-import { HiEllipsisHorizontal, HiMagnifyingGlass, HiOutlineDocumentText } from "react-icons/hi2"
+import {
+  HiEllipsisHorizontal,
+  HiLink,
+  HiMagnifyingGlass,
+  HiOutlineDocumentText,
+} from "react-icons/hi2"
 
 import useActiveList from "@/app/(dashboard)/dashboard/hooks/useActiveList"
 import useOtherUser from "@/app/(dashboard)/dashboard/hooks/useOtherUser"
@@ -32,6 +37,11 @@ const SummaryModal = dynamic(() => import("@/app/components/modals/SummaryModal"
   loading: () => null,
 })
 
+const ShareDialog = dynamic(() => import("@/app/components/sharing/ShareDialog"), {
+  ssr: false,
+  loading: () => null,
+})
+
 interface HeaderProps {
   conversation: FullConversationType
 }
@@ -48,6 +58,7 @@ const Header: React.FC<HeaderProps> = memo(function Header({ conversation }) {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [searchModalOpen, setSearchModalOpen] = useState(false)
   const [summaryModalOpen, setSummaryModalOpen] = useState(false)
+  const [shareDialogOpen, setShareDialogOpen] = useState(false)
 
   const isActive = members.indexOf(otherUser?.id || "") !== -1
 
@@ -101,6 +112,14 @@ const Header: React.FC<HeaderProps> = memo(function Header({ conversation }) {
             conversationName={conversation.name || otherUser?.name || "Conversation"}
           />
           <button
+            onClick={() => setShareDialogOpen(true)}
+            className="cursor-pointer rounded-full p-2 text-sky-500 transition hover:bg-accent hover:text-sky-600"
+            title="Share conversation"
+            aria-label="Share conversation"
+          >
+            <HiLink size={22} />
+          </button>
+          <button
             onClick={() => setSummaryModalOpen(true)}
             className="cursor-pointer rounded-full p-2 text-sky-500 transition hover:bg-accent hover:text-sky-600"
             title="Summarize conversation"
@@ -138,6 +157,14 @@ const Header: React.FC<HeaderProps> = memo(function Header({ conversation }) {
           isOpen={summaryModalOpen}
           onClose={() => setSummaryModalOpen(false)}
           conversationId={conversation.id}
+        />
+      )}
+      {shareDialogOpen && (
+        <ShareDialog
+          conversationId={conversation.id}
+          conversationName={conversation.name || otherUser?.name || "Conversation"}
+          isOpen={shareDialogOpen}
+          onClose={() => setShareDialogOpen(false)}
         />
       )}
     </>

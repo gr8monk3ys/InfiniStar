@@ -26,7 +26,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({ isOpen, onClose }) => {
       .delete(`/api/conversations/${conversationId}`)
       .then(() => {
         onClose()
-        router.push("/conversations")
+        router.push("/dashboard/conversations")
         router.refresh()
       })
       .catch(() => toast.error("Something went wrong!"))

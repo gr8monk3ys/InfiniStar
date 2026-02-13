@@ -77,9 +77,8 @@ export default function JoinPage() {
   // Handle join
   const handleJoin = async () => {
     if (!isSignedIn) {
-      // Redirect to login with callback URL
-      const callbackUrl = encodeURIComponent(`/join/${token}`)
-      router.push(`/login?callbackUrl=${callbackUrl}`)
+      const redirectUrl = encodeURIComponent(`/join/${token}`)
+      router.push(`/sign-in?redirect_url=${redirectUrl}`)
       return
     }
 
@@ -120,8 +119,8 @@ export default function JoinPage() {
 
   // Handle login redirect
   const handleLogin = () => {
-    const callbackUrl = encodeURIComponent(`/join/${token}`)
-    router.push(`/login?callbackUrl=${callbackUrl}`)
+    const redirectUrl = encodeURIComponent(`/join/${token}`)
+    router.push(`/sign-in?redirect_url=${redirectUrl}`)
   }
 
   // Loading state
