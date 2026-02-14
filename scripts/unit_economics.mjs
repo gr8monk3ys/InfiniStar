@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import process from "node:process"
+import { URL } from "node:url"
 import { neonConfig } from "@neondatabase/serverless"
 import { PrismaNeon } from "@prisma/adapter-neon"
 import { PrismaClient } from "@prisma/client"
