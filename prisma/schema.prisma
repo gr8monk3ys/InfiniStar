@@ -73,6 +73,8 @@ model User {
   tipsReceived     CreatorTip[]          @relation("CreatorTipsReceived")
   subscriptionsGiven    CreatorSubscription[] @relation("CreatorSubscriptionsGiven")
   subscriptionsReceived CreatorSubscription[] @relation("CreatorSubscriptionsReceived")
+  following            UserFollow[]        @relation("UserFollows")
+  followers            UserFollow[]        @relation("UserFollowers")
 
   @@map("users")
 }
@@ -519,6 +521,20 @@ model CreatorSubscription {
   @@index([creatorId, status])
   @@index([supporterId, status])
   @@map("creator_subscriptions")
+}
+
+model UserFollow {
+  followerId  String   @db.Uuid
+  followingId String   @db.Uuid
+  createdAt   DateTime @default(now())
+
+  follower  User @relation("UserFollows", fields: [followerId], references: [id], onDelete: Cascade)
+  following User @relation("UserFollowers", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@id([followerId, followingId])
+  @@index([followingId])
+  @@index([followerId])
+  @@map("user_follows")
 }
 
 enum CreatorTransactionStatus {

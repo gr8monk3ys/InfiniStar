@@ -9,6 +9,8 @@ import prisma from "@/app/lib/prismadb"
 import { CharacterCard } from "@/app/components/characters/CharacterCard"
 import { CreatorSupportCard } from "@/app/components/monetization/CreatorSupportCard"
 
+import FollowCreatorButton from "./FollowCreatorButton"
+
 export const dynamic = "force-dynamic"
 
 interface CreatorCharacter {
@@ -62,7 +64,7 @@ export default async function CreatorProfilePage({ params }: CreatorProfilePageP
     ? await prisma.user.findUnique({ where: { clerkId: viewerClerkId }, select: { id: true } })
     : null
 
-  const [tips, subscriptions, viewerSubscription] = await Promise.all([
+  const [tips, subscriptions, viewerSubscription, followerCount, viewerFollow] = await Promise.all([
     prisma.creatorTip.findMany({
       where: {
         creatorId: user.id,
@@ -103,6 +105,20 @@ export default async function CreatorProfilePage({ params }: CreatorProfilePageP
             interval: true,
             status: true,
           },
+        })
+      : Promise.resolve(null),
+    prisma.userFollow.count({
+      where: { followingId: user.id },
+    }),
+    viewerUser?.id
+      ? prisma.userFollow.findUnique({
+          where: {
+            followerId_followingId: {
+              followerId: viewerUser.id,
+              followingId: user.id,
+            },
+          },
+          select: { followerId: true },
         })
       : Promise.resolve(null),
   ])
@@ -152,6 +168,10 @@ export default async function CreatorProfilePage({ params }: CreatorProfilePageP
             <HiChatBubbleLeftRight className="size-4" aria-hidden="true" />
             {totalChats.toLocaleString()} total chats
           </span>
+          <span className="flex items-center gap-1">
+            <span className="size-4 rounded-full bg-primary/10" aria-hidden="true" />
+            {followerCount.toLocaleString()} follower{followerCount === 1 ? "" : "s"}
+          </span>
           {user.website && (
             <a
               href={user.website}
@@ -164,6 +184,14 @@ export default async function CreatorProfilePage({ params }: CreatorProfilePageP
             </a>
           )}
         </div>
+
+        <FollowCreatorButton
+          creatorId={user.id}
+          creatorName={user.name || "Creator"}
+          initialIsFollowing={Boolean(viewerFollow)}
+          initialFollowerCount={followerCount}
+          disabled={viewerUser?.id === user.id}
+        />
       </div>
 
       {/* Characters Grid */}

@@ -91,6 +91,29 @@ export default async function FeedPage() {
     ? await getRecommendationSignalsForUser(currentUser.id)
     : null
 
+  const followingCreatorIds = currentUser?.id
+    ? (
+        await prisma.userFollow.findMany({
+          where: { followerId: currentUser.id },
+          select: { followingId: true },
+          take: 1000,
+        })
+      ).map((row) => row.followingId)
+    : []
+
+  const followingRaw =
+    followingCreatorIds.length > 0
+      ? await prisma.character.findMany({
+          where: {
+            isPublic: true,
+            createdById: { in: followingCreatorIds },
+          },
+          orderBy: [{ createdAt: "desc" }, { usageCount: "desc" }],
+          take: 60,
+          select: CHARACTER_SELECT,
+        })
+      : []
+
   const trendingCharacters = recommendationSignals
     ? rankCharactersForUser(trendingRaw, recommendationSignals).slice(0, 8)
     : trendingRaw.slice(0, 8)
@@ -98,6 +121,10 @@ export default async function FeedPage() {
   const freshCharacters = recommendationSignals
     ? rankCharactersForUser(freshRaw, recommendationSignals).slice(0, 8)
     : freshRaw.slice(0, 8)
+
+  const followingCharacters = recommendationSignals
+    ? rankCharactersForUser(followingRaw, recommendationSignals).slice(0, 8)
+    : followingRaw.slice(0, 8)
 
   const topCreators: CreatorSummary[] = creatorRows
     .map((creator) => {
@@ -207,6 +234,34 @@ export default async function FeedPage() {
           </div>
         )}
       </section>
+
+      {currentUser?.id && (
+        <section>
+          <div className="mb-4 flex items-center gap-2">
+            <HiUserGroup className="size-5 text-primary" />
+            <h2 className="text-xl font-semibold">From Creators You Follow</h2>
+          </div>
+          {followingCreatorIds.length === 0 ? (
+            <div className="rounded-xl border border-dashed p-8 text-sm text-muted-foreground">
+              Follow a few creators to see their newest characters here. Start with{" "}
+              <Link href="/explore" className="text-primary underline-offset-4 hover:underline">
+                Explore
+              </Link>
+              .
+            </div>
+          ) : followingCharacters.length === 0 ? (
+            <div className="rounded-xl border border-dashed p-8 text-sm text-muted-foreground">
+              No public characters from creators you follow yet.
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+              {followingCharacters.map((character) => (
+                <CharacterCard key={character.id} character={character} />
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
       <section>
         <div className="mb-4 flex items-center gap-2">
