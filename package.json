@@ -65,7 +65,7 @@
     "@t3-oss/env-nextjs": "^0.13.10",
     "@types/lodash": "^4.17.23",
     "@types/react-select": "^5.0.1",
-    "axios": "^1.13.4",
+    "axios": "^1.13.5",
     "bcryptjs": "^2.4.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -138,5 +138,10 @@
     "tailwindcss": "^3.4.17",
     "ts-node": "^10.9.2",
     "typescript": "^5.0.0"
+  },
+  "overrides": {
+    "@babel/runtime": "^7.28.6",
+    "@types/node-fetch": "2.6.13",
+    "form-data": "^4.0.5"
   }
 }
