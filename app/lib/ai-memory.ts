@@ -8,6 +8,7 @@
 import Anthropic from "@anthropic-ai/sdk"
 import { MemoryCategory, type AIMemory } from "@prisma/client"
 
+import { getFreeTierModel } from "@/app/lib/ai-model-routing"
 import { trackAiUsage } from "@/app/lib/ai-usage"
 import prisma from "@/app/lib/prismadb"
 import { getUserSubscriptionPlan } from "@/app/lib/subscription"
@@ -387,8 +388,9 @@ If there's nothing notable to remember, return an empty array.
 
   try {
     const startedAt = Date.now()
+    const model = getFreeTierModel()
     const response = await anthropic.messages.create({
-      model: "claude-3-5-haiku-20241022", // Use faster model for extraction
+      model, // Use fast/cheap model for extraction.
       max_tokens: 1024,
       messages: [
         {
@@ -402,7 +404,7 @@ If there's nothing notable to remember, return an empty array.
     await trackAiUsage({
       userId,
       conversationId,
-      model: "claude-3-5-haiku-20241022",
+      model,
       inputTokens: response.usage.input_tokens,
       outputTokens: response.usage.output_tokens,
       requestType: "memory-extract",

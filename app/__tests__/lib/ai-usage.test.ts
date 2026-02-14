@@ -14,15 +14,15 @@ jest.mock("@/app/lib/prismadb", () => ({
 }))
 
 describe("MODEL_PRICING", () => {
-  it("should have pricing for Claude 3.5 Sonnet", () => {
-    const pricing = MODEL_PRICING["claude-3-5-sonnet-20241022"]
+  it("should have pricing for Claude Sonnet 4.5", () => {
+    const pricing = MODEL_PRICING["claude-sonnet-4-5-20250929"]
     expect(pricing).toBeDefined()
     expect(pricing.input).toBe(3.0)
     expect(pricing.output).toBe(15.0)
   })
 
-  it("should have pricing for Claude 3 Opus", () => {
-    const pricing = MODEL_PRICING["claude-3-opus-20240229"]
+  it("should have pricing for Claude Opus 4.1", () => {
+    const pricing = MODEL_PRICING["claude-opus-4-1-20250805"]
     expect(pricing).toBeDefined()
     expect(pricing.input).toBe(15.0)
     expect(pricing.output).toBe(75.0)
@@ -35,17 +35,17 @@ describe("MODEL_PRICING", () => {
     expect(pricing.output).toBe(1.25)
   })
 
-  it("should have pricing for Claude 3.5 Haiku", () => {
-    const pricing = MODEL_PRICING["claude-3-5-haiku-20241022"]
+  it("should have pricing for Claude Haiku 4.5", () => {
+    const pricing = MODEL_PRICING["claude-haiku-4-5-20251001"]
     expect(pricing).toBeDefined()
-    expect(pricing.input).toBe(0.8)
-    expect(pricing.output).toBe(4.0)
+    expect(pricing.input).toBe(1.0)
+    expect(pricing.output).toBe(5.0)
   })
 
   it("should have Haiku as the cheapest model", () => {
     const haiku = MODEL_PRICING["claude-3-haiku-20240307"]
-    const sonnet = MODEL_PRICING["claude-3-5-sonnet-20241022"]
-    const opus = MODEL_PRICING["claude-3-opus-20240229"]
+    const sonnet = MODEL_PRICING["claude-sonnet-4-5-20250929"]
+    const opus = MODEL_PRICING["claude-opus-4-1-20250805"]
 
     expect(haiku.input).toBeLessThan(sonnet.input)
     expect(haiku.input).toBeLessThan(opus.input)
@@ -55,8 +55,8 @@ describe("MODEL_PRICING", () => {
 
   it("should have Opus as the most expensive model", () => {
     const haiku = MODEL_PRICING["claude-3-haiku-20240307"]
-    const sonnet = MODEL_PRICING["claude-3-5-sonnet-20241022"]
-    const opus = MODEL_PRICING["claude-3-opus-20240229"]
+    const sonnet = MODEL_PRICING["claude-sonnet-4-5-20250929"]
+    const opus = MODEL_PRICING["claude-opus-4-1-20250805"]
 
     expect(opus.input).toBeGreaterThan(sonnet.input)
     expect(opus.input).toBeGreaterThan(haiku.input)
@@ -67,7 +67,7 @@ describe("MODEL_PRICING", () => {
 
 describe("calculateTokenCost", () => {
   describe("Sonnet model costs", () => {
-    const model = "claude-3-5-sonnet-20241022"
+    const model = "claude-sonnet-4-5-20250929"
 
     it("should calculate zero cost for zero tokens", () => {
       const result = calculateTokenCost(model, 0, 0)
@@ -110,11 +110,11 @@ describe("calculateTokenCost", () => {
   })
 
   describe("Opus model costs", () => {
-    const model = "claude-3-opus-20240229"
+    const model = "claude-opus-4-1-20250805"
 
     it("should calculate higher costs than Sonnet", () => {
       const opusResult = calculateTokenCost(model, 1000, 1000)
-      const sonnetResult = calculateTokenCost("claude-3-5-sonnet-20241022", 1000, 1000)
+      const sonnetResult = calculateTokenCost("claude-sonnet-4-5-20250929", 1000, 1000)
 
       expect(opusResult.totalCost).toBeGreaterThan(sonnetResult.totalCost)
     })
@@ -133,25 +133,25 @@ describe("calculateTokenCost", () => {
   })
 
   describe("Haiku model costs", () => {
-    const model = "claude-3-5-haiku-20241022"
+    const model = "claude-haiku-4-5-20251001"
 
     it("should calculate lower costs than Sonnet", () => {
       const haikuResult = calculateTokenCost(model, 1000, 1000)
-      const sonnetResult = calculateTokenCost("claude-3-5-sonnet-20241022", 1000, 1000)
+      const sonnetResult = calculateTokenCost("claude-sonnet-4-5-20250929", 1000, 1000)
 
       expect(haikuResult.totalCost).toBeLessThan(sonnetResult.totalCost)
     })
 
     it("should calculate cost for 1 million input tokens", () => {
       const result = calculateTokenCost(model, 1_000_000, 0)
-      // $0.80 per million tokens = 80 cents
-      expect(result.inputCost).toBe(80)
+      // $1 per million tokens = 100 cents
+      expect(result.inputCost).toBe(100)
     })
 
     it("should calculate cost for 1 million output tokens", () => {
       const result = calculateTokenCost(model, 0, 1_000_000)
-      // $4 per million tokens = 400 cents
-      expect(result.outputCost).toBe(400)
+      // $5 per million tokens = 500 cents
+      expect(result.outputCost).toBe(500)
     })
 
     it("should handle large volume requests efficiently", () => {
@@ -164,7 +164,7 @@ describe("calculateTokenCost", () => {
   describe("Unknown model handling", () => {
     it("should default to Sonnet pricing for unknown model", () => {
       const unknownResult = calculateTokenCost("unknown-model", 1000, 1000)
-      const sonnetResult = calculateTokenCost("claude-3-5-sonnet-20241022", 1000, 1000)
+      const sonnetResult = calculateTokenCost("claude-sonnet-4-5-20250929", 1000, 1000)
 
       expect(unknownResult.inputCost).toBe(sonnetResult.inputCost)
       expect(unknownResult.outputCost).toBe(sonnetResult.outputCost)
@@ -179,7 +179,7 @@ describe("calculateTokenCost", () => {
 
   describe("Rounding behavior", () => {
     it("should round to 2 decimal places", () => {
-      const result = calculateTokenCost("claude-3-5-sonnet-20241022", 333, 777)
+      const result = calculateTokenCost("claude-sonnet-4-5-20250929", 333, 777)
 
       // Check that results are rounded to 2 decimal places
       expect(result.inputCost.toString().split(".")[1]?.length || 0).toBeLessThanOrEqual(2)
@@ -188,12 +188,12 @@ describe("calculateTokenCost", () => {
     })
 
     it("should handle very small token counts", () => {
-      const result = calculateTokenCost("claude-3-5-sonnet-20241022", 1, 1)
+      const result = calculateTokenCost("claude-sonnet-4-5-20250929", 1, 1)
       expect(result.totalCost).toBe(0) // Less than 0.005 cents, rounds to 0
     })
 
     it("should handle very large token counts", () => {
-      const result = calculateTokenCost("claude-3-5-sonnet-20241022", 100_000_000, 50_000_000)
+      const result = calculateTokenCost("claude-sonnet-4-5-20250929", 100_000_000, 50_000_000)
       expect(result.inputCost).toBe(30000) // $300 worth
       expect(result.outputCost).toBe(75000) // $750 worth
       expect(result.totalCost).toBe(105000)
@@ -202,7 +202,7 @@ describe("calculateTokenCost", () => {
 
   describe("Return value structure", () => {
     it("should return object with all required fields", () => {
-      const result = calculateTokenCost("claude-3-5-sonnet-20241022", 1000, 1000)
+      const result = calculateTokenCost("claude-sonnet-4-5-20250929", 1000, 1000)
 
       expect(result).toHaveProperty("inputCost")
       expect(result).toHaveProperty("outputCost")
@@ -210,7 +210,7 @@ describe("calculateTokenCost", () => {
     })
 
     it("should return numbers for all cost fields", () => {
-      const result = calculateTokenCost("claude-3-5-sonnet-20241022", 1000, 1000)
+      const result = calculateTokenCost("claude-sonnet-4-5-20250929", 1000, 1000)
 
       expect(typeof result.inputCost).toBe("number")
       expect(typeof result.outputCost).toBe("number")
@@ -218,7 +218,7 @@ describe("calculateTokenCost", () => {
     })
 
     it("should have totalCost equal to sum of input and output costs", () => {
-      const result = calculateTokenCost("claude-3-5-sonnet-20241022", 5000, 2500)
+      const result = calculateTokenCost("claude-sonnet-4-5-20250929", 5000, 2500)
 
       // Due to rounding, we check within a small epsilon
       expect(Math.abs(result.totalCost - (result.inputCost + result.outputCost))).toBeLessThan(0.01)
@@ -227,17 +227,17 @@ describe("calculateTokenCost", () => {
 
   describe("Edge cases", () => {
     it("should handle negative input tokens (treat as 0)", () => {
-      const result = calculateTokenCost("claude-3-5-sonnet-20241022", -1000, 1000)
+      const result = calculateTokenCost("claude-sonnet-4-5-20250929", -1000, 1000)
       expect(result.inputCost).toBe(0)
     })
 
     it("should handle negative output tokens (treat as 0)", () => {
-      const result = calculateTokenCost("claude-3-5-sonnet-20241022", 1000, -1000)
+      const result = calculateTokenCost("claude-sonnet-4-5-20250929", 1000, -1000)
       expect(result.outputCost).toBe(0)
     })
 
     it("should handle floating point input tokens", () => {
-      const result = calculateTokenCost("claude-3-5-sonnet-20241022", 1000.5, 500.7)
+      const result = calculateTokenCost("claude-sonnet-4-5-20250929", 1000.5, 500.7)
       expect(result.totalCost).toBeGreaterThan(0)
     })
   })
@@ -247,9 +247,9 @@ describe("Cost Comparison Scenarios", () => {
   it("should show significant cost difference between models for same usage", () => {
     const tokens = { input: 10_000, output: 5_000 }
 
-    const haiku = calculateTokenCost("claude-3-5-haiku-20241022", tokens.input, tokens.output)
-    const sonnet = calculateTokenCost("claude-3-5-sonnet-20241022", tokens.input, tokens.output)
-    const opus = calculateTokenCost("claude-3-opus-20240229", tokens.input, tokens.output)
+    const haiku = calculateTokenCost("claude-haiku-4-5-20251001", tokens.input, tokens.output)
+    const sonnet = calculateTokenCost("claude-sonnet-4-5-20250929", tokens.input, tokens.output)
+    const opus = calculateTokenCost("claude-opus-4-1-20250805", tokens.input, tokens.output)
 
     // Verify relative costs
     expect(opus.totalCost).toBeGreaterThan(sonnet.totalCost)
@@ -268,15 +268,15 @@ describe("Cost Comparison Scenarios", () => {
     const totalInput = inputPerRequest * requestsPerMonth
     const totalOutput = outputPerRequest * requestsPerMonth
 
-    const haikuMonthly = calculateTokenCost("claude-3-5-haiku-20241022", totalInput, totalOutput)
-    const sonnetMonthly = calculateTokenCost("claude-3-5-sonnet-20241022", totalInput, totalOutput)
+    const haikuMonthly = calculateTokenCost("claude-haiku-4-5-20251001", totalInput, totalOutput)
+    const sonnetMonthly = calculateTokenCost("claude-sonnet-4-5-20250929", totalInput, totalOutput)
 
     // Sonnet: about $9 + $22.50 = $31.50 (3150 cents)
     expect(sonnetMonthly.totalCost).toBeGreaterThan(3000)
     expect(sonnetMonthly.totalCost).toBeLessThan(3500)
 
-    // Haiku: about $2.4 + $6 = $8.4 (840 cents)
-    expect(haikuMonthly.totalCost).toBeGreaterThan(700)
-    expect(haikuMonthly.totalCost).toBeLessThan(900)
+    // Haiku: about $3 + $7.50 = $10.50 (1050 cents)
+    expect(haikuMonthly.totalCost).toBeGreaterThan(900)
+    expect(haikuMonthly.totalCost).toBeLessThan(1200)
   })
 })

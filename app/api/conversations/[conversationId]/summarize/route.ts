@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server"
 import Anthropic from "@anthropic-ai/sdk"
 
 import { getAiAccessDecision } from "@/app/lib/ai-access"
+import { getFreeTierModel } from "@/app/lib/ai-model-routing"
 import { trackAiUsage } from "@/app/lib/ai-usage"
 import { verifyCsrfToken } from "@/app/lib/csrf"
 import prisma from "@/app/lib/prismadb"
@@ -190,7 +191,7 @@ export async function POST(
 
     // Track request start time for latency measurement
     const startTime = Date.now()
-    const modelToUse = "claude-3-5-sonnet-20241022"
+    const modelToUse = getFreeTierModel()
 
     const accessDecision = await getAiAccessDecision(currentUser.id)
     if (!accessDecision.allowed) {

@@ -1,13 +1,18 @@
 /**
  * AI Model Configuration
  *
- * This module provides configuration for available Anthropic Claude models
+ * This module provides configuration for available Anthropic Claude models.
+ *
+ * NOTE: Model IDs and pricing change over time. Keep this list aligned with
+ * Anthropic's "models list" endpoint and pricing page.
  */
 
-export type ModelType =
-  | "claude-3-5-sonnet-20241022"
-  | "claude-3-opus-20240229"
-  | "claude-3-5-haiku-20241022"
+export const MODEL_SONNET_4_5 = "claude-sonnet-4-5-20250929" as const
+export const MODEL_HAIKU_4_5 = "claude-haiku-4-5-20251001" as const
+
+export const SUPPORTED_MODEL_IDS = [MODEL_SONNET_4_5, MODEL_HAIKU_4_5] as const
+
+export type ModelType = (typeof SUPPORTED_MODEL_IDS)[number]
 
 export interface AIModel {
   id: ModelType
@@ -26,10 +31,10 @@ export interface AIModel {
  * Available Claude models with their configurations
  */
 export const AI_MODELS: Record<ModelType, AIModel> = {
-  "claude-3-5-sonnet-20241022": {
-    id: "claude-3-5-sonnet-20241022",
-    name: "Claude 3.5 Sonnet",
-    description: "Best balance of speed, quality, and cost. Recommended for most use cases.",
+  [MODEL_SONNET_4_5]: {
+    id: MODEL_SONNET_4_5,
+    name: "Claude Sonnet 4.5",
+    description: "High-quality responses with a strong balance of speed and cost. Recommended.",
     speed: "balanced",
     quality: "great",
     cost: "medium",
@@ -38,28 +43,16 @@ export const AI_MODELS: Record<ModelType, AIModel> = {
     outputCostPerMillion: 15.0,
     recommended: true,
   },
-  "claude-3-opus-20240229": {
-    id: "claude-3-opus-20240229",
-    name: "Claude 3 Opus",
-    description: "Most capable model with best quality output. Slower and more expensive.",
-    speed: "slow",
-    quality: "best",
-    cost: "high",
-    maxTokens: 4096,
-    inputCostPerMillion: 15.0,
-    outputCostPerMillion: 75.0,
-    recommended: false,
-  },
-  "claude-3-5-haiku-20241022": {
-    id: "claude-3-5-haiku-20241022",
-    name: "Claude 3.5 Haiku",
-    description: "Fast, affordable model. Great for lightweight chats and background features.",
+  [MODEL_HAIKU_4_5]: {
+    id: MODEL_HAIKU_4_5,
+    name: "Claude Haiku 4.5",
+    description: "Fast and affordable. Great for lightweight chats and background features.",
     speed: "fast",
     quality: "good",
     cost: "low",
     maxTokens: 4096,
-    inputCostPerMillion: 0.8,
-    outputCostPerMillion: 4.0,
+    inputCostPerMillion: 1.0,
+    outputCostPerMillion: 5.0,
     recommended: false,
   },
 }
@@ -68,7 +61,7 @@ export const AI_MODELS: Record<ModelType, AIModel> = {
  * Get model configuration
  */
 export function getModel(modelId: ModelType): AIModel {
-  return AI_MODELS[modelId] || AI_MODELS["claude-3-5-sonnet-20241022"]
+  return AI_MODELS[modelId] || AI_MODELS[MODEL_SONNET_4_5]
 }
 
 /**
@@ -82,7 +75,7 @@ export function getAllModels(): AIModel[] {
  * Get default model
  */
 export function getDefaultModel(): ModelType {
-  return "claude-3-5-sonnet-20241022"
+  return MODEL_SONNET_4_5
 }
 
 /**
@@ -96,10 +89,7 @@ export function isValidModel(type: string): type is ModelType {
  * Get recommended model
  */
 export function getRecommendedModel(): AIModel {
-  return (
-    Object.values(AI_MODELS).find((model) => model.recommended) ||
-    AI_MODELS["claude-3-5-sonnet-20241022"]
-  )
+  return Object.values(AI_MODELS).find((model) => model.recommended) || AI_MODELS[MODEL_SONNET_4_5]
 }
 
 /**

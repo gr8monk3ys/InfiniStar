@@ -3,6 +3,7 @@ import Anthropic from "@anthropic-ai/sdk"
 
 import { getAiAccessDecision } from "@/app/lib/ai-access"
 import { buildAiConversationHistory, buildAiMessageContent } from "@/app/lib/ai-message-content"
+import { getModelForUser } from "@/app/lib/ai-model-routing"
 import {
   getDefaultPersonality,
   getSystemPrompt,
@@ -196,7 +197,10 @@ export async function POST(request: NextRequest) {
 
     // Track request start time for latency measurement
     const startTime = Date.now()
-    const modelToUse = conversation.aiModel || "claude-3-5-sonnet-20241022"
+    const modelToUse = getModelForUser({
+      isPro: accessDecision.limits?.isPro ?? false,
+      requestedModelId: conversation.aiModel,
+    })
 
     // Get system prompt based on personality with proper type validation
     const personalityType =

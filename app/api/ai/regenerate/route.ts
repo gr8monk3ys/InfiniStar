@@ -4,6 +4,7 @@ import { z } from "zod"
 
 import { getAiAccessDecision } from "@/app/lib/ai-access"
 import { buildAiConversationHistory } from "@/app/lib/ai-message-content"
+import { getModelForUser } from "@/app/lib/ai-model-routing"
 import {
   getDefaultPersonality,
   getSystemPrompt,
@@ -220,7 +221,10 @@ export async function POST(request: NextRequest) {
         const encoder = new TextEncoder()
         let fullResponse = ""
         const startTime = Date.now()
-        const modelToUse = message.conversation.aiModel || "claude-3-5-sonnet-20241022"
+        const modelToUse = getModelForUser({
+          isPro: accessDecision.limits?.isPro ?? false,
+          requestedModelId: message.conversation.aiModel,
+        })
 
         // Get system prompt based on personality with proper type validation
         const personalityType =

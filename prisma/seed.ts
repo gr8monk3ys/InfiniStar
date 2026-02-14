@@ -137,7 +137,7 @@ async function main() {
     data: {
       name: "AI Assistant",
       isAI: true,
-      aiModel: "claude-3-5-sonnet-20241022",
+      aiModel: "claude-sonnet-4-5-20250929",
       users: {
         connect: { id: alice.id },
       },

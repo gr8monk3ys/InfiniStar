@@ -7,6 +7,7 @@
 
 import Anthropic from "@anthropic-ai/sdk"
 
+import { getFreeTierModel } from "@/app/lib/ai-model-routing"
 import { trackAiUsage } from "@/app/lib/ai-usage"
 import { type FullMessageType } from "@/app/types"
 
@@ -295,9 +296,10 @@ export async function generateSuggestions(
   // Call Claude Haiku for fast suggestions
   const anthropic = getAnthropicClient()
 
+  const model = getFreeTierModel()
   const startedAt = Date.now()
   const response = await anthropic.messages.create({
-    model: "claude-3-5-haiku-20241022",
+    model,
     max_tokens: 512,
     system,
     messages: [
@@ -313,7 +315,7 @@ export async function generateSuggestions(
     await trackAiUsage({
       userId: tracking.userId,
       conversationId: tracking.conversationId,
-      model: "claude-3-5-haiku-20241022",
+      model,
       inputTokens: response.usage.input_tokens,
       outputTokens: response.usage.output_tokens,
       requestType: "suggestions",

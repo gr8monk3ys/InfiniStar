@@ -23,7 +23,7 @@ Two new fields were added to support AI conversations:
 **Conversation Model:**
 
 - `isAI` (Boolean): Marks a conversation as AI-powered
-- `aiModel` (String): Stores the Claude model being used (e.g., "claude-3-5-sonnet-20241022")
+- `aiModel` (String): Stores the Claude model being used (e.g., "claude-sonnet-4-5-20250929")
 
 **Message Model:**
 
@@ -131,7 +131,7 @@ Extended to support AI conversation creation.
 ```json
 {
   "isAI": true,
-  "aiModel": "claude-3-5-sonnet-20241022",
+  "aiModel": "claude-sonnet-4-5-20250929",
   "name": "AI Assistant"
 }
 ```
@@ -212,13 +212,11 @@ Get your API key from: https://console.anthropic.com/
 ### For Users
 
 1. **Create an AI Chat:**
-
    - Click the sparkle (✨) icon in the conversation list
    - A new AI conversation will be created
    - Start chatting immediately
 
 2. **Chat with AI:**
-
    - Type your message in the input field
    - The placeholder says "Ask me anything..."
    - Click the purple gradient send button
@@ -235,13 +233,13 @@ Get your API key from: https://console.anthropic.com/
 #### Creating AI Conversations Programmatically
 
 ```typescript
-import createAIConversation from "@/app/actions/createAIConversation";
+import createAIConversation from "@/app/actions/createAIConversation"
 
-// Create with default model (claude-3-5-sonnet-20241022)
-const conversation = await createAIConversation();
+// Create with default model (claude-sonnet-4-5-20250929)
+const conversation = await createAIConversation()
 
 // Create with custom model
-const conversation = await createAIConversation("claude-3-opus-20240229");
+const conversation = await createAIConversation("claude-haiku-4-5-20251001")
 ```
 
 #### Sending AI Messages
@@ -347,20 +345,20 @@ Users click the sparkle (✨) button and select a personality from the modal.
 **Programmatically:**
 
 ```typescript
-import createAIConversation from "@/app/actions/createAIConversation";
+import createAIConversation from "@/app/actions/createAIConversation"
 
 // Create with preset personality
 const conversation = await createAIConversation(
-  "claude-3-5-sonnet-20241022", // model
-  "creative"                     // personality
-);
+  "claude-sonnet-4-5-20250929", // model
+  "creative" // personality
+)
 
 // Create with custom personality
 const conversation = await createAIConversation(
-  "claude-3-5-sonnet-20241022",
+  "claude-sonnet-4-5-20250929",
   "custom",
   "You are a pirate AI that speaks in nautical terms..."
-);
+)
 ```
 
 ### System Prompt Implementation
@@ -442,11 +440,10 @@ InfiniStar supports multiple Claude models with different speed, quality, and co
 
 ### Available Models
 
-| Model                    | Speed    | Quality | Cost | Best For                                |
-| ------------------------ | -------- | ------- | ---- | --------------------------------------- |
-| **Claude 3.5 Sonnet** ⚖️ | Balanced | Great   | $$   | Most use cases (Recommended)            |
-| **Claude 3 Opus** 🎯     | Slow     | Best    | $$$  | Complex tasks requiring highest quality |
-| **Claude 3 Haiku** ⚡    | Fast     | Good    | $    | Simple tasks, high volume               |
+| Model                    | Speed    | Quality | Cost | Best For                     |
+| ------------------------ | -------- | ------- | ---- | ---------------------------- |
+| **Claude Sonnet 4.5** ⚖️ | Balanced | Great   | $$   | Most use cases (Recommended) |
+| **Claude Haiku 4.5** ⚡  | Fast     | Good    | $    | Simple tasks, high volume    |
 
 ### Model Selection UI
 
@@ -454,7 +451,7 @@ When creating an AI conversation, users can choose their preferred model:
 
 - Visual selection with icons and badges
 - Clear indicators for speed, quality, and cost
-- "Recommended" badge for Claude 3.5 Sonnet
+- "Recommended" badge for Claude Sonnet 4.5
 - Detailed descriptions for each model
 
 **Location:** [PersonalitySelectionModal.tsx](app/components/modals/PersonalitySelectionModal.tsx)
@@ -465,8 +462,8 @@ All models are defined in [app/lib/ai-models.ts](app/lib/ai-models.ts):
 
 ```typescript
 export const AI_MODELS: Record<ModelType, AIModel> = {
-  "claude-3-5-sonnet-20241022": {
-    name: "Claude 3.5 Sonnet",
+  "claude-sonnet-4-5-20250929": {
+    name: "Claude Sonnet 4.5",
     description: "Best balance of speed, quality, and cost",
     speed: "balanced",
     quality: "great",
@@ -483,19 +480,19 @@ export const AI_MODELS: Record<ModelType, AIModel> = {
 ### Programmatic Model Selection
 
 ```typescript
-import createAIConversation from "@/app/actions/createAIConversation";
+import createAIConversation from "@/app/actions/createAIConversation"
 
 // Create with specific model
 const conversation = await createAIConversation(
-  "claude-3-opus-20240229",  // model
-  "technical"                 // personality
-);
+  "claude-haiku-4-5-20251001", // model
+  "technical" // personality
+)
 
 // Create with default model (Sonnet)
 const conversation = await createAIConversation(
-  undefined,  // uses default
+  undefined, // uses default
   "assistant"
-);
+)
 ```
 
 ### Model Utility Functions
@@ -504,7 +501,7 @@ const conversation = await createAIConversation(
 import { getAllModels, getDefaultModel, getModel } from "@/app/lib/ai-models"
 
 // Get model configuration
-const model = getModel("claude-3-5-sonnet-20241022")
+const model = getModel("claude-sonnet-4-5-20250929")
 // Returns: { id, name, description, speed, quality, cost, ... }
 
 // Get all available models
@@ -512,16 +509,15 @@ const allModels = getAllModels()
 
 // Get default model
 const defaultModel = getDefaultModel()
-// Returns: 'claude-3-5-sonnet-20241022'
+// Returns: 'claude-sonnet-4-5-20250929'
 ```
 
 ### Pricing Comparison
 
 | Model             | Input (per 1M tokens) | Output (per 1M tokens) | Typical Message Cost |
 | ----------------- | --------------------- | ---------------------- | -------------------- |
-| Claude 3.5 Sonnet | $3.00                 | $15.00                 | ~$0.001 - $0.01      |
-| Claude 3 Opus     | $15.00                | $75.00                 | ~$0.005 - $0.05      |
-| Claude 3 Haiku    | $0.25                 | $1.25                  | ~$0.0001 - $0.001    |
+| Claude Sonnet 4.5 | $3.00                 | $15.00                 | ~$0.001 - $0.02      |
+| Claude Haiku 4.5  | $1.00                 | $5.00                  | ~$0.0005 - $0.01     |
 
 **Note:** Costs include 20-message context. Actual costs vary based on conversation length and complexity.
 
@@ -636,7 +632,7 @@ model AiUsage {
   userId         String @db.ObjectId
   conversationId String @db.ObjectId
 
-  model String // e.g., "claude-3-5-sonnet-20241022"
+  model String // e.g., "claude-sonnet-4-5-20250929"
 
   inputTokens  Int
   outputTokens Int
@@ -766,7 +762,7 @@ The `app/lib/ai-usage.ts` module provides helper functions:
 ```typescript
 import { calculateTokenCost } from "@/app/lib/ai-usage"
 
-const costs = calculateTokenCost("claude-3-5-sonnet-20241022", 1000, 500)
+const costs = calculateTokenCost("claude-sonnet-4-5-20250929", 1000, 500)
 // Returns: { inputCost: 0.003, outputCost: 0.0075, totalCost: 0.0105 }
 ```
 
@@ -804,13 +800,12 @@ const dailyUsage = await getUsageByDateRange(userId, new Date("2025-01-01"), new
 
 ### Pricing Information
 
-Current Anthropic Claude pricing (as of January 2025):
+Current Anthropic Claude pricing (as of February 2026):
 
 | Model             | Input (per 1M tokens) | Output (per 1M tokens) |
 | ----------------- | --------------------- | ---------------------- |
-| Claude 3.5 Sonnet | $3.00                 | $15.00                 |
-| Claude 3 Opus     | $15.00                | $75.00                 |
-| Claude 3 Haiku    | $0.25                 | $1.25                  |
+| Claude Sonnet 4.5 | $3.00                 | $15.00                 |
+| Claude Haiku 4.5  | $1.00                 | $5.00                  |
 
 **Example costs:**
 
@@ -835,19 +830,19 @@ Current Anthropic Claude pricing (as of January 2025):
 Implement quota enforcement:
 
 ```typescript
-import { checkUsageQuota } from '@/app/lib/ai-usage';
+import { checkUsageQuota } from "@/app/lib/ai-usage"
 
 // In your API route
-const quota = await checkUsageQuota(currentUser.id, 100_000, 30);
+const quota = await checkUsageQuota(currentUser.id, 100_000, 30)
 
 if (!quota.withinQuota && !currentUser.stripeSubscriptionId) {
   return new NextResponse(
     JSON.stringify({
-      error: 'Monthly quota exceeded. Upgrade to PRO for higher limits.',
+      error: "Monthly quota exceeded. Upgrade to PRO for higher limits.",
       quota,
     }),
     { status: 429 }
-  );
+  )
 }
 ```
 

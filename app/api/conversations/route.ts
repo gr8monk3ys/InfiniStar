@@ -2,6 +2,8 @@ import { NextResponse, type NextRequest } from "next/server"
 import { auth } from "@clerk/nextjs/server"
 import { z } from "zod"
 
+import { getModelForUser } from "@/app/lib/ai-model-routing"
+import { SUPPORTED_MODEL_IDS } from "@/app/lib/ai-models"
 import { verifyCsrfToken } from "@/app/lib/csrf"
 import prisma from "@/app/lib/prismadb"
 import { pusherServer } from "@/app/lib/pusher"
@@ -97,9 +99,7 @@ const createConversationSchema = z
       .optional()
       .nullable(),
     isAI: z.boolean().optional(),
-    aiModel: z
-      .enum(["claude-3-5-sonnet-20241022", "claude-3-5-haiku-20241022", "claude-3-opus-20240229"])
-      .optional(),
+    aiModel: z.enum(SUPPORTED_MODEL_IDS).optional(),
     characterId: z.string().uuid().optional(),
     sceneCharacterIds: z
       .array(z.string().uuid("Scene character ID must be a valid UUID"))
@@ -166,7 +166,12 @@ export async function POST(request: NextRequest) {
 
     const currentUser = await prisma.user.findUnique({
       where: { clerkId: userId },
-      select: { id: true, email: true },
+      select: {
+        id: true,
+        email: true,
+        stripePriceId: true,
+        stripeCurrentPeriodEnd: true,
+      },
     })
     if (!currentUser) {
       return NextResponse.json({ error: "User not found" }, { status: 401 })
@@ -198,6 +203,16 @@ export async function POST(request: NextRequest) {
 
     // Handle AI conversation creation
     if (isAI) {
+      const isPro = Boolean(
+        currentUser.stripePriceId &&
+        currentUser.stripeCurrentPeriodEnd &&
+        currentUser.stripeCurrentPeriodEnd.getTime() + 86_400_000 > Date.now()
+      )
+      const routedModel = getModelForUser({
+        isPro,
+        requestedModelId: aiModel,
+      })
+
       if (sceneCharacterIds && sceneCharacterIds.length > 0) {
         const uniqueSceneCharacterIds = [...new Set(sceneCharacterIds)]
         if (uniqueSceneCharacterIds.length < 2) {
@@ -242,7 +257,7 @@ export async function POST(request: NextRequest) {
           data: {
             name: buildSceneConversationName(orderedCharacters, sanitizedName),
             isAI: true,
-            aiModel: aiModel || "claude-3-5-sonnet-20241022",
+            aiModel: routedModel,
             aiSystemPrompt: scenePrompt,
             aiPersonality: "custom",
             users: {
@@ -326,7 +341,7 @@ export async function POST(request: NextRequest) {
         data: {
           name: sanitizedName || character?.name || "AI Assistant",
           isAI: true,
-          aiModel: aiModel || "claude-3-5-sonnet-20241022",
+          aiModel: routedModel,
           aiSystemPrompt: character?.systemPrompt,
           aiPersonality: character ? "custom" : undefined,
           characterId: character?.id,

@@ -1,11 +1,13 @@
 "use server"
 
+import { getModelForUser } from "@/app/lib/ai-model-routing"
 import {
   getDefaultPersonality,
   getPersonality,
   type PersonalityType,
 } from "@/app/lib/ai-personalities"
 import prisma from "@/app/lib/prismadb"
+import { getUserSubscriptionPlan } from "@/app/lib/subscription"
 
 import getCurrentUser from "./getCurrentUser"
 
@@ -23,11 +25,16 @@ export default async function createAIConversation(
   try {
     const personalityType = personality || getDefaultPersonality()
     const personalityConfig = getPersonality(personalityType)
+    const subscriptionPlan = await getUserSubscriptionPlan(currentUser.id).catch(() => null)
+    const routedModel = getModelForUser({
+      isPro: subscriptionPlan?.isPro ?? false,
+      requestedModelId: aiModel,
+    })
 
     const newConversation = await prisma.conversation.create({
       data: {
         isAI: true,
-        aiModel: aiModel || "claude-3-5-sonnet-20241022",
+        aiModel: routedModel,
         aiPersonality: personalityType,
         aiSystemPrompt: personalityType === "custom" ? customPrompt : null,
         name: personalityConfig.name,
