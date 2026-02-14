@@ -1,10 +1,14 @@
 "use client"
 
+import toast from "react-hot-toast"
+
 interface NotificationsTabContentProps {
   emailNotifications: boolean
   setEmailNotifications: (value: boolean) => void
   emailDigest: "none" | "daily" | "weekly"
   setEmailDigest: (value: "none" | "daily" | "weekly") => void
+  browserNotifications: boolean
+  setBrowserNotifications: (value: boolean) => void
   notifyOnNewMessage: boolean
   setNotifyOnNewMessage: (value: boolean) => void
   notifyOnMention: boolean
@@ -20,6 +24,8 @@ export function NotificationsTabContent({
   setEmailNotifications,
   emailDigest,
   setEmailDigest,
+  browserNotifications,
+  setBrowserNotifications,
   notifyOnNewMessage,
   setNotifyOnNewMessage,
   notifyOnMention,
@@ -36,6 +42,63 @@ export function NotificationsTabContent({
         <p className="mt-1 text-sm text-gray-600">
           Control how and when you receive notifications from InfiniStar.
         </p>
+      </div>
+
+      {/* Browser Notifications */}
+      <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex-1">
+            <label
+              htmlFor="browserNotifications"
+              className="block text-sm font-medium text-gray-900"
+            >
+              Browser Notifications
+            </label>
+            <p className="mt-1 text-sm text-gray-500">
+              Show notifications while this app is open (best-effort). You may need to grant
+              permission in your browser.
+            </p>
+          </div>
+          <button
+            type="button"
+            id="browserNotifications"
+            role="switch"
+            aria-checked={browserNotifications}
+            onClick={async () => {
+              if (isLoading) return
+
+              if (browserNotifications) {
+                setBrowserNotifications(false)
+                return
+              }
+
+              if (typeof window === "undefined" || !("Notification" in window)) {
+                toast.error("Browser notifications are not supported on this device.")
+                return
+              }
+
+              const permission = await Notification.requestPermission()
+              if (permission !== "granted") {
+                toast.error("Notification permission not granted.")
+                setBrowserNotifications(false)
+                return
+              }
+
+              setBrowserNotifications(true)
+            }}
+            disabled={isLoading}
+            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
+              browserNotifications ? "bg-sky-600" : "bg-gray-200"
+            }`}
+          >
+            <span className="sr-only">Enable browser notifications</span>
+            <span
+              className={`pointer-events-none inline-block size-5 rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                browserNotifications ? "translate-x-5" : "translate-x-0"
+              }`}
+            />
+          </button>
+        </div>
       </div>
 
       {/* Email Notifications Master Toggle */}
@@ -111,15 +174,15 @@ export function NotificationsTabContent({
             role="switch"
             aria-checked={notifyOnNewMessage}
             onClick={() => setNotifyOnNewMessage(!notifyOnNewMessage)}
-            disabled={isLoading || !emailNotifications}
+            disabled={isLoading}
             className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
-              notifyOnNewMessage && emailNotifications ? "bg-sky-600" : "bg-gray-200"
+              notifyOnNewMessage ? "bg-sky-600" : "bg-gray-200"
             }`}
           >
             <span className="sr-only">Enable new message notifications</span>
             <span
               className={`pointer-events-none inline-block size-5 rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                notifyOnNewMessage && emailNotifications ? "translate-x-5" : "translate-x-0"
+                notifyOnNewMessage ? "translate-x-5" : "translate-x-0"
               }`}
             />
           </button>
@@ -141,15 +204,15 @@ export function NotificationsTabContent({
             role="switch"
             aria-checked={notifyOnMention}
             onClick={() => setNotifyOnMention(!notifyOnMention)}
-            disabled={isLoading || !emailNotifications}
+            disabled={isLoading}
             className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
-              notifyOnMention && emailNotifications ? "bg-sky-600" : "bg-gray-200"
+              notifyOnMention ? "bg-sky-600" : "bg-gray-200"
             }`}
           >
             <span className="sr-only">Enable mention notifications</span>
             <span
               className={`pointer-events-none inline-block size-5 rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                notifyOnMention && emailNotifications ? "translate-x-5" : "translate-x-0"
+                notifyOnMention ? "translate-x-5" : "translate-x-0"
               }`}
             />
           </button>
@@ -171,15 +234,15 @@ export function NotificationsTabContent({
             role="switch"
             aria-checked={notifyOnAIComplete}
             onClick={() => setNotifyOnAIComplete(!notifyOnAIComplete)}
-            disabled={isLoading || !emailNotifications}
+            disabled={isLoading}
             className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
-              notifyOnAIComplete && emailNotifications ? "bg-sky-600" : "bg-gray-200"
+              notifyOnAIComplete ? "bg-sky-600" : "bg-gray-200"
             }`}
           >
             <span className="sr-only">Enable AI response notifications</span>
             <span
               className={`pointer-events-none inline-block size-5 rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                notifyOnAIComplete && emailNotifications ? "translate-x-5" : "translate-x-0"
+                notifyOnAIComplete ? "translate-x-5" : "translate-x-0"
               }`}
             />
           </button>

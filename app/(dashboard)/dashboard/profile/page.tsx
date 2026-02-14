@@ -103,6 +103,7 @@ export default function ProfilePage() {
   // Notification preferences state
   const [emailNotifications, setEmailNotifications] = useState(true)
   const [emailDigest, setEmailDigest] = useState<"none" | "daily" | "weekly">("none")
+  const [browserNotifications, setBrowserNotifications] = useState(false)
   const [notifyOnNewMessage, setNotifyOnNewMessage] = useState(true)
   const [notifyOnMention, setNotifyOnMention] = useState(true)
   const [notifyOnAIComplete, setNotifyOnAIComplete] = useState(true)
@@ -144,6 +145,7 @@ export default function ProfilePage() {
         preferences: {
           emailNotifications: boolean
           emailDigest: "none" | "daily" | "weekly"
+          browserNotifications: boolean
           notifyOnNewMessage: boolean
           notifyOnMention: boolean
           notifyOnAIComplete: boolean
@@ -155,6 +157,7 @@ export default function ProfilePage() {
       const prefs = response.preferences
       setEmailNotifications(prefs.emailNotifications)
       setEmailDigest(prefs.emailDigest)
+      setBrowserNotifications(prefs.browserNotifications)
       setNotifyOnNewMessage(prefs.notifyOnNewMessage)
       setNotifyOnMention(prefs.notifyOnMention)
       setNotifyOnAIComplete(prefs.notifyOnAIComplete)
@@ -276,6 +279,7 @@ export default function ProfilePage() {
         {
           emailNotifications,
           emailDigest,
+          browserNotifications,
           notifyOnNewMessage,
           notifyOnMention,
           notifyOnAIComplete,
@@ -434,6 +438,8 @@ export default function ProfilePage() {
                 setEmailNotifications={setEmailNotifications}
                 emailDigest={emailDigest}
                 setEmailDigest={setEmailDigest}
+                browserNotifications={browserNotifications}
+                setBrowserNotifications={setBrowserNotifications}
                 notifyOnNewMessage={notifyOnNewMessage}
                 setNotifyOnNewMessage={setNotifyOnNewMessage}
                 notifyOnMention={notifyOnMention}

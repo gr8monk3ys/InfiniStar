@@ -44,6 +44,7 @@ const ShareDialog = dynamic(() => import("@/app/components/sharing/ShareDialog")
 
 interface HeaderProps {
   conversation: FullConversationType
+  currentUserId: string | null
 }
 
 /**
@@ -52,7 +53,7 @@ interface HeaderProps {
  * Wrapped with React.memo to prevent unnecessary re-renders when parent re-renders
  * but conversation data hasn't changed.
  */
-const Header: React.FC<HeaderProps> = memo(function Header({ conversation }) {
+const Header: React.FC<HeaderProps> = memo(function Header({ conversation, currentUserId }) {
   const otherUser = useOtherUser(conversation)
   const { members } = useActiveList()
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -75,6 +76,7 @@ const Header: React.FC<HeaderProps> = memo(function Header({ conversation }) {
       {drawerOpen && (
         <ProfileDrawer
           data={conversation}
+          currentUserId={currentUserId}
           isOpen={drawerOpen}
           onClose={() => setDrawerOpen(false)}
         />

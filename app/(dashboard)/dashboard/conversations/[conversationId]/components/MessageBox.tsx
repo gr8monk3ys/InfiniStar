@@ -2,7 +2,7 @@
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Image from "next/image"
-import { useAuth, useUser } from "@clerk/nextjs"
+import { useUser } from "@clerk/nextjs"
 import axios, { isAxiosError } from "axios"
 import clsx from "clsx"
 import { format } from "date-fns"
@@ -31,6 +31,7 @@ interface MessageBoxProps {
   characterName?: string | null
   characterAvatar?: string | null
   csrfToken?: string | null
+  currentUserId?: string | null
   onReply?: (message: FullMessageType) => void
   onRegenerate?: (messageId: string) => void
   isRegenerating?: boolean
@@ -43,13 +44,13 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
   characterName,
   characterAvatar,
   csrfToken,
+  currentUserId,
   onReply,
   onRegenerate,
   isRegenerating = false,
   regeneratingMessageId = null,
 }) {
   const { user } = useUser()
-  const { userId } = useAuth()
   const [imageModalOpen, setImageModalOpen] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
@@ -240,7 +241,7 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
 
   // Parse reactions from JSON
   const reactions = (data.reactions as Record<string, string[]>) || {}
-  const currentUserId = userId
+  const viewerId = currentUserId || null
 
   // Don't show deleted messages
   if (data.isDeleted) {
@@ -517,7 +518,7 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
         {Object.keys(reactions).length > 0 && (
           <div className="mt-1 flex flex-wrap gap-1">
             {Object.entries(reactions).map(([emoji, userIds]) => {
-              const hasReacted = currentUserId && userIds.includes(currentUserId)
+              const hasReacted = viewerId && userIds.includes(viewerId)
               return (
                 <button
                   key={emoji}

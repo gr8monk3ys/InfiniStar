@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import dynamic from "next/dynamic"
 import Image from "next/image"
-import { useAuth } from "@clerk/nextjs"
 import axios from "axios"
 import type { CloudinaryUploadWidgetResults } from "next-cloudinary"
 import { useForm, type FieldValues, type SubmitHandler } from "react-hook-form"
@@ -39,6 +38,8 @@ interface FormProps {
   enableVoiceInput?: boolean
   /** Messages for AI suggestions context */
   messages?: FullMessageType[]
+  /** Current signed-in user ID (Prisma UUID) for typing indicator + UI behavior */
+  currentUserId?: string | null
 }
 
 const Form: React.FC<FormProps> = ({
@@ -48,13 +49,13 @@ const Form: React.FC<FormProps> = ({
   onAIStreamingChange,
   enableVoiceInput = true,
   messages = [],
+  currentUserId,
 }) => {
   const { conversationId } = useConversation()
   const [isLoading, setIsLoading] = useState(false)
   const [pendingImage, setPendingImage] = useState<string | null>(null)
   const { token: csrfToken } = useCsrfToken()
-  const { userId } = useAuth()
-  const currentUserId = userId ?? undefined
+  const viewerId = currentUserId ?? undefined
 
   // Check if voice input is supported
   const voiceSupported = isVoiceInputSupported()
@@ -79,7 +80,7 @@ const Form: React.FC<FormProps> = ({
   // Set up typing indicator hook for human-to-human conversations
   const { emitTyping } = useTypingIndicator({
     conversationId,
-    currentUserId,
+    currentUserId: viewerId,
   })
 
   // Debounce ref for typing indicator

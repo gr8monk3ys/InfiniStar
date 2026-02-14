@@ -1,4 +1,5 @@
 import getConversations from "@/app/actions/getConversations"
+import getCurrentUser from "@/app/actions/getCurrentUser"
 import getUsers from "@/app/actions/getUsers"
 
 import GlobalSearchProvider from "../components/GlobalSearchProvider"
@@ -12,6 +13,7 @@ export const dynamic = "force-dynamic"
 export default async function ConversationsLayout({ children }: { children: React.ReactNode }) {
   const conversations = await getConversations()
   const user = await getUsers()
+  const currentUser = await getCurrentUser()
 
   return (
     <Sidebar>
@@ -19,7 +21,12 @@ export default async function ConversationsLayout({ children }: { children: Reac
         <KeyboardShortcutsProvider>
           <PresenceProvider>
             <div className="h-full">
-              <ConversationList user={user} title="Messages" initialItems={conversations} />
+              <ConversationList
+                user={user}
+                title="Messages"
+                initialItems={conversations}
+                currentUserId={currentUser?.id ?? null}
+              />
               {children}
             </div>
           </PresenceProvider>

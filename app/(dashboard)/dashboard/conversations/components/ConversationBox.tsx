@@ -2,7 +2,7 @@
 
 import { memo, useCallback, useMemo } from "react"
 import { useRouter } from "next/navigation"
-import { useAuth, useUser } from "@clerk/nextjs"
+import { useUser } from "@clerk/nextjs"
 import clsx from "clsx"
 import { format } from "date-fns"
 import { BsPinAngleFill } from "react-icons/bs"
@@ -19,12 +19,17 @@ interface ConversationBoxProps {
   selected?: boolean
   /** Whether this conversation is selected via keyboard navigation */
   keyboardSelected?: boolean
+  currentUserId?: string | null
 }
 
-const ConversationBox: React.FC<ConversationBoxProps> = ({ data, selected, keyboardSelected }) => {
+const ConversationBox: React.FC<ConversationBoxProps> = ({
+  data,
+  selected,
+  keyboardSelected,
+  currentUserId,
+}) => {
   const otherUser = useOtherUser(data)
   const { user } = useUser()
-  const { userId } = useAuth()
   const router = useRouter()
 
   const handleClick = useCallback(() => {
@@ -68,14 +73,14 @@ const ConversationBox: React.FC<ConversationBoxProps> = ({ data, selected, keybo
   }, [lastMessage])
 
   const isMuted = useMemo(() => {
-    if (!userId) return false
-    return data.mutedBy?.includes(userId) || false
-  }, [data.mutedBy, userId])
+    if (!currentUserId) return false
+    return data.mutedBy?.includes(currentUserId) || false
+  }, [data.mutedBy, currentUserId])
 
   const isPinned = useMemo(() => {
-    if (!userId) return false
-    return data.pinnedBy?.includes(userId) || false
-  }, [data.pinnedBy, userId])
+    if (!currentUserId) return false
+    return data.pinnedBy?.includes(currentUserId) || false
+  }, [data.pinnedBy, currentUserId])
 
   return (
     <div

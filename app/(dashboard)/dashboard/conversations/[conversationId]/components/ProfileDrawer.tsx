@@ -1,7 +1,6 @@
 "use client"
 
 import { Fragment, memo, useMemo, useState } from "react"
-import { useAuth } from "@clerk/nextjs"
 import { Dialog, Transition } from "@headlessui/react"
 import axios, { isAxiosError } from "axios"
 import { format } from "date-fns"
@@ -30,6 +29,7 @@ interface ProfileDrawerProps {
   isOpen: boolean
   onClose: () => void
   data: FullConversationType
+  currentUserId: string | null
 }
 
 /**
@@ -42,12 +42,12 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = memo(function ProfileDrawer(
   isOpen,
   onClose,
   data,
+  currentUserId,
 }) {
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [isArchiving, setIsArchiving] = useState(false)
   const [isPinning, setIsPinning] = useState(false)
   const [isMuting, setIsMuting] = useState(false)
-  const { userId } = useAuth()
   const { token: csrfToken } = useCsrfToken()
   const otherUser = useOtherUser(data)
 
@@ -89,19 +89,19 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = memo(function ProfileDrawer(
   }, [data, isActive, presence])
 
   const isArchived = useMemo(() => {
-    if (!userId) return false
-    return data.archivedBy?.includes(userId) || false
-  }, [data.archivedBy, userId])
+    if (!currentUserId) return false
+    return data.archivedBy?.includes(currentUserId) || false
+  }, [data.archivedBy, currentUserId])
 
   const isPinned = useMemo(() => {
-    if (!userId) return false
-    return data.pinnedBy?.includes(userId) || false
-  }, [data.pinnedBy, userId])
+    if (!currentUserId) return false
+    return data.pinnedBy?.includes(currentUserId) || false
+  }, [data.pinnedBy, currentUserId])
 
   const isMuted = useMemo(() => {
-    if (!userId) return false
-    return data.mutedBy?.includes(userId) || false
-  }, [data.mutedBy, userId])
+    if (!currentUserId) return false
+    return data.mutedBy?.includes(currentUserId) || false
+  }, [data.mutedBy, currentUserId])
 
   const handleArchiveToggle = async () => {
     setIsArchiving(true)

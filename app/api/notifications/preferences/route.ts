@@ -12,6 +12,7 @@ const EMAIL_DIGEST_OPTIONS = ["none", "daily", "weekly"] as const
 const updatePreferencesSchema = z.object({
   emailNotifications: z.boolean().optional(),
   emailDigest: z.enum(EMAIL_DIGEST_OPTIONS).optional(),
+  browserNotifications: z.boolean().optional(),
   notifyOnNewMessage: z.boolean().optional(),
   notifyOnMention: z.boolean().optional(),
   notifyOnAIComplete: z.boolean().optional(),
@@ -52,6 +53,7 @@ export async function GET(_request: NextRequest) {
       select: {
         emailNotifications: true,
         emailDigest: true,
+        browserNotifications: true,
         notifyOnNewMessage: true,
         notifyOnMention: true,
         notifyOnAIComplete: true,
@@ -67,6 +69,7 @@ export async function GET(_request: NextRequest) {
       preferences: {
         emailNotifications: user.emailNotifications ?? true,
         emailDigest: user.emailDigest ?? "none",
+        browserNotifications: user.browserNotifications ?? false,
         notifyOnNewMessage: user.notifyOnNewMessage ?? true,
         notifyOnMention: user.notifyOnMention ?? true,
         notifyOnAIComplete: user.notifyOnAIComplete ?? true,
@@ -89,7 +92,7 @@ export async function PATCH(request: NextRequest) {
 
     const currentUser = await getCurrentUser()
 
-    if (!currentUser?.id || !currentUser?.email) {
+    if (!currentUser?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
@@ -103,6 +106,7 @@ export async function PATCH(request: NextRequest) {
     const {
       emailNotifications,
       emailDigest,
+      browserNotifications,
       notifyOnNewMessage,
       notifyOnMention,
       notifyOnAIComplete,
@@ -112,6 +116,7 @@ export async function PATCH(request: NextRequest) {
     const updateData: {
       emailNotifications?: boolean
       emailDigest?: string
+      browserNotifications?: boolean
       notifyOnNewMessage?: boolean
       notifyOnMention?: boolean
       notifyOnAIComplete?: boolean
@@ -119,6 +124,7 @@ export async function PATCH(request: NextRequest) {
 
     if (emailNotifications !== undefined) updateData.emailNotifications = emailNotifications
     if (emailDigest !== undefined) updateData.emailDigest = emailDigest
+    if (browserNotifications !== undefined) updateData.browserNotifications = browserNotifications
     if (notifyOnNewMessage !== undefined) updateData.notifyOnNewMessage = notifyOnNewMessage
     if (notifyOnMention !== undefined) updateData.notifyOnMention = notifyOnMention
     if (notifyOnAIComplete !== undefined) updateData.notifyOnAIComplete = notifyOnAIComplete
@@ -130,6 +136,7 @@ export async function PATCH(request: NextRequest) {
       select: {
         emailNotifications: true,
         emailDigest: true,
+        browserNotifications: true,
         notifyOnNewMessage: true,
         notifyOnMention: true,
         notifyOnAIComplete: true,
@@ -142,6 +149,7 @@ export async function PATCH(request: NextRequest) {
       preferences: {
         emailNotifications: updatedUser.emailNotifications,
         emailDigest: updatedUser.emailDigest,
+        browserNotifications: updatedUser.browserNotifications,
         notifyOnNewMessage: updatedUser.notifyOnNewMessage,
         notifyOnMention: updatedUser.notifyOnMention,
         notifyOnAIComplete: updatedUser.notifyOnAIComplete,

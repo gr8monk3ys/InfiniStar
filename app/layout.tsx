@@ -6,6 +6,7 @@ import { ClerkProvider } from "@clerk/nextjs"
 import { siteConfig } from "@/config/site"
 import { cn } from "@/app/lib/utils"
 import { ThemeCustomProvider } from "@/app/components/providers/ThemeCustomProvider"
+import { ServiceWorkerRegister } from "@/app/components/pwa/ServiceWorkerRegister"
 import { SiteHeader } from "@/app/components/site-header"
 import { TailwindIndicator } from "@/app/components/tailwind-indicator"
 import { ThemeProvider } from "@/app/components/theme-provider"
@@ -17,8 +18,9 @@ export const metadata: Metadata = {
     template: `%s - ${siteConfig.name}`,
   },
   description: siteConfig.description,
+  manifest: "/manifest.webmanifest",
   icons: {
-    icon: "/favicon.ico",
+    icon: "/favicon-32x32.png",
     shortcut: "/favicon-16x16.png",
     apple: "/apple-touch-icon.png",
   },
@@ -42,6 +44,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
         <head />
         <body className={cn("min-h-screen bg-background antialiased")}>
           <ToasterContext />
+          <ServiceWorkerRegister />
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
             <ThemeCustomProvider>
               <div className="theme-transition-bg relative flex min-h-screen flex-col">

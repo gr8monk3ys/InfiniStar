@@ -39,6 +39,7 @@ model User {
   // Notification preferences
   emailNotifications Boolean  @default(true) // Master toggle for email notifications
   emailDigest        String   @default("none") // "none", "daily", "weekly"
+  browserNotifications Boolean @default(false) // Browser notifications (in-app, best-effort)
   notifyOnNewMessage Boolean  @default(true) // Notify on new messages
   notifyOnMention    Boolean  @default(true) // Notify when mentioned
   notifyOnAIComplete Boolean  @default(true) // Notify when AI response completes

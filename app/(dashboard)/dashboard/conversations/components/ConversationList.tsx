@@ -1,9 +1,8 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import dynamic from "next/dynamic"
 import { useRouter } from "next/navigation"
-import { useAuth } from "@clerk/nextjs"
 import { type User } from "@prisma/client"
 import clsx from "clsx"
 import { BsPinAngleFill } from "react-icons/bs"
@@ -51,10 +50,22 @@ const SceneChatModal = dynamic(() => import("@/app/components/modals/SceneChatMo
 interface ConversationListProps {
   initialItems: FullConversationType[]
   user: User[]
+  currentUserId: string | null
   title?: string
 }
 
-const ConversationList: React.FC<ConversationListProps> = ({ initialItems, user }) => {
+interface NotificationPreferences {
+  browserNotifications: boolean
+  notifyOnNewMessage: boolean
+  notifyOnAIComplete: boolean
+  mutedConversations: string[]
+}
+
+const ConversationList: React.FC<ConversationListProps> = ({
+  initialItems,
+  user,
+  currentUserId,
+}) => {
   const [items, setItems] = useState(initialItems)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isPersonalityModalOpen, setIsPersonalityModalOpen] = useState(false)
@@ -62,6 +73,18 @@ const ConversationList: React.FC<ConversationListProps> = ({ initialItems, user 
   const [showArchived, setShowArchived] = useState(false)
   const [selectedTagId, setSelectedTagId] = useState<string | null>(null)
   const [showTagFilter, setShowTagFilter] = useState(false)
+  const [notificationPrefs, setNotificationPrefs] = useState<NotificationPreferences | null>(null)
+  const itemsRef = useRef(items)
+  const lastNotifiedMessageIdRef = useRef<Map<string, string>>(new Map())
+  const notificationPrefsRef = useRef<NotificationPreferences | null>(notificationPrefs)
+
+  useEffect(() => {
+    itemsRef.current = items
+  }, [items])
+
+  useEffect(() => {
+    notificationPrefsRef.current = notificationPrefs
+  }, [notificationPrefs])
 
   // Fetch user's tags for filtering
   const { tags: userTags } = useTags()
@@ -74,9 +97,70 @@ const ConversationList: React.FC<ConversationListProps> = ({ initialItems, user 
     useKeyboardShortcutsContext()
 
   const router = useRouter()
-  const { userId: currentUserId } = useAuth()
 
   const { conversationId, isOpen } = useConversation()
+
+  useEffect(() => {
+    if (!currentUserId) {
+      setNotificationPrefs(null)
+      return
+    }
+
+    let cancelled = false
+
+    const fetchPreferences = async () => {
+      try {
+        const response = await fetch("/api/notifications/preferences")
+        if (!response.ok) {
+          setNotificationPrefs(null)
+          return
+        }
+
+        const data = (await response.json()) as {
+          preferences?: {
+            browserNotifications?: boolean
+            notifyOnNewMessage?: boolean
+            notifyOnAIComplete?: boolean
+            mutedConversations?: string[]
+          }
+        }
+
+        const prefs = data.preferences
+        if (!prefs) return
+
+        if (!cancelled) {
+          setNotificationPrefs({
+            browserNotifications: Boolean(prefs.browserNotifications),
+            notifyOnNewMessage: Boolean(prefs.notifyOnNewMessage),
+            notifyOnAIComplete: Boolean(prefs.notifyOnAIComplete),
+            mutedConversations: Array.isArray(prefs.mutedConversations)
+              ? prefs.mutedConversations
+              : [],
+          })
+        }
+      } catch {
+        if (!cancelled) {
+          setNotificationPrefs(null)
+        }
+      }
+    }
+
+    fetchPreferences().catch(() => {
+      // ignore
+    })
+
+    const handleFocus = () => {
+      fetchPreferences().catch(() => {
+        // ignore
+      })
+    }
+
+    window.addEventListener("focus", handleFocus)
+    return () => {
+      cancelled = true
+      window.removeEventListener("focus", handleFocus)
+    }
+  }, [currentUserId])
 
   // Filter and sort conversations based on archive, pin, and tag status
   const filteredItems = useMemo(() => {
@@ -143,6 +227,83 @@ const ConversationList: React.FC<ConversationListProps> = ({ initialItems, user 
     pusherClient.subscribe(userChannel)
 
     const updateHandler = (conversation: FullConversationType) => {
+      const incomingMessage = conversation.messages?.[0]
+      if (incomingMessage) {
+        const existingConversation = itemsRef.current.find((c) => c.id === conversation.id)
+        const previousMessageId = existingConversation?.messages?.[0]?.id || null
+        const lastNotifiedId = lastNotifiedMessageIdRef.current.get(conversation.id) || null
+        const shouldConsiderNew =
+          incomingMessage.id !== previousMessageId && incomingMessage.id !== lastNotifiedId
+
+        if (shouldConsiderNew) {
+          lastNotifiedMessageIdRef.current.set(conversation.id, incomingMessage.id)
+
+          const prefs = notificationPrefsRef.current
+          if (
+            prefs &&
+            prefs.browserNotifications &&
+            !prefs.mutedConversations.includes(conversation.id) &&
+            typeof window !== "undefined" &&
+            "Notification" in window &&
+            Notification.permission === "granted" &&
+            typeof document !== "undefined" &&
+            document.hidden
+          ) {
+            const isAiMessage = Boolean(incomingMessage.isAI)
+            const shouldNotifyForType = isAiMessage
+              ? prefs.notifyOnAIComplete
+              : prefs.notifyOnNewMessage
+            const isOwnMessage = !isAiMessage && incomingMessage.senderId === currentUserId
+
+            if (shouldNotifyForType && !isOwnMessage) {
+              const titleFallback = isAiMessage ? "AI reply" : "New message"
+
+              let title = existingConversation?.name || titleFallback
+              if (
+                !existingConversation?.name &&
+                existingConversation &&
+                !existingConversation.isGroup
+              ) {
+                const other = existingConversation.users?.find((u) => u.id !== currentUserId)
+                title = other?.name || titleFallback
+              }
+
+              const preview = incomingMessage.image
+                ? "Sent an image"
+                : incomingMessage.body
+                  ? incomingMessage.body.slice(0, 160)
+                  : "New message"
+
+              const prefix = isAiMessage
+                ? "AI: "
+                : incomingMessage.sender?.name
+                  ? `${incomingMessage.sender.name}: `
+                  : ""
+
+              try {
+                const notification = new Notification(title, {
+                  body: `${prefix}${preview}`,
+                  icon: "/icon-192.png",
+                  tag: conversation.id,
+                })
+
+                notification.onclick = () => {
+                  try {
+                    window.focus()
+                  } catch {
+                    // ignore
+                  }
+                  router.push(`/dashboard/conversations/${conversation.id}`)
+                  notification.close()
+                }
+              } catch {
+                // Ignore notification errors (permissions, unsupported, etc.)
+              }
+            }
+          }
+        }
+      }
+
       setItems((current) =>
         current.map((currentConversation) => {
           if (currentConversation.id === conversation.id) {
@@ -546,6 +707,7 @@ const ConversationList: React.FC<ConversationListProps> = ({ initialItems, user 
                       data={item}
                       selected={conversationId === item.id}
                       keyboardSelected={selectedConversationIndex === index}
+                      currentUserId={currentUserId}
                     />
                   ))}
                 </div>
@@ -568,6 +730,7 @@ const ConversationList: React.FC<ConversationListProps> = ({ initialItems, user 
                         data={item}
                         selected={conversationId === item.id}
                         keyboardSelected={selectedConversationIndex === absoluteIndex}
+                        currentUserId={currentUserId}
                       />
                     )
                   })}

@@ -1,7 +1,6 @@
 "use client"
 
 import React, { useCallback, useEffect, useRef, useState } from "react"
-import { useAuth } from "@clerk/nextjs"
 import axios from "axios"
 import toast from "react-hot-toast"
 
@@ -22,6 +21,7 @@ interface ConversationContainerProps {
   isAI: boolean
   characterName?: string | null
   characterAvatar?: string | null
+  currentUserId: string | null
 }
 
 /**
@@ -36,10 +36,10 @@ const ConversationContainer: React.FC<ConversationContainerProps> = ({
   isAI,
   characterName,
   characterAvatar,
+  currentUserId: currentUserIdProp,
 }) => {
   const { conversationId } = useConversation()
-  const { userId } = useAuth()
-  const currentUserId = userId ?? undefined
+  const currentUserId = currentUserIdProp ?? undefined
   const { token: csrfToken } = useCsrfToken()
   const bottomRef = useRef<HTMLDivElement | null>(null)
 
@@ -165,6 +165,7 @@ const ConversationContainer: React.FC<ConversationContainerProps> = ({
         characterName={characterName}
         characterAvatar={characterAvatar}
         csrfToken={csrfToken}
+        currentUserId={currentUserIdProp}
         onRegenerate={isAI ? handleRegenerate : undefined}
         isRegenerating={isRegenerating}
         regeneratingMessageId={regeneratingMessageId}
@@ -174,7 +175,12 @@ const ConversationContainer: React.FC<ConversationContainerProps> = ({
       {/* Typing indicator - displayed above the message input */}
       <TypingIndicator typingUsers={typingUsers} isAITyping={isAI && isAITyping} />
 
-      <Form isAI={isAI} onAIStreamingChange={handleAIStreamingChange} messages={messages} />
+      <Form
+        isAI={isAI}
+        onAIStreamingChange={handleAIStreamingChange}
+        messages={messages}
+        currentUserId={currentUserIdProp}
+      />
     </>
   )
 }
