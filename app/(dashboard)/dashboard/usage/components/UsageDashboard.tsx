@@ -30,19 +30,16 @@ interface UsageStats {
   averageLatency: number
 }
 
-interface QuotaInfo {
-  withinQuota: boolean
-  used: number
-  remaining: number
-  percentage: number
-}
-
 interface SubscriptionInfo {
   isPro: boolean
   plan: string
   monthlyMessageCount: number
   monthlyMessageLimit: number | null
   remainingMessages: number | null
+  monthlyTokenUsage: number
+  monthlyTokenQuota: number | null
+  monthlyCostUsageCents: number
+  monthlyCostQuotaCents: number | null
 }
 
 interface DailyUsageData {
@@ -78,7 +75,6 @@ interface PeakHour {
 
 interface UsageData {
   stats: UsageStats
-  quota: QuotaInfo
   subscription: SubscriptionInfo
   dailyUsage: DailyUsageData[] | null
   modelUsage: ModelUsageData[]
@@ -204,7 +200,6 @@ export function UsageDashboard() {
       ) : (
         <UsageSummary
           stats={usageData.stats}
-          quota={usageData.quota}
           subscription={usageData.subscription}
           avgMessagesPerConversation={usageData.avgMessagesPerConversation}
         />

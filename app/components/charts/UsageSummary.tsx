@@ -24,24 +24,20 @@ interface UsageStats {
   averageLatency: number
 }
 
-interface QuotaInfo {
-  withinQuota: boolean
-  used: number
-  remaining: number
-  percentage: number
-}
-
 interface SubscriptionInfo {
   isPro: boolean
   plan: string
   monthlyMessageCount: number
   monthlyMessageLimit: number | null
   remainingMessages: number | null
+  monthlyTokenUsage: number
+  monthlyTokenQuota: number | null
+  monthlyCostUsageCents: number
+  monthlyCostQuotaCents: number | null
 }
 
 interface UsageSummaryProps {
   stats: UsageStats
-  quota: QuotaInfo
   subscription: SubscriptionInfo
   avgMessagesPerConversation?: number
   className?: string
@@ -94,7 +90,6 @@ function getLatencyLabel(ms: number): string {
  */
 export function UsageSummary({
   stats,
-  quota,
   subscription,
   avgMessagesPerConversation = 0,
   className,
@@ -102,22 +97,42 @@ export function UsageSummary({
 }: UsageSummaryProps) {
   // Calculate messages remaining for display
   const messagesDisplay = subscription.isPro
-    ? "Unlimited"
+    ? `${subscription.monthlyMessageCount} this month`
     : `${subscription.remainingMessages ?? 0} remaining`
 
-  // Calculate quota percentage for display
-  const quotaPercentage = Math.min(Math.round(quota.percentage), 100)
+  const hasCostCap = subscription.isPro && subscription.monthlyCostQuotaCents !== null
+  const quotaTitle = hasCostCap ? "Monthly AI Fair-Use Cap" : "Monthly Token Quota"
+  const quotaUsed = hasCostCap ? subscription.monthlyCostUsageCents : subscription.monthlyTokenUsage
+  const quotaTotal = hasCostCap
+    ? subscription.monthlyCostQuotaCents
+    : subscription.monthlyTokenQuota
+  const quotaPercentage =
+    quotaTotal && quotaTotal > 0 ? Math.min(Math.round((quotaUsed / quotaTotal) * 100), 100) : 0
+  const quotaRemaining = quotaTotal ? Math.max(0, quotaTotal - quotaUsed) : 0
 
   return (
     <div className={cn("space-y-6", className)}>
       {/* Quota Progress Bar */}
       <div className="rounded-lg border border-border bg-card p-6 shadow-sm">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-sm font-medium text-card-foreground">Monthly Token Quota</h3>
-          <span className="text-sm text-muted-foreground">
-            {formatCompactNumber(quota.used)} / {formatCompactNumber(quota.used + quota.remaining)}{" "}
-            tokens
-          </span>
+          <h3 className="text-sm font-medium text-card-foreground">{quotaTitle}</h3>
+          {quotaTotal ? (
+            <span className="text-sm text-muted-foreground">
+              {hasCostCap ? (
+                <>
+                  {formatCost(quotaUsed)} / {formatCost(quotaTotal)}
+                </>
+              ) : (
+                <>
+                  {formatCompactNumber(quotaUsed)} / {formatCompactNumber(quotaTotal)} tokens
+                </>
+              )}
+            </span>
+          ) : (
+            <span className="text-sm text-muted-foreground">
+              {hasCostCap ? formatCost(quotaUsed) : `${formatCompactNumber(quotaUsed)} tokens`}
+            </span>
+          )}
         </div>
         <div
           className="h-3 w-full overflow-hidden rounded-full bg-muted"
@@ -125,14 +140,14 @@ export function UsageSummary({
           aria-valuenow={quotaPercentage}
           aria-valuemin={0}
           aria-valuemax={100}
-          aria-label={`Token quota usage: ${quotaPercentage}%`}
+          aria-label={`${quotaTitle} usage: ${quotaPercentage}%`}
         >
           <div
             className={cn(
               "h-full transition-all duration-500",
-              quota.percentage > 90
+              quotaPercentage > 90
                 ? "bg-red-500"
-                : quota.percentage > 70
+                : quotaPercentage > 70
                   ? "bg-yellow-500"
                   : "bg-gradient-to-r from-purple-500 to-pink-500"
             )}
@@ -141,13 +156,19 @@ export function UsageSummary({
         </div>
         <div className="mt-2 flex items-center justify-between">
           <p className="text-xs text-muted-foreground">
-            {quota.withinQuota ? (
-              <>
-                {formatCompactNumber(quota.remaining)} tokens remaining (
-                {(100 - quota.percentage).toFixed(1)}%)
-              </>
+            {quotaTotal ? (
+              hasCostCap ? (
+                <>
+                  {formatCost(quotaRemaining)} remaining ({(100 - quotaPercentage).toFixed(1)}%)
+                </>
+              ) : (
+                <>
+                  {formatCompactNumber(quotaRemaining)} tokens remaining (
+                  {(100 - quotaPercentage).toFixed(1)}%)
+                </>
+              )
             ) : (
-              <span className="font-medium text-red-600 dark:text-red-400">Quota exceeded</span>
+              <>{subscription.isPro ? "No quota configured" : "No quota configured"}</>
             )}
           </p>
           <span
@@ -214,7 +235,9 @@ export function UsageSummary({
           value={subscription.isPro ? "PRO" : "Free"}
           subtitle={
             subscription.isPro
-              ? "Unlimited access"
+              ? hasCostCap
+                ? `${formatCost(subscription.monthlyCostQuotaCents!)} fair-use cap`
+                : "Unlimited access"
               : `${subscription.monthlyMessageLimit} msg/month`
           }
           icon={<HiOutlineSparkles className="size-5" />}

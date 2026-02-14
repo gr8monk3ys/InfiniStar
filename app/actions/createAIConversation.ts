@@ -7,7 +7,6 @@ import {
   type PersonalityType,
 } from "@/app/lib/ai-personalities"
 import prisma from "@/app/lib/prismadb"
-import { getUserSubscriptionPlan } from "@/app/lib/subscription"
 
 import getCurrentUser from "./getCurrentUser"
 
@@ -25,9 +24,13 @@ export default async function createAIConversation(
   try {
     const personalityType = personality || getDefaultPersonality()
     const personalityConfig = getPersonality(personalityType)
-    const subscriptionPlan = await getUserSubscriptionPlan(currentUser.id).catch(() => null)
+    const isPro = Boolean(
+      currentUser.stripePriceId &&
+      currentUser.stripeCurrentPeriodEnd &&
+      currentUser.stripeCurrentPeriodEnd.getTime() + 86_400_000 > Date.now()
+    )
     const routedModel = getModelForUser({
-      isPro: subscriptionPlan?.isPro ?? false,
+      isPro,
       requestedModelId: aiModel,
     })
 

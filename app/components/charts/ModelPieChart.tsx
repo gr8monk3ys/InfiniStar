@@ -28,9 +28,12 @@ interface ModelPieChartProps {
 
 // Colors for different models
 const MODEL_COLORS: Record<string, string> = {
-  "Claude 3.5 Sonnet": "#8b5cf6", // purple
-  "Claude 3 Opus": "#f97316", // orange
-  "Claude 3 Haiku": "#06b6d4", // cyan
+  "Claude Sonnet 4.5": "#8b5cf6", // purple
+  "Claude Haiku 4.5": "#06b6d4", // cyan
+  // Legacy labels (for older rows in analytics)
+  "Claude 3.5 Sonnet": "#8b5cf6",
+  "Claude 3 Opus": "#f97316",
+  "Claude 3 Haiku": "#06b6d4",
 }
 
 const DEFAULT_COLORS = ["#8b5cf6", "#f97316", "#06b6d4", "#22c55e", "#ec4899"]

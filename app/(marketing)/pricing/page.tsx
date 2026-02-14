@@ -43,7 +43,7 @@ export default async function PricingPage() {
           Simple, Transparent Pricing
         </h1>
         <p className="text-lg leading-normal text-muted-foreground sm:text-xl">
-          Start free with 10 messages per month. Upgrade to PRO for unlimited AI conversations.
+          Start free with 50 messages per month. Upgrade to PRO for higher limits and better models.
         </p>
       </div>
 
@@ -153,8 +153,8 @@ export default async function PricingPage() {
           <div className="rounded-lg border bg-background p-6">
             <h3 className="font-semibold">What AI models can I use?</h3>
             <p className="mt-2 text-sm text-muted-foreground">
-              Free users have access to Claude 3.5 Sonnet. PRO users can choose from Claude 3.5
-              Sonnet, Claude 3.5 Haiku (fastest), and Claude 3 Opus (most capable).
+              Free users use Claude Haiku 4.5. PRO users can choose between Claude Sonnet 4.5
+              (recommended) and Claude Haiku 4.5 (fastest). PRO usage is subject to a fair-use cap.
             </p>
           </div>
 

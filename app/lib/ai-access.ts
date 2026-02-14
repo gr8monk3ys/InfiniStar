@@ -1,8 +1,14 @@
+import {
+  AI_FREE_MONTHLY_MESSAGE_LIMIT,
+  AI_FREE_MONTHLY_TOKEN_QUOTA,
+  AI_PRO_MONTHLY_COST_CAP_CENTS,
+} from "@/app/lib/ai-limits"
 import prisma from "@/app/lib/prismadb"
 import { getUserSubscriptionPlan } from "@/app/lib/subscription"
 
-export const FREE_TIER_MONTHLY_MESSAGE_LIMIT = 10
-export const FREE_TIER_MONTHLY_TOKEN_QUOTA = 100_000
+// Backwards-compatible exports (used across the app + API responses).
+export const FREE_TIER_MONTHLY_MESSAGE_LIMIT = AI_FREE_MONTHLY_MESSAGE_LIMIT
+export const FREE_TIER_MONTHLY_TOKEN_QUOTA = AI_FREE_MONTHLY_TOKEN_QUOTA
 
 type AiAccessDenialCode =
   | "FREE_TIER_MESSAGE_LIMIT_REACHED"
@@ -34,25 +40,7 @@ function getMonthStartUtc(): Date {
 export async function getAiAccessDecision(userId: string): Promise<AiAccessDecision> {
   try {
     const subscriptionPlan = await getUserSubscriptionPlan(userId)
-    const proCostCapRaw = Number.parseInt(process.env.AI_PRO_MONTHLY_COST_CAP_CENTS ?? "", 10)
-    const proCostCapCents =
-      Number.isFinite(proCostCapRaw) && proCostCapRaw > 0 ? proCostCapRaw : null
-
-    if (subscriptionPlan.isPro && proCostCapCents === null) {
-      return {
-        allowed: true,
-        limits: {
-          isPro: true,
-          monthlyMessageCount: 0,
-          monthlyMessageLimit: null,
-          remainingMessages: null,
-          monthlyTokenUsage: 0,
-          monthlyTokenQuota: null,
-          monthlyCostUsageCents: 0,
-          monthlyCostQuotaCents: null,
-        },
-      }
-    }
+    const proCostCapCents = AI_PRO_MONTHLY_COST_CAP_CENTS
 
     const monthStart = getMonthStartUtc()
     const [monthlyMessageCount, monthlyAggregates] = await Promise.all([
@@ -120,7 +108,7 @@ export async function getAiAccessDecision(userId: string): Promise<AiAccessDecis
         allowed: false,
         code: "FREE_TIER_MESSAGE_LIMIT_REACHED",
         message:
-          "You have reached the free-tier monthly AI message limit. Upgrade to PRO for unlimited usage.",
+          "You have reached the free-tier monthly AI message limit. Upgrade to PRO for higher limits.",
         limits: {
           isPro: false,
           monthlyMessageCount,

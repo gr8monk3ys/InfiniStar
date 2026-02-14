@@ -79,6 +79,14 @@ function getMessageLimitColor(
   return "red"
 }
 
+function getQuotaColor(used: number, limit: number | null): "sky" | "green" | "yellow" | "red" {
+  if (limit === null || limit <= 0) return "green"
+  const percentage = (used / limit) * 100
+  if (percentage < 50) return "green"
+  if (percentage < 80) return "yellow"
+  return "red"
+}
+
 /**
  * Detailed usage breakdown section
  */
@@ -169,15 +177,52 @@ function ConversationTotalSection({ tokens }: { tokens: ConversationTokenStats }
  * Subscription usage section
  */
 function SubscriptionSection({ subscription }: { subscription: SubscriptionUsage }) {
+  const hasCostCap = subscription.isPro && subscription.monthlyCostQuotaCents !== null
+
   return (
     <UsageBreakdownSection title={`Monthly Usage (${subscription.plan})`}>
       {subscription.isPro ? (
-        <div className="text-center">
-          <div className="text-lg font-semibold text-green-600 dark:text-green-400">Unlimited</div>
-          <div className="text-xs text-muted-foreground">
-            {subscription.monthlyMessageCount} messages this month
+        hasCostCap ? (
+          <>
+            <div className="mb-2 grid grid-cols-2 gap-2 text-center">
+              <div>
+                <div className="text-lg font-semibold text-foreground">
+                  {formatCost(subscription.monthlyCostUsageCents)}
+                </div>
+                <div className="text-xs text-muted-foreground">Used</div>
+              </div>
+              <div>
+                <div className="text-lg font-semibold text-foreground">
+                  {formatCost(subscription.monthlyCostQuotaCents!)}
+                </div>
+                <div className="text-xs text-muted-foreground">Fair-Use Cap</div>
+              </div>
+            </div>
+            <ProgressBar
+              value={subscription.monthlyCostUsageCents}
+              max={subscription.monthlyCostQuotaCents!}
+              label={`Spend (${formatCost(subscription.monthlyCostUsageCents)} / ${formatCost(
+                subscription.monthlyCostQuotaCents!
+              )})`}
+              color={getQuotaColor(
+                subscription.monthlyCostUsageCents,
+                subscription.monthlyCostQuotaCents
+              )}
+            />
+            <div className="mt-2 text-center text-xs text-muted-foreground">
+              {subscription.monthlyMessageCount} messages this month
+            </div>
+          </>
+        ) : (
+          <div className="text-center">
+            <div className="text-lg font-semibold text-green-600 dark:text-green-400">
+              Unlimited
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {subscription.monthlyMessageCount} messages this month
+            </div>
           </div>
-        </div>
+        )
       ) : (
         <>
           <div className="mb-2 grid grid-cols-2 gap-2 text-center">
@@ -210,6 +255,21 @@ function SubscriptionSection({ subscription }: { subscription: SubscriptionUsage
               subscription.monthlyMessageLimit
             )}
           />
+          {subscription.monthlyTokenQuota ? (
+            <div className="mt-3">
+              <ProgressBar
+                value={subscription.monthlyTokenUsage}
+                max={subscription.monthlyTokenQuota}
+                label={`Tokens (${formatTokenCount(
+                  subscription.monthlyTokenUsage
+                )} / ${formatTokenCount(subscription.monthlyTokenQuota)})`}
+                color={getQuotaColor(
+                  subscription.monthlyTokenUsage,
+                  subscription.monthlyTokenQuota
+                )}
+              />
+            </div>
+          ) : null}
         </>
       )}
     </UsageBreakdownSection>

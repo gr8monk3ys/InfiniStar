@@ -33,6 +33,10 @@ export interface SubscriptionUsage {
   monthlyMessageCount: number
   monthlyMessageLimit: number | null
   remainingMessages: number | null
+  monthlyTokenUsage: number
+  monthlyTokenQuota: number | null
+  monthlyCostUsageCents: number
+  monthlyCostQuotaCents: number | null
 }
 
 /**

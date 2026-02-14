@@ -8,9 +8,9 @@ export const freePlan: SubscriptionPlan = {
   stripePriceId: "",
   price: 0,
   features: [
-    "10 AI messages per month",
+    "50 AI messages per month",
     "All 7 AI personalities",
-    "Claude 3.5 Sonnet model",
+    "Claude Haiku 4.5 model",
     "Message history",
     "Basic search",
     "50 AI memories",
@@ -19,14 +19,14 @@ export const freePlan: SubscriptionPlan = {
 
 export const proPlan: SubscriptionPlan = {
   name: "PRO",
-  description: "Unlimited AI conversations with premium features for power users.",
+  description: "Higher limits and better models for power users.",
   stripePriceId: env.STRIPE_PRO_MONTHLY_PLAN_ID || "",
-  price: 20,
+  price: 9.99,
   features: [
-    "Unlimited AI messages",
+    "High monthly limits (fair use cap applies)",
     "All 7 AI personalities",
-    "All Claude models (Sonnet, Haiku, Opus)",
-    "Priority response times",
+    "Claude Sonnet 4.5 + Haiku 4.5",
+    "Faster response tier",
     "Advanced search & analytics",
     "200 AI memories",
     "Conversation export (MD, JSON, TXT)",

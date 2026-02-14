@@ -73,7 +73,7 @@ export default async function IndexPage() {
             </span>
             <span className="flex items-center gap-2">
               <HiOutlineBolt className="size-4 text-yellow-500" />
-              10 free messages/month
+              50 free messages/month
             </span>
             <span className="flex items-center gap-2">
               <HiOutlineSparkles className="size-4 text-primary" />
@@ -160,22 +160,16 @@ export default async function IndexPage() {
               <div className="mt-8 space-y-4">
                 {[
                   {
-                    name: "Claude 3.5 Sonnet",
+                    name: "Claude Sonnet 4.5",
                     desc: "Balanced performance and speed",
                     badge: "Recommended",
                     badgeClass: "bg-primary/10 text-primary",
                   },
                   {
-                    name: "Claude 3.5 Haiku",
+                    name: "Claude Haiku 4.5",
                     desc: "Fastest responses, cost-efficient",
                     badge: "Fast",
                     badgeClass: "bg-blue-500/10 text-blue-500",
-                  },
-                  {
-                    name: "Claude 3 Opus",
-                    desc: "Most capable, complex reasoning",
-                    badge: "Powerful",
-                    badgeClass: "bg-amber-500/10 text-amber-500",
                   },
                 ].map((model) => (
                   <div
@@ -207,7 +201,7 @@ export default async function IndexPage() {
                   <div className="gradient-bg size-10 rounded-full" />
                   <div>
                     <div className="font-semibold">Creative AI</div>
-                    <div className="text-xs text-muted-foreground">Claude 3.5 Sonnet</div>
+                    <div className="text-xs text-muted-foreground">Claude Sonnet 4.5</div>
                   </div>
                 </div>
                 <div className="space-y-3">
