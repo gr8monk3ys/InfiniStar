@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { type Channel, type Members } from "pusher-js"
 
 import { pusherClient } from "@/app/lib/pusher"
+import { PUSHER_PRESENCE_CHANNEL } from "@/app/lib/pusher-channels"
 
 import useActiveList from "./useActiveList"
 
@@ -12,14 +13,14 @@ interface PusherMember {
 }
 
 const useActiveChannel = (): void => {
-  const { set, add, remove } = useActiveList()
+  const { set, add, remove, updatePresence } = useActiveList()
   const [activeChannel, setActiveChannel] = useState<Channel | null>(null)
 
   useEffect(() => {
     let channel = activeChannel
 
     if (!channel) {
-      channel = pusherClient.subscribe("presence-messenger")
+      channel = pusherClient.subscribe(PUSHER_PRESENCE_CHANNEL)
       setActiveChannel(channel)
     }
 
@@ -38,13 +39,32 @@ const useActiveChannel = (): void => {
       remove(member.id)
     })
 
+    channel.bind(
+      "user:presence",
+      (data: {
+        userId: string
+        presenceStatus: string
+        lastSeenAt?: string | null
+        customStatus?: string | null
+        customStatusEmoji?: string | null
+      }) => {
+        updatePresence({
+          userId: data.userId,
+          presenceStatus: data.presenceStatus,
+          lastSeenAt: data.lastSeenAt ? new Date(data.lastSeenAt) : null,
+          customStatus: data.customStatus,
+          customStatusEmoji: data.customStatusEmoji,
+        })
+      }
+    )
+
     return () => {
       if (activeChannel) {
-        pusherClient.unsubscribe("presence-messenger")
+        pusherClient.unsubscribe(PUSHER_PRESENCE_CHANNEL)
         setActiveChannel(null)
       }
     }
-  }, [activeChannel, set, add, remove])
+  }, [activeChannel, set, add, remove, updatePresence])
 }
 
 export default useActiveChannel

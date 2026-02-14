@@ -7,6 +7,7 @@ import { SUPPORTED_MODEL_IDS } from "@/app/lib/ai-models"
 import { verifyCsrfToken } from "@/app/lib/csrf"
 import prisma from "@/app/lib/prismadb"
 import { pusherServer } from "@/app/lib/pusher"
+import { getPusherConversationChannel, getPusherUserChannel } from "@/app/lib/pusher-channels"
 import { sanitizePlainText } from "@/app/lib/sanitize"
 
 interface SceneCharacterPromptInput {
@@ -311,12 +312,18 @@ export async function POST(request: NextRequest) {
             data: { lastMessageAt: new Date() },
           })
 
-          await pusherServer.trigger(newConversation.id, "messages:new", greetingMessage)
+          await pusherServer.trigger(
+            getPusherConversationChannel(newConversation.id),
+            "messages:new",
+            greetingMessage
+          )
         }
 
-        if (currentUser.email) {
-          await pusherServer.trigger(currentUser.email, "conversation:new", newConversation)
-        }
+        await pusherServer.trigger(
+          getPusherUserChannel(currentUser.id),
+          "conversation:new",
+          newConversation
+        )
 
         return NextResponse.json(newConversation)
       }
@@ -392,13 +399,19 @@ export async function POST(request: NextRequest) {
         })
 
         // Trigger Pusher event for greeting
-        await pusherServer.trigger(newConversation.id, "messages:new", greetingMessage)
+        await pusherServer.trigger(
+          getPusherConversationChannel(newConversation.id),
+          "messages:new",
+          greetingMessage
+        )
       }
 
       // Trigger Pusher event for user
-      if (currentUser.email) {
-        pusherServer.trigger(currentUser.email, "conversation:new", newConversation)
-      }
+      pusherServer.trigger(
+        getPusherUserChannel(currentUser.id),
+        "conversation:new",
+        newConversation
+      )
 
       return NextResponse.json(newConversation)
     }
@@ -427,10 +440,8 @@ export async function POST(request: NextRequest) {
       })
 
       // Trigger Pusher event for all users in the conversation
-      newConversation.users.forEach((user: { email?: string | null }) => {
-        if (user.email) {
-          pusherServer.trigger(user.email, "conversation:new", newConversation)
-        }
+      newConversation.users.forEach((user: { id: string }) => {
+        pusherServer.trigger(getPusherUserChannel(user.id), "conversation:new", newConversation)
       })
 
       return NextResponse.json(newConversation)
@@ -490,10 +501,8 @@ export async function POST(request: NextRequest) {
     })
 
     // Trigger Pusher event for all users in the conversation
-    newConversation.users.forEach((user: { email?: string | null }) => {
-      if (user.email) {
-        pusherServer.trigger(user.email, "conversation:new", newConversation)
-      }
+    newConversation.users.forEach((user: { id: string }) => {
+      pusherServer.trigger(getPusherUserChannel(user.id), "conversation:new", newConversation)
     })
 
     return NextResponse.json(newConversation)

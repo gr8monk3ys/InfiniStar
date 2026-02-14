@@ -4,6 +4,7 @@ import { z } from "zod"
 import { verifyCsrfToken } from "@/app/lib/csrf"
 import prisma from "@/app/lib/prismadb"
 import { pusherServer } from "@/app/lib/pusher"
+import { getPusherConversationChannel } from "@/app/lib/pusher-channels"
 import getCurrentUser from "@/app/actions/getCurrentUser"
 
 // Validation schema
@@ -108,7 +109,7 @@ export async function POST(
 
     // Trigger Pusher event for real-time update
     await pusherServer.trigger(
-      `conversation-${message.conversationId}`,
+      getPusherConversationChannel(message.conversationId),
       "message:reaction",
       updatedMessage
     )

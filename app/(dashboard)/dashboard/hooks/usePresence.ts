@@ -2,21 +2,24 @@ import { useEffect, useRef } from "react"
 import { useAuth } from "@clerk/nextjs"
 import axios from "axios"
 
+import { useCsrfToken } from "@/app/hooks/useCsrfToken"
+
 // Track user activity and update presence status
 export default function usePresence() {
   const { userId } = useAuth()
+  const { token: csrfToken } = useCsrfToken()
   const awayTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const isActiveRef = useRef(true)
 
   useEffect(() => {
-    if (!userId) return
+    if (!userId || !csrfToken) return
+
+    const headers = { "X-CSRF-Token": csrfToken }
 
     // Update presence to online when component mounts
     const setOnline = async () => {
       try {
-        await axios.patch("/api/users/presence", {
-          status: "online",
-        })
+        await axios.patch("/api/users/presence", { status: "online" }, { headers })
       } catch (error) {
         console.error("Failed to set online status:", error)
       }
@@ -25,9 +28,7 @@ export default function usePresence() {
     // Update presence to offline when component unmounts or page is hidden
     const setOffline = async () => {
       try {
-        await axios.patch("/api/users/presence", {
-          status: "offline",
-        })
+        await axios.patch("/api/users/presence", { status: "offline" }, { headers })
       } catch (error) {
         console.error("Failed to set offline status:", error)
       }
@@ -36,9 +37,7 @@ export default function usePresence() {
     // Update presence to away after inactivity
     const setAway = async () => {
       try {
-        await axios.patch("/api/users/presence", {
-          status: "away",
-        })
+        await axios.patch("/api/users/presence", { status: "away" }, { headers })
         isActiveRef.current = false
       } catch (error) {
         console.error("Failed to set away status:", error)
@@ -54,9 +53,7 @@ export default function usePresence() {
       // If was away, set back to online
       if (!isActiveRef.current) {
         try {
-          await axios.patch("/api/users/presence", {
-            status: "online",
-          })
+          await axios.patch("/api/users/presence", { status: "online" }, { headers })
           isActiveRef.current = true
         } catch (error) {
           console.error("Failed to set online status:", error)
@@ -113,5 +110,5 @@ export default function usePresence() {
       })
       document.removeEventListener("visibilitychange", handleVisibilityChange)
     }
-  }, [userId])
+  }, [userId, csrfToken])
 }

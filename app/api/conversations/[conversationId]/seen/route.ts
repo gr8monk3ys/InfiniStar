@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server"
 import { verifyCsrfToken } from "@/app/lib/csrf"
 import prisma from "@/app/lib/prismadb"
 import { pusherServer } from "@/app/lib/pusher"
+import { getPusherConversationChannel, getPusherUserChannel } from "@/app/lib/pusher-channels"
 import getCurrentUser from "@/app/actions/getCurrentUser"
 
 interface IParams {
@@ -92,7 +93,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<I
     })
 
     // Update all connections with new seen
-    await pusherServer.trigger(currentUser.email, "conversation:update", {
+    await pusherServer.trigger(getPusherUserChannel(currentUser.id), "conversation:update", {
       id: conversationId,
       messages: [updatedMessage],
     })
@@ -103,7 +104,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<I
     }
 
     // Update last message seen
-    await pusherServer.trigger(conversationId!, "message:update", updatedMessage)
+    await pusherServer.trigger(
+      getPusherConversationChannel(conversationId!),
+      "message:update",
+      updatedMessage
+    )
 
     return new NextResponse("Success")
   } catch (error) {

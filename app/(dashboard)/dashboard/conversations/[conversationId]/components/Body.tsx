@@ -11,6 +11,7 @@ interface BodyProps {
   isAI?: boolean
   characterName?: string | null
   characterAvatar?: string | null
+  csrfToken?: string | null
   onRegenerate?: (messageId: string) => void
   isRegenerating?: boolean
   regeneratingMessageId?: string | null
@@ -31,6 +32,7 @@ const Body: React.FC<BodyProps> = memo(function Body({
   isAI = false,
   characterName,
   characterAvatar,
+  csrfToken,
   onRegenerate,
   isRegenerating = false,
   regeneratingMessageId,
@@ -43,6 +45,7 @@ const Body: React.FC<BodyProps> = memo(function Body({
           isLast={i === initialMessages.length - 1}
           key={message.id}
           data={message}
+          csrfToken={csrfToken}
           characterName={characterName}
           characterAvatar={characterAvatar}
           onRegenerate={isAI ? onRegenerate : undefined}

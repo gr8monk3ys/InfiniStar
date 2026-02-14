@@ -14,6 +14,7 @@ import { trackAiUsage } from "@/app/lib/ai-usage"
 import { verifyCsrfToken } from "@/app/lib/csrf"
 import prisma from "@/app/lib/prismadb"
 import { pusherServer } from "@/app/lib/pusher"
+import { getPusherConversationChannel } from "@/app/lib/pusher-channels"
 import { aiChatLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 import getCurrentUser from "@/app/actions/getCurrentUser"
 
@@ -213,7 +214,11 @@ export async function POST(request: NextRequest) {
     })
 
     // Trigger Pusher event to notify clients about the deletion
-    await pusherServer.trigger(message.conversationId, "message:delete", deletedMessage)
+    await pusherServer.trigger(
+      getPusherConversationChannel(message.conversationId),
+      "message:delete",
+      deletedMessage
+    )
 
     // Create a ReadableStream for streaming response
     const stream = new ReadableStream({
@@ -310,7 +315,11 @@ export async function POST(request: NextRequest) {
           })
 
           // Trigger Pusher event for complete AI response
-          await pusherServer.trigger(message.conversationId, "messages:new", newAiMessage)
+          await pusherServer.trigger(
+            getPusherConversationChannel(message.conversationId),
+            "messages:new",
+            newAiMessage
+          )
 
           // Send completion signal
           const completeData = JSON.stringify({

@@ -18,6 +18,7 @@ import {
 } from "@/app/lib/moderation"
 import prisma from "@/app/lib/prismadb"
 import { pusherServer } from "@/app/lib/pusher"
+import { getPusherConversationChannel, getPusherUserChannel } from "@/app/lib/pusher-channels"
 import { aiChatLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 import getCurrentUser from "@/app/actions/getCurrentUser"
 
@@ -184,7 +185,11 @@ export async function POST(request: NextRequest) {
     })
 
     // Trigger Pusher event for user message
-    await pusherServer.trigger(conversationId, "messages:new", userMessage)
+    await pusherServer.trigger(
+      getPusherConversationChannel(conversationId),
+      "messages:new",
+      userMessage
+    )
 
     // Build conversation history for Claude
     const conversationHistory = buildAiConversationHistory(conversation.messages)
@@ -262,10 +267,14 @@ export async function POST(request: NextRequest) {
     })
 
     // Trigger Pusher event for AI response
-    await pusherServer.trigger(conversationId, "messages:new", aiMessage)
+    await pusherServer.trigger(
+      getPusherConversationChannel(conversationId),
+      "messages:new",
+      aiMessage
+    )
 
     // Notify user of conversation update
-    await pusherServer.trigger(currentUser.email, "conversation:update", {
+    await pusherServer.trigger(getPusherUserChannel(currentUser.id), "conversation:update", {
       id: conversationId,
       messages: [aiMessage],
     })

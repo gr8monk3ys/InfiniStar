@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server"
 import { verifyCsrfToken } from "@/app/lib/csrf"
 import prisma from "@/app/lib/prismadb"
 import { pusherServer } from "@/app/lib/pusher"
+import { getPusherUserChannel } from "@/app/lib/pusher-channels"
 import getCurrentUser from "@/app/actions/getCurrentUser"
 
 // Helper function to validate CSRF token
@@ -99,7 +100,7 @@ export async function POST(
 
     // Trigger Pusher event for real-time update (only to the user who archived)
     await pusherServer.trigger(
-      `user-${currentUser.id}`,
+      getPusherUserChannel(currentUser.id),
       "conversation:archive",
       updatedConversation
     )
@@ -184,7 +185,7 @@ export async function DELETE(
 
     // Trigger Pusher event for real-time update (only to the user who unarchived)
     await pusherServer.trigger(
-      `user-${currentUser.id}`,
+      getPusherUserChannel(currentUser.id),
       "conversation:unarchive",
       updatedConversation
     )

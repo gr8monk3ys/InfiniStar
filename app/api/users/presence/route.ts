@@ -4,6 +4,7 @@ import { z } from "zod"
 import { verifyCsrfToken } from "@/app/lib/csrf"
 import prisma from "@/app/lib/prismadb"
 import { pusherServer } from "@/app/lib/pusher"
+import { PUSHER_PRESENCE_CHANNEL } from "@/app/lib/pusher-channels"
 import getCurrentUser from "@/app/actions/getCurrentUser"
 
 // Validation schema
@@ -78,33 +79,14 @@ export async function PATCH(request: NextRequest) {
       data: updateData,
     })
 
-    // Trigger Pusher event for real-time presence update
-    // Broadcast to all conversations the user is part of
-    const userConversations = await prisma.conversation.findMany({
-      where: {
-        users: {
-          some: {
-            id: currentUser.id,
-          },
-        },
-      },
-      select: {
-        id: true,
-      },
+    // Broadcast presence update to the authenticated presence channel.
+    await pusherServer.trigger(PUSHER_PRESENCE_CHANNEL, "user:presence", {
+      userId: currentUser.id,
+      presenceStatus: updatedUser.presenceStatus,
+      lastSeenAt: updatedUser.lastSeenAt,
+      customStatus: updatedUser.customStatus,
+      customStatusEmoji: updatedUser.customStatusEmoji,
     })
-
-    // Trigger presence update for each conversation
-    await Promise.all(
-      userConversations.map((conversation: { id: string }) =>
-        pusherServer.trigger(`conversation-${conversation.id}`, "user:presence", {
-          userId: currentUser.id,
-          presenceStatus: updatedUser.presenceStatus,
-          lastSeenAt: updatedUser.lastSeenAt,
-          customStatus: updatedUser.customStatus,
-          customStatusEmoji: updatedUser.customStatusEmoji,
-        })
-      )
-    )
 
     return NextResponse.json({
       message: "Presence updated successfully",

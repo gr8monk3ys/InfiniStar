@@ -11,6 +11,7 @@ import { NextResponse, type NextRequest } from "next/server"
 import { verifyCsrfToken } from "@/app/lib/csrf"
 import prisma from "@/app/lib/prismadb"
 import { pusherServer } from "@/app/lib/pusher"
+import { getPusherUserChannel } from "@/app/lib/pusher-channels"
 import { getClientIdentifier, shareJoinLimiter } from "@/app/lib/rate-limit"
 import { joinViaShare } from "@/app/lib/sharing"
 import getCurrentUser from "@/app/actions/getCurrentUser"
@@ -96,8 +97,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<I
     // Notify other users in the conversation about the new participant
     if (conversation) {
       for (const user of conversation.users) {
-        if (user.id !== currentUser.id && user.email) {
-          await pusherServer.trigger(user.email, "conversation:update", conversation)
+        if (user.id !== currentUser.id) {
+          await pusherServer.trigger(
+            getPusherUserChannel(user.id),
+            "conversation:update",
+            conversation
+          )
         }
       }
     }

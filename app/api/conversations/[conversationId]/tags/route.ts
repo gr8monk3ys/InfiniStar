@@ -5,6 +5,7 @@ import { z } from "zod"
 import { verifyCsrfToken } from "@/app/lib/csrf"
 import prisma from "@/app/lib/prismadb"
 import { pusherServer } from "@/app/lib/pusher"
+import { getPusherUserChannel } from "@/app/lib/pusher-channels"
 import { getClientIdentifier, tagLimiter } from "@/app/lib/rate-limit"
 
 // Validation schema for adding a tag to conversation
@@ -33,7 +34,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     const currentUser = await prisma.user.findUnique({
       where: { clerkId: userId },
-      select: { id: true, email: true },
+      select: { id: true },
     })
     if (!currentUser) {
       return NextResponse.json({ error: "User not found" }, { status: 401 })
@@ -225,12 +226,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     })
 
     // Trigger Pusher event for real-time update (user-specific)
-    if (currentUser.email) {
-      await pusherServer.trigger(currentUser.email, "conversation:tag:add", {
-        conversationId,
-        tag,
-      })
-    }
+    await pusherServer.trigger(getPusherUserChannel(currentUser.id), "conversation:tag:add", {
+      conversationId,
+      tag,
+    })
 
     return NextResponse.json({
       conversation: updatedConversation,

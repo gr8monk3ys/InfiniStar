@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server"
 import { verifyCsrfToken } from "@/app/lib/csrf"
 import prisma from "@/app/lib/prismadb"
 import { pusherServer } from "@/app/lib/pusher"
+import { getPusherConversationChannel } from "@/app/lib/pusher-channels"
 import getCurrentUser from "@/app/actions/getCurrentUser"
 
 interface IParams {
@@ -87,7 +88,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<I
       isTyping,
     }
 
-    await pusherServer.trigger(conversationId, "user:typing", typingPayload)
+    await pusherServer.trigger(
+      getPusherConversationChannel(conversationId),
+      "user:typing",
+      typingPayload
+    )
 
     return NextResponse.json({ success: true })
   } catch (error) {

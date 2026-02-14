@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server"
 import { verifyCsrfToken } from "@/app/lib/csrf"
 import prisma from "@/app/lib/prismadb"
 import { pusherServer } from "@/app/lib/pusher"
+import { getPusherUserChannel } from "@/app/lib/pusher-channels"
 import getCurrentUser from "@/app/actions/getCurrentUser"
 
 interface IParams {
@@ -63,10 +64,12 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
       },
     })
 
-    existingConversation.users.forEach((user: { email?: string | null }) => {
-      if (user.email) {
-        pusherServer.trigger(user.email, "conversation:remove", existingConversation)
-      }
+    existingConversation.users.forEach((user: { id: string }) => {
+      pusherServer.trigger(
+        getPusherUserChannel(user.id),
+        "conversation:remove",
+        existingConversation
+      )
     })
 
     return NextResponse.json(deletedConversation)

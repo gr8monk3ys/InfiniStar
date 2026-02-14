@@ -30,6 +30,7 @@ interface MessageBoxProps {
   isLast?: boolean
   characterName?: string | null
   characterAvatar?: string | null
+  csrfToken?: string | null
   onReply?: (message: FullMessageType) => void
   onRegenerate?: (messageId: string) => void
   isRegenerating?: boolean
@@ -41,6 +42,7 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
   isLast,
   characterName,
   characterAvatar,
+  csrfToken,
   onReply,
   onRegenerate,
   isRegenerating = false,
@@ -96,10 +98,17 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
       return
     }
 
+    if (!csrfToken) {
+      toast.error("Security token not available. Please refresh the page.")
+      return
+    }
+
     try {
-      await axios.patch(`/api/messages/${data.id}`, {
-        body: editedBody.trim(),
-      })
+      await axios.patch(
+        `/api/messages/${data.id}`,
+        { body: editedBody.trim() },
+        { headers: { "X-CSRF-Token": csrfToken } }
+      )
       toast.success("Message edited")
       setIsEditing(false)
       setShowMenu(false)
@@ -111,16 +120,21 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
       toast.error(message)
       setEditedBody(data.body || "")
     }
-  }, [editedBody, data.body, data.id])
+  }, [csrfToken, editedBody, data.body, data.id])
 
   const handleDelete = useCallback(async () => {
     if (!confirm("Are you sure you want to delete this message?")) {
       return
     }
 
+    if (!csrfToken) {
+      toast.error("Security token not available. Please refresh the page.")
+      return
+    }
+
     setIsDeleting(true)
     try {
-      await axios.delete(`/api/messages/${data.id}`)
+      await axios.delete(`/api/messages/${data.id}`, { headers: { "X-CSRF-Token": csrfToken } })
       toast.success("Message deleted")
       setShowMenu(false)
     } catch (error) {
@@ -132,7 +146,7 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
     } finally {
       setIsDeleting(false)
     }
-  }, [data.id])
+  }, [csrfToken, data.id])
 
   const handleCancelEdit = useCallback(() => {
     setEditedBody(data.body || "")
@@ -141,8 +155,17 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
 
   const handleReaction = useCallback(
     async (emoji: string) => {
+      if (!csrfToken) {
+        toast.error("Security token not available. Please refresh the page.")
+        return
+      }
+
       try {
-        await axios.post(`/api/messages/${data.id}/react`, { emoji })
+        await axios.post(
+          `/api/messages/${data.id}/react`,
+          { emoji },
+          { headers: { "X-CSRF-Token": csrfToken } }
+        )
         setShowReactionPicker(false)
       } catch (error) {
         const message =
@@ -152,7 +175,7 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
         toast.error(message)
       }
     },
-    [data.id]
+    [csrfToken, data.id]
   )
 
   const stopSpeech = useCallback(() => {

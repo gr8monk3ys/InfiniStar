@@ -17,6 +17,7 @@
 
 import prisma from "@/app/lib/prismadb"
 import { pusherServer } from "@/app/lib/pusher"
+import { getPusherUserChannel } from "@/app/lib/pusher-channels"
 
 // Valid retention period options in days
 export const RETENTION_PERIODS = [7, 14, 30, 60, 90, 180, 365] as const
@@ -286,10 +287,14 @@ export async function deleteOldConversations(userId: string): Promise<AutoDelete
       // Notify all users in the conversation about the deletion via Pusher
       if (conv?.users) {
         for (const participant of conv.users) {
-          await pusherServer.trigger(`user-${participant.id}`, "conversation:auto-delete", {
-            conversationId: conversation.id,
-            reason: "auto-delete",
-          })
+          await pusherServer.trigger(
+            getPusherUserChannel(participant.id),
+            "conversation:auto-delete",
+            {
+              conversationId: conversation.id,
+              reason: "auto-delete",
+            }
+          )
         }
       }
 

@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server"
 import { verifyCsrfToken } from "@/app/lib/csrf"
 import prisma from "@/app/lib/prismadb"
 import { pusherServer } from "@/app/lib/pusher"
+import { getPusherUserChannel } from "@/app/lib/pusher-channels"
 import getCurrentUser from "@/app/actions/getCurrentUser"
 
 // POST /api/conversations/[conversationId]/mute - Mute a conversation
@@ -93,7 +94,11 @@ export async function POST(
     })
 
     // Trigger Pusher event for real-time update (only to the user who muted)
-    await pusherServer.trigger(`user-${currentUser.id}`, "conversation:mute", updatedConversation)
+    await pusherServer.trigger(
+      getPusherUserChannel(currentUser.id),
+      "conversation:mute",
+      updatedConversation
+    )
 
     return NextResponse.json(updatedConversation)
   } catch (error: unknown) {
@@ -190,7 +195,11 @@ export async function DELETE(
     })
 
     // Trigger Pusher event for real-time update (only to the user who unmuted)
-    await pusherServer.trigger(`user-${currentUser.id}`, "conversation:unmute", updatedConversation)
+    await pusherServer.trigger(
+      getPusherUserChannel(currentUser.id),
+      "conversation:unmute",
+      updatedConversation
+    )
 
     return NextResponse.json(updatedConversation)
   } catch (error: unknown) {

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import dynamic from "next/dynamic"
 import { useRouter } from "next/navigation"
-import { useAuth, useUser } from "@clerk/nextjs"
+import { useAuth } from "@clerk/nextjs"
 import { type User } from "@prisma/client"
 import clsx from "clsx"
 import { BsPinAngleFill } from "react-icons/bs"
@@ -19,9 +19,9 @@ import {
 import { MdOutlineGroupAdd } from "react-icons/md"
 
 import { pusherClient } from "@/app/lib/pusher"
+import { getPusherUserChannel } from "@/app/lib/pusher-channels"
 import { useGlobalSearchContext } from "@/app/(dashboard)/dashboard/components/GlobalSearchProvider"
 import { useKeyboardShortcutsContext } from "@/app/(dashboard)/dashboard/components/KeyboardShortcutsProvider"
-import useActiveList from "@/app/(dashboard)/dashboard/hooks/useActiveList"
 import useConversation from "@/app/(dashboard)/dashboard/hooks/useConversation"
 import { TagBadge } from "@/app/components/tags"
 import { useTags } from "@/app/hooks/useTags"
@@ -74,14 +74,9 @@ const ConversationList: React.FC<ConversationListProps> = ({ initialItems, user 
     useKeyboardShortcutsContext()
 
   const router = useRouter()
-  const { user: clerkUser } = useUser()
   const { userId: currentUserId } = useAuth()
 
   const { conversationId, isOpen } = useConversation()
-
-  const pusherKey = useMemo(() => {
-    return clerkUser?.emailAddresses[0]?.emailAddress
-  }, [clerkUser?.emailAddresses])
 
   // Filter and sort conversations based on archive, pin, and tag status
   const filteredItems = useMemo(() => {
@@ -139,13 +134,12 @@ const ConversationList: React.FC<ConversationListProps> = ({ initialItems, user 
   }, [filteredItems, currentUserId])
 
   useEffect(() => {
-    if (!pusherKey || !currentUserId) {
+    if (!currentUserId) {
       return
     }
 
     // Subscribe to user-specific channel for personal updates (archive/unarchive)
-    const userChannel = `user-${currentUserId}`
-    pusherClient.subscribe(pusherKey)
+    const userChannel = getPusherUserChannel(currentUserId)
     pusherClient.subscribe(userChannel)
 
     const updateHandler = (conversation: FullConversationType) => {
@@ -270,24 +264,6 @@ const ConversationList: React.FC<ConversationListProps> = ({ initialItems, user 
       )
     }
 
-    const presenceHandler = (data: {
-      userId: string
-      presenceStatus: string
-      lastSeenAt?: string | null
-      customStatus?: string | null
-      customStatusEmoji?: string | null
-    }) => {
-      // Update presence in the active list store
-      const { updatePresence } = useActiveList.getState()
-      updatePresence({
-        userId: data.userId,
-        presenceStatus: data.presenceStatus,
-        lastSeenAt: data.lastSeenAt ? new Date(data.lastSeenAt) : null,
-        customStatus: data.customStatus,
-        customStatusEmoji: data.customStatusEmoji,
-      })
-    }
-
     pusherClient.bind("conversation:update", updateHandler)
     pusherClient.bind("conversation:new", newHandler)
     pusherClient.bind("conversation:remove", removeHandler)
@@ -297,13 +273,9 @@ const ConversationList: React.FC<ConversationListProps> = ({ initialItems, user 
     pusherClient.bind("conversation:unpin", unpinHandler)
     pusherClient.bind("conversation:mute", muteHandler)
     pusherClient.bind("conversation:unmute", unmuteHandler)
-    pusherClient.bind("user:presence", presenceHandler)
 
     return () => {
-      // Unsubscribe from both channels
-      if (pusherKey) {
-        pusherClient.unsubscribe(pusherKey)
-      }
+      // Unsubscribe from user channel
       pusherClient.unsubscribe(userChannel)
 
       // Unbind all event handlers to prevent memory leaks
@@ -316,9 +288,8 @@ const ConversationList: React.FC<ConversationListProps> = ({ initialItems, user 
       pusherClient.unbind("conversation:unpin", unpinHandler)
       pusherClient.unbind("conversation:mute", muteHandler)
       pusherClient.unbind("conversation:unmute", unmuteHandler)
-      pusherClient.unbind("user:presence", presenceHandler)
     }
-  }, [pusherKey, currentUserId, router])
+  }, [currentUserId])
 
   // Register the open new AI conversation callback
   const openNewAIConversationHandler = useCallback(() => {

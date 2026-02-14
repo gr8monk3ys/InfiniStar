@@ -4,6 +4,7 @@ import { z } from "zod"
 import { verifyCsrfToken } from "@/app/lib/csrf"
 import prisma from "@/app/lib/prismadb"
 import { pusherServer } from "@/app/lib/pusher"
+import { getPusherConversationChannel } from "@/app/lib/pusher-channels"
 import { sanitizeMessage } from "@/app/lib/sanitize"
 import getCurrentUser from "@/app/actions/getCurrentUser"
 
@@ -109,7 +110,7 @@ export async function PATCH(
 
     // Trigger Pusher event for real-time update
     await pusherServer.trigger(
-      `conversation-${message.conversationId}`,
+      getPusherConversationChannel(message.conversationId),
       "message:update",
       updatedMessage
     )
@@ -176,7 +177,7 @@ export async function DELETE(
 
     // Trigger Pusher event for real-time update
     await pusherServer.trigger(
-      `conversation-${message.conversationId}`,
+      getPusherConversationChannel(message.conversationId),
       "message:delete",
       deletedMessage
     )

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 
 import { pusherClient } from "@/app/lib/pusher"
+import { getPusherConversationChannel } from "@/app/lib/pusher-channels"
 
 interface TypingUser {
   userId: string
@@ -111,7 +112,7 @@ export function useTypingIndicator(options: UseTypingIndicatorOptions): UseTypin
     }
 
     // Subscribe to the conversation channel
-    pusherClient.subscribe(conversationId)
+    pusherClient.subscribe(getPusherConversationChannel(conversationId))
     pusherClient.bind("user:typing", handleTyping)
 
     return () => {

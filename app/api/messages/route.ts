@@ -10,6 +10,7 @@ import {
 } from "@/app/lib/moderation"
 import prisma from "@/app/lib/prismadb"
 import { pusherServer } from "@/app/lib/pusher"
+import { getPusherConversationChannel, getPusherUserChannel } from "@/app/lib/pusher-channels"
 import { apiLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 import { sanitizeMessage, sanitizeUrl } from "@/app/lib/sanitize"
 
@@ -223,11 +224,15 @@ export async function POST(request: NextRequest) {
     })
 
     // Trigger Pusher events for real-time updates
-    await pusherServer.trigger(conversationId, "messages:new", newMessage)
+    await pusherServer.trigger(
+      getPusherConversationChannel(conversationId),
+      "messages:new",
+      newMessage
+    )
 
     // Notify all users in the conversation
-    updatedConversation.users.forEach((user: { email?: string | null }) => {
-      pusherServer.trigger(user.email!, "conversation:update", {
+    updatedConversation.users.forEach((user: { id: string }) => {
+      pusherServer.trigger(getPusherUserChannel(user.id), "conversation:update", {
         id: conversationId,
         messages: [newMessage],
       })

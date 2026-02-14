@@ -1,12 +1,12 @@
 "use client"
 
 import { useState } from "react"
-import { useUser } from "@clerk/nextjs"
 import axios from "axios"
 import toast from "react-hot-toast"
 import { HiOutlineXMark } from "react-icons/hi2"
 
 import Modal from "@/app/components/ui/modal"
+import { useCsrfToken } from "@/app/hooks/useCsrfToken"
 
 interface StatusModalProps {
   isOpen: boolean
@@ -33,7 +33,7 @@ const COMMON_EMOJIS = [
 ]
 
 const StatusModal: React.FC<StatusModalProps> = ({ isOpen, onClose }) => {
-  const { user } = useUser()
+  const { token: csrfToken } = useCsrfToken()
   // TODO: customStatus and customStatusEmoji are not stored in Clerk.
   // These should be fetched from the Prisma user object instead of the session.
   const [customStatus, setCustomStatus] = useState("")
@@ -44,13 +44,25 @@ const StatusModal: React.FC<StatusModalProps> = ({ isOpen, onClose }) => {
     e.preventDefault()
     setIsLoading(true)
 
+    if (!csrfToken) {
+      toast.error("Security token not available. Please refresh the page.")
+      setIsLoading(false)
+      return
+    }
+
     try {
       // Update presence with custom status
-      await axios.patch("/api/users/presence", {
-        status: "online",
-        customStatus: customStatus || null,
-        customStatusEmoji: customStatusEmoji || null,
-      })
+      await axios.patch(
+        "/api/users/presence",
+        {
+          status: "online",
+          customStatus: customStatus || null,
+          customStatusEmoji: customStatusEmoji || null,
+        },
+        {
+          headers: { "X-CSRF-Token": csrfToken },
+        }
+      )
 
       // TODO: Clerk's useUser() has no update method for custom fields.
       // Custom status is persisted via the API call above; consider using
@@ -69,12 +81,24 @@ const StatusModal: React.FC<StatusModalProps> = ({ isOpen, onClose }) => {
   const handleClearStatus = async () => {
     setIsLoading(true)
 
+    if (!csrfToken) {
+      toast.error("Security token not available. Please refresh the page.")
+      setIsLoading(false)
+      return
+    }
+
     try {
-      await axios.patch("/api/users/presence", {
-        status: "online",
-        customStatus: null,
-        customStatusEmoji: null,
-      })
+      await axios.patch(
+        "/api/users/presence",
+        {
+          status: "online",
+          customStatus: null,
+          customStatusEmoji: null,
+        },
+        {
+          headers: { "X-CSRF-Token": csrfToken },
+        }
+      )
 
       // TODO: Clerk's useUser() has no update method for custom fields.
       // Custom status is persisted via the API call above; consider using

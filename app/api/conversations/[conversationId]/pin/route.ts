@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server"
 import { verifyCsrfToken } from "@/app/lib/csrf"
 import prisma from "@/app/lib/prismadb"
 import { pusherServer } from "@/app/lib/pusher"
+import { getPusherUserChannel } from "@/app/lib/pusher-channels"
 import getCurrentUser from "@/app/actions/getCurrentUser"
 
 // Helper function to validate CSRF token
@@ -114,7 +115,11 @@ export async function POST(
     })
 
     // Trigger Pusher event for real-time update (only to the user who pinned)
-    await pusherServer.trigger(`user-${currentUser.id}`, "conversation:pin", updatedConversation)
+    await pusherServer.trigger(
+      getPusherUserChannel(currentUser.id),
+      "conversation:pin",
+      updatedConversation
+    )
 
     return NextResponse.json(updatedConversation)
   } catch (error: unknown) {
@@ -195,7 +200,11 @@ export async function DELETE(
     })
 
     // Trigger Pusher event for real-time update (only to the user who unpinned)
-    await pusherServer.trigger(`user-${currentUser.id}`, "conversation:unpin", updatedConversation)
+    await pusherServer.trigger(
+      getPusherUserChannel(currentUser.id),
+      "conversation:unpin",
+      updatedConversation
+    )
 
     return NextResponse.json(updatedConversation)
   } catch (error: unknown) {

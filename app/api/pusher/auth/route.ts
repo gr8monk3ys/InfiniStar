@@ -1,36 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server"
 
-import { verifyCsrfToken } from "@/app/lib/csrf"
 import prisma from "@/app/lib/prismadb"
 import { pusherServer } from "@/app/lib/pusher"
+import { PUSHER_PRESENCE_CHANNEL } from "@/app/lib/pusher-channels"
 import { apiLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 import getCurrentUser from "@/app/actions/getCurrentUser"
 
 export async function POST(request: NextRequest) {
-  // CSRF Protection
-  const headerToken = request.headers.get("X-CSRF-Token")
-  const cookieHeader = request.headers.get("cookie")
-  let cookieToken: string | null = null
-
-  if (cookieHeader) {
-    const cookies = cookieHeader.split(";").reduce(
-      (acc, cookie) => {
-        const [key, value] = cookie.trim().split("=")
-        acc[key] = value
-        return acc
-      },
-      {} as Record<string, string>
-    )
-    cookieToken = cookies["csrf-token"] || null
-  }
-
-  if (!verifyCsrfToken(headerToken, cookieToken)) {
-    return NextResponse.json(
-      { error: "Invalid CSRF token", code: "CSRF_TOKEN_INVALID" },
-      { status: 403 }
-    )
-  }
-
   // Rate limiting
   const identifier = getClientIdentifier(request)
   if (!apiLimiter.check(identifier)) {
@@ -42,7 +18,7 @@ export async function POST(request: NextRequest) {
 
   const currentUser = await getCurrentUser()
 
-  if (!currentUser?.id || !currentUser?.email) {
+  if (!currentUser?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
@@ -56,11 +32,13 @@ export async function POST(request: NextRequest) {
   }
 
   // Validate channel access based on channel type
-  // Conversation channels: conversation-{conversationId}
-  // User channels: user-{userId}
+  // Conversation channels: private-conversation-{conversationId}
+  // User channels: private-user-{userId}
   // Presence channels: presence-messenger
-  if (channel.startsWith("conversation-")) {
-    const conversationId = channel.replace("conversation-", "")
+  const isPresenceChannel = channel === PUSHER_PRESENCE_CHANNEL
+
+  if (channel.startsWith("private-conversation-")) {
+    const conversationId = channel.replace("private-conversation-", "")
 
     // Verify user is a participant in this conversation
     const conversation = await prisma.conversation.findFirst({
@@ -78,19 +56,26 @@ export async function POST(request: NextRequest) {
     if (!conversation) {
       return NextResponse.json({ error: "Not authorized for this conversation" }, { status: 403 })
     }
-  } else if (channel.startsWith("user-")) {
-    // User channels should only be accessible by the user themselves
-    const channelUserId = channel.replace("user-", "")
+  } else if (channel.startsWith("private-user-")) {
+    const channelUserId = channel.replace("private-user-", "")
     if (channelUserId !== currentUser.id) {
       return NextResponse.json({ error: "Not authorized for this channel" }, { status: 403 })
     }
-  }
-  // Allow presence-messenger and email-based channels for general presence
-
-  const data = {
-    user_id: currentUser.email,
+  } else if (!isPresenceChannel) {
+    // Do not authorize unknown channels.
+    return NextResponse.json({ error: "Not authorized for this channel" }, { status: 403 })
   }
 
-  const authResponse = pusherServer.authorizeChannel(socketId, channel, data)
+  // Presence channels must include a stable user_id (we use our internal UUID).
+  const authResponse = isPresenceChannel
+    ? pusherServer.authorizeChannel(socketId, channel, {
+        user_id: currentUser.id,
+        user_info: {
+          name: currentUser.name || "Anonymous",
+          image: currentUser.image || null,
+        },
+      })
+    : pusherServer.authorizeChannel(socketId, channel)
+
   return NextResponse.json(authResponse)
 }

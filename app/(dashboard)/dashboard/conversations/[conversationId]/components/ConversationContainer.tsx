@@ -6,6 +6,7 @@ import axios from "axios"
 import toast from "react-hot-toast"
 
 import { pusherClient } from "@/app/lib/pusher"
+import { getPusherConversationChannel } from "@/app/lib/pusher-channels"
 import useConversation from "@/app/(dashboard)/dashboard/hooks/useConversation"
 import { useAiRegenerate } from "@/app/hooks/useAiRegenerate"
 import { useCsrfToken } from "@/app/hooks/useCsrfToken"
@@ -84,16 +85,29 @@ const ConversationContainer: React.FC<ConversationContainerProps> = ({
 
   // Mark messages as seen
   useEffect(() => {
-    axios.post(`/api/conversations/${conversationId}/seen`)
-  }, [conversationId])
+    if (!csrfToken) return
+    axios.post(
+      `/api/conversations/${conversationId}/seen`,
+      {},
+      { headers: { "X-CSRF-Token": csrfToken } }
+    )
+  }, [conversationId, csrfToken])
 
   // Subscribe to Pusher events for real-time updates
   useEffect(() => {
-    pusherClient.subscribe(conversationId)
+    const channelName = getPusherConversationChannel(conversationId)
+
+    pusherClient.subscribe(channelName)
     bottomRef?.current?.scrollIntoView()
 
     const messageHandler = (message: FullMessageType) => {
-      axios.post(`/api/conversations/${conversationId}/seen`)
+      if (csrfToken) {
+        axios.post(
+          `/api/conversations/${conversationId}/seen`,
+          {},
+          { headers: { "X-CSRF-Token": csrfToken } }
+        )
+      }
 
       setMessages((current) => {
         if (current.some((m) => m.id === message.id)) {
@@ -135,13 +149,13 @@ const ConversationContainer: React.FC<ConversationContainerProps> = ({
     pusherClient.bind("message:reaction", reactionHandler)
 
     return () => {
-      pusherClient.unsubscribe(conversationId)
+      pusherClient.unsubscribe(channelName)
       pusherClient.unbind("messages:new", messageHandler)
       pusherClient.unbind("message:update", updateMessageHandler)
       pusherClient.unbind("message:delete", deleteMessageHandler)
       pusherClient.unbind("message:reaction", reactionHandler)
     }
-  }, [conversationId])
+  }, [conversationId, csrfToken])
 
   return (
     <>
@@ -150,6 +164,7 @@ const ConversationContainer: React.FC<ConversationContainerProps> = ({
         isAI={isAI}
         characterName={characterName}
         characterAvatar={characterAvatar}
+        csrfToken={csrfToken}
         onRegenerate={isAI ? handleRegenerate : undefined}
         isRegenerating={isRegenerating}
         regeneratingMessageId={regeneratingMessageId}
