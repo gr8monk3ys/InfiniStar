@@ -35,6 +35,13 @@ describe("MODEL_PRICING", () => {
     expect(pricing.output).toBe(1.25)
   })
 
+  it("should have pricing for Claude 3.5 Haiku", () => {
+    const pricing = MODEL_PRICING["claude-3-5-haiku-20241022"]
+    expect(pricing).toBeDefined()
+    expect(pricing.input).toBe(0.8)
+    expect(pricing.output).toBe(4.0)
+  })
+
   it("should have Haiku as the cheapest model", () => {
     const haiku = MODEL_PRICING["claude-3-haiku-20240307"]
     const sonnet = MODEL_PRICING["claude-3-5-sonnet-20241022"]
@@ -126,7 +133,7 @@ describe("calculateTokenCost", () => {
   })
 
   describe("Haiku model costs", () => {
-    const model = "claude-3-haiku-20240307"
+    const model = "claude-3-5-haiku-20241022"
 
     it("should calculate lower costs than Sonnet", () => {
       const haikuResult = calculateTokenCost(model, 1000, 1000)
@@ -137,20 +144,20 @@ describe("calculateTokenCost", () => {
 
     it("should calculate cost for 1 million input tokens", () => {
       const result = calculateTokenCost(model, 1_000_000, 0)
-      // $0.25 per million tokens = 25 cents
-      expect(result.inputCost).toBe(25)
+      // $0.80 per million tokens = 80 cents
+      expect(result.inputCost).toBe(80)
     })
 
     it("should calculate cost for 1 million output tokens", () => {
       const result = calculateTokenCost(model, 0, 1_000_000)
-      // $1.25 per million tokens = 125 cents
-      expect(result.outputCost).toBe(125)
+      // $4 per million tokens = 400 cents
+      expect(result.outputCost).toBe(400)
     })
 
     it("should handle large volume requests efficiently", () => {
       // 10K input, 5K output - typical for longer conversations
       const result = calculateTokenCost(model, 10_000, 5_000)
-      expect(result.totalCost).toBeLessThan(1) // Still under 1 cent with Haiku
+      expect(result.totalCost).toBeLessThan(5) // Still just a few cents with Haiku
     })
   })
 
@@ -221,14 +228,12 @@ describe("calculateTokenCost", () => {
   describe("Edge cases", () => {
     it("should handle negative input tokens (treat as 0)", () => {
       const result = calculateTokenCost("claude-3-5-sonnet-20241022", -1000, 1000)
-      // Negative tokens would produce negative cost
-      expect(result.inputCost).toBeLessThanOrEqual(0)
+      expect(result.inputCost).toBe(0)
     })
 
     it("should handle negative output tokens (treat as 0)", () => {
       const result = calculateTokenCost("claude-3-5-sonnet-20241022", 1000, -1000)
-      // Negative tokens would produce negative cost
-      expect(result.outputCost).toBeLessThanOrEqual(0)
+      expect(result.outputCost).toBe(0)
     })
 
     it("should handle floating point input tokens", () => {
@@ -242,7 +247,7 @@ describe("Cost Comparison Scenarios", () => {
   it("should show significant cost difference between models for same usage", () => {
     const tokens = { input: 10_000, output: 5_000 }
 
-    const haiku = calculateTokenCost("claude-3-haiku-20240307", tokens.input, tokens.output)
+    const haiku = calculateTokenCost("claude-3-5-haiku-20241022", tokens.input, tokens.output)
     const sonnet = calculateTokenCost("claude-3-5-sonnet-20241022", tokens.input, tokens.output)
     const opus = calculateTokenCost("claude-3-opus-20240229", tokens.input, tokens.output)
 
@@ -263,15 +268,15 @@ describe("Cost Comparison Scenarios", () => {
     const totalInput = inputPerRequest * requestsPerMonth
     const totalOutput = outputPerRequest * requestsPerMonth
 
-    const haikuMonthly = calculateTokenCost("claude-3-haiku-20240307", totalInput, totalOutput)
+    const haikuMonthly = calculateTokenCost("claude-3-5-haiku-20241022", totalInput, totalOutput)
     const sonnetMonthly = calculateTokenCost("claude-3-5-sonnet-20241022", totalInput, totalOutput)
 
     // Sonnet: about $9 + $22.50 = $31.50 (3150 cents)
     expect(sonnetMonthly.totalCost).toBeGreaterThan(3000)
     expect(sonnetMonthly.totalCost).toBeLessThan(3500)
 
-    // Haiku: about $0.75 + $1.875 = $2.625 (262.5 cents)
-    expect(haikuMonthly.totalCost).toBeGreaterThan(200)
-    expect(haikuMonthly.totalCost).toBeLessThan(300)
+    // Haiku: about $2.4 + $6 = $8.4 (840 cents)
+    expect(haikuMonthly.totalCost).toBeGreaterThan(700)
+    expect(haikuMonthly.totalCost).toBeLessThan(900)
   })
 })

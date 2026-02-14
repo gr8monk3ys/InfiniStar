@@ -7,7 +7,7 @@
 export type ModelType =
   | "claude-3-5-sonnet-20241022"
   | "claude-3-opus-20240229"
-  | "claude-3-haiku-20240307"
+  | "claude-3-5-haiku-20241022"
 
 export interface AIModel {
   id: ModelType
@@ -50,16 +50,16 @@ export const AI_MODELS: Record<ModelType, AIModel> = {
     outputCostPerMillion: 75.0,
     recommended: false,
   },
-  "claude-3-haiku-20240307": {
-    id: "claude-3-haiku-20240307",
-    name: "Claude 3 Haiku",
-    description: "Fastest and most affordable model. Good for simple tasks.",
+  "claude-3-5-haiku-20241022": {
+    id: "claude-3-5-haiku-20241022",
+    name: "Claude 3.5 Haiku",
+    description: "Fast, affordable model. Great for lightweight chats and background features.",
     speed: "fast",
     quality: "good",
     cost: "low",
     maxTokens: 4096,
-    inputCostPerMillion: 0.25,
-    outputCostPerMillion: 1.25,
+    inputCostPerMillion: 0.8,
+    outputCostPerMillion: 4.0,
     recommended: false,
   },
 }

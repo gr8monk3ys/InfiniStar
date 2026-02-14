@@ -7,6 +7,7 @@ export const FREE_TIER_MONTHLY_TOKEN_QUOTA = 100_000
 type AiAccessDenialCode =
   | "FREE_TIER_MESSAGE_LIMIT_REACHED"
   | "FREE_TIER_TOKEN_QUOTA_REACHED"
+  | "PRO_TIER_COST_CAP_REACHED"
   | "AI_ACCESS_CHECK_FAILED"
 
 export interface AiAccessDecision {
@@ -20,6 +21,8 @@ export interface AiAccessDecision {
     remainingMessages: number | null
     monthlyTokenUsage: number
     monthlyTokenQuota: number | null
+    monthlyCostUsageCents: number
+    monthlyCostQuotaCents: number | null
   }
 }
 
@@ -31,7 +34,11 @@ function getMonthStartUtc(): Date {
 export async function getAiAccessDecision(userId: string): Promise<AiAccessDecision> {
   try {
     const subscriptionPlan = await getUserSubscriptionPlan(userId)
-    if (subscriptionPlan.isPro) {
+    const proCostCapRaw = Number.parseInt(process.env.AI_PRO_MONTHLY_COST_CAP_CENTS ?? "", 10)
+    const proCostCapCents =
+      Number.isFinite(proCostCapRaw) && proCostCapRaw > 0 ? proCostCapRaw : null
+
+    if (subscriptionPlan.isPro && proCostCapCents === null) {
       return {
         allowed: true,
         limits: {
@@ -41,16 +48,19 @@ export async function getAiAccessDecision(userId: string): Promise<AiAccessDecis
           remainingMessages: null,
           monthlyTokenUsage: 0,
           monthlyTokenQuota: null,
+          monthlyCostUsageCents: 0,
+          monthlyCostQuotaCents: null,
         },
       }
     }
 
     const monthStart = getMonthStartUtc()
-    const [monthlyMessageCount, monthlyTokenAggregate] = await Promise.all([
+    const [monthlyMessageCount, monthlyAggregates] = await Promise.all([
       prisma.aiUsage.count({
         where: {
           userId,
           createdAt: { gte: monthStart },
+          requestType: { in: ["chat", "chat-stream"] },
         },
       }),
       prisma.aiUsage.aggregate({
@@ -60,11 +70,49 @@ export async function getAiAccessDecision(userId: string): Promise<AiAccessDecis
         },
         _sum: {
           totalTokens: true,
+          totalCost: true,
         },
       }),
     ])
 
-    const monthlyTokenUsage = monthlyTokenAggregate._sum.totalTokens ?? 0
+    const monthlyTokenUsage = monthlyAggregates._sum.totalTokens ?? 0
+    const monthlyCostUsageCents = monthlyAggregates._sum.totalCost ?? 0
+
+    if (subscriptionPlan.isPro) {
+      if (proCostCapCents !== null && monthlyCostUsageCents >= proCostCapCents) {
+        return {
+          allowed: false,
+          code: "PRO_TIER_COST_CAP_REACHED",
+          message:
+            "You have reached this month's AI fair-use cap. Please contact support to increase limits.",
+          limits: {
+            isPro: true,
+            monthlyMessageCount,
+            monthlyMessageLimit: null,
+            remainingMessages: null,
+            monthlyTokenUsage,
+            monthlyTokenQuota: null,
+            monthlyCostUsageCents,
+            monthlyCostQuotaCents: proCostCapCents,
+          },
+        }
+      }
+
+      return {
+        allowed: true,
+        limits: {
+          isPro: true,
+          monthlyMessageCount,
+          monthlyMessageLimit: null,
+          remainingMessages: null,
+          monthlyTokenUsage,
+          monthlyTokenQuota: null,
+          monthlyCostUsageCents,
+          monthlyCostQuotaCents: proCostCapCents,
+        },
+      }
+    }
+
     const remainingMessages = Math.max(0, FREE_TIER_MONTHLY_MESSAGE_LIMIT - monthlyMessageCount)
 
     if (monthlyMessageCount >= FREE_TIER_MONTHLY_MESSAGE_LIMIT) {
@@ -80,6 +128,8 @@ export async function getAiAccessDecision(userId: string): Promise<AiAccessDecis
           remainingMessages: 0,
           monthlyTokenUsage,
           monthlyTokenQuota: FREE_TIER_MONTHLY_TOKEN_QUOTA,
+          monthlyCostUsageCents,
+          monthlyCostQuotaCents: null,
         },
       }
     }
@@ -97,6 +147,8 @@ export async function getAiAccessDecision(userId: string): Promise<AiAccessDecis
           remainingMessages,
           monthlyTokenUsage,
           monthlyTokenQuota: FREE_TIER_MONTHLY_TOKEN_QUOTA,
+          monthlyCostUsageCents,
+          monthlyCostQuotaCents: null,
         },
       }
     }
@@ -110,6 +162,8 @@ export async function getAiAccessDecision(userId: string): Promise<AiAccessDecis
         remainingMessages,
         monthlyTokenUsage,
         monthlyTokenQuota: FREE_TIER_MONTHLY_TOKEN_QUOTA,
+        monthlyCostUsageCents,
+        monthlyCostQuotaCents: null,
       },
     }
   } catch {

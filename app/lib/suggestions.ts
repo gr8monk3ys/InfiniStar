@@ -7,6 +7,7 @@
 
 import Anthropic from "@anthropic-ai/sdk"
 
+import { trackAiUsage } from "@/app/lib/ai-usage"
 import { type FullMessageType } from "@/app/types"
 
 /**
@@ -267,9 +268,13 @@ export async function generateSuggestions(
   options?: {
     maxSuggestions?: number
     skipCache?: boolean
+    tracking?: {
+      userId: string
+      conversationId: string
+    }
   }
 ): Promise<SuggestionsResponse> {
-  const { maxSuggestions = 4, skipCache = false } = options || {}
+  const { maxSuggestions = 4, skipCache = false, tracking } = options || {}
 
   // Check cache first
   if (!skipCache) {
@@ -290,6 +295,7 @@ export async function generateSuggestions(
   // Call Claude Haiku for fast suggestions
   const anthropic = getAnthropicClient()
 
+  const startedAt = Date.now()
   const response = await anthropic.messages.create({
     model: "claude-3-5-haiku-20241022",
     max_tokens: 512,
@@ -301,6 +307,19 @@ export async function generateSuggestions(
       },
     ],
   })
+  const latencyMs = Date.now() - startedAt
+
+  if (tracking) {
+    await trackAiUsage({
+      userId: tracking.userId,
+      conversationId: tracking.conversationId,
+      model: "claude-3-5-haiku-20241022",
+      inputTokens: response.usage.input_tokens,
+      outputTokens: response.usage.output_tokens,
+      requestType: "suggestions",
+      latencyMs,
+    })
+  }
 
   // Extract text from response
   const textContent = response.content.find((c) => c.type === "text")

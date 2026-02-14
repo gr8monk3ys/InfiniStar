@@ -10,6 +10,7 @@ import getCurrentUser from "@/app/actions/getCurrentUser"
 const MODEL_CONTEXT_WINDOWS: Record<string, number> = {
   "claude-3-5-sonnet-20241022": 200_000,
   "claude-3-opus-20240229": 200_000,
+  "claude-3-5-haiku-20241022": 200_000,
   "claude-3-haiku-20240307": 200_000,
 }
 
@@ -102,6 +103,7 @@ export async function GET(request: NextRequest) {
       where: {
         userId: currentUser.id,
         createdAt: { gte: monthStart },
+        requestType: { in: ["chat", "chat-stream"] },
       },
     })
 
@@ -469,6 +471,7 @@ function formatModelName(model: string): string {
   const modelNames: Record<string, string> = {
     "claude-3-5-sonnet-20241022": "Claude 3.5 Sonnet",
     "claude-3-opus-20240229": "Claude 3 Opus",
+    "claude-3-5-haiku-20241022": "Claude 3.5 Haiku",
     "claude-3-haiku-20240307": "Claude 3 Haiku",
   }
   return modelNames[model] || model

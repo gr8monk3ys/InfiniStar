@@ -9,12 +9,20 @@ import prisma from "@/app/lib/prismadb"
 
 /**
  * Pricing information for Anthropic Claude models (per million tokens)
- * Prices as of January 2025
+ * Prices should be kept in sync with Anthropic's published API pricing.
+ *
+ * Notes:
+ * - Values are USD per 1,000,000 tokens.
+ * - `calculateTokenCost` returns costs in cents.
  */
 export const MODEL_PRICING = {
   "claude-3-5-sonnet-20241022": {
     input: 3.0, // $3 per million input tokens
     output: 15.0, // $15 per million output tokens
+  },
+  "claude-3-5-haiku-20241022": {
+    input: 0.8, // $0.80 per million input tokens
+    output: 4.0, // $4 per million output tokens
   },
   "claude-3-opus-20240229": {
     input: 15.0, // $15 per million input tokens
@@ -25,6 +33,8 @@ export const MODEL_PRICING = {
     output: 1.25, // $1.25 per million output tokens
   },
 } as const
+
+export type AiRequestType = "chat" | "chat-stream" | "suggestions" | "memory-extract" | "summary"
 
 /**
  * Calculate cost in cents for token usage
@@ -38,14 +48,17 @@ export function calculateTokenCost(
   outputCost: number
   totalCost: number
 } {
+  const safeInputTokens = Math.max(0, inputTokens)
+  const safeOutputTokens = Math.max(0, outputTokens)
+
   // Get pricing for model, default to Sonnet if unknown
   const pricing =
     MODEL_PRICING[model as keyof typeof MODEL_PRICING] ||
     MODEL_PRICING["claude-3-5-sonnet-20241022"]
 
   // Calculate costs in cents (divide by million for per-token rate, multiply by 100 for cents)
-  const inputCost = (inputTokens / 1_000_000) * pricing.input * 100
-  const outputCost = (outputTokens / 1_000_000) * pricing.output * 100
+  const inputCost = (safeInputTokens / 1_000_000) * pricing.input * 100
+  const outputCost = (safeOutputTokens / 1_000_000) * pricing.output * 100
   const totalCost = inputCost + outputCost
 
   return {
@@ -72,7 +85,7 @@ export async function trackAiUsage({
   model: string
   inputTokens: number
   outputTokens: number
-  requestType: "chat" | "chat-stream"
+  requestType: AiRequestType
   latencyMs?: number
 }) {
   const totalTokens = inputTokens + outputTokens

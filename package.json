@@ -25,6 +25,7 @@
     "test:load:smoke": "node scripts/load_smoke.mjs",
     "ops:stripe:webhook:verify": "node scripts/verify_stripe_webhook_staging.mjs",
     "ops:sentry:alerts:audit": "node scripts/audit_sentry_alerts.mjs",
+    "ops:ai:unit-economics": "node scripts/unit_economics.mjs",
     "ops:db:backup-restore:drill": "bash scripts/db_backup_restore_drill.sh",
     "ci:release:gate": "bash scripts/release_gate.sh",
     "ci:release:gate:full": "RUN_E2E=1 RUN_LOAD_SMOKE=1 bash scripts/release_gate.sh",

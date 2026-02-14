@@ -8,6 +8,7 @@
 import Anthropic from "@anthropic-ai/sdk"
 import { MemoryCategory, type AIMemory } from "@prisma/client"
 
+import { trackAiUsage } from "@/app/lib/ai-usage"
 import prisma from "@/app/lib/prismadb"
 import { getUserSubscriptionPlan } from "@/app/lib/subscription"
 
@@ -338,6 +339,8 @@ Remember to consider this context when responding, but don't explicitly mention 
  * Extract memorable information from conversation messages using AI
  */
 export async function extractMemoriesFromMessages(
+  userId: string,
+  conversationId: string,
   messages: Array<{ role: "user" | "assistant"; content: string }>,
   existingMemories: AIMemory[]
 ): Promise<ExtractedMemory[]> {
@@ -380,9 +383,10 @@ Return a JSON array of memories to save. Each memory should have:
 Only extract genuinely useful information. Don't create memories for trivial or temporary things.
 If there's nothing notable to remember, return an empty array.
 
-Respond with ONLY the JSON array, no other text.`
+  Respond with ONLY the JSON array, no other text.`
 
   try {
+    const startedAt = Date.now()
     const response = await anthropic.messages.create({
       model: "claude-3-5-haiku-20241022", // Use faster model for extraction
       max_tokens: 1024,
@@ -392,6 +396,17 @@ Respond with ONLY the JSON array, no other text.`
           content: extractionPrompt,
         },
       ],
+    })
+    const latencyMs = Date.now() - startedAt
+
+    await trackAiUsage({
+      userId,
+      conversationId,
+      model: "claude-3-5-haiku-20241022",
+      inputTokens: response.usage.input_tokens,
+      outputTokens: response.usage.output_tokens,
+      requestType: "memory-extract",
+      latencyMs,
     })
 
     const responseText = response.content[0].type === "text" ? response.content[0].text : ""

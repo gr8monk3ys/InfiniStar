@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server"
 import Anthropic from "@anthropic-ai/sdk"
 
+import { getAiAccessDecision } from "@/app/lib/ai-access"
 import { trackAiUsage } from "@/app/lib/ai-usage"
 import { verifyCsrfToken } from "@/app/lib/csrf"
 import prisma from "@/app/lib/prismadb"
@@ -191,6 +192,20 @@ export async function POST(
     const startTime = Date.now()
     const modelToUse = "claude-3-5-sonnet-20241022"
 
+    const accessDecision = await getAiAccessDecision(currentUser.id)
+    if (!accessDecision.allowed) {
+      return NextResponse.json(
+        {
+          error:
+            accessDecision.message ??
+            "AI access is unavailable for this account right now. Please try again.",
+          code: accessDecision.code,
+          limits: accessDecision.limits,
+        },
+        { status: 402 }
+      )
+    }
+
     // Call Anthropic API to generate summary
     const response = await anthropic.messages.create({
       model: modelToUse,
@@ -238,7 +253,7 @@ export async function POST(
       model: modelToUse,
       inputTokens: response.usage.input_tokens,
       outputTokens: response.usage.output_tokens,
-      requestType: "chat",
+      requestType: "summary",
       latencyMs,
     })
 

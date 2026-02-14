@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { z } from "zod"
 
+import { getAiAccessDecision } from "@/app/lib/ai-access"
 import { verifyCsrfToken } from "@/app/lib/csrf"
 import prisma from "@/app/lib/prismadb"
 import { getClientIdentifier, InMemoryRateLimiter } from "@/app/lib/rate-limit"
@@ -144,6 +145,20 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const accessDecision = await getAiAccessDecision(currentUser.id)
+    if (!accessDecision.allowed) {
+      return NextResponse.json(
+        {
+          error:
+            accessDecision.message ??
+            "AI access is unavailable for this account right now. Please try again.",
+          code: accessDecision.code,
+          limits: accessDecision.limits,
+        },
+        { status: 402 }
+      )
+    }
+
     // Build suggestion context
     // Reverse messages to get chronological order
     const messages = conversation.messages.reverse() as FullMessageType[]
@@ -169,6 +184,10 @@ export async function POST(request: NextRequest) {
     const result = await generateSuggestions(context, type as SuggestionType, {
       maxSuggestions: 4,
       skipCache: skipCache || false,
+      tracking: {
+        userId: currentUser.id,
+        conversationId,
+      },
     })
 
     return NextResponse.json({
