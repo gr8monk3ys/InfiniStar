@@ -1,4 +1,8 @@
 import { withSentryConfig } from "@sentry/nextjs"
+import path from "path"
+import { fileURLToPath } from "url"
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 function isEnabled(value) {
   if (!value) {
@@ -114,6 +118,10 @@ function buildSecurityHeaders() {
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  outputFileTracingRoot: __dirname,
+  turbopack: {
+    root: __dirname,
+  },
   async headers() {
     return [
       {

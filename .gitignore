@@ -8,6 +8,8 @@
 tsconfig.tsbuildinfo
 .next/
 coverage/
+playwright-report/
+test-results/
 node_modules/
 prisma/dev.db
 prisma/dev.db-journal
