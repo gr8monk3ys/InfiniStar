@@ -1,6 +1,9 @@
 #!/usr/bin/env node
 import process from "node:process"
+import { neonConfig } from "@neondatabase/serverless"
+import { PrismaNeon } from "@prisma/adapter-neon"
 import { PrismaClient } from "@prisma/client"
+import ws from "ws"
 
 function writeLine(message = "") {
   process.stdout.write(`${message}\n`)
@@ -76,11 +79,21 @@ function isProUser(user) {
   )
 }
 
+function isProbablyNeonDatabaseUrl(rawUrl) {
+  if (!rawUrl) return false
+  try {
+    const parsed = new URL(rawUrl)
+    return parsed.hostname.includes("neon.tech")
+  } catch {
+    return false
+  }
+}
+
 const argv = parseArgs(process.argv.slice(2))
 
 const days = parsePositiveInt(argv.days || process.env.UNIT_ECON_DAYS, 30)
 const topUsers = parsePositiveInt(argv["top-users"] || process.env.UNIT_ECON_TOP_USERS, 10)
-const proPriceUsd = Number(argv["pro-price-usd"] || process.env.UNIT_ECON_PRO_PRICE_USD || 20)
+const proPriceUsd = Number(argv["pro-price-usd"] || process.env.UNIT_ECON_PRO_PRICE_USD || 9.99)
 
 const stripePct = Number(argv["stripe-pct"] || process.env.UNIT_ECON_STRIPE_PCT || 0.029)
 const stripeFixedUsd = Number(
@@ -92,8 +105,18 @@ if (!process.env.DATABASE_URL) {
   process.exit(1)
 }
 
+if (!isProbablyNeonDatabaseUrl(process.env.DATABASE_URL)) {
+  writeErrorLine(
+    "This script requires a Neon pooled DATABASE_URL (hostname contains 'neon.tech') because Prisma is configured with the Neon driver adapter."
+  )
+  writeErrorLine("Set DATABASE_URL to your Neon/Vercel connection string and re-run.")
+  process.exit(1)
+}
+
 const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000)
-const prisma = new PrismaClient()
+neonConfig.webSocketConstructor = ws
+const adapter = new PrismaNeon({ connectionString: process.env.DATABASE_URL })
+const prisma = new PrismaClient({ adapter })
 
 try {
   const where = { createdAt: { gte: since } }
