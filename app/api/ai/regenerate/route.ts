@@ -70,7 +70,8 @@ export async function POST(request: NextRequest) {
 
   // Rate limiting
   const identifier = getClientIdentifier(request)
-  if (!aiChatLimiter.check(identifier)) {
+  const allowed = await Promise.resolve(aiChatLimiter.check(identifier))
+  if (!allowed) {
     return new Response(
       JSON.stringify({
         error: "Too many AI requests. Please try again in a minute.",

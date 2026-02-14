@@ -104,7 +104,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
     // Rate limiting
     const identifier = getClientIdentifier(request)
-    if (!templateLimiter.check(identifier)) {
+    const allowed = await Promise.resolve(templateLimiter.check(identifier))
+    if (!allowed) {
       return NextResponse.json(
         { error: "Too many requests. Please try again later." },
         { status: 429 }
@@ -216,7 +217,8 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     // Rate limiting
     const identifier = getClientIdentifier(request)
-    if (!templateLimiter.check(identifier)) {
+    const allowed = await Promise.resolve(templateLimiter.check(identifier))
+    if (!allowed) {
       return NextResponse.json(
         { error: "Too many requests. Please try again later." },
         { status: 429 }

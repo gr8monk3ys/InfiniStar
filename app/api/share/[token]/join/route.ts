@@ -51,7 +51,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<I
 
     // Rate limiting
     const identifier = getClientIdentifier(request)
-    if (!shareJoinLimiter.check(identifier)) {
+    const allowed = await Promise.resolve(shareJoinLimiter.check(identifier))
+    if (!allowed) {
       return NextResponse.json(
         { error: "Too many join attempts. Please try again later." },
         { status: 429 }

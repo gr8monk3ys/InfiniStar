@@ -30,7 +30,8 @@ export async function POST(request: NextRequest) {
   try {
     // Special strict rate limiting for this endpoint
     const identifier = getClientIdentifier(request)
-    if (!autoDeleteRunLimiter.check(identifier)) {
+    const allowed = await Promise.resolve(autoDeleteRunLimiter.check(identifier))
+    if (!allowed) {
       return NextResponse.json(
         {
           error: "You can only run auto-delete once per hour. Please try again later.",

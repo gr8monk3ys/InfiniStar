@@ -46,7 +46,8 @@ import {
 export async function GET(request: NextRequest): Promise<NextResponse<AdvancedSearchResponse>> {
   // Rate limiting
   const identifier = getClientIdentifier(request)
-  if (!apiLimiter.check(identifier)) {
+  const allowed = await Promise.resolve(apiLimiter.check(identifier))
+  if (!allowed) {
     return NextResponse.json(
       {
         success: false,
@@ -276,7 +277,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<SearchSug
 
   // Rate limiting
   const identifier = getClientIdentifier(request)
-  if (!apiLimiter.check(identifier)) {
+  const allowed = await Promise.resolve(apiLimiter.check(identifier))
+  if (!allowed) {
     return NextResponse.json(
       {
         success: false,

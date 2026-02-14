@@ -80,7 +80,8 @@ export async function POST(request: NextRequest) {
   try {
     // Rate limiting
     const identifier = getClientIdentifier(request)
-    if (!tagLimiter.check(identifier)) {
+    const allowed = await Promise.resolve(tagLimiter.check(identifier))
+    if (!allowed) {
       return NextResponse.json(
         { error: "Too many requests. Please try again later." },
         { status: 429 }

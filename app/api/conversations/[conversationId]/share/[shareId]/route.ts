@@ -64,7 +64,8 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
     // Rate limiting
     const identifier = getClientIdentifier(request)
-    if (!shareLimiter.check(identifier)) {
+    const allowed = await Promise.resolve(shareLimiter.check(identifier))
+    if (!allowed) {
       return NextResponse.json(
         { error: "Too many requests. Please try again later." },
         { status: 429 }
@@ -134,7 +135,8 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
 
     // Rate limiting
     const identifier = getClientIdentifier(request)
-    if (!shareLimiter.check(identifier)) {
+    const allowed = await Promise.resolve(shareLimiter.check(identifier))
+    if (!allowed) {
       return NextResponse.json(
         { error: "Too many requests. Please try again later." },
         { status: 429 }

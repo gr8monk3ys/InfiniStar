@@ -21,7 +21,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<IP
   try {
     // Rate limiting to prevent abuse
     const identifier = getClientIdentifier(request)
-    if (!shareJoinLimiter.check(identifier)) {
+    const allowed = await Promise.resolve(shareJoinLimiter.check(identifier))
+    if (!allowed) {
       return NextResponse.json(
         { error: "Too many requests. Please try again later." },
         { status: 429 }

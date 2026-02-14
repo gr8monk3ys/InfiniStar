@@ -33,7 +33,8 @@ export async function POST(
   { params }: { params: Promise<{ characterId: string }> }
 ): Promise<NextResponse> {
   const identifier = getClientIdentifier(request)
-  if (!apiLimiter.check(identifier)) {
+  const allowed = await Promise.resolve(apiLimiter.check(identifier))
+  if (!allowed) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 })
   }
 
@@ -102,7 +103,8 @@ export async function DELETE(
   { params }: { params: Promise<{ characterId: string }> }
 ): Promise<NextResponse> {
   const identifier = getClientIdentifier(request)
-  if (!apiLimiter.check(identifier)) {
+  const allowed = await Promise.resolve(apiLimiter.check(identifier))
+  if (!allowed) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 })
   }
 

@@ -66,7 +66,8 @@ export async function POST(request: NextRequest) {
 
   // Rate limiting
   const identifier = getClientIdentifier(request)
-  if (!suggestionsLimiter.check(identifier)) {
+  const allowed = await Promise.resolve(suggestionsLimiter.check(identifier))
+  if (!allowed) {
     return NextResponse.json(
       {
         error: "Too many requests. Please try again in a moment.",

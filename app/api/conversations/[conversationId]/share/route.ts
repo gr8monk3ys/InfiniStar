@@ -63,7 +63,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<I
 
     // Rate limiting
     const identifier = getClientIdentifier(request)
-    if (!shareLimiter.check(identifier)) {
+    const allowed = await Promise.resolve(shareLimiter.check(identifier))
+    if (!allowed) {
       return NextResponse.json(
         { error: "Too many requests. Please try again later." },
         { status: 429 }

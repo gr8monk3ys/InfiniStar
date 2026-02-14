@@ -45,7 +45,8 @@ export async function GET(
 ): Promise<NextResponse> {
   // Rate limiting
   const identifier = getClientIdentifier(request)
-  if (!apiLimiter.check(identifier)) {
+  const allowed = await Promise.resolve(apiLimiter.check(identifier))
+  if (!allowed) {
     return NextResponse.json(
       { error: "Too many export requests. Please try again later.", success: false },
       { status: 429, headers: { "Retry-After": "60" } }

@@ -27,7 +27,8 @@ export async function POST(request: NextRequest) {
   try {
     // Rate limiting - stricter for AI extraction
     const identifier = getClientIdentifier(request)
-    if (!memoryExtractLimiter.check(identifier)) {
+    const allowed = await Promise.resolve(memoryExtractLimiter.check(identifier))
+    if (!allowed) {
       return NextResponse.json(
         { error: "Too many extraction requests. Please try again in a minute." },
         { status: 429 }

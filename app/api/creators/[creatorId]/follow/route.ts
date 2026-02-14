@@ -37,7 +37,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     // Rate limiting
     const identifier = getClientIdentifier(request)
-    if (!apiLimiter.check(identifier)) {
+    const allowed = await Promise.resolve(apiLimiter.check(identifier))
+    if (!allowed) {
       return NextResponse.json(
         { error: "Too many requests. Please try again later." },
         { status: 429, headers: { "Retry-After": "60" } }
@@ -82,7 +83,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     // Rate limiting
     const identifier = getClientIdentifier(request)
-    if (!apiLimiter.check(identifier)) {
+    const allowed = await Promise.resolve(apiLimiter.check(identifier))
+    if (!allowed) {
       return NextResponse.json(
         { error: "Too many requests. Please try again later." },
         { status: 429, headers: { "Retry-After": "60" } }
@@ -135,7 +137,8 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     // Rate limiting
     const identifier = getClientIdentifier(request)
-    if (!apiLimiter.check(identifier)) {
+    const allowed = await Promise.resolve(apiLimiter.check(identifier))
+    if (!allowed) {
       return NextResponse.json(
         { error: "Too many requests. Please try again later." },
         { status: 429, headers: { "Retry-After": "60" } }
