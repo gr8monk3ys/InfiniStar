@@ -18,6 +18,17 @@ import { sanitizeMessage, sanitizeUrl } from "@/app/lib/sanitize"
 const createMessageSchema = z.object({
   message: z.string().max(5000, "Message too long (max 5000 characters)").optional(),
   image: z.string().url("Invalid image URL").max(2000, "Image URL too long").optional().nullable(),
+  audioUrl: z
+    .string()
+    .url("Invalid audio URL")
+    .max(2000, "Audio URL too long")
+    .optional()
+    .nullable(),
+  audioTranscript: z
+    .string()
+    .max(10000, "Transcript too long (max 10000 characters)")
+    .optional()
+    .nullable(),
   conversationId: z.string().min(1, "Conversation ID is required"),
   replyToId: z.string().optional().nullable(),
 })
@@ -97,21 +108,24 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    const { message, image, conversationId, replyToId } = validation.data
+    const { message, image, audioUrl, audioTranscript, conversationId, replyToId } = validation.data
 
     // Sanitize user input to prevent XSS attacks
     const sanitizedMessage = message ? sanitizeMessage(message) : ""
     const sanitizedImage = image ? sanitizeUrl(image) : null
+    const sanitizedAudioUrl = audioUrl ? sanitizeUrl(audioUrl) : null
+    const sanitizedTranscript = audioTranscript ? sanitizeMessage(audioTranscript) : null
 
-    // Validate that we have either a message or an image
-    if (!sanitizedMessage && !sanitizedImage) {
-      return new NextResponse(JSON.stringify({ error: "Message or image is required" }), {
+    // Validate that we have either a message, an image, or audio
+    if (!sanitizedMessage && !sanitizedImage && !sanitizedAudioUrl) {
+      return new NextResponse(JSON.stringify({ error: "Message, image, or audio is required" }), {
         status: 400,
         headers: { "Content-Type": "application/json" },
       })
     }
 
-    const moderationResult = await moderateTextModelAssisted(sanitizedMessage)
+    const moderationText = sanitizedMessage || sanitizedTranscript || ""
+    const moderationResult = await moderateTextModelAssisted(moderationText)
     if (moderationResult.shouldBlock) {
       return new NextResponse(
         JSON.stringify({
@@ -167,6 +181,9 @@ export async function POST(request: NextRequest) {
       data: {
         body: sanitizedMessage,
         image: sanitizedImage,
+        audioUrl: sanitizedAudioUrl,
+        audioTranscript:
+          sanitizedTranscript ?? (sanitizedAudioUrl && sanitizedMessage ? sanitizedMessage : null),
         conversationId,
         senderId: currentUser.id,
         replyToId: replyToId || null,

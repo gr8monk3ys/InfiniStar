@@ -538,6 +538,18 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
                     }}
                     aria-label="Click to view full-size image"
                   />
+                ) : data.audioUrl ? (
+                  <div className="flex flex-col gap-2">
+                    <audio
+                      controls
+                      preload="metadata"
+                      src={data.audioUrl}
+                      className="w-72 max-w-full"
+                    />
+                    {displayBody ? (
+                      <div className="text-sm text-muted-foreground">{displayBody}</div>
+                    ) : null}
+                  </div>
                 ) : data.isAI ? (
                   displayBody ? (
                     <MarkdownRenderer content={displayBody} />
@@ -692,7 +704,7 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
               )}
 
               {/* Edit/Delete menu - only show for own messages and not AI messages */}
-              {isOwn && !data.isAI && !data.image && (
+              {isOwn && !data.isAI && !data.image && !data.audioUrl && (
                 <div className="relative">
                   <button
                     onClick={() => setShowMenu(!showMenu)}

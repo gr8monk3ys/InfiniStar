@@ -23,6 +23,7 @@ import prisma from "@/app/lib/prismadb"
 import { pusherServer } from "@/app/lib/pusher"
 import { getPusherConversationChannel } from "@/app/lib/pusher-channels"
 import { aiChatLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
+import { sanitizeUrl } from "@/app/lib/sanitize"
 import { sendWebPushToUser } from "@/app/lib/web-push"
 import getCurrentUser from "@/app/actions/getCurrentUser"
 
@@ -30,6 +31,12 @@ import getCurrentUser from "@/app/actions/getCurrentUser"
 const chatStreamSchema = z.object({
   message: z.string().max(10000, "Message too long (max 10000 characters)").optional().nullable(),
   image: z.string().url("Invalid image URL").max(2000, "Image URL too long").optional().nullable(),
+  audioUrl: z
+    .string()
+    .url("Invalid audio URL")
+    .max(2000, "Audio URL too long")
+    .optional()
+    .nullable(),
   conversationId: z.string().min(1, "Conversation ID is required"),
 })
 
@@ -113,11 +120,12 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    const { message, image, conversationId } = validation.data
+    const { message, image, audioUrl, conversationId } = validation.data
 
     const builtUserContent = buildAiMessageContent(message ?? null, image ?? null)
     const sanitizedMessage = builtUserContent.sanitizedText
     const sanitizedImage = builtUserContent.sanitizedImage
+    const sanitizedAudioUrl = audioUrl ? sanitizeUrl(audioUrl) : null
 
     if (!builtUserContent.content) {
       return new Response(JSON.stringify({ error: "Message text or image is required" }), {
@@ -216,6 +224,8 @@ export async function POST(request: NextRequest) {
       data: {
         body: sanitizedMessage || null,
         image: sanitizedImage,
+        audioUrl: sanitizedAudioUrl,
+        audioTranscript: sanitizedAudioUrl ? sanitizedMessage || null : null,
         conversation: {
           connect: { id: conversationId },
         },

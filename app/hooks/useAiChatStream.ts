@@ -27,6 +27,7 @@ interface UseAiChatStreamOptions {
 interface SendAiMessageInput {
   message?: string
   image?: string
+  audioUrl?: string
 }
 
 /**
@@ -83,6 +84,7 @@ export function useAiChatStream(options: UseAiChatStreamOptions) {
           body: JSON.stringify({
             message: trimmedMessage || undefined,
             image: input.image || undefined,
+            audioUrl: input.audioUrl || undefined,
             conversationId,
           }),
           signal: abortControllerRef.current.signal,
