@@ -22,6 +22,7 @@ import prisma from "@/app/lib/prismadb"
 import { pusherServer } from "@/app/lib/pusher"
 import { getPusherConversationChannel } from "@/app/lib/pusher-channels"
 import { aiChatLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
+import { sendWebPushToUser } from "@/app/lib/web-push"
 import getCurrentUser from "@/app/actions/getCurrentUser"
 
 // Validation schema for AI chat stream requests
@@ -142,6 +143,11 @@ export async function POST(request: NextRequest) {
     const conversation = await prisma.conversation.findUnique({
       where: { id: conversationId },
       include: {
+        character: {
+          select: {
+            name: true,
+          },
+        },
         messages: {
           orderBy: { createdAt: "asc" },
           take: 20, // Get last 20 messages for context
@@ -336,6 +342,31 @@ export async function POST(request: NextRequest) {
             aiMessage
           )
 
+          // Best-effort background push (web push) for AI completion.
+          const pushPromise = (async () => {
+            const prefs = await prisma.user.findUnique({
+              where: { id: currentUser.id },
+              select: {
+                browserNotifications: true,
+                notifyOnAIComplete: true,
+              },
+            })
+
+            const isMuted = (conversation.mutedBy || []).includes(currentUser.id)
+            if (prefs?.browserNotifications && prefs.notifyOnAIComplete && !isMuted) {
+              const title = conversation.name || conversation.character?.name || "AI reply"
+              const preview = aiMessage.body ? aiMessage.body.slice(0, 160) : "AI response complete"
+              await sendWebPushToUser(currentUser.id, {
+                title,
+                body: `AI: ${preview}`,
+                url: `/dashboard/conversations/${conversationId}`,
+                tag: conversationId,
+              })
+            }
+          })().catch((error) => {
+            console.error("WEB_PUSH_AI_COMPLETE_ERROR", error)
+          })
+
           // Send completion signal with token usage data
           const completeData = JSON.stringify({
             type: "done",
@@ -349,6 +380,7 @@ export async function POST(request: NextRequest) {
           controller.enqueue(encoder.encode(`data: ${completeData}\n\n`))
 
           controller.close()
+          await pushPromise
         } catch (error) {
           console.error("Streaming error:", error)
 

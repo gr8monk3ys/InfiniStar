@@ -88,6 +88,77 @@ type TabType =
   | "auto-delete"
   | "account"
 
+function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4)
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/")
+  const rawData = window.atob(base64)
+  const buffer = new ArrayBuffer(rawData.length)
+  const outputArray = new Uint8Array(buffer)
+  for (let i = 0; i < rawData.length; i++) {
+    outputArray[i] = rawData.charCodeAt(i)
+  }
+  return outputArray
+}
+
+async function syncBackgroundPushForDevice(enabled: boolean) {
+  if (typeof window === "undefined") return
+  if (!("Notification" in window)) return
+  if (!("serviceWorker" in navigator)) return
+  if (!("PushManager" in window)) return
+
+  if (!enabled) {
+    const reg = await navigator.serviceWorker.getRegistration()
+    if (!reg) return
+
+    const sub = await reg.pushManager.getSubscription()
+    if (!sub) return
+
+    const endpoint = sub.endpoint
+    await sub.unsubscribe().catch(() => {
+      // best-effort
+    })
+
+    await api.delete("/api/notifications/push", {
+      data: { endpoint },
+      showErrorToast: false,
+      retries: 0,
+    })
+
+    return
+  }
+
+  if (Notification.permission !== "granted") {
+    const permission = await Notification.requestPermission()
+    if (permission !== "granted") {
+      return
+    }
+  }
+
+  const status = await api.get<{ configured: boolean; publicKey: string | null }>(
+    "/api/notifications/push",
+    { showErrorToast: false, retries: 0 }
+  )
+
+  if (!status.configured || !status.publicKey) {
+    return
+  }
+
+  const reg = await navigator.serviceWorker.register("/sw.js")
+  const existingSub = await reg.pushManager.getSubscription()
+  const subscription =
+    existingSub ??
+    (await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(status.publicKey),
+    }))
+
+  await api.post(
+    "/api/notifications/push",
+    { subscription: subscription.toJSON(), userAgent: navigator.userAgent },
+    { showErrorToast: false, retries: 0 }
+  )
+}
+
 export default function ProfilePage() {
   const { user, isLoaded } = useUser()
   const router = useRouter()
@@ -295,6 +366,13 @@ export default function ProfilePage() {
       )
 
       loader.success(response.message)
+
+      // Best-effort: keep this device in sync with the saved preference.
+      try {
+        await syncBackgroundPushForDevice(browserNotifications)
+      } catch {
+        // Ignore push sync failures; prefs still saved.
+      }
     } catch (error) {
       const message =
         error instanceof ApiError ? error.message : "Failed to save notification preferences"

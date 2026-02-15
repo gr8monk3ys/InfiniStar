@@ -62,6 +62,8 @@ model User {
 
   messages Message[]
 
+  pushSubscriptions PushSubscription[]
+
   tags             Tag[]
   aiMemories       AIMemory[]
   messageTemplates MessageTemplate[]
@@ -78,6 +80,23 @@ model User {
   followers            UserFollow[]        @relation("UserFollowers")
 
   @@map("users")
+}
+
+model PushSubscription {
+  id        String   @id @default(uuid()) @db.Uuid
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId    String @db.Uuid
+  endpoint  String @unique
+  p256dh    String
+  auth      String
+  userAgent String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("push_subscriptions")
 }
 
 model Conversation {

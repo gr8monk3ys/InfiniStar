@@ -1,6 +1,9 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import toast from "react-hot-toast"
+
+import { api, createLoadingToast } from "@/app/lib/api-client"
 
 interface NotificationsTabContentProps {
   emailNotifications: boolean
@@ -35,6 +38,79 @@ export function NotificationsTabContent({
   isLoading,
   onSubmit,
 }: NotificationsTabContentProps) {
+  const [pushSupported, setPushSupported] = useState(false)
+  const [pushConfigured, setPushConfigured] = useState<boolean | null>(null)
+  const [pushSubscribed, setPushSubscribed] = useState<boolean | null>(null)
+  const [pushStatusLoading, setPushStatusLoading] = useState(false)
+  const [pushTestLoading, setPushTestLoading] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+
+    const checkPush = async () => {
+      if (typeof window === "undefined") return
+
+      const supported =
+        "Notification" in window && "serviceWorker" in navigator && "PushManager" in window
+
+      if (!cancelled) {
+        setPushSupported(supported)
+      }
+
+      if (!supported) {
+        if (!cancelled) {
+          setPushConfigured(null)
+          setPushSubscribed(null)
+        }
+        return
+      }
+
+      setPushStatusLoading(true)
+      try {
+        const status = await api.get<{ configured: boolean; publicKey: string | null }>(
+          "/api/notifications/push",
+          { showErrorToast: false, retries: 0 }
+        )
+
+        if (!cancelled) {
+          setPushConfigured(Boolean(status.configured && status.publicKey))
+        }
+
+        let reg: ServiceWorkerRegistration | undefined =
+          await navigator.serviceWorker.getRegistration()
+        if (!reg && browserNotifications) {
+          try {
+            reg = await navigator.serviceWorker.register("/sw.js")
+          } catch {
+            reg = undefined
+          }
+        }
+
+        const sub = reg ? await reg.pushManager.getSubscription() : null
+        if (!cancelled) {
+          setPushSubscribed(Boolean(sub))
+        }
+      } catch {
+        if (!cancelled) {
+          setPushConfigured(null)
+          setPushSubscribed(null)
+        }
+      } finally {
+        if (!cancelled) {
+          setPushStatusLoading(false)
+        }
+      }
+    }
+
+    checkPush().catch(() => {
+      // ignore
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [browserNotifications, isLoading])
+
   return (
     <form onSubmit={onSubmit} className="space-y-6" aria-label="Notification preferences form">
       <div>
@@ -55,8 +131,8 @@ export function NotificationsTabContent({
               Browser Notifications
             </label>
             <p className="mt-1 text-sm text-gray-500">
-              Show notifications while this app is open (best-effort). You may need to grant
-              permission in your browser.
+              Show notifications while this app is open (best-effort) and enable background push on
+              supported browsers. You may need to grant permission in your browser.
             </p>
           </div>
           <button
@@ -97,6 +173,66 @@ export function NotificationsTabContent({
                 browserNotifications ? "translate-x-5" : "translate-x-0"
               }`}
             />
+          </button>
+        </div>
+      </div>
+
+      {/* Background Push (Web Push) */}
+      <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex-1">
+            <h4 className="text-sm font-medium text-gray-900">Background Push (Beta)</h4>
+            <p className="mt-1 text-sm text-gray-500">
+              Receive notifications even when the app is closed (requires service worker support).
+            </p>
+            <p className="mt-2 text-xs text-gray-500">
+              Status:{" "}
+              {pushStatusLoading
+                ? "Checking..."
+                : !pushSupported
+                  ? "Not supported on this browser"
+                  : pushConfigured === false
+                    ? "Not configured on the server"
+                    : browserNotifications
+                      ? pushSubscribed
+                        ? "Enabled on this device"
+                        : "Not enabled on this device yet (save preferences to enable)"
+                      : "Turn on Browser Notifications and save to enable"}
+            </p>
+          </div>
+
+          <button
+            type="button"
+            disabled={
+              isLoading ||
+              pushTestLoading ||
+              pushStatusLoading ||
+              !pushSupported ||
+              pushConfigured !== true ||
+              !browserNotifications ||
+              pushSubscribed !== true
+            }
+            onClick={async () => {
+              if (pushTestLoading || isLoading) return
+              setPushTestLoading(true)
+              const loader = createLoadingToast("Sending test push...")
+              try {
+                await api.post(
+                  "/api/notifications/push/test",
+                  {},
+                  { showErrorToast: false, retries: 0 }
+                )
+                loader.success("Test push sent (check your notifications).")
+              } catch (error) {
+                const message = error instanceof Error ? error.message : "Failed to send test push"
+                loader.error(message)
+              } finally {
+                setPushTestLoading(false)
+              }
+            }}
+            className="rounded-md bg-sky-600 px-3 py-2 text-sm text-white hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {pushTestLoading ? "Sending..." : "Send Test"}
           </button>
         </div>
       </div>

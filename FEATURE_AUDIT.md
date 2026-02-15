@@ -19,10 +19,10 @@ Legend: **Implemented**, **Partial**, **Missing**
 - **Conversation share links / join flow**: Implemented (verify UX)
 - **Conversation export (MD/JSON/TXT)**: Implemented
 - **Threaded replies (reply-to)**: Implemented
-- **Regenerate AI replies**: Implemented (overwrites message; no “deleted placeholder” UX)
+- **Regenerate AI replies**: Implemented (streams in-place; stores variants + active selection UI)
 - **Message reactions**: Implemented
 - **Message edits (user messages)**: Implemented
-- **Conversation branching / alt replies UI**: Missing
+- **Conversation branching / alt replies UI**: Implemented (branch from message; variant selector)
 
 ## Characters / Marketplace
 
@@ -70,12 +70,10 @@ Legend: **Implemented**, **Partial**, **Missing**
 - **Rate limiting**: Implemented (Redis-backed optional)
 - **PWA manifest + installability**: Implemented
 - **Browser notifications (foreground / best-effort)**: Implemented
-- **True web push notifications (background)**: Missing
+- **True web push notifications (background)**: Implemented (service worker + VAPID; requires server config)
 
 ## Highest-Priority Gaps For Competitive Parity
 
-- Conversation branching / alternate replies selection UI
 - Stronger safety (model-based moderation, age gating, better reporting UX)
-- True web push notifications (service worker + VAPID + server fanout)
 - Audio messages + transcription
 - Image generation (provider integration + cost controls)
