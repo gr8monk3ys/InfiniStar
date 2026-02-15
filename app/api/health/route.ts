@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 
 import prisma from "@/app/lib/prismadb"
+import { isRedisAvailable } from "@/app/lib/redis"
 
 export async function GET(): Promise<NextResponse> {
   const timestamp = new Date().toISOString()
@@ -8,13 +9,21 @@ export async function GET(): Promise<NextResponse> {
   try {
     await prisma.$queryRaw`SELECT 1`
 
+    const redisConfigured = Boolean(process.env.REDIS_URL)
+    const redisAvailable = redisConfigured ? await isRedisAvailable() : false
+    const shouldRequireRedisInProd = process.env.NODE_ENV === "production"
+
+    const status =
+      shouldRequireRedisInProd && (!redisConfigured || !redisAvailable) ? "degraded" : "ok"
+
     return NextResponse.json(
       {
-        status: "ok",
+        status,
         timestamp,
         database: "connected",
+        redis: redisConfigured ? (redisAvailable ? "connected" : "disconnected") : "not_configured",
       },
-      { status: 200 }
+      { status: status === "ok" ? 200 : 503 }
     )
   } catch {
     return NextResponse.json(

@@ -42,6 +42,7 @@ This checklist is the release gate for shipping InfiniStar as a reliable and com
 
 ## 5. Operational Readiness
 
+- [ ] Redis configured for production (`REDIS_URL`) so rate limiting and 2FA token storage work across instances (verify `/api/health` reports `redis: connected`)
 - [ ] Sentry alert rules verified against production severity thresholds (blocked locally: SENTRY_AUTH_TOKEN/SENTRY_ORG/SENTRY_PROJECT not configured)
 - [x] Incident response runbook documented (`runbooks/INCIDENT_RESPONSE_RUNBOOK.md`)
 - [ ] DB backup/restore drill executed and documented (blocked locally: DRILL_DATABASE_URL not configured)
