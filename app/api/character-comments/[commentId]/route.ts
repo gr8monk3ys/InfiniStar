@@ -87,6 +87,11 @@ export async function DELETE(
         where: { id: comment.characterId },
         data: { commentCount: { decrement: 1 } },
       }),
+      // Clamp counters to prevent negative values in case of drift.
+      prisma.character.updateMany({
+        where: { id: comment.characterId, commentCount: { lt: 0 } },
+        data: { commentCount: 0 },
+      }),
     ])
 
     return NextResponse.json({ deleted: true })
