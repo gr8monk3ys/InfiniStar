@@ -60,6 +60,20 @@ function parsePositiveInt(rawValue, fallback) {
   return parsed
 }
 
+function parsePositiveIntOrNull(rawValue, fallback) {
+  if (rawValue === undefined || rawValue === null || rawValue === "") {
+    return fallback
+  }
+
+  const parsed = Number(rawValue)
+  if (!Number.isFinite(parsed) || !Number.isInteger(parsed)) {
+    return fallback
+  }
+
+  // Explicitly allow <= 0 to mean "unlimited" (null).
+  return parsed > 0 ? parsed : null
+}
+
 function centsToUsd(cents) {
   if (!Number.isFinite(cents)) {
     return 0
@@ -99,6 +113,13 @@ const proPriceUsd = Number(argv["pro-price-usd"] || process.env.UNIT_ECON_PRO_PR
 const stripePct = Number(argv["stripe-pct"] || process.env.UNIT_ECON_STRIPE_PCT || 0.029)
 const stripeFixedUsd = Number(
   argv["stripe-fixed-usd"] || process.env.UNIT_ECON_STRIPE_FIXED_USD || 0.3
+)
+
+const proCostCapCents = parsePositiveIntOrNull(
+  argv["pro-cap-cents"] ||
+    process.env.UNIT_ECON_PRO_CAP_CENTS ||
+    process.env.AI_PRO_MONTHLY_COST_CAP_CENTS,
+  800
 )
 
 if (!process.env.DATABASE_URL) {
@@ -255,6 +276,36 @@ try {
   writeLine(`PRO LLM cost: ${formatUsd(proTopUsersCostUsd)}`)
   writeLine(`PRO gross profit (LLM only): ${formatUsd(proTopUsersGrossProfitUsd)}`)
   writeLine(`FREE LLM cost (top users only): ${formatUsd(centsToUsd(freeTopUsersCostCents))}`)
+
+  writeLine()
+  writeLine("Theoretical PRO economics at fair-use cap (per user/month)")
+  writeLine(`Assumed PRO price: ${formatUsd(proPriceUsd)} / month`)
+  writeLine(`Assumed Stripe fees: ${(stripePct * 100).toFixed(2)}% + ${formatUsd(stripeFixedUsd)}`)
+
+  const netPerUserUsd = Math.max(0, proPriceUsd * (1 - stripePct) - stripeFixedUsd)
+  writeLine(`Net revenue after Stripe: ${formatUsd(netPerUserUsd)}`)
+
+  if (proCostCapCents === null) {
+    writeLine("PRO cost cap: unlimited (AI_PRO_MONTHLY_COST_CAP_CENTS <= 0)")
+    writeLine("Worst-case LLM cost is unbounded. Set AI_PRO_MONTHLY_COST_CAP_CENTS to control risk.")
+  } else {
+    const capUsd = centsToUsd(proCostCapCents)
+    writeLine(`PRO cost cap: ${formatUsd(capUsd)} (AI_PRO_MONTHLY_COST_CAP_CENTS=${proCostCapCents})`)
+
+    const worstCaseGrossProfitUsd = netPerUserUsd - capUsd
+    writeLine(`Worst-case gross profit (LLM only): ${formatUsd(worstCaseGrossProfitUsd)}`)
+
+    // Break-even and target margin pricing at cap (LLM-only).
+    const stripeMultiplier = 1 - stripePct
+    if (stripeMultiplier > 0) {
+      const breakevenPriceUsd = (capUsd + stripeFixedUsd) / stripeMultiplier
+      writeLine(`Break-even PRO price at cap (LLM only): ${formatUsd(breakevenPriceUsd)}`)
+
+      const priceForMargin = (marginUsd) => (capUsd + stripeFixedUsd + marginUsd) / stripeMultiplier
+      writeLine(`Price for $2.00 margin at cap: ${formatUsd(priceForMargin(2))}`)
+      writeLine(`Price for $5.00 margin at cap: ${formatUsd(priceForMargin(5))}`)
+    }
+  }
 
   writeLine()
   writeLine(
