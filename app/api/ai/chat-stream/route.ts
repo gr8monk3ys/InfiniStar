@@ -144,8 +144,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify the conversation exists and is an AI conversation
-    const conversation = await prisma.conversation.findUnique({
-      where: { id: conversationId },
+    const conversation = await prisma.conversation.findFirst({
+      where: {
+        id: conversationId,
+        users: { some: { id: currentUser.id } },
+      },
       include: {
         character: {
           select: {
@@ -161,7 +164,10 @@ export async function POST(request: NextRequest) {
     })
 
     if (!conversation) {
-      return new Response("Conversation not found", { status: 404 })
+      return new Response(JSON.stringify({ error: "Not authorized for this conversation" }), {
+        status: 403,
+        headers: { "Content-Type": "application/json" },
+      })
     }
 
     if (!conversation.isAI) {

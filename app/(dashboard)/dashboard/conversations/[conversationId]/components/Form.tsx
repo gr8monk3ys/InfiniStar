@@ -7,8 +7,17 @@ import axios from "axios"
 import type { CloudinaryUploadWidgetResults } from "next-cloudinary"
 import { useForm, type FieldValues, type SubmitHandler } from "react-hook-form"
 import toast from "react-hot-toast"
-import { HiPaperAirplane, HiPhoto, HiXMark } from "react-icons/hi2"
+import { HiPaperAirplane, HiPhoto, HiSparkles, HiXMark } from "react-icons/hi2"
 
+import { Button } from "@/app/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/app/components/ui/dialog"
 import useConversation from "@/app/(dashboard)/dashboard/hooks/useConversation"
 import { SuggestionChips } from "@/app/components/suggestions"
 import { isVoiceInputSupported, VoiceInput, type VoiceInputMode } from "@/app/components/voice"
@@ -54,6 +63,12 @@ const Form: React.FC<FormProps> = ({
   const { conversationId } = useConversation()
   const [isLoading, setIsLoading] = useState(false)
   const [pendingImage, setPendingImage] = useState<string | null>(null)
+  const [imageGenOpen, setImageGenOpen] = useState(false)
+  const [imageGenPrompt, setImageGenPrompt] = useState("")
+  const [imageGenSize, setImageGenSize] = useState<
+    "512x512" | "1024x1024" | "1024x1792" | "1792x1024"
+  >("1024x1024")
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false)
   const { token: csrfToken } = useCsrfToken()
   const viewerId = currentUserId ?? undefined
 
@@ -160,6 +175,51 @@ const Form: React.FC<FormProps> = ({
       formRef.current.requestSubmit()
     }
   }, [getValues])
+
+  const handleGenerateImage = useCallback(async () => {
+    if (!csrfToken) {
+      toast.error("Security token not available. Please refresh the page.")
+      return
+    }
+
+    const prompt = imageGenPrompt.trim()
+    if (!prompt) {
+      toast.error("Enter an image prompt first")
+      return
+    }
+
+    setIsGeneratingImage(true)
+    const loader = toast.loading("Generating image...")
+
+    try {
+      const res = await fetch("/api/ai/image/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-Token": csrfToken,
+        },
+        body: JSON.stringify({
+          conversationId,
+          prompt,
+          size: imageGenSize,
+        }),
+      })
+
+      const data = (await res.json().catch(() => null)) as { error?: string } | null
+      if (!res.ok) {
+        throw new Error(data?.error || "Failed to generate image")
+      }
+
+      toast.success("Image sent")
+      setImageGenOpen(false)
+      setImageGenPrompt("")
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to generate image")
+    } finally {
+      toast.dismiss(loader)
+      setIsGeneratingImage(false)
+    }
+  }, [conversationId, csrfToken, imageGenPrompt, imageGenSize])
 
   // Handle input change for typing indicator (debounced)
   const handleInputChange = useCallback(
@@ -423,6 +483,18 @@ const Form: React.FC<FormProps> = ({
             tabIndex={0}
           />
         </CldUploadButton>
+        {isAI && (
+          <button
+            type="button"
+            onClick={() => setImageGenOpen(true)}
+            disabled={isLoading || isStreaming}
+            className="rounded-md p-1 text-violet-600 transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
+            aria-label="Generate image"
+            title="Generate image"
+          >
+            <HiSparkles size={26} />
+          </button>
+        )}
         <form
           ref={formRef}
           onSubmit={handleSubmit(onSubmit)}
@@ -480,6 +552,81 @@ const Form: React.FC<FormProps> = ({
           </button>
         </form>
       </div>
+
+      {isAI && (
+        <Dialog
+          open={imageGenOpen}
+          onOpenChange={(open) => {
+            setImageGenOpen(open)
+            if (!open) {
+              setImageGenPrompt("")
+              setImageGenSize("1024x1024")
+            }
+          }}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Generate image</DialogTitle>
+              <DialogDescription>
+                Creates an AI-generated image and sends it to this conversation.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-3">
+              <label className="block text-sm font-medium text-foreground" htmlFor="image-prompt">
+                Prompt
+              </label>
+              <textarea
+                id="image-prompt"
+                value={imageGenPrompt}
+                onChange={(e) => setImageGenPrompt(e.target.value)}
+                placeholder="Describe the image you want..."
+                className="min-h-28 w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                maxLength={2000}
+                disabled={isGeneratingImage || isStreaming}
+              />
+
+              <label className="block text-sm font-medium text-foreground" htmlFor="image-size">
+                Size
+              </label>
+              <select
+                id="image-size"
+                value={imageGenSize}
+                onChange={(e) =>
+                  setImageGenSize(
+                    e.target.value as "512x512" | "1024x1024" | "1024x1792" | "1792x1024"
+                  )
+                }
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                disabled={isGeneratingImage || isStreaming}
+              >
+                <option value="512x512">512x512</option>
+                <option value="1024x1024">1024x1024</option>
+                <option value="1024x1792">1024x1792</option>
+                <option value="1792x1024">1792x1024</option>
+              </select>
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setImageGenOpen(false)}
+                disabled={isGeneratingImage}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                onClick={handleGenerateImage}
+                disabled={isGeneratingImage || isStreaming}
+              >
+                {isGeneratingImage ? "Generating..." : "Generate"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   )
 }
