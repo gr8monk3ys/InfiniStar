@@ -96,14 +96,6 @@ export function ShareDialog({
 
     setIsCreating(true)
     try {
-      // Get CSRF token
-      await api.get("/api/csrf")
-
-      const csrfToken = document.cookie
-        .split("; ")
-        .find((row) => row.startsWith("csrf-token="))
-        ?.split("=")[1]
-
       const response = await api.post<{ share: ShareItem; shareUrl: string }>(
         `/api/conversations/${conversationId}/share`,
         {
@@ -113,11 +105,6 @@ export function ShareDialog({
           maxUses: settings.maxUses,
           allowedEmails: settings.shareType === "INVITE" ? inviteEmails : [],
           name: settings.name || null,
-        },
-        {
-          headers: {
-            "X-CSRF-Token": csrfToken || "",
-          },
         }
       )
 
@@ -139,41 +126,17 @@ export function ShareDialog({
 
   // Delete a share
   const handleDelete = async (shareId: string) => {
-    // Get CSRF token
-    await api.get("/api/csrf")
-
-    const csrfToken = document.cookie
-      .split("; ")
-      .find((row) => row.startsWith("csrf-token="))
-      ?.split("=")[1]
-
-    await api.delete(`/api/conversations/${conversationId}/share/${shareId}`, {
-      headers: {
-        "X-CSRF-Token": csrfToken || "",
-      },
-    })
+    await api.delete(`/api/conversations/${conversationId}/share/${shareId}`)
 
     setShares((prev) => prev.filter((share) => share.id !== shareId))
   }
 
   // Toggle share active state
   const handleToggleActive = async (shareId: string, isActive: boolean) => {
-    // Get CSRF token
-    await api.get("/api/csrf")
-
-    const csrfToken = document.cookie
-      .split("; ")
-      .find((row) => row.startsWith("csrf-token="))
-      ?.split("=")[1]
-
     const response = await api.patch<{ share: ShareItem; shareUrl: string }>(
       `/api/conversations/${conversationId}/share/${shareId}`,
       { isActive },
-      {
-        headers: {
-          "X-CSRF-Token": csrfToken || "",
-        },
-      }
+      { showErrorToast: true }
     )
 
     setShares((prev) =>
@@ -203,14 +166,6 @@ export function ShareDialog({
 
     setIsCreating(true)
     try {
-      // Get CSRF token
-      await api.get("/api/csrf")
-
-      const csrfToken = document.cookie
-        .split("; ")
-        .find((row) => row.startsWith("csrf-token="))
-        ?.split("=")[1]
-
       const response = await api.patch<{ share: ShareItem; shareUrl: string }>(
         `/api/conversations/${conversationId}/share/${editingShare.id}`,
         {
@@ -220,11 +175,7 @@ export function ShareDialog({
           allowedEmails: inviteEmails,
           name: settings.name || null,
         },
-        {
-          headers: {
-            "X-CSRF-Token": csrfToken || "",
-          },
-        }
+        { showErrorToast: true }
       )
 
       setShares((prev) =>

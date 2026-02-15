@@ -8,6 +8,8 @@
 import axios, { type AxiosError, type AxiosRequestConfig } from "axios"
 import toast from "react-hot-toast"
 
+import { clearClientCsrfTokenCache, getClientCsrfToken } from "@/app/lib/csrf-client"
+
 export interface ApiClientConfig extends AxiosRequestConfig {
   retries?: number
   retryDelay?: number
@@ -88,6 +90,50 @@ function getErrorMessage(error: AxiosError): string {
   }
 }
 
+function isMutationMethod(method?: string): boolean {
+  if (!method) return false
+  return ["POST", "PUT", "PATCH", "DELETE"].includes(method.toUpperCase())
+}
+
+function isSameOriginApiUrl(url?: string): boolean {
+  if (!url) return false
+  return url.startsWith("/")
+}
+
+async function withCsrfHeaderIfNeeded(
+  axiosConfig: AxiosRequestConfig
+): Promise<AxiosRequestConfig> {
+  const method = (axiosConfig.method ?? "GET").toUpperCase()
+  const url = axiosConfig.url
+
+  if (!isMutationMethod(method) || !isSameOriginApiUrl(url)) {
+    return axiosConfig
+  }
+
+  const headers = (axiosConfig.headers ?? {}) as Record<string, unknown>
+  const existingToken = headers["X-CSRF-Token"]
+
+  // If a non-empty token was provided explicitly, respect it.
+  if (typeof existingToken === "string" && existingToken.trim().length > 0) {
+    return axiosConfig
+  }
+
+  const token = await getClientCsrfToken()
+  if (!token) {
+    // Fail fast with a better error than a generic 403 downstream.
+    throw new ApiError("Security token not available. Please refresh and try again.", 403, null)
+  }
+
+  return {
+    ...axiosConfig,
+    withCredentials: true,
+    headers: {
+      ...headers,
+      "X-CSRF-Token": token,
+    },
+  }
+}
+
 /**
  * Make an API request with retry logic and error handling
  *
@@ -115,14 +161,28 @@ export async function apiRequest<T = unknown>(config: ApiClientConfig): Promise<
 
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
+      const axiosConfigWithCsrf = await withCsrfHeaderIfNeeded(axiosConfig)
       const response = await axios({
-        ...axiosConfig,
+        ...axiosConfigWithCsrf,
         timeout: timeoutMs,
       })
 
       return response.data
     } catch (error) {
       lastError = error as AxiosError
+
+      // If CSRF token expired/rotated, clear cache and retry once.
+      if (
+        lastError.response?.status === 403 &&
+        typeof (lastError.response.data as { error?: unknown } | undefined)?.error === "string" &&
+        String((lastError.response.data as { error?: unknown }).error)
+          .toLowerCase()
+          .includes("csrf") &&
+        attempt < retries
+      ) {
+        clearClientCsrfTokenCache()
+        continue
+      }
 
       // Don't retry if error is not retryable
       if (!isRetryableError(lastError)) {

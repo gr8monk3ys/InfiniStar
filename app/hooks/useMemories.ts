@@ -123,11 +123,6 @@ export function useMemories(options?: UseMemoriesOptions): UseMemoriesReturn {
       const loader = createLoadingToast("Saving memory...")
 
       try {
-        const csrfToken = document.cookie
-          .split("; ")
-          .find((row) => row.startsWith("csrf-token="))
-          ?.split("=")[1]
-
         const response = await api.post<MemoryResponse>(
           "/api/ai/memory",
           {
@@ -138,9 +133,6 @@ export function useMemories(options?: UseMemoriesOptions): UseMemoriesReturn {
             expiresAt: memoryOptions?.expiresAt || null,
           },
           {
-            headers: {
-              "X-CSRF-Token": csrfToken || "",
-            },
             showErrorToast: false,
           }
         )
@@ -180,15 +172,7 @@ export function useMemories(options?: UseMemoriesOptions): UseMemoriesReturn {
     const loader = createLoadingToast("Deleting memory...")
 
     try {
-      const csrfToken = document.cookie
-        .split("; ")
-        .find((row) => row.startsWith("csrf-token="))
-        ?.split("=")[1]
-
       await api.delete(`/api/ai/memory/${encodeURIComponent(key)}`, {
-        headers: {
-          "X-CSRF-Token": csrfToken || "",
-        },
         showErrorToast: false,
       })
 
@@ -216,11 +200,6 @@ export function useMemories(options?: UseMemoriesOptions): UseMemoriesReturn {
       const loader = createLoadingToast("Analyzing conversation...")
 
       try {
-        const csrfToken = document.cookie
-          .split("; ")
-          .find((row) => row.startsWith("csrf-token="))
-          ?.split("=")[1]
-
         const response = await api.post<ExtractResponse>(
           "/api/ai/memory/extract",
           {
@@ -228,9 +207,6 @@ export function useMemories(options?: UseMemoriesOptions): UseMemoriesReturn {
             autoSave,
           },
           {
-            headers: {
-              "X-CSRF-Token": csrfToken || "",
-            },
             showErrorToast: false,
             timeoutMs: 60000, // Allow more time for AI extraction
           }

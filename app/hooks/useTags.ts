@@ -62,18 +62,10 @@ export function useTags(): UseTagsReturn {
     const loader = createLoadingToast("Creating tag...")
 
     try {
-      const csrfToken = document.cookie
-        .split("; ")
-        .find((row) => row.startsWith("csrf-token="))
-        ?.split("=")[1]
-
       const response = await api.post<TagResponse>(
         "/api/tags",
         { name, color },
         {
-          headers: {
-            "X-CSRF-Token": csrfToken || "",
-          },
           showErrorToast: false,
         }
       )
@@ -94,15 +86,7 @@ export function useTags(): UseTagsReturn {
       const loader = createLoadingToast("Updating tag...")
 
       try {
-        const csrfToken = document.cookie
-          .split("; ")
-          .find((row) => row.startsWith("csrf-token="))
-          ?.split("=")[1]
-
         const response = await api.patch<TagResponse>(`/api/tags/${tagId}`, data, {
-          headers: {
-            "X-CSRF-Token": csrfToken || "",
-          },
           showErrorToast: false,
         })
 
@@ -129,15 +113,7 @@ export function useTags(): UseTagsReturn {
     const loader = createLoadingToast("Deleting tag...")
 
     try {
-      const csrfToken = document.cookie
-        .split("; ")
-        .find((row) => row.startsWith("csrf-token="))
-        ?.split("=")[1]
-
       await api.delete(`/api/tags/${tagId}`, {
-        headers: {
-          "X-CSRF-Token": csrfToken || "",
-        },
         showErrorToast: false,
       })
 
@@ -179,18 +155,10 @@ export function useConversationTags(conversationId: string): UseConversationTags
       setIsLoading(true)
 
       try {
-        const csrfToken = document.cookie
-          .split("; ")
-          .find((row) => row.startsWith("csrf-token="))
-          ?.split("=")[1]
-
         await api.post(
           `/api/conversations/${conversationId}/tags`,
           { tagId },
           {
-            headers: {
-              "X-CSRF-Token": csrfToken || "",
-            },
             showErrorToast: true,
           }
         )
@@ -211,15 +179,7 @@ export function useConversationTags(conversationId: string): UseConversationTags
       setIsLoading(true)
 
       try {
-        const csrfToken = document.cookie
-          .split("; ")
-          .find((row) => row.startsWith("csrf-token="))
-          ?.split("=")[1]
-
         await api.delete(`/api/conversations/${conversationId}/tags/${tagId}`, {
-          headers: {
-            "X-CSRF-Token": csrfToken || "",
-          },
           showErrorToast: true,
         })
 

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 
+import { getClientCsrfToken } from "@/app/lib/csrf-client"
 import { pusherClient } from "@/app/lib/pusher"
 import { getPusherConversationChannel } from "@/app/lib/pusher-channels"
 
@@ -151,18 +152,7 @@ export function useTypingIndicator(options: UseTypingIndicatorOptions): UseTypin
       }
 
       try {
-        // Get CSRF token from cookie
-        const cookies = document.cookie.split(";").reduce(
-          (acc, cookie) => {
-            const [key, value] = cookie.trim().split("=")
-            acc[key] = value
-            return acc
-          },
-          {} as Record<string, string>
-        )
-
-        const csrfToken = cookies["csrf-token"]
-
+        const csrfToken = await getClientCsrfToken()
         if (!csrfToken) {
           console.warn("CSRF token not available for typing indicator")
           return

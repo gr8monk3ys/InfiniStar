@@ -84,26 +84,10 @@ export default function JoinPage() {
 
     setIsJoining(true)
     try {
-      // Get CSRF token
-      await api.get("/api/csrf")
-
-      const csrfToken = document.cookie
-        .split("; ")
-        .find((row) => row.startsWith("csrf-token="))
-        ?.split("=")[1]
-
       const response = await api.post<{
         success: boolean
         conversationId: string
-      }>(
-        `/api/share/${token}/join`,
-        {},
-        {
-          headers: {
-            "X-CSRF-Token": csrfToken || "",
-          },
-        }
-      )
+      }>(`/api/share/${token}/join`, {})
 
       if (response.success) {
         toast.success("Successfully joined the conversation!")

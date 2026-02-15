@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react"
 
+import { getClientCsrfToken } from "@/app/lib/csrf-client"
+
 /**
  * Hook to fetch and manage CSRF token
  *
@@ -32,18 +34,15 @@ export function useCsrfToken() {
 
     async function fetchToken() {
       try {
-        const response = await fetch("/api/csrf", {
-          credentials: "include", // Important: include cookies
-        })
-
-        if (!response.ok) {
-          throw new Error(`Failed to fetch CSRF token: ${response.statusText}`)
-        }
-
-        const data = await response.json()
-
+        const token = await getClientCsrfToken()
         if (isMounted) {
-          setToken(data.token)
+          if (!token) {
+            setError(new Error("Failed to fetch CSRF token"))
+            setToken(null)
+            return
+          }
+
+          setToken(token)
           setError(null)
         }
       } catch (err) {
