@@ -13,6 +13,7 @@ import {
   HiLockClosed,
   HiPaintBrush,
   HiShieldCheck,
+  HiSparkles,
   HiTrash,
   HiUser,
 } from "react-icons/hi2"
@@ -63,6 +64,11 @@ const AutoDeleteSettings = dynamic(
   }
 )
 
+const MemoryManager = dynamic(() => import("@/app/components/ai-memory/MemoryManager"), {
+  loading: () => <div className="h-48 animate-pulse rounded-lg bg-gray-100" />,
+  ssr: false,
+})
+
 // Deletion status type
 interface DeletionStatus {
   deletionRequested: boolean
@@ -78,6 +84,7 @@ type TabType =
   | "notifications"
   | "sessions"
   | "appearance"
+  | "memory"
   | "auto-delete"
   | "account"
 
@@ -326,6 +333,7 @@ export default function ProfilePage() {
     { id: "notifications", label: "Notifications", icon: <HiBell size={20} /> },
     { id: "sessions", label: "Sessions", icon: <HiComputerDesktop size={20} /> },
     { id: "appearance", label: "Appearance", icon: <HiPaintBrush size={20} /> },
+    { id: "memory", label: "AI Memory", icon: <HiSparkles size={20} /> },
     { id: "auto-delete", label: "Auto-Delete", icon: <HiClock size={20} /> },
     { id: "account", label: "Delete Account", icon: <HiTrash size={20} />, isDestructive: true },
   ]
@@ -489,6 +497,12 @@ export default function ProfilePage() {
                 <ThemeSelector />
                 <div className="border-t border-gray-200 dark:border-gray-700" />
                 <ThemeCustomizer />
+              </div>
+            )}
+
+            {activeTab === "memory" && (
+              <div className="space-y-4" aria-label="AI memory settings section">
+                <MemoryManager />
               </div>
             )}
 
