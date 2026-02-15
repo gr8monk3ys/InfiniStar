@@ -52,7 +52,7 @@ export default defineConfig({
   webServer: {
     command:
       process.env.PLAYWRIGHT_WEB_SERVER_COMMAND ||
-      `bash -lc 'set -a; [ -f .env.ci.example ] && source .env.ci.example; set +a; SKIP_ENV_VALIDATION=1 SKIP_CLERK_AUTH_HANDSHAKE=${skipClerkAuthHandshake} NEXT_PUBLIC_APP_URL=http://localhost:3101 PORT=3101 npm run dev'`,
+      `bash -lc 'set -a; [ -f .env.ci.example ] && source .env.ci.example; set +a; SKIP_ENV_VALIDATION=1 SKIP_CLERK_AUTH_HANDSHAKE=${skipClerkAuthHandshake} NEXT_PUBLIC_APP_URL=http://localhost:3101 PORT=3101 npm run build && SKIP_ENV_VALIDATION=1 SKIP_CLERK_AUTH_HANDSHAKE=${skipClerkAuthHandshake} NEXT_PUBLIC_APP_URL=http://localhost:3101 PORT=3101 npm run start'`,
     url: process.env.PLAYWRIGHT_TEST_BASE_URL || defaultBaseURL,
     reuseExistingServer: false,
     timeout: 180000,
