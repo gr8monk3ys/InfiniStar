@@ -3,6 +3,7 @@ import { auth } from "@clerk/nextjs/server"
 import { z } from "zod"
 
 import { verifyCsrfToken } from "@/app/lib/csrf"
+import { canAccessNsfw } from "@/app/lib/nsfw"
 import prisma from "@/app/lib/prismadb"
 import { sanitizePlainText } from "@/app/lib/sanitize"
 import { slugify } from "@/app/lib/slug"
@@ -17,6 +18,7 @@ const updateCharacterSchema = z.object({
   coverImageUrl: z.string().url().optional().nullable(),
   tags: z.array(z.string().min(1).max(30)).max(10).optional(),
   isPublic: z.boolean().optional(),
+  isNsfw: z.boolean().optional(),
   featured: z.boolean().optional(),
   category: z.string().max(50).optional(),
 })
@@ -36,6 +38,23 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
 
   if (!character) {
     return NextResponse.json({ error: "Character not found" }, { status: 404 })
+  }
+
+  if (character.isPublic && character.isNsfw) {
+    const { userId } = await auth()
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
+    }
+
+    const currentUser = await prisma.user.findUnique({
+      where: { clerkId: userId },
+      select: { id: true, isAdult: true, nsfwEnabled: true },
+    })
+
+    const isOwner = currentUser?.id && character.createdById === currentUser.id
+    if (!isOwner && !canAccessNsfw(currentUser)) {
+      return NextResponse.json({ error: "NSFW content is not enabled." }, { status: 403 })
+    }
   }
 
   if (!character.isPublic) {
@@ -64,7 +83,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
   const currentUser = await prisma.user.findUnique({
     where: { clerkId: userId },
-    select: { id: true },
+    select: { id: true, isAdult: true },
   })
   if (!currentUser) {
     return NextResponse.json({ error: "User not found" }, { status: 401 })
@@ -108,6 +127,13 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   const data = validation.data
   let slug = existing.slug
 
+  if (data.isNsfw && !currentUser.isAdult) {
+    return NextResponse.json(
+      { error: "You must confirm you are 18+ to mark NSFW." },
+      { status: 403 }
+    )
+  }
+
   if (data.name) {
     const sanitized = sanitizePlainText(data.name)
     if (!sanitized) {
@@ -135,6 +161,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       coverImageUrl: data.coverImageUrl ?? undefined,
       tags: data.tags?.map((tag) => sanitizePlainText(tag)).filter(Boolean) as string[] | undefined,
       isPublic: data.isPublic,
+      isNsfw: data.isNsfw,
       featured: data.featured,
       category: data.category ? sanitizePlainText(data.category) || undefined : undefined,
     },

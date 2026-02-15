@@ -3,6 +3,7 @@ import Link from "next/link"
 import { auth } from "@clerk/nextjs/server"
 import { HiArrowTrendingUp, HiChatBubbleLeftRight, HiSparkles, HiUserGroup } from "react-icons/hi2"
 
+import { canAccessNsfw } from "@/app/lib/nsfw"
 import prisma from "@/app/lib/prismadb"
 import { getRecommendationSignalsForUser, rankCharactersForUser } from "@/app/lib/recommendations"
 import { cn } from "@/app/lib/utils"
@@ -29,6 +30,7 @@ const CHARACTER_SELECT = {
   usageCount: true,
   likeCount: true,
   featured: true,
+  isNsfw: true,
   createdBy: {
     select: {
       id: true,
@@ -51,18 +53,23 @@ interface CreatorSummary {
 export default async function FeedPage() {
   const { userId } = await auth()
   const currentUser = userId
-    ? await prisma.user.findUnique({ where: { clerkId: userId }, select: { id: true } })
+    ? await prisma.user.findUnique({
+        where: { clerkId: userId },
+        select: { id: true, isAdult: true, nsfwEnabled: true },
+      })
     : null
+  const allowNsfw = canAccessNsfw(currentUser)
+  const publicCharacterWhere = allowNsfw ? { isPublic: true } : { isPublic: true, isNsfw: false }
 
   const [trendingRaw, freshRaw, creatorRows] = await Promise.all([
     prisma.character.findMany({
-      where: { isPublic: true },
+      where: publicCharacterWhere,
       orderBy: [{ usageCount: "desc" }, { likeCount: "desc" }],
       take: 60,
       select: CHARACTER_SELECT,
     }),
     prisma.character.findMany({
-      where: { isPublic: true },
+      where: publicCharacterWhere,
       orderBy: { createdAt: "desc" },
       take: 60,
       select: CHARACTER_SELECT,
@@ -70,7 +77,7 @@ export default async function FeedPage() {
     prisma.user.findMany({
       where: {
         characters: {
-          some: { isPublic: true },
+          some: publicCharacterWhere,
         },
       },
       select: {
@@ -79,7 +86,7 @@ export default async function FeedPage() {
         image: true,
         bio: true,
         characters: {
-          where: { isPublic: true },
+          where: publicCharacterWhere,
           select: { usageCount: true, likeCount: true },
         },
       },
@@ -105,7 +112,7 @@ export default async function FeedPage() {
     followingCreatorIds.length > 0
       ? await prisma.character.findMany({
           where: {
-            isPublic: true,
+            ...publicCharacterWhere,
             createdById: { in: followingCreatorIds },
           },
           orderBy: [{ createdAt: "desc" }, { usageCount: "desc" }],

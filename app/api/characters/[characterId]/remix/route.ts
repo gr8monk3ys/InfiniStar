@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server"
 import { auth } from "@clerk/nextjs/server"
 
 import { verifyCsrfToken } from "@/app/lib/csrf"
+import { canAccessNsfw } from "@/app/lib/nsfw"
 import prisma from "@/app/lib/prismadb"
 import { apiLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 import { sanitizePlainText } from "@/app/lib/sanitize"
@@ -57,7 +58,7 @@ export async function POST(
 
   const currentUser = await prisma.user.findUnique({
     where: { clerkId: userId },
-    select: { id: true },
+    select: { id: true, isAdult: true, nsfwEnabled: true },
   })
   if (!currentUser) {
     return NextResponse.json({ error: "User not found" }, { status: 401 })
@@ -79,11 +80,16 @@ export async function POST(
       tags: true,
       category: true,
       isPublic: true,
+      isNsfw: true,
     },
   })
 
   if (!original || !original.isPublic) {
     return NextResponse.json({ error: "Character not found" }, { status: 404 })
+  }
+
+  if (original.isNsfw && !canAccessNsfw(currentUser)) {
+    return NextResponse.json({ error: "NSFW content is not enabled." }, { status: 403 })
   }
 
   const remixNameRaw = `${original.name} (Remix)`
@@ -114,6 +120,7 @@ export async function POST(
       tags: original.tags,
       category: original.category,
       isPublic: false,
+      isNsfw: original.isNsfw,
       createdById: currentUser.id,
     },
   })

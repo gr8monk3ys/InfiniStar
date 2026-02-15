@@ -1,5 +1,6 @@
 import { auth } from "@clerk/nextjs/server"
 
+import { canAccessNsfw } from "@/app/lib/nsfw"
 import prisma from "@/app/lib/prismadb"
 import { getRecommendationSignalsForUser, rankCharactersForUser } from "@/app/lib/recommendations"
 
@@ -25,6 +26,7 @@ const CHARACTER_SELECT = {
   usageCount: true,
   likeCount: true,
   featured: true,
+  isNsfw: true,
   createdBy: {
     select: {
       id: true,
@@ -39,13 +41,18 @@ export default async function ExplorePage() {
 
   // Look up the Prisma user if logged in
   const currentUser = userId
-    ? await prisma.user.findUnique({ where: { clerkId: userId }, select: { id: true } })
+    ? await prisma.user.findUnique({
+        where: { clerkId: userId },
+        select: { id: true, isAdult: true, nsfwEnabled: true },
+      })
     : null
+  const allowNsfw = canAccessNsfw(currentUser)
+  const publicCharacterWhere = allowNsfw ? { isPublic: true } : { isPublic: true, isNsfw: false }
 
   const [featuredRaw, trendingRaw, allRaw, likedRecords] = await Promise.all([
     // Featured characters
     prisma.character.findMany({
-      where: { isPublic: true, featured: true },
+      where: { ...publicCharacterWhere, featured: true },
       orderBy: { usageCount: "desc" },
       take: 24,
       select: CHARACTER_SELECT,
@@ -53,7 +60,7 @@ export default async function ExplorePage() {
 
     // Trending characters
     prisma.character.findMany({
-      where: { isPublic: true },
+      where: publicCharacterWhere,
       orderBy: { usageCount: "desc" },
       take: 80,
       select: CHARACTER_SELECT,
@@ -61,7 +68,7 @@ export default async function ExplorePage() {
 
     // All public characters (newest first)
     prisma.character.findMany({
-      where: { isPublic: true },
+      where: publicCharacterWhere,
       orderBy: { createdAt: "desc" },
       take: 120,
       select: CHARACTER_SELECT,

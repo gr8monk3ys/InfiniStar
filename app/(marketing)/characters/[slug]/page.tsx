@@ -5,12 +5,14 @@ import { auth } from "@clerk/nextjs/server"
 import { HiChatBubbleLeftRight, HiEye, HiHeart, HiUser } from "react-icons/hi2"
 
 import { getCategoryById } from "@/app/lib/character-categories"
+import { canAccessNsfw } from "@/app/lib/nsfw"
 import prisma from "@/app/lib/prismadb"
 import { cn } from "@/app/lib/utils"
 import { CharacterCard } from "@/app/components/characters/CharacterCard"
 import { CharacterLikeButton } from "@/app/components/characters/CharacterLikeButton"
 import { CharacterRemixButton } from "@/app/components/characters/CharacterRemixButton"
 import { CharacterStartChatButton } from "@/app/components/characters/CharacterStartChatButton"
+import { NsfwGateCard } from "@/app/components/safety/NsfwGateCard"
 
 interface SimilarCharacter {
   id: string
@@ -21,6 +23,7 @@ interface SimilarCharacter {
   category: string
   usageCount: number
   likeCount: number
+  isNsfw?: boolean
   createdBy: {
     id: string
     name: string | null
@@ -50,6 +53,41 @@ export default async function CharacterPage({ params }: CharacterPageProps) {
     notFound()
   }
 
+  const { userId } = await auth()
+  const currentUser = userId
+    ? await prisma.user.findUnique({
+        where: { clerkId: userId },
+        select: { id: true, isAdult: true, nsfwEnabled: true },
+      })
+    : null
+  const allowNsfw = canAccessNsfw(currentUser)
+
+  if (character.isNsfw && !allowNsfw) {
+    return (
+      <section className="container py-12 md:py-16">
+        <div className="mx-auto max-w-2xl rounded-2xl border bg-card p-8 shadow-sm">
+          <h1 className="text-2xl font-bold">NSFW content</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            This character is marked as 18+. To view it, you must confirm you are 18+ and enable
+            NSFW content in your Safety settings.
+          </p>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <NsfwGateCard />
+            <Link
+              href={userId ? "/dashboard/profile" : "/sign-in"}
+              className="rounded-md border px-4 py-2 text-sm font-medium hover:bg-accent"
+            >
+              {userId ? "Open Safety Settings" : "Sign In"}
+            </Link>
+            <Link href="/explore" className="rounded-md px-4 py-2 text-sm hover:underline">
+              Back to Explore
+            </Link>
+          </div>
+        </div>
+      </section>
+    )
+  }
+
   // Increment view count
   await prisma.character.update({
     where: { id: character.id },
@@ -57,26 +95,18 @@ export default async function CharacterPage({ params }: CharacterPageProps) {
   })
 
   // Check if current user has liked this character
-  const { userId } = await auth()
   let hasLiked = false
 
-  if (userId) {
-    const currentUser = await prisma.user.findUnique({
-      where: { clerkId: userId },
-      select: { id: true },
-    })
-
-    if (currentUser) {
-      const like = await prisma.characterLike.findUnique({
-        where: {
-          userId_characterId: {
-            userId: currentUser.id,
-            characterId: character.id,
-          },
+  if (currentUser?.id) {
+    const like = await prisma.characterLike.findUnique({
+      where: {
+        userId_characterId: {
+          userId: currentUser.id,
+          characterId: character.id,
         },
-      })
-      hasLiked = !!like
-    }
+      },
+    })
+    hasLiked = !!like
   }
 
   // Get category info
@@ -88,6 +118,7 @@ export default async function CharacterPage({ params }: CharacterPageProps) {
       isPublic: true,
       category: character.category,
       id: { not: character.id },
+      ...(allowNsfw ? {} : { isNsfw: false }),
     },
     orderBy: [{ usageCount: "desc" }, { createdAt: "desc" }],
     take: 4,

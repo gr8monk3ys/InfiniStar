@@ -18,6 +18,7 @@ interface CharacterCardProps {
     category: string
     usageCount: number
     likeCount: number
+    isNsfw?: boolean
     createdBy?: {
       id: string
       name: string | null
@@ -76,6 +77,12 @@ const CharacterCard = memo(function CharacterCard({
 
         {/* Bottom gradient overlay */}
         <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/60 to-transparent" />
+
+        {character.isNsfw && (
+          <span className="absolute left-2 top-2 rounded-full bg-red-600/80 px-2 py-0.5 text-[10px] font-semibold text-white backdrop-blur-sm">
+            NSFW
+          </span>
+        )}
 
         {/* Stats overlay on image */}
         <div className="absolute bottom-2 left-2 flex items-center gap-2">

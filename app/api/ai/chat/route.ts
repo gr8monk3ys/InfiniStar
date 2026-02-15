@@ -16,6 +16,7 @@ import {
   moderateText,
   moderationReasonFromCategories,
 } from "@/app/lib/moderation"
+import { canAccessNsfw } from "@/app/lib/nsfw"
 import prisma from "@/app/lib/prismadb"
 import { pusherServer } from "@/app/lib/pusher"
 import { getPusherConversationChannel, getPusherUserChannel } from "@/app/lib/pusher-channels"
@@ -81,6 +82,7 @@ export async function POST(request: NextRequest) {
     if (!currentUser?.id || !currentUser?.email) {
       return new NextResponse("Unauthorized", { status: 401 })
     }
+    const allowNsfw = canAccessNsfw(currentUser)
 
     const body = await request.json()
     const { message, image, conversationId } = body
@@ -122,6 +124,7 @@ export async function POST(request: NextRequest) {
         character: {
           select: {
             name: true,
+            isNsfw: true,
           },
         },
         messages: {
@@ -137,6 +140,13 @@ export async function POST(request: NextRequest) {
 
     if (!conversation.isAI) {
       return new NextResponse("Not an AI conversation", { status: 400 })
+    }
+
+    if (conversation.character?.isNsfw && !allowNsfw) {
+      return new NextResponse(JSON.stringify({ error: "NSFW content is not enabled." }), {
+        status: 403,
+        headers: { "Content-Type": "application/json" },
+      })
     }
 
     const accessDecision = await getAiAccessDecision(currentUser.id)

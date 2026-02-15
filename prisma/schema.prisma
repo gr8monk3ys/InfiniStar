@@ -24,6 +24,12 @@ model User {
   location String? // User location
   website  String? // User website URL
 
+  // Age gating / NSFW preferences
+  isAdult          Boolean   @default(false)
+  adultConfirmedAt DateTime?
+  nsfwEnabled      Boolean   @default(false)
+  nsfwEnabledAt    DateTime?
+
   // Presence fields
   presenceStatus    String?   @default("offline") // "online", "offline", "away"
   lastSeenAt        DateTime? // Last time user was active
@@ -163,6 +169,7 @@ model Character {
 
   isPublic   Boolean   @default(false)
   featured   Boolean   @default(false)
+  isNsfw     Boolean   @default(false)
   viewCount  Int       @default(0)
   usageCount Int       @default(0)
   lastUsedAt DateTime?
@@ -176,6 +183,7 @@ model Character {
   likes         CharacterLike[]
 
   @@index([isPublic, featured])
+  @@index([isPublic, isNsfw])
   @@index([createdAt])
   @@index([usageCount])
   @@map("characters")

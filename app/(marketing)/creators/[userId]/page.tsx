@@ -5,6 +5,7 @@ import { format } from "date-fns"
 import { HiCalendar, HiChatBubbleLeftRight, HiGlobeAlt } from "react-icons/hi2"
 
 import { toMonthlyRecurringCents } from "@/app/lib/creator-monetization"
+import { canAccessNsfw } from "@/app/lib/nsfw"
 import prisma from "@/app/lib/prismadb"
 import { CharacterCard } from "@/app/components/characters/CharacterCard"
 import { CreatorSupportCard } from "@/app/components/monetization/CreatorSupportCard"
@@ -22,6 +23,7 @@ interface CreatorCharacter {
   category: string
   usageCount: number
   likeCount: number
+  isNsfw?: boolean
   createdBy: {
     id: string
     name: string | null
@@ -36,6 +38,16 @@ interface CreatorProfilePageProps {
 export default async function CreatorProfilePage({ params }: CreatorProfilePageProps) {
   const { userId } = await params
 
+  const { userId: viewerClerkId } = await auth()
+  const viewerUser = viewerClerkId
+    ? await prisma.user.findUnique({
+        where: { clerkId: viewerClerkId },
+        select: { id: true, isAdult: true, nsfwEnabled: true },
+      })
+    : null
+  const allowNsfw = canAccessNsfw(viewerUser)
+  const publicCharacterWhere = allowNsfw ? { isPublic: true } : { isPublic: true, isNsfw: false }
+
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: {
@@ -46,7 +58,7 @@ export default async function CreatorProfilePage({ params }: CreatorProfilePageP
       website: true,
       createdAt: true,
       characters: {
-        where: { isPublic: true },
+        where: publicCharacterWhere,
         orderBy: [{ usageCount: "desc" }, { createdAt: "desc" }],
         include: {
           createdBy: {
@@ -58,11 +70,6 @@ export default async function CreatorProfilePage({ params }: CreatorProfilePageP
   })
 
   if (!user) notFound()
-
-  const { userId: viewerClerkId } = await auth()
-  const viewerUser = viewerClerkId
-    ? await prisma.user.findUnique({ where: { clerkId: viewerClerkId }, select: { id: true } })
-    : null
 
   const [tips, subscriptions, viewerSubscription, followerCount, viewerFollow] = await Promise.all([
     prisma.creatorTip.findMany({

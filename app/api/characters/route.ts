@@ -8,6 +8,7 @@ import {
   moderateText,
   moderationReasonFromCategories,
 } from "@/app/lib/moderation"
+import { canAccessNsfw } from "@/app/lib/nsfw"
 import prisma from "@/app/lib/prismadb"
 import { getRecommendationSignalsForUser, rankCharactersForUser } from "@/app/lib/recommendations"
 import { sanitizePlainText } from "@/app/lib/sanitize"
@@ -23,6 +24,7 @@ const createCharacterSchema = z.object({
   coverImageUrl: z.string().url().optional(),
   tags: z.array(z.string().min(1).max(30)).max(10).optional(),
   isPublic: z.boolean().optional(),
+  isNsfw: z.boolean().optional(),
   category: z.string().max(50).optional(),
 })
 
@@ -47,6 +49,7 @@ export async function GET(request: NextRequest) {
   const where: {
     isPublic: boolean
     featured?: boolean
+    isNsfw?: boolean
     category?: string
     OR?: Array<{
       name?: { contains: string; mode: "insensitive" }
@@ -78,8 +81,16 @@ export async function GET(request: NextRequest) {
 
   const { userId } = await auth()
   const currentUser = userId
-    ? await prisma.user.findUnique({ where: { clerkId: userId }, select: { id: true } })
+    ? await prisma.user.findUnique({
+        where: { clerkId: userId },
+        select: { id: true, isAdult: true, nsfwEnabled: true },
+      })
     : null
+  const allowNsfw = canAccessNsfw(currentUser)
+
+  if (!allowNsfw) {
+    where.isNsfw = false
+  }
 
   let orderBy: Record<string, "asc" | "desc">[]
   switch (params.sort) {
@@ -158,7 +169,7 @@ export async function POST(request: NextRequest) {
 
   const currentUser = await prisma.user.findUnique({
     where: { clerkId: userId },
-    select: { id: true },
+    select: { id: true, isAdult: true },
   })
   if (!currentUser) {
     return NextResponse.json({ error: "User not found" }, { status: 401 })
@@ -220,6 +231,13 @@ export async function POST(request: NextRequest) {
     )
   }
 
+  if (data.isNsfw && !currentUser.isAdult) {
+    return NextResponse.json(
+      { error: "You must confirm you are 18+ to create NSFW characters." },
+      { status: 403 }
+    )
+  }
+
   const baseSlug = slugify(sanitizedName)
   let slug = baseSlug
   let suffix = 1
@@ -241,6 +259,7 @@ export async function POST(request: NextRequest) {
       coverImageUrl: data.coverImageUrl,
       tags: data.tags?.map((tag) => sanitizePlainText(tag)).filter(Boolean) as string[],
       isPublic: data.isPublic ?? false,
+      isNsfw: data.isNsfw ?? false,
       category: data.category ? sanitizePlainText(data.category) || "general" : "general",
       createdById: currentUser.id,
     },

@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server"
 import { auth } from "@clerk/nextjs/server"
 
 import { verifyCsrfToken } from "@/app/lib/csrf"
+import { canAccessNsfw } from "@/app/lib/nsfw"
 import prisma from "@/app/lib/prismadb"
 import { apiLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 
@@ -50,7 +51,7 @@ export async function POST(
 
   const currentUser = await prisma.user.findUnique({
     where: { clerkId: userId },
-    select: { id: true },
+    select: { id: true, isAdult: true, nsfwEnabled: true },
   })
   if (!currentUser) {
     return NextResponse.json({ error: "User not found" }, { status: 401 })
@@ -61,11 +62,15 @@ export async function POST(
 
     const character = await prisma.character.findUnique({
       where: { id: characterId },
-      select: { id: true, isPublic: true },
+      select: { id: true, isPublic: true, isNsfw: true },
     })
 
     if (!character || !character.isPublic) {
       return NextResponse.json({ error: "Character not found" }, { status: 404 })
+    }
+
+    if (character.isNsfw && !canAccessNsfw(currentUser)) {
+      return NextResponse.json({ error: "NSFW content is not enabled." }, { status: 403 })
     }
 
     const existing = await prisma.characterLike.findUnique({
@@ -120,7 +125,7 @@ export async function DELETE(
 
   const currentUser = await prisma.user.findUnique({
     where: { clerkId: userId },
-    select: { id: true },
+    select: { id: true, isAdult: true, nsfwEnabled: true },
   })
   if (!currentUser) {
     return NextResponse.json({ error: "User not found" }, { status: 401 })
@@ -131,11 +136,15 @@ export async function DELETE(
 
     const character = await prisma.character.findUnique({
       where: { id: characterId },
-      select: { id: true, isPublic: true },
+      select: { id: true, isPublic: true, isNsfw: true },
     })
 
     if (!character || !character.isPublic) {
       return NextResponse.json({ error: "Character not found" }, { status: 404 })
+    }
+
+    if (character.isNsfw && !canAccessNsfw(currentUser)) {
+      return NextResponse.json({ error: "NSFW content is not enabled." }, { status: 403 })
     }
 
     const existing = await prisma.characterLike.findUnique({

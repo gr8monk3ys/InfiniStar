@@ -13,6 +13,7 @@ import {
   HiLockClosed,
   HiPaintBrush,
   HiShieldCheck,
+  HiShieldExclamation,
   HiSparkles,
   HiTrash,
   HiUser,
@@ -26,6 +27,7 @@ import {
   NotificationsTabContent,
   PasswordTabContent,
   ProfileTabContent,
+  SafetyTabContent,
 } from "./components"
 
 // Lazy-load modals that are only shown on user interaction
@@ -81,6 +83,7 @@ type TabType =
   | "profile"
   | "password"
   | "security"
+  | "safety"
   | "notifications"
   | "sessions"
   | "appearance"
@@ -187,6 +190,11 @@ export default function ProfilePage() {
   const [notifyOnAIComplete, setNotifyOnAIComplete] = useState(true)
   const [isNotificationsLoading, setIsNotificationsLoading] = useState(false)
 
+  // Safety preferences state
+  const [isAdult, setIsAdult] = useState(false)
+  const [nsfwEnabled, setNsfwEnabled] = useState(false)
+  const [isSafetyLoading, setIsSafetyLoading] = useState(false)
+
   // Deletion status state
   const [deletionStatus, setDeletionStatus] = useState<DeletionStatus | null>(null)
   const [isDeletionLoading, setIsDeletionLoading] = useState(false)
@@ -244,14 +252,37 @@ export default function ProfilePage() {
     }
   }, [])
 
+  const fetchSafetyPreferences = useCallback(async () => {
+    try {
+      const response = await api.get<{
+        preferences: {
+          isAdult: boolean
+          nsfwEnabled: boolean
+        }
+      }>("/api/safety/preferences", { showErrorToast: false })
+      setIsAdult(response.preferences.isAdult)
+      setNsfwEnabled(response.preferences.nsfwEnabled)
+    } catch {
+      // Defaults are fine
+    }
+  }, [])
+
   useEffect(() => {
     if (isLoaded && user) {
       setName(user.fullName || user.firstName || "")
       fetchDeletionStatus()
       checkHasPassword()
       fetchNotificationPreferences()
+      fetchSafetyPreferences()
     }
-  }, [isLoaded, user, fetchDeletionStatus, checkHasPassword, fetchNotificationPreferences])
+  }, [
+    isLoaded,
+    user,
+    fetchDeletionStatus,
+    checkHasPassword,
+    fetchNotificationPreferences,
+    fetchSafetyPreferences,
+  ])
 
   const handleAvatarUpload = async (result: CloudinaryUploadWidgetResults) => {
     if (!result.info || typeof result.info === "string" || !result.info.secure_url) {
@@ -382,6 +413,32 @@ export default function ProfilePage() {
     }
   }
 
+  const handleSafetySubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSafetyLoading(true)
+
+    const loader = createLoadingToast("Saving safety settings...")
+
+    try {
+      const response = await api.patch<{
+        message: string
+        preferences: {
+          isAdult: boolean
+          nsfwEnabled: boolean
+        }
+      }>("/api/safety/preferences", { isAdult, nsfwEnabled }, { retries: 1, showErrorToast: false })
+      loader.success(response.message)
+
+      setIsAdult(response.preferences.isAdult)
+      setNsfwEnabled(response.preferences.nsfwEnabled)
+    } catch (error) {
+      const message = error instanceof ApiError ? error.message : "Failed to save safety settings"
+      loader.error(message)
+    } finally {
+      setIsSafetyLoading(false)
+    }
+  }
+
   const handleCancelDeletion = async () => {
     setIsDeletionLoading(true)
     const loader = createLoadingToast("Cancelling deletion request...")
@@ -408,6 +465,7 @@ export default function ProfilePage() {
     { id: "profile", label: "Profile Information", icon: <HiUser size={20} /> },
     { id: "password", label: "Change Password", icon: <HiLockClosed size={20} /> },
     { id: "security", label: "Security", icon: <HiShieldCheck size={20} /> },
+    { id: "safety", label: "Safety & Content", icon: <HiShieldExclamation size={20} /> },
     { id: "notifications", label: "Notifications", icon: <HiBell size={20} /> },
     { id: "sessions", label: "Sessions", icon: <HiComputerDesktop size={20} /> },
     { id: "appearance", label: "Appearance", icon: <HiPaintBrush size={20} /> },
@@ -516,6 +574,17 @@ export default function ProfilePage() {
                 </div>
                 <TwoFactorSettings hasPassword={hasPassword} />
               </div>
+            )}
+
+            {activeTab === "safety" && (
+              <SafetyTabContent
+                isAdult={isAdult}
+                setIsAdult={setIsAdult}
+                nsfwEnabled={nsfwEnabled}
+                setNsfwEnabled={setNsfwEnabled}
+                isLoading={isSafetyLoading}
+                onSubmit={handleSafetySubmit}
+              />
             )}
 
             {activeTab === "notifications" && (

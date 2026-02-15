@@ -5,6 +5,7 @@ import { z } from "zod"
 import { getModelForUser } from "@/app/lib/ai-model-routing"
 import { SUPPORTED_MODEL_IDS } from "@/app/lib/ai-models"
 import { verifyCsrfToken } from "@/app/lib/csrf"
+import { canAccessNsfw } from "@/app/lib/nsfw"
 import prisma from "@/app/lib/prismadb"
 import { pusherServer } from "@/app/lib/pusher"
 import { getPusherConversationChannel, getPusherUserChannel } from "@/app/lib/pusher-channels"
@@ -172,11 +173,14 @@ export async function POST(request: NextRequest) {
         email: true,
         stripePriceId: true,
         stripeCurrentPeriodEnd: true,
+        isAdult: true,
+        nsfwEnabled: true,
       },
     })
     if (!currentUser) {
       return NextResponse.json({ error: "User not found" }, { status: 401 })
     }
+    const allowNsfw = canAccessNsfw(currentUser)
 
     const body = await request.json()
 
@@ -235,8 +239,13 @@ export async function POST(request: NextRequest) {
             description: true,
             greeting: true,
             systemPrompt: true,
+            isNsfw: true,
           },
         })
+
+        if (!allowNsfw && sceneCharacters.some((character) => character.isNsfw)) {
+          return NextResponse.json({ error: "NSFW content is not enabled." }, { status: 403 })
+        }
 
         const sceneCharactersById = new Map(
           sceneCharacters.map((character: SceneCharacterPromptInput) => [character.id, character])
@@ -341,6 +350,10 @@ export async function POST(request: NextRequest) {
 
         if (!character.isPublic && character.createdById !== currentUser.id) {
           return NextResponse.json({ error: "Not authorized for this character" }, { status: 403 })
+        }
+
+        if (character.isNsfw && !allowNsfw) {
+          return NextResponse.json({ error: "NSFW content is not enabled." }, { status: 403 })
         }
       }
 
