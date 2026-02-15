@@ -2,6 +2,7 @@
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Image from "next/image"
+import { useRouter } from "next/navigation"
 import { useUser } from "@clerk/nextjs"
 import axios, { isAxiosError } from "axios"
 import clsx from "clsx"
@@ -14,6 +15,7 @@ import {
   HiChevronRight,
   HiEllipsisVertical,
   HiFaceSmile,
+  HiOutlineSquare2Stack,
   HiPencil,
   HiSpeakerWave,
   HiStopCircle,
@@ -54,6 +56,7 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
   regeneratingMessageId = null,
   regeneratingContent,
 }) {
+  const router = useRouter()
   const { user } = useUser()
   const [imageModalOpen, setImageModalOpen] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
@@ -66,6 +69,7 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
   const [isSwitchingVariant, setIsSwitchingVariant] = useState(false)
   const [localActiveVariant, setLocalActiveVariant] = useState<number | null>(null)
   const [localBodyOverride, setLocalBodyOverride] = useState<string | null>(null)
+  const [isForking, setIsForking] = useState(false)
   const speechUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null)
 
   const commonEmojis = ["👍", "❤️", "😄", "🎉", "🔥", "👏"]
@@ -80,6 +84,8 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
   const container = clsx("flex gap-3 p-4", isOwn && "justify-end")
   const avatar = clsx(isOwn && "order-2")
   const body = clsx("flex flex-col gap-2", isOwn && "items-end")
+
+  const isAiConversation = Boolean(onRegenerate)
 
   const variants = useMemo(() => {
     if (!Array.isArray(data.variants)) return []
@@ -268,6 +274,50 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
     },
     [csrfToken, data.id, data.isAI, isSwitchingVariant, isThisRegenerating, variants]
   )
+
+  const handleForkConversation = useCallback(async () => {
+    if (!csrfToken) {
+      toast.error("Security token not available. Please refresh the page.")
+      return
+    }
+
+    if (!isAiConversation) {
+      return
+    }
+
+    if (isForking) {
+      return
+    }
+
+    setIsForking(true)
+
+    try {
+      const response = await axios.post(
+        `/api/conversations/${data.conversationId}/fork`,
+        { messageId: data.id },
+        { headers: { "X-CSRF-Token": csrfToken } }
+      )
+
+      const nextConversationId =
+        response.data && typeof response.data.id === "string" ? response.data.id : null
+      if (!nextConversationId) {
+        throw new Error("Failed to create branch")
+      }
+
+      toast.success("Branch created")
+      router.push(`/dashboard/conversations/${nextConversationId}`)
+    } catch (error) {
+      const message =
+        isAxiosError(error) && error.response?.data?.error
+          ? error.response.data.error
+          : error instanceof Error
+            ? error.message
+            : "Failed to create branch"
+      toast.error(message)
+    } finally {
+      setIsForking(false)
+    }
+  }, [csrfToken, data.conversationId, data.id, isAiConversation, isForking, router])
 
   const stopSpeech = useCallback(() => {
     if (!isSpeechSupported || typeof window === "undefined") {
@@ -581,6 +631,27 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
                     <HiChevronRight size={16} />
                   </button>
                 </div>
+              )}
+
+              {/* Branch conversation from this point (AI conversations only) */}
+              {isAiConversation && !data.isDeleted && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleForkConversation().catch(() => {
+                      // handled in function
+                    })
+                  }}
+                  disabled={isForking}
+                  className={clsx(
+                    "rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground",
+                    isForking && "opacity-60"
+                  )}
+                  aria-label="Branch conversation from here"
+                  title="Branch from here"
+                >
+                  <HiOutlineSquare2Stack size={16} />
+                </button>
               )}
 
               {/* Regenerate button - only show for AI messages */}
