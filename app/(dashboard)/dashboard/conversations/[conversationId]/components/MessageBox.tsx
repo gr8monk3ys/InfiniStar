@@ -36,6 +36,7 @@ interface MessageBoxProps {
   onRegenerate?: (messageId: string) => void
   isRegenerating?: boolean
   regeneratingMessageId?: string | null
+  regeneratingContent?: string
 }
 
 const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
@@ -49,6 +50,7 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
   onRegenerate,
   isRegenerating = false,
   regeneratingMessageId = null,
+  regeneratingContent,
 }) {
   const { user } = useUser()
   const [imageModalOpen, setImageModalOpen] = useState(false)
@@ -74,11 +76,16 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
   const avatar = clsx(isOwn && "order-2")
   const body = clsx("flex flex-col gap-2", isOwn && "items-end")
 
+  const isThisRegenerating = Boolean(
+    data.isAI && isRegenerating && regeneratingMessageId === data.id
+  )
+  const displayBody = isThisRegenerating ? (regeneratingContent ?? "") : (data.body ?? "")
+
   // Check if message body contains code blocks (for AI messages)
   const hasCodeBlocks = useMemo(() => {
-    if (!data.body) return false
-    return data.body.includes("```") || data.body.includes("`")
-  }, [data.body])
+    if (!displayBody) return false
+    return displayBody.includes("```") || displayBody.includes("`")
+  }, [displayBody])
 
   // AI messages with code blocks get special styling
   const isAiWithCode = data.isAI && hasCodeBlocks
@@ -190,7 +197,13 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
   }, [isSpeechSupported])
 
   const handleToggleSpeech = useCallback(() => {
-    if (!isSpeechSupported || !data.isAI || !data.body || typeof window === "undefined") {
+    if (
+      !isSpeechSupported ||
+      !data.isAI ||
+      !displayBody ||
+      isThisRegenerating ||
+      typeof window === "undefined"
+    ) {
       return
     }
 
@@ -199,7 +212,7 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
       return
     }
 
-    const utterance = new SpeechSynthesisUtterance(data.body)
+    const utterance = new SpeechSynthesisUtterance(displayBody)
     utterance.rate = 1
     utterance.pitch = 1
 
@@ -222,7 +235,7 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
     window.speechSynthesis.cancel()
     window.speechSynthesis.speak(utterance)
     setIsSpeaking(true)
-  }, [isSpeechSupported, data.isAI, data.body, isSpeaking, stopSpeech])
+  }, [isSpeechSupported, data.isAI, displayBody, isSpeaking, isThisRegenerating, stopSpeech])
 
   useEffect(() => {
     const supported =
@@ -392,10 +405,14 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
                     }}
                     aria-label="Click to view full-size image"
                   />
-                ) : data.isAI && data.body ? (
-                  <MarkdownRenderer content={data.body} />
+                ) : data.isAI ? (
+                  displayBody ? (
+                    <MarkdownRenderer content={displayBody} />
+                  ) : isThisRegenerating ? (
+                    <div className="text-sm italic text-muted-foreground">Regenerating...</div>
+                  ) : null
                 ) : (
-                  <div>{data.body}</div>
+                  <div>{displayBody}</div>
                 )}
               </div>
 
@@ -460,7 +477,7 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
               )}
 
               {/* Text-to-speech button for AI responses */}
-              {data.isAI && data.body && isSpeechSupported && (
+              {data.isAI && displayBody && isSpeechSupported && !isThisRegenerating && (
                 <button
                   onClick={handleToggleSpeech}
                   className={clsx(

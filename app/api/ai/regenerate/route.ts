@@ -200,27 +200,6 @@ export async function POST(request: NextRequest) {
     // Build conversation history for Claude
     const conversationHistory = buildAiConversationHistory(conversationMessages)
 
-    // Soft delete the existing AI message
-    const deletedMessage = await prisma.message.update({
-      where: { id: messageId },
-      data: {
-        isDeleted: true,
-        deletedAt: new Date(),
-        body: null,
-      },
-      include: {
-        sender: true,
-        seen: true,
-      },
-    })
-
-    // Trigger Pusher event to notify clients about the deletion
-    await pusherServer.trigger(
-      getPusherConversationChannel(message.conversationId),
-      "message:delete",
-      deletedMessage
-    )
-
     // Create a ReadableStream for streaming response
     const stream = new ReadableStream({
       async start(controller) {
@@ -284,21 +263,17 @@ export async function POST(request: NextRequest) {
             latencyMs,
           })
 
-          // Create new AI message and update conversation in a transaction for atomicity
-          const newAiMessage = await prisma.$transaction(async (tx) => {
-            const createdMessage = await tx.message.create({
+          // Overwrite the existing AI message instead of deleting + creating a new one.
+          // This avoids leaving "This message was deleted" placeholders in the UI.
+          const updatedMessage = await prisma.$transaction(async (tx) => {
+            const updated = await tx.message.update({
+              where: { id: messageId },
               data: {
                 body: fullResponse,
-                conversation: {
-                  connect: { id: message.conversationId },
-                },
-                sender: {
-                  connect: { id: currentUser.id },
-                },
-                seen: {
-                  connect: { id: currentUser.id },
-                },
-                isAI: true,
+                isDeleted: false,
+                deletedAt: null,
+                inputTokens: finalMessage.usage.input_tokens,
+                outputTokens: finalMessage.usage.output_tokens,
               },
               include: {
                 seen: true,
@@ -306,27 +281,26 @@ export async function POST(request: NextRequest) {
               },
             })
 
-            // Update conversation lastMessageAt
+            // Mark activity for conversation ordering and presence.
             await tx.conversation.update({
               where: { id: message.conversationId },
               data: { lastMessageAt: new Date() },
             })
 
-            return createdMessage
+            return updated
           })
 
-          // Trigger Pusher event for complete AI response
+          // Trigger Pusher update event for real-time UI refresh.
           await pusherServer.trigger(
             getPusherConversationChannel(message.conversationId),
-            "messages:new",
-            newAiMessage
+            "message:update",
+            updatedMessage
           )
 
           // Send completion signal
           const completeData = JSON.stringify({
             type: "done",
-            messageId: newAiMessage.id,
-            deletedMessageId: messageId,
+            messageId,
           })
           controller.enqueue(encoder.encode(`data: ${completeData}\n\n`))
 

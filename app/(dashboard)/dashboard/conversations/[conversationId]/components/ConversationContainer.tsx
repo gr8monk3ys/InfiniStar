@@ -61,7 +61,7 @@ const ConversationContainer: React.FC<ConversationContainerProps> = ({
   )
 
   // Set up regeneration hook for AI conversations
-  const { regenerate, isRegenerating, regeneratingMessageId } = useAiRegenerate({
+  const { regenerate, isRegenerating, regeneratingMessageId, streamingContent } = useAiRegenerate({
     csrfToken,
     onComplete: () => {
       toast.success("AI response regenerated")
@@ -169,6 +169,7 @@ const ConversationContainer: React.FC<ConversationContainerProps> = ({
         onRegenerate={isAI ? handleRegenerate : undefined}
         isRegenerating={isRegenerating}
         regeneratingMessageId={regeneratingMessageId}
+        regeneratingContent={streamingContent}
         bottomRef={bottomRef}
       />
 

@@ -6,14 +6,13 @@ interface StreamChunk {
   type: "chunk" | "done" | "error"
   content?: string
   messageId?: string
-  deletedMessageId?: string
   error?: string
 }
 
 interface UseAiRegenerateOptions {
   csrfToken: string | null
   onChunk?: (chunk: string) => void
-  onComplete?: (newMessageId: string, deletedMessageId: string) => void
+  onComplete?: (messageId: string) => void
   onError?: (error: string) => void
 }
 
@@ -108,8 +107,8 @@ export function useAiRegenerate(options: UseAiRegenerateOptions) {
                 if (parsed.type === "chunk" && parsed.content) {
                   setStreamingContent((prev) => prev + parsed.content)
                   onChunk?.(parsed.content)
-                } else if (parsed.type === "done" && parsed.messageId && parsed.deletedMessageId) {
-                  onComplete?.(parsed.messageId, parsed.deletedMessageId)
+                } else if (parsed.type === "done" && parsed.messageId) {
+                  onComplete?.(parsed.messageId)
                 } else if (parsed.type === "error") {
                   const errMsg = parsed.error || "Regeneration error"
                   setError(errMsg)

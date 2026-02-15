@@ -16,6 +16,7 @@ interface BodyProps {
   onRegenerate?: (messageId: string) => void
   isRegenerating?: boolean
   regeneratingMessageId?: string | null
+  regeneratingContent?: string
   bottomRef?: RefObject<HTMLDivElement | null>
 }
 
@@ -38,6 +39,7 @@ const Body: React.FC<BodyProps> = memo(function Body({
   onRegenerate,
   isRegenerating = false,
   regeneratingMessageId,
+  regeneratingContent,
   bottomRef,
 }) {
   return (
@@ -54,6 +56,7 @@ const Body: React.FC<BodyProps> = memo(function Body({
           onRegenerate={isAI ? onRegenerate : undefined}
           isRegenerating={isRegenerating}
           regeneratingMessageId={regeneratingMessageId}
+          regeneratingContent={regeneratingContent}
         />
       ))}
       <div className="pt-24" ref={bottomRef} />
