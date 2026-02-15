@@ -11,8 +11,13 @@ jest.mock("@/app/actions/getCurrentUser", () => ({
   default: () => mockGetCurrentUser(),
 }))
 
+jest.mock("@/app/lib/ai-access", () => ({
+  getAiAccessDecision: async () => ({ allowed: true }),
+}))
+
 jest.mock("@/app/lib/rate-limit", () => ({
   aiChatLimiter: { check: () => true },
+  aiTranscribeLimiter: { check: () => true },
   getClientIdentifier: () => "test-client",
 }))
 

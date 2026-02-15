@@ -1,9 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { z } from "zod"
 
+import { getAiAccessDecision } from "@/app/lib/ai-access"
 import { verifyCsrfToken } from "@/app/lib/csrf"
 import { moderateTextModelAssisted } from "@/app/lib/moderation"
-import { aiChatLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
+import { aiChatLimiter, aiTranscribeLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 import { sanitizeMessage, sanitizeUrl } from "@/app/lib/sanitize"
 import getCurrentUser from "@/app/actions/getCurrentUser"
 
@@ -11,6 +12,80 @@ const transcribeSchema = z.object({
   audioUrl: z.string().url("Invalid audio URL").max(2000, "Audio URL too long"),
   language: z.string().max(16).optional().nullable(),
 })
+
+const MAX_AUDIO_BYTES = 25 * 1024 * 1024 // 25MB
+
+function isAllowedCloudinaryAudioUrl(audioUrl: string): boolean {
+  const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
+  if (!cloudName) return false
+
+  try {
+    const parsed = new URL(audioUrl)
+    if (parsed.protocol !== "https:") return false
+    if (parsed.hostname !== "res.cloudinary.com") return false
+
+    // Expect URLs like: https://res.cloudinary.com/<cloudName>/video/upload/...
+    if (!parsed.pathname.startsWith(`/${cloudName}/`)) return false
+    if (!parsed.pathname.includes("/video/upload/") && !parsed.pathname.includes("/raw/upload/")) {
+      return false
+    }
+
+    return true
+  } catch {
+    return false
+  }
+}
+
+async function readArrayBufferWithLimit(
+  response: Response,
+  maxBytes: number
+): Promise<ArrayBuffer> {
+  const contentLengthHeader = response.headers.get("content-length")
+  if (contentLengthHeader) {
+    const contentLength = Number(contentLengthHeader)
+    if (Number.isFinite(contentLength) && contentLength > maxBytes) {
+      throw new Error("PAYLOAD_TOO_LARGE")
+    }
+  }
+
+  const body = response.body
+  if (!body) {
+    const buffer = await response.arrayBuffer()
+    if (buffer.byteLength > maxBytes) {
+      throw new Error("PAYLOAD_TOO_LARGE")
+    }
+    return buffer
+  }
+
+  const reader = body.getReader()
+  const chunks: Uint8Array[] = []
+  let received = 0
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      if (!value) continue
+
+      received += value.byteLength
+      if (received > maxBytes) {
+        throw new Error("PAYLOAD_TOO_LARGE")
+      }
+      chunks.push(value)
+    }
+  } finally {
+    reader.releaseLock()
+  }
+
+  const out = new Uint8Array(received)
+  let offset = 0
+  for (const chunk of chunks) {
+    out.set(chunk, offset)
+    offset += chunk.byteLength
+  }
+
+  return out.buffer
+}
 
 function getCsrfTokens(request: NextRequest): {
   headerToken: string | null
@@ -56,6 +131,28 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
+    const transcribeAllowed = await Promise.resolve(aiTranscribeLimiter.check(currentUser.id))
+    if (!transcribeAllowed) {
+      return NextResponse.json(
+        { error: "Too many transcription requests. Please try again in a minute." },
+        { status: 429, headers: { "Retry-After": "60" } }
+      )
+    }
+
+    const accessDecision = await getAiAccessDecision(currentUser.id)
+    if (!accessDecision.allowed) {
+      return NextResponse.json(
+        {
+          error:
+            accessDecision.message ??
+            "AI access is unavailable for this account right now. Please try again.",
+          code: accessDecision.code,
+          limits: accessDecision.limits,
+        },
+        { status: 402 }
+      )
+    }
+
     const openAiKey = process.env.OPENAI_API_KEY
     if (!openAiKey) {
       return NextResponse.json({ error: "Transcription is not configured." }, { status: 501 })
@@ -72,13 +169,37 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid audio URL" }, { status: 400 })
     }
 
-    const audioRes = await fetch(sanitizedAudioUrl)
+    // Prevent SSRF by restricting to our upload host.
+    if (!isAllowedCloudinaryAudioUrl(sanitizedAudioUrl)) {
+      return NextResponse.json({ error: "Unsupported audio URL host." }, { status: 400 })
+    }
+
+    const audioRes = await fetch(sanitizedAudioUrl, {
+      redirect: "error",
+      cache: "no-store",
+    })
     if (!audioRes.ok) {
       return NextResponse.json({ error: "Failed to fetch audio." }, { status: 400 })
     }
 
-    const contentType = audioRes.headers.get("content-type") || "audio/webm"
-    const buffer = await audioRes.arrayBuffer()
+    const contentType = audioRes.headers.get("content-type") || "application/octet-stream"
+    const isLikelyMedia =
+      contentType.startsWith("audio/") ||
+      contentType.startsWith("video/") ||
+      contentType === "application/octet-stream"
+    if (!isLikelyMedia) {
+      return NextResponse.json({ error: "Unsupported audio content type." }, { status: 400 })
+    }
+
+    let buffer: ArrayBuffer
+    try {
+      buffer = await readArrayBufferWithLimit(audioRes, MAX_AUDIO_BYTES)
+    } catch (error) {
+      if (error instanceof Error && error.message === "PAYLOAD_TOO_LARGE") {
+        return NextResponse.json({ error: "Audio file is too large." }, { status: 413 })
+      }
+      throw error
+    }
     const audioBlob = new Blob([buffer], { type: contentType })
 
     const model = process.env.OPENAI_TRANSCRIPTION_MODEL || "whisper-1"

@@ -106,6 +106,7 @@ function createRateLimiter(name: string, limit: number, windowMs: number): IRate
 export const apiLimiter = createRateLimiter("api", 60, 60000) // 60 requests per minute
 export const authLimiter = createRateLimiter("auth", 5, 300000) // 5 requests per 5 minutes
 export const aiChatLimiter = createRateLimiter("aiChat", 20, 60000) // 20 AI requests per minute
+export const aiTranscribeLimiter = createRateLimiter("aiTranscribe", 10, 60000) // 10 transcription requests per minute
 export const accountDeletionLimiter = createRateLimiter("accountDeletion", 3, 3600000) // 3 requests per hour
 export const twoFactorLimiter = createRateLimiter("twoFactor", 5, 300000) // 5 attempts per 5 minutes for 2FA verification
 export const tagLimiter = createRateLimiter("tag", 30, 60000) // 30 tag operations per minute
@@ -120,6 +121,7 @@ setInterval(() => {
   apiLimiter.cleanup()
   authLimiter.cleanup()
   aiChatLimiter.cleanup()
+  aiTranscribeLimiter.cleanup()
   accountDeletionLimiter.cleanup()
   twoFactorLimiter.cleanup()
   tagLimiter.cleanup()
