@@ -323,7 +323,7 @@ const Form: React.FC<FormProps> = ({
               "Content-Type": "application/json",
               "X-CSRF-Token": csrfToken,
             },
-            body: JSON.stringify({ audioUrl }),
+            body: JSON.stringify({ conversationId, audioUrl }),
           })
           if (txRes.ok) {
             const txJson = (await txRes.json().catch(() => null)) as { transcript?: string } | null

@@ -47,7 +47,14 @@ export const MODEL_PRICING = {
   },
 } as const
 
-export type AiRequestType = "chat" | "chat-stream" | "suggestions" | "memory-extract" | "summary"
+export type AiRequestType =
+  | "chat"
+  | "chat-stream"
+  | "suggestions"
+  | "memory-extract"
+  | "summary"
+  | "image-generate"
+  | "transcribe"
 
 /**
  * Calculate cost in cents for token usage
@@ -92,6 +99,7 @@ export async function trackAiUsage({
   outputTokens,
   requestType,
   latencyMs,
+  costOverrideCents,
 }: {
   userId: string
   conversationId: string
@@ -100,9 +108,25 @@ export async function trackAiUsage({
   outputTokens: number
   requestType: AiRequestType
   latencyMs?: number
+  /**
+   * Non-token usage costs (e.g., image generation / transcription) can provide a fixed estimate.
+   * When provided, token-based cost calculation is skipped.
+   */
+  costOverrideCents?: number
 }) {
-  const totalTokens = inputTokens + outputTokens
-  const costs = calculateTokenCost(model, inputTokens, outputTokens)
+  const safeInputTokens = Math.max(0, Math.trunc(inputTokens))
+  const safeOutputTokens = Math.max(0, Math.trunc(outputTokens))
+  const totalTokens = safeInputTokens + safeOutputTokens
+
+  const safeCostOverride =
+    typeof costOverrideCents === "number" && Number.isFinite(costOverrideCents)
+      ? Math.max(0, costOverrideCents)
+      : null
+
+  const costs =
+    safeCostOverride === null
+      ? calculateTokenCost(model, safeInputTokens, safeOutputTokens)
+      : { inputCost: 0, outputCost: 0, totalCost: Math.round(safeCostOverride * 100) / 100 }
 
   try {
     const usage = await prisma.aiUsage.create({
@@ -110,8 +134,8 @@ export async function trackAiUsage({
         userId,
         conversationId,
         model,
-        inputTokens,
-        outputTokens,
+        inputTokens: safeInputTokens,
+        outputTokens: safeOutputTokens,
         totalTokens,
         inputCost: costs.inputCost,
         outputCost: costs.outputCost,

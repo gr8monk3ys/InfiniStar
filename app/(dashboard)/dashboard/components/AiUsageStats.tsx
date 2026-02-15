@@ -200,7 +200,8 @@ const AiUsageStats = () => {
       <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
         <p className="text-sm text-blue-800">
           <span className="font-medium">Note:</span> Usage tracking helps you monitor AI costs and
-          stay within quota limits. Costs are estimates based on current Anthropic pricing.
+          stay within quota limits. Costs are estimates based on configured model pricing and
+          multimodal cost assumptions.
         </p>
       </div>
     </div>

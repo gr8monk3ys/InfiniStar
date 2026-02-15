@@ -5,6 +5,7 @@
 import { NextRequest } from "next/server"
 
 const mockGetCurrentUser = jest.fn()
+const mockFindFirst = jest.fn()
 
 jest.mock("@/app/actions/getCurrentUser", () => ({
   __esModule: true,
@@ -13,6 +14,18 @@ jest.mock("@/app/actions/getCurrentUser", () => ({
 
 jest.mock("@/app/lib/ai-access", () => ({
   getAiAccessDecision: async () => ({ allowed: true }),
+}))
+
+jest.mock("@/app/lib/prismadb", () => ({
+  __esModule: true,
+  default: {
+    conversation: {
+      findFirst: (args: unknown) => mockFindFirst(args),
+    },
+    aiUsage: {
+      create: jest.fn(),
+    },
+  },
 }))
 
 jest.mock("@/app/lib/rate-limit", () => ({
@@ -45,6 +58,7 @@ describe("/api/ai/transcribe", () => {
     }
 
     mockGetCurrentUser.mockResolvedValue({ id: "user-1", email: "user@example.com" })
+    mockFindFirst.mockResolvedValue({ id: "conv-1", isAI: true, character: { isNsfw: false } })
   })
 
   afterAll(() => {

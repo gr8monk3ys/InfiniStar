@@ -2,13 +2,18 @@ import { NextResponse, type NextRequest } from "next/server"
 import { z } from "zod"
 
 import { getAiAccessDecision } from "@/app/lib/ai-access"
+import { AI_TRANSCRIBE_COST_CENTS_PER_REQUEST } from "@/app/lib/ai-limits"
+import { trackAiUsage } from "@/app/lib/ai-usage"
 import { verifyCsrfToken } from "@/app/lib/csrf"
 import { moderateTextModelAssisted } from "@/app/lib/moderation"
+import { canAccessNsfw } from "@/app/lib/nsfw"
+import prisma from "@/app/lib/prismadb"
 import { aiChatLimiter, aiTranscribeLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 import { sanitizeMessage, sanitizeUrl } from "@/app/lib/sanitize"
 import getCurrentUser from "@/app/actions/getCurrentUser"
 
 const transcribeSchema = z.object({
+  conversationId: z.string().uuid(),
   audioUrl: z.string().url("Invalid audio URL").max(2000, "Audio URL too long"),
   language: z.string().max(16).optional().nullable(),
 })
@@ -139,7 +144,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const accessDecision = await getAiAccessDecision(currentUser.id)
+    const accessDecision = await getAiAccessDecision(currentUser.id, { requestType: "transcribe" })
     if (!accessDecision.allowed) {
       return NextResponse.json(
         {
@@ -162,6 +167,44 @@ export async function POST(request: NextRequest) {
     const validation = transcribeSchema.safeParse(body)
     if (!validation.success) {
       return NextResponse.json({ error: validation.error.issues[0].message }, { status: 400 })
+    }
+
+    const allowNsfw = canAccessNsfw(currentUser)
+    const conversation = await prisma.conversation.findFirst({
+      where: {
+        id: validation.data.conversationId,
+        users: { some: { id: currentUser.id } },
+      },
+      select: {
+        id: true,
+        isAI: true,
+        character: { select: { isNsfw: true } },
+      },
+    })
+
+    if (!conversation) {
+      return NextResponse.json({ error: "Not authorized for this conversation" }, { status: 403 })
+    }
+
+    if (conversation.isAI && conversation.character?.isNsfw && !allowNsfw) {
+      return NextResponse.json({ error: "NSFW content is not enabled." }, { status: 403 })
+    }
+
+    const proCostCapCents = accessDecision.limits?.monthlyCostQuotaCents ?? null
+    const proCostUsageCents = accessDecision.limits?.monthlyCostUsageCents ?? 0
+    if (accessDecision.limits?.isPro && proCostCapCents !== null) {
+      if (proCostUsageCents + AI_TRANSCRIBE_COST_CENTS_PER_REQUEST > proCostCapCents) {
+        return NextResponse.json(
+          {
+            error:
+              accessDecision.message ??
+              "You have reached this month's AI fair-use cap. Please contact support to increase limits.",
+            code: "PRO_TIER_COST_CAP_REACHED",
+            limits: accessDecision.limits,
+          },
+          { status: 402 }
+        )
+      }
     }
 
     const sanitizedAudioUrl = sanitizeUrl(validation.data.audioUrl)
@@ -210,6 +253,7 @@ export async function POST(request: NextRequest) {
       form.append("language", validation.data.language)
     }
 
+    const startTime = Date.now()
     const transcriptionRes = await fetch("https://api.openai.com/v1/audio/transcriptions", {
       method: "POST",
       headers: {
@@ -221,6 +265,18 @@ export async function POST(request: NextRequest) {
     if (!transcriptionRes.ok) {
       return NextResponse.json({ error: "Failed to transcribe audio." }, { status: 502 })
     }
+
+    const latencyMs = Date.now() - startTime
+    await trackAiUsage({
+      userId: currentUser.id,
+      conversationId: conversation.id,
+      model: `openai:${model}`,
+      inputTokens: 0,
+      outputTokens: 0,
+      requestType: "transcribe",
+      latencyMs,
+      costOverrideCents: AI_TRANSCRIBE_COST_CENTS_PER_REQUEST,
+    })
 
     const transcriptionJson = (await transcriptionRes.json()) as unknown
     const rawText = (transcriptionJson as { text?: string }).text ?? ""

@@ -2,8 +2,16 @@ import { NextResponse, type NextRequest } from "next/server"
 import { z } from "zod"
 
 import { getAiAccessDecision } from "@/app/lib/ai-access"
+import {
+  AI_IMAGE_GENERATION_COST_CENTS_512,
+  AI_IMAGE_GENERATION_COST_CENTS_1024,
+  AI_IMAGE_GENERATION_COST_CENTS_1024x1792,
+  AI_IMAGE_GENERATION_COST_CENTS_1792x1024,
+} from "@/app/lib/ai-limits"
+import { trackAiUsage } from "@/app/lib/ai-usage"
 import { verifyCsrfToken } from "@/app/lib/csrf"
 import { moderateTextModelAssisted } from "@/app/lib/moderation"
+import { canAccessNsfw } from "@/app/lib/nsfw"
 import prisma from "@/app/lib/prismadb"
 import { pusherServer } from "@/app/lib/pusher"
 import { getPusherConversationChannel, getPusherUserChannel } from "@/app/lib/pusher-channels"
@@ -40,6 +48,21 @@ function getCsrfTokens(request: NextRequest): {
   return { headerToken, cookieToken }
 }
 
+function estimateImageCostCents(size: "512x512" | "1024x1024" | "1024x1792" | "1792x1024"): number {
+  switch (size) {
+    case "512x512":
+      return AI_IMAGE_GENERATION_COST_CENTS_512
+    case "1024x1024":
+      return AI_IMAGE_GENERATION_COST_CENTS_1024
+    case "1024x1792":
+      return AI_IMAGE_GENERATION_COST_CENTS_1024x1792
+    case "1792x1024":
+      return AI_IMAGE_GENERATION_COST_CENTS_1792x1024
+    default:
+      return AI_IMAGE_GENERATION_COST_CENTS_1024
+  }
+}
+
 export async function POST(request: NextRequest) {
   const { headerToken, cookieToken } = getCsrfTokens(request)
   if (!verifyCsrfToken(headerToken, cookieToken)) {
@@ -60,6 +83,7 @@ export async function POST(request: NextRequest) {
     if (!currentUser?.id || !currentUser.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
+    const allowNsfw = canAccessNsfw(currentUser)
 
     const body = await request.json()
     const validation = generateImageSchema.safeParse(body)
@@ -89,7 +113,11 @@ export async function POST(request: NextRequest) {
         id: validation.data.conversationId,
         users: { some: { id: currentUser.id } },
       },
-      select: { id: true, isAI: true },
+      select: {
+        id: true,
+        isAI: true,
+        character: { select: { isNsfw: true } },
+      },
     })
 
     if (!conversation) {
@@ -100,7 +128,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Not an AI conversation" }, { status: 400 })
     }
 
-    const accessDecision = await getAiAccessDecision(currentUser.id)
+    if (conversation.character?.isNsfw && !allowNsfw) {
+      return NextResponse.json({ error: "NSFW content is not enabled." }, { status: 403 })
+    }
+
+    const accessDecision = await getAiAccessDecision(currentUser.id, {
+      requestType: "image-generate",
+    })
     if (!accessDecision.allowed) {
       return NextResponse.json(
         {
@@ -128,6 +162,25 @@ export async function POST(request: NextRequest) {
     const openAiModel = process.env.OPENAI_IMAGE_MODEL || "dall-e-3"
     const size = validation.data.size || "1024x1024"
 
+    const estimatedCostCents = estimateImageCostCents(size)
+    const proCostCapCents = accessDecision.limits?.monthlyCostQuotaCents ?? null
+    const proCostUsageCents = accessDecision.limits?.monthlyCostUsageCents ?? 0
+    if (accessDecision.limits?.isPro && proCostCapCents !== null) {
+      if (proCostUsageCents + estimatedCostCents > proCostCapCents) {
+        return NextResponse.json(
+          {
+            error:
+              accessDecision.message ??
+              "You have reached this month's AI fair-use cap. Please contact support to increase limits.",
+            code: "PRO_TIER_COST_CAP_REACHED",
+            limits: accessDecision.limits,
+          },
+          { status: 402 }
+        )
+      }
+    }
+
+    const startTime = Date.now()
     const imageRes = await fetch("https://api.openai.com/v1/images/generations", {
       method: "POST",
       headers: {
@@ -147,6 +200,17 @@ export async function POST(request: NextRequest) {
     }
 
     const imageJson = (await imageRes.json()) as unknown
+    const latencyMs = Date.now() - startTime
+    await trackAiUsage({
+      userId: currentUser.id,
+      conversationId: conversation.id,
+      model: `openai:${openAiModel}`,
+      inputTokens: 0,
+      outputTokens: 0,
+      requestType: "image-generate",
+      latencyMs,
+      costOverrideCents: estimatedCostCents,
+    })
     const imageData = (imageJson as { data?: Array<{ url?: string; b64_json?: string }> }).data?.[0]
     const openAiUrl = imageData?.url ?? null
     const openAiB64 = imageData?.b64_json ?? null
