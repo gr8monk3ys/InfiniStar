@@ -1,3 +1,5 @@
+import { moderateTextWithOpenAi } from "@/app/lib/model-moderation"
+
 export type ModerationCategory =
   | "harassment"
   | "hate"
@@ -181,4 +183,51 @@ export function buildModerationDetails(result: ModerationResult, context: string
     .slice(0, 6)
     .join(", ")
   return `Auto-flagged in ${context}. Categories: ${categoryList}. Signals: ${labels}.`
+}
+
+function severityRank(severity: ModerationSeverity): number {
+  switch (severity) {
+    case "block":
+      return 2
+    case "review":
+      return 1
+    default:
+      return 0
+  }
+}
+
+function mergeModerationResults(a: ModerationResult, b: ModerationResult): ModerationResult {
+  const severity = severityRank(a.severity) >= severityRank(b.severity) ? a.severity : b.severity
+  const categories = [...new Set([...a.categories, ...b.categories])]
+  const matches = [...a.matches, ...b.matches].filter(
+    (match, idx, all) =>
+      all.findIndex((m) => m.category === match.category && m.label === match.label) === idx
+  )
+
+  return {
+    severity,
+    shouldBlock: severity === "block",
+    shouldReview: severity === "review",
+    categories,
+    matches,
+  }
+}
+
+export async function moderateTextModelAssisted(
+  content: string | null | undefined
+): Promise<ModerationResult> {
+  const baseline = moderateText(content)
+  if (!content || content.trim().length === 0) {
+    return baseline
+  }
+
+  try {
+    const modelResult = await moderateTextWithOpenAi(content.trim())
+    if (!modelResult) {
+      return baseline
+    }
+    return mergeModerationResults(baseline, modelResult)
+  } catch {
+    return baseline
+  }
 }

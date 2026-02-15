@@ -5,7 +5,7 @@ import { z } from "zod"
 import { verifyCsrfToken } from "@/app/lib/csrf"
 import {
   buildModerationDetails,
-  moderateText,
+  moderateTextModelAssisted,
   moderationReasonFromCategories,
 } from "@/app/lib/moderation"
 import prisma from "@/app/lib/prismadb"
@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    const moderationResult = moderateText(sanitizedMessage)
+    const moderationResult = await moderateTextModelAssisted(sanitizedMessage)
     if (moderationResult.shouldBlock) {
       return new NextResponse(
         JSON.stringify({

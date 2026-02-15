@@ -3,6 +3,11 @@ import { auth } from "@clerk/nextjs/server"
 import { z } from "zod"
 
 import { verifyCsrfToken } from "@/app/lib/csrf"
+import {
+  buildModerationDetails,
+  moderateTextModelAssisted,
+  moderationReasonFromCategories,
+} from "@/app/lib/moderation"
 import { canAccessNsfw } from "@/app/lib/nsfw"
 import prisma from "@/app/lib/prismadb"
 import { sanitizePlainText } from "@/app/lib/sanitize"
@@ -127,6 +132,30 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   const data = validation.data
   let slug = existing.slug
 
+  const moderationPayload = [
+    data.name ? sanitizePlainText(data.name) : null,
+    data.tagline ? sanitizePlainText(data.tagline) : null,
+    data.description ? sanitizePlainText(data.description) : null,
+    data.greeting ? sanitizePlainText(data.greeting) : null,
+    data.systemPrompt ?? null,
+  ]
+    .filter(Boolean)
+    .join("\n")
+
+  const moderationResult = moderationPayload
+    ? await moderateTextModelAssisted(moderationPayload)
+    : null
+  if (moderationResult?.shouldBlock) {
+    return NextResponse.json(
+      {
+        error: "Character content was blocked by safety filters.",
+        code: "CONTENT_BLOCKED",
+        categories: moderationResult.categories,
+      },
+      { status: 400 }
+    )
+  }
+
   if (data.isNsfw && !currentUser.isAdult) {
     return NextResponse.json(
       { error: "You must confirm you are 18+ to mark NSFW." },
@@ -166,6 +195,19 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       category: data.category ? sanitizePlainText(data.category) || undefined : undefined,
     },
   })
+
+  if (moderationResult?.shouldReview) {
+    await prisma.contentReport.create({
+      data: {
+        reporterId: currentUser.id,
+        targetType: "CHARACTER",
+        targetId: existing.id,
+        reason: moderationReasonFromCategories(moderationResult.categories),
+        details: buildModerationDetails(moderationResult, "character-update"),
+        status: "OPEN",
+      },
+    })
+  }
 
   return NextResponse.json(updated)
 }

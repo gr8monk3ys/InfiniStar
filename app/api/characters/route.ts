@@ -5,7 +5,7 @@ import { z } from "zod"
 import { verifyCsrfToken } from "@/app/lib/csrf"
 import {
   buildModerationDetails,
-  moderateText,
+  moderateTextModelAssisted,
   moderationReasonFromCategories,
 } from "@/app/lib/moderation"
 import { canAccessNsfw } from "@/app/lib/nsfw"
@@ -219,7 +219,7 @@ export async function POST(request: NextRequest) {
     .filter(Boolean)
     .join("\n")
 
-  const moderationResult = moderateText(moderationPayload)
+  const moderationResult = await moderateTextModelAssisted(moderationPayload)
   if (moderationResult.shouldBlock) {
     return NextResponse.json(
       {

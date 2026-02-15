@@ -13,7 +13,7 @@ import { trackAiUsage } from "@/app/lib/ai-usage"
 import { verifyCsrfToken } from "@/app/lib/csrf"
 import {
   buildModerationDetails,
-  moderateText,
+  moderateTextModelAssisted,
   moderationReasonFromCategories,
 } from "@/app/lib/moderation"
 import { canAccessNsfw } from "@/app/lib/nsfw"
@@ -102,7 +102,9 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    const moderationResult = sanitizedMessage ? moderateText(sanitizedMessage) : null
+    const moderationResult = sanitizedMessage
+      ? await moderateTextModelAssisted(sanitizedMessage)
+      : null
     if (moderationResult?.shouldBlock) {
       return new NextResponse(
         JSON.stringify({
