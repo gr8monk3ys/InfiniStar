@@ -9,6 +9,7 @@ import prisma from "@/app/lib/prismadb"
 import { cn } from "@/app/lib/utils"
 import { CharacterCard } from "@/app/components/characters/CharacterCard"
 import { CharacterLikeButton } from "@/app/components/characters/CharacterLikeButton"
+import { CharacterRemixButton } from "@/app/components/characters/CharacterRemixButton"
 import { CharacterStartChatButton } from "@/app/components/characters/CharacterStartChatButton"
 
 interface SimilarCharacter {
@@ -188,12 +189,13 @@ export default async function CharacterPage({ params }: CharacterPageProps) {
 
           {/* Action Buttons */}
           <div className="flex items-center gap-3">
+            <CharacterStartChatButton characterId={character.id} />
             <CharacterLikeButton
               characterId={character.id}
               initialLiked={hasLiked}
               initialCount={character.likeCount}
             />
-            <CharacterStartChatButton characterId={character.id} />
+            <CharacterRemixButton characterId={character.id} />
           </div>
         </div>
 
