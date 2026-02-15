@@ -25,6 +25,7 @@ const CHARACTER_SELECT = {
   category: true,
   usageCount: true,
   likeCount: true,
+  commentCount: true,
   featured: true,
   isNsfw: true,
   createdBy: {
@@ -61,7 +62,7 @@ export default async function ExplorePage() {
     // Trending characters
     prisma.character.findMany({
       where: publicCharacterWhere,
-      orderBy: { usageCount: "desc" },
+      orderBy: [{ usageCount: "desc" }, { commentCount: "desc" }, { likeCount: "desc" }],
       take: 80,
       select: CHARACTER_SELECT,
     }),

@@ -2,7 +2,13 @@ import Image from "next/image"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { auth } from "@clerk/nextjs/server"
-import { HiChatBubbleLeftRight, HiEye, HiHeart, HiUser } from "react-icons/hi2"
+import {
+  HiChatBubbleBottomCenterText,
+  HiChatBubbleLeftRight,
+  HiEye,
+  HiHeart,
+  HiUser,
+} from "react-icons/hi2"
 
 import { getCategoryById } from "@/app/lib/character-categories"
 import { canAccessNsfw } from "@/app/lib/nsfw"
@@ -13,6 +19,8 @@ import { CharacterLikeButton } from "@/app/components/characters/CharacterLikeBu
 import { CharacterRemixButton } from "@/app/components/characters/CharacterRemixButton"
 import { CharacterStartChatButton } from "@/app/components/characters/CharacterStartChatButton"
 import { NsfwGateCard } from "@/app/components/safety/NsfwGateCard"
+
+import CharacterCommentsSection from "./CharacterCommentsSection"
 
 interface SimilarCharacter {
   id: string
@@ -251,6 +259,15 @@ export default async function CharacterPage({ params }: CharacterPageProps) {
             </span>
           </div>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <HiChatBubbleBottomCenterText className="size-5" aria-hidden="true" />
+            <span>
+              <span className="font-semibold text-foreground">
+                {character.commentCount.toLocaleString()}
+              </span>{" "}
+              comments
+            </span>
+          </div>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <HiEye className="size-5" aria-hidden="true" />
             <span>
               <span className="font-semibold text-foreground">
@@ -364,6 +381,11 @@ export default async function CharacterPage({ params }: CharacterPageProps) {
             </div>
           </div>
         </div>
+
+        <CharacterCommentsSection
+          characterId={character.id}
+          initialCount={character.commentCount}
+        />
 
         {/* Similar Characters */}
         {similarCharacters.length > 0 && (

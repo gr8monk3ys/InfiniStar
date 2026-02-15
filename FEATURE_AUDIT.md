@@ -11,8 +11,10 @@ Legend: **Implemented**, **Partial**, **Missing**
 - **Multiple AI models + routing (free vs PRO)**: Implemented (Claude Haiku/Sonnet/Opus)
 - **Personality presets + custom system prompt**: Implemented (7 presets + custom)
 - **Image attachments**: Implemented (Cloudinary upload)
+- **In-chat image generation (AI)**: Implemented (OpenAI optional)
 - **Multimodal image input to AI (vision)**: Implemented (image URL sent to Claude)
 - **Voice input**: Implemented (Web Speech API; browser-dependent)
+- **Voice messages + transcription**: Implemented (Cloudinary audio upload + OpenAI optional)
 - **Voice output / TTS**: Implemented (browser `speechSynthesis` for AI messages)
 - **Conversation search**: Implemented
 - **Tags / organization**: Implemented
@@ -45,15 +47,15 @@ Legend: **Implemented**, **Partial**, **Missing**
 
 ## Safety & Moderation
 
-- **Basic text moderation (block/review)**: Partial (rule-based; should be upgraded to model-assisted moderation for scale)
+- **Basic text moderation (block/review)**: Implemented (rule-based + optional model-assisted moderation)
 - **User reporting + moderation reports endpoints**: Implemented
 - **User blocking**: Implemented
-- **Age gating / NSFW policy controls**: Missing
+- **Age gating / NSFW policy controls**: Implemented
 
 ## Social / Community
 
 - **Community feed**: Implemented (top creators, trending, following)
-- **Community comments / posts**: Missing
+- **Community comments / posts**: Partial (character comments)
 - **Public profile “social graph” polish (badges, leaderboards, etc.)**: Missing
 
 ## Payments / Monetization
@@ -74,6 +76,6 @@ Legend: **Implemented**, **Partial**, **Missing**
 
 ## Highest-Priority Gaps For Competitive Parity
 
-- Stronger safety (model-based moderation, age gating, better reporting UX)
-- Audio messages + transcription
-- Image generation (provider integration + cost controls)
+- Per-conversation memory controls (pin/forget)
+- Community posts / threads (beyond character comments)
+- Social graph polish (badges, leaderboards, notifications)

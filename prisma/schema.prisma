@@ -78,6 +78,7 @@ model User {
   blocksReceived   UserBlock[]       @relation("BlocksReceived")
   reportsFiled     ContentReport[]
   characterLikes   CharacterLike[]
+  characterComments CharacterComment[]
   tipsGiven        CreatorTip[]          @relation("CreatorTipsGiven")
   tipsReceived     CreatorTip[]          @relation("CreatorTipsReceived")
   subscriptionsGiven    CreatorSubscription[] @relation("CreatorSubscriptionsGiven")
@@ -175,12 +176,14 @@ model Character {
   lastUsedAt DateTime?
   category   String    @default("general")
   likeCount  Int       @default(0)
+  commentCount Int     @default(0)
 
   createdById String @db.Uuid
   createdBy   User   @relation(fields: [createdById], references: [id], onDelete: Cascade)
 
   conversations Conversation[]
   likes         CharacterLike[]
+  comments      CharacterComment[]
 
   @@index([isPublic, featured])
   @@index([isPublic, isNsfw])
@@ -486,6 +489,24 @@ model CharacterLike {
   @@index([characterId])
   @@index([userId])
   @@map("character_likes")
+}
+
+model CharacterComment {
+  id        String   @id @default(uuid()) @db.Uuid
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  body String
+
+  characterId String    @db.Uuid
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  authorId String @db.Uuid
+  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([characterId, createdAt])
+  @@index([authorId, createdAt])
+  @@map("character_comments")
 }
 
 model AffiliateClick {

@@ -33,7 +33,7 @@ const listSchema = z.object({
   tag: z.string().optional(),
   featured: z.string().optional(),
   category: z.string().optional(),
-  sort: z.enum(["popular", "newest", "liked", "recommended"]).optional(),
+  sort: z.enum(["popular", "newest", "liked", "recommended", "discussed"]).optional(),
   limit: z.string().optional(),
   cursor: z.string().optional(),
 })
@@ -96,6 +96,9 @@ export async function GET(request: NextRequest) {
   switch (params.sort) {
     case "popular":
       orderBy = [{ usageCount: "desc" }, { createdAt: "desc" }]
+      break
+    case "discussed":
+      orderBy = [{ commentCount: "desc" }, { usageCount: "desc" }, { createdAt: "desc" }]
       break
     case "newest":
       orderBy = [{ createdAt: "desc" }]

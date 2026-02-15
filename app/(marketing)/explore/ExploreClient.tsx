@@ -20,6 +20,7 @@ interface CharacterData {
   category: string
   usageCount: number
   likeCount: number
+  commentCount: number
   createdBy?: {
     id: string
     name: string | null

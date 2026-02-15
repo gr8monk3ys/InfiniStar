@@ -3,7 +3,12 @@
 import { memo } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { HiChatBubbleLeftRight, HiHeart, HiOutlineHeart } from "react-icons/hi2"
+import {
+  HiChatBubbleBottomCenterText,
+  HiChatBubbleLeftRight,
+  HiHeart,
+  HiOutlineHeart,
+} from "react-icons/hi2"
 
 import { getCategoryById } from "@/app/lib/character-categories"
 import { cn } from "@/app/lib/utils"
@@ -18,6 +23,7 @@ interface CharacterCardProps {
     category: string
     usageCount: number
     likeCount: number
+    commentCount?: number
     isNsfw?: boolean
     createdBy?: {
       id: string
@@ -94,6 +100,12 @@ const CharacterCard = memo(function CharacterCard({
             <HiHeart className="size-3" />
             {character.likeCount}
           </span>
+          {typeof character.commentCount === "number" && (
+            <span className="flex items-center gap-1 rounded-full bg-black/50 px-2 py-0.5 text-xs text-white/90 backdrop-blur-sm">
+              <HiChatBubbleBottomCenterText className="size-3" />
+              {character.commentCount}
+            </span>
+          )}
         </div>
 
         {/* Like button overlay */}

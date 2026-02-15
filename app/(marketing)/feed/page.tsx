@@ -29,6 +29,7 @@ const CHARACTER_SELECT = {
   category: true,
   usageCount: true,
   likeCount: true,
+  commentCount: true,
   featured: true,
   isNsfw: true,
   createdBy: {
@@ -64,7 +65,7 @@ export default async function FeedPage() {
   const [trendingRaw, freshRaw, creatorRows] = await Promise.all([
     prisma.character.findMany({
       where: publicCharacterWhere,
-      orderBy: [{ usageCount: "desc" }, { likeCount: "desc" }],
+      orderBy: [{ usageCount: "desc" }, { commentCount: "desc" }, { likeCount: "desc" }],
       take: 60,
       select: CHARACTER_SELECT,
     }),
