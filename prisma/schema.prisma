@@ -180,6 +180,11 @@ model Message {
   // Reactions stored as JSON: { "👍": ["userId1", "userId2"], "❤️": ["userId3"] }
   reactions Json? @default("{}")
 
+  // Alternative AI replies (e.g., regenerations) stored as a JSON array of strings.
+  // `body` always contains the currently active variant for fast reads.
+  variants      Json @default("[]")
+  activeVariant Int  @default(0)
+
   // Reply/threading support
   replyToId String?   @db.Uuid
   replyTo   Message?  @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: NoAction, onUpdate: NoAction)

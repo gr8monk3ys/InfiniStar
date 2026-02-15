@@ -263,6 +263,18 @@ export async function POST(request: NextRequest) {
             latencyMs,
           })
 
+          const existingVariants = Array.isArray(message.variants)
+            ? message.variants.filter((variant): variant is string => typeof variant === "string")
+            : []
+
+          // Backfill the current body as the first variant on the first regeneration.
+          if (existingVariants.length === 0 && message.body) {
+            existingVariants.push(message.body)
+          }
+
+          const nextVariants = [...existingVariants, fullResponse]
+          const nextActiveVariant = nextVariants.length - 1
+
           // Overwrite the existing AI message instead of deleting + creating a new one.
           // This avoids leaving "This message was deleted" placeholders in the UI.
           const updatedMessage = await prisma.$transaction(async (tx) => {
@@ -272,6 +284,8 @@ export async function POST(request: NextRequest) {
                 body: fullResponse,
                 isDeleted: false,
                 deletedAt: null,
+                variants: nextVariants,
+                activeVariant: nextActiveVariant,
                 inputTokens: finalMessage.usage.input_tokens,
                 outputTokens: finalMessage.usage.output_tokens,
               },

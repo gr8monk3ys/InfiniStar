@@ -10,6 +10,8 @@ import toast from "react-hot-toast"
 import {
   HiArrowPath,
   HiArrowUturnLeft,
+  HiChevronLeft,
+  HiChevronRight,
   HiEllipsisVertical,
   HiFaceSmile,
   HiPencil,
@@ -61,6 +63,9 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
   const [showReactionPicker, setShowReactionPicker] = useState(false)
   const [isSpeechSupported, setIsSpeechSupported] = useState(false)
   const [isSpeaking, setIsSpeaking] = useState(false)
+  const [isSwitchingVariant, setIsSwitchingVariant] = useState(false)
+  const [localActiveVariant, setLocalActiveVariant] = useState<number | null>(null)
+  const [localBodyOverride, setLocalBodyOverride] = useState<string | null>(null)
   const speechUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null)
 
   const commonEmojis = ["👍", "❤️", "😄", "🎉", "🔥", "👏"]
@@ -76,10 +81,36 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
   const avatar = clsx(isOwn && "order-2")
   const body = clsx("flex flex-col gap-2", isOwn && "items-end")
 
+  const variants = useMemo(() => {
+    if (!Array.isArray(data.variants)) return []
+    return data.variants.filter((variant): variant is string => typeof variant === "string")
+  }, [data.variants])
+
+  const activeVariant =
+    localActiveVariant ??
+    (typeof data.activeVariant === "number" && data.activeVariant >= 0 ? data.activeVariant : 0)
+  const safeActiveVariant =
+    variants.length > 0 ? Math.min(Math.max(activeVariant, 0), variants.length - 1) : 0
+
+  useEffect(() => {
+    if (localActiveVariant === null && localBodyOverride === null) return
+
+    if (
+      localActiveVariant !== null &&
+      typeof data.activeVariant === "number" &&
+      data.activeVariant === localActiveVariant &&
+      (localBodyOverride === null || data.body === localBodyOverride)
+    ) {
+      setLocalActiveVariant(null)
+      setLocalBodyOverride(null)
+    }
+  }, [data.activeVariant, data.body, localActiveVariant, localBodyOverride])
+
   const isThisRegenerating = Boolean(
     data.isAI && isRegenerating && regeneratingMessageId === data.id
   )
-  const displayBody = isThisRegenerating ? (regeneratingContent ?? "") : (data.body ?? "")
+  const baseBody = localBodyOverride ?? data.body ?? ""
+  const displayBody = isThisRegenerating ? (regeneratingContent ?? "") : baseBody
 
   // Check if message body contains code blocks (for AI messages)
   const hasCodeBlocks = useMemo(() => {
@@ -184,6 +215,58 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
       }
     },
     [csrfToken, data.id]
+  )
+
+  const handleSetVariant = useCallback(
+    async (index: number) => {
+      if (!csrfToken) {
+        toast.error("Security token not available. Please refresh the page.")
+        return
+      }
+
+      if (!data.isAI || variants.length === 0) {
+        return
+      }
+
+      if (index < 0 || index >= variants.length) {
+        return
+      }
+
+      if (isSwitchingVariant || isThisRegenerating) {
+        return
+      }
+
+      setIsSwitchingVariant(true)
+      setLocalActiveVariant(index)
+      setLocalBodyOverride(variants[index])
+
+      try {
+        const response = await axios.patch(
+          `/api/messages/${data.id}/variant`,
+          { index },
+          { headers: { "X-CSRF-Token": csrfToken } }
+        )
+
+        const updated = response.data as { body?: string | null; activeVariant?: number } | null
+        if (updated && typeof updated.activeVariant === "number") {
+          setLocalActiveVariant(updated.activeVariant)
+        }
+        if (updated && typeof updated.body === "string") {
+          setLocalBodyOverride(updated.body)
+        }
+      } catch (error) {
+        const message =
+          isAxiosError(error) && error.response?.data?.error
+            ? error.response.data.error
+            : "Failed to switch reply variant"
+        toast.error(message)
+        setLocalActiveVariant(null)
+        setLocalBodyOverride(null)
+      } finally {
+        setIsSwitchingVariant(false)
+      }
+    },
+    [csrfToken, data.id, data.isAI, isSwitchingVariant, isThisRegenerating, variants]
   )
 
   const stopSpeech = useCallback(() => {
@@ -453,6 +536,52 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
                   </div>
                 )}
               </div>
+
+              {/* Regenerate button - only show for AI messages */}
+              {data.isAI && variants.length > 1 && !data.isDeleted && (
+                <div
+                  className={clsx(
+                    "flex items-center gap-1 rounded-md border border-border bg-background/50 px-1 py-0.5",
+                    (isSwitchingVariant || isThisRegenerating) && "opacity-60"
+                  )}
+                  aria-label="Alternative replies"
+                  title="Alternative replies"
+                >
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const prevIndex =
+                        safeActiveVariant === 0 ? variants.length - 1 : safeActiveVariant - 1
+                      handleSetVariant(prevIndex).catch(() => {
+                        // handled in function
+                      })
+                    }}
+                    disabled={isSwitchingVariant || isThisRegenerating}
+                    className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-50"
+                    aria-label="Previous reply variant"
+                  >
+                    <HiChevronLeft size={16} />
+                  </button>
+                  <span className="min-w-10 text-center text-[10px] text-muted-foreground">
+                    {safeActiveVariant + 1}/{variants.length}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const nextIndex =
+                        safeActiveVariant === variants.length - 1 ? 0 : safeActiveVariant + 1
+                      handleSetVariant(nextIndex).catch(() => {
+                        // handled in function
+                      })
+                    }}
+                    disabled={isSwitchingVariant || isThisRegenerating}
+                    className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-50"
+                    aria-label="Next reply variant"
+                  >
+                    <HiChevronRight size={16} />
+                  </button>
+                </div>
+              )}
 
               {/* Regenerate button - only show for AI messages */}
               {data.isAI && onRegenerate && !data.isDeleted && (
