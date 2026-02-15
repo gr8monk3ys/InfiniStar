@@ -1,78 +1,81 @@
 # Feature Audit (Character.AI / Joyland Comparison)
 
-This is a pragmatic, code-informed snapshot of product parity against typical Character.AI/Joyland feature sets. It is **not exhaustive** and should be validated against current product behavior.
+This is a pragmatic, code-informed snapshot of product parity against typical Character.AI/Joyland feature sets. It is **not exhaustive** and should be validated against current product behavior (including Vercel env + DB state).
 
 Legend: **Implemented**, **Partial**, **Missing**
 
 ## Core Chat Experience
 
 - **AI 1:1 chat**: Implemented
-- **Streaming responses**: Implemented
-- **Multiple AI models**: Implemented (Claude Sonnet/Opus/Haiku)
-- **Personality/system prompts**: Implemented (8 presets + custom)
+- **Streaming responses (SSE)**: Implemented
+- **Multiple AI models + routing (free vs PRO)**: Implemented (Claude Haiku/Sonnet/Opus)
+- **Personality presets + custom system prompt**: Implemented (7 presets + custom)
+- **Image attachments**: Implemented (Cloudinary upload)
+- **Multimodal image input to AI (vision)**: Implemented (image URL sent to Claude)
+- **Voice input**: Implemented (Web Speech API; browser-dependent)
+- **Voice output / TTS**: Implemented (browser `speechSynthesis` for AI messages)
 - **Conversation search**: Implemented
 - **Tags / organization**: Implemented
-- **Conversation share links**: Partial (routes exist; verify UX)
-- **Conversation export**: Implemented
-- **Conversation branching / alt replies**: Missing
-- **Regenerate responses**: Implemented
+- **Conversation share links / join flow**: Implemented (verify UX)
+- **Conversation export (MD/JSON/TXT)**: Implemented
+- **Threaded replies (reply-to)**: Implemented
+- **Regenerate AI replies**: Implemented (overwrites message; no “deleted placeholder” UX)
 - **Message reactions**: Implemented
-- **Message edits**: Partial (verify UI + API)
+- **Message edits (user messages)**: Implemented
+- **Conversation branching / alt replies UI**: Missing
 
-## Characters / Bot Marketplace
+## Characters / Marketplace
 
-- **Public character profiles**: Missing
-- **Character creation & editor**: Missing
-- **Character discovery / browse**: Partial (`/explore` exists; verify content source)
-- **Trending / featured characters**: Missing
-- **Ratings / likes / favorites**: Missing
-- **User follow / subscriptions**: Missing
+- **Character creation & editor**: Implemented (`/dashboard/characters`)
+- **Public character pages**: Implemented (`/characters/[slug]`)
+- **Explore / discovery**: Implemented (`/explore` + API sorting)
+- **Trending / featured**: Implemented (featured flag + usage/like sorting)
+- **Likes + favorites**: Implemented (`/dashboard/favorites`)
+- **Character remix/clone**: Implemented (Remix button clones a public character into your library)
+- **Creator profiles**: Implemented (`/creators/[userId]`)
+- **Follow creators + following feed**: Implemented (`/feed`)
 
 ## Memory & Long-Term Context
 
-- **Persistent memory**: Partial (memory endpoints exist; verify UX + retention)
-- **Memory controls (pin/forget)**: Missing
-- **Lorebook / world info**: Missing
+- **Persistent memory store**: Implemented (DB-backed memories per user)
+- **Memory injected into AI system prompt**: Implemented
+- **Manual memory CRUD UI**: Implemented (Profile Settings -> AI Memory)
+- **Auto-extract memories from conversations**: Partial (API exists; not integrated into the main chat UX)
+- **Per-conversation memory controls (pin/forget)**: Missing
 
 ## Safety & Moderation
 
-- **Content moderation filters**: Missing
-- **User reporting**: Missing
-- **User blocking**: Missing
-- **Safety policy enforcement**: Missing
-- **Age gating / NSFW handling**: Missing
-
-## Voice / Multimodal
-
-- **Voice input**: Implemented
-- **Voice output / TTS**: Missing
-- **Image generation / multimodal**: Missing
-- **Audio messages / transcription**: Partial (voice input only)
+- **Basic text moderation (block/review)**: Partial (rule-based; should be upgraded to model-assisted moderation for scale)
+- **User reporting + moderation reports endpoints**: Implemented
+- **User blocking**: Implemented
+- **Age gating / NSFW policy controls**: Missing
 
 ## Social / Community
 
-- **Public profiles**: Partial (profile editing exists; not public)
-- **Shared conversations**: Partial (share endpoints exist; verify UX)
-- **Community comments**: Missing
-- **Remixes / forks**: Missing
+- **Community feed**: Implemented (top creators, trending, following)
+- **Community comments / posts**: Missing
+- **Public profile “social graph” polish (badges, leaderboards, etc.)**: Missing
 
-## Payments / Access Control
+## Payments / Monetization
 
-- **Subscriptions (Stripe)**: Implemented
-- **Usage tracking**: Implemented
-- **Quotas / limits**: Implemented
-- **Free tier gating**: Implemented
+- **Subscriptions (Stripe PRO)**: Implemented
+- **AI usage tracking + usage dashboard**: Implemented
+- **Affiliate links**: Implemented
+- **AdSense unit(s)**: Implemented (verify config + policy compliance)
+- **Creator monetization (tips + subscriptions)**: Implemented (verify Stripe setup)
 
-## Admin / Ops
+## Ops / Reliability
 
-- **Audit logging**: Partial (cron/account deletion logs)
-- **Analytics dashboard**: Partial (`/dashboard/usage`)
-- **Moderation tooling**: Missing
+- **CSRF protection**: Implemented
+- **Rate limiting**: Implemented (Redis-backed optional)
+- **PWA manifest + installability**: Implemented
+- **Browser notifications (foreground / best-effort)**: Implemented
+- **True web push notifications (background)**: Missing
 
-## Readiness Gaps (Highest Priority for Parity)
+## Highest-Priority Gaps For Competitive Parity
 
-- Character creation + public character pages
-- Discovery / trending / search at scale
-- Safety & moderation system (report/block/filter)
-- Memory UX and controls
-- Social engagement features (favorites, likes, follows)
+- Conversation branching / alternate replies selection UI
+- Stronger safety (model-based moderation, age gating, better reporting UX)
+- True web push notifications (service worker + VAPID + server fanout)
+- Audio messages + transcription
+- Image generation (provider integration + cost controls)
