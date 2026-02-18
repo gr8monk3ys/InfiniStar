@@ -239,7 +239,7 @@ const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, onClose }
                 onFocus={() => query.length >= 2 && !hasSearched && hideSuggestions()}
                 placeholder="Search conversations and messages..."
                 className="block w-full rounded-lg border border-gray-300 py-3 pl-10 pr-24 text-base focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
-                aria-label="Search query"
+                aria-label="Search conversations and messages"
                 aria-describedby="search-hint"
                 autoComplete="off"
               />
@@ -367,6 +367,9 @@ const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, onClose }
           role="listbox"
           aria-label="Search results"
           aria-labelledby={`search-tab-${filters.type}`}
+          aria-live="polite"
+          aria-atomic="true"
+          aria-busy={isSearching}
         >
           {/* Loading State */}
           {isSearching && (

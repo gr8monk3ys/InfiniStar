@@ -229,7 +229,12 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = memo(function ProfileDrawer(
     <>
       <ConfirmModal isOpen={confirmOpen} onClose={() => setConfirmOpen(false)} />
       <Transition.Root show={isOpen} as={Fragment}>
-        <Dialog as="div" className="relative z-50" onClose={onClose}>
+        <Dialog
+          as="div"
+          className="relative z-50"
+          onClose={onClose}
+          aria-label="Conversation details"
+        >
           <Transition.Child
             as={Fragment}
             enter="ease-out duration-500"
@@ -263,6 +268,7 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = memo(function ProfileDrawer(
                               type="button"
                               className="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
                               onClick={onClose}
+                              aria-label="Close panel"
                             >
                               <span className="sr-only">Close panel</span>
                               <IoClose size={24} aria-hidden="true" />
@@ -279,11 +285,13 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = memo(function ProfileDrawer(
                               <Avatar user={otherUser} />
                             )}
                           </div>
-                          <div>{title}</div>
+                          <h2 className="text-base font-semibold text-gray-900">{title}</h2>
                           <div className="text-sm text-gray-500">{statusText}</div>
                           <div className="my-8 flex gap-10">
-                            <div
+                            <button
+                              type="button"
                               onClick={handlePinToggle}
+                              disabled={isPinning}
                               className={`flex cursor-pointer flex-col items-center gap-3 ${
                                 isPinning ? "opacity-50" : "hover:opacity-75"
                               }`}
@@ -296,9 +304,11 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = memo(function ProfileDrawer(
                               <div className="text-sm font-light text-neutral-600">
                                 {isPinned ? "Unpin" : "Pin"}
                               </div>
-                            </div>
-                            <div
+                            </button>
+                            <button
+                              type="button"
                               onClick={handleMuteToggle}
+                              disabled={isMuting}
                               className={`flex cursor-pointer flex-col items-center gap-3 ${
                                 isMuting ? "opacity-50" : "hover:opacity-75"
                               }`}
@@ -315,9 +325,11 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = memo(function ProfileDrawer(
                               <div className="text-sm font-light text-neutral-600">
                                 {isMuted ? "Unmute" : "Mute"}
                               </div>
-                            </div>
-                            <div
+                            </button>
+                            <button
+                              type="button"
                               onClick={handleArchiveToggle}
+                              disabled={isArchiving}
                               className={`flex cursor-pointer flex-col items-center gap-3 ${
                                 isArchiving ? "opacity-50" : "hover:opacity-75"
                               }`}
@@ -336,16 +348,18 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = memo(function ProfileDrawer(
                               <div className="text-sm font-light text-neutral-600">
                                 {isArchived ? "Unarchive" : "Archive"}
                               </div>
-                            </div>
-                            <div
+                            </button>
+                            <button
+                              type="button"
                               onClick={() => setConfirmOpen(true)}
                               className="flex cursor-pointer flex-col items-center gap-3 hover:opacity-75"
+                              aria-label="Delete conversation"
                             >
                               <div className="flex size-10 items-center justify-center rounded-full bg-neutral-100">
                                 <IoTrash size={20} />
                               </div>
                               <div className="text-sm font-light text-neutral-600">Delete</div>
-                            </div>
+                            </button>
                           </div>
                           {!data.isGroup && (
                             <div className="flex items-center justify-center gap-3 pb-6">

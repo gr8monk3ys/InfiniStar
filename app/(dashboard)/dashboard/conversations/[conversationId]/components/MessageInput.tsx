@@ -16,6 +16,8 @@ interface MessageInputProps {
   onInputChange?: (e: React.ChangeEvent<HTMLInputElement>) => void
   /** Optional callback for Cmd/Ctrl+Enter shortcut to submit */
   onModifierEnter?: () => void
+  /** Accessible label for the input */
+  "aria-label"?: string
 }
 
 const MessageInput: React.FC<MessageInputProps> = ({
@@ -26,6 +28,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
   register,
   onInputChange,
   onModifierEnter,
+  "aria-label": ariaLabel,
 }) => {
   const registeredProps = register(id, { required })
 
@@ -58,6 +61,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
         onChange={handleChange}
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
+        aria-label={ariaLabel ?? "Message"}
         className="w-full rounded-full bg-secondary px-4 py-2 font-light text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
         aria-describedby={`${id}-shortcut-hint`}
       />
