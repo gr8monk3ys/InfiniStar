@@ -22,6 +22,16 @@ import {
   HiTrash,
 } from "react-icons/hi2"
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/app/components/ui/alert-dialog"
 import { MarkdownRenderer } from "@/app/components/ui/MarkdownRenderer"
 import Avatar from "@/app/components/Avatar"
 import { type FullMessageType } from "@/app/types"
@@ -63,6 +73,7 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
   const [isEditing, setIsEditing] = useState(false)
   const [editedBody, setEditedBody] = useState(data.body || "")
   const [isDeleting, setIsDeleting] = useState(false)
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
   const [showReactionPicker, setShowReactionPicker] = useState(false)
   const [isSpeechSupported, setIsSpeechSupported] = useState(false)
   const [isSpeaking, setIsSpeaking] = useState(false)
@@ -167,11 +178,11 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
     }
   }, [csrfToken, editedBody, data.body, data.id])
 
-  const handleDelete = useCallback(async () => {
-    if (!confirm("Are you sure you want to delete this message?")) {
-      return
-    }
+  const handleDelete = useCallback(() => {
+    setIsDeleteConfirmOpen(true)
+  }, [])
 
+  const handleDeleteConfirm = useCallback(async () => {
     if (!csrfToken) {
       toast.error("Security token not available. Please refresh the page.")
       return
@@ -425,352 +436,379 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
   }
 
   return (
-    <div
-      className={container}
-      role="article"
-      aria-label={`Message from ${data.isAI && characterName ? characterName : data.sender.name}`}
-    >
-      <div className={avatar}>
-        {data.isAI && characterAvatar ? (
-          <div className="relative size-9 overflow-hidden rounded-full">
-            <Image
-              src={characterAvatar}
-              alt={characterName || "AI"}
-              fill
-              className="object-cover"
-            />
-          </div>
-        ) : (
-          <Avatar user={data.sender} />
-        )}
-      </div>
-      <div className={body}>
-        <div className="flex items-center gap-1">
-          <div className="text-sm text-muted-foreground">
-            {data.isAI && characterName ? characterName : data.sender.name}
-          </div>
-          <div
-            className="text-xs text-muted-foreground"
-            aria-label={`Sent at ${format(new Date(data.createdAt), "p")}`}
-          >
-            {format(new Date(data.createdAt), "p")}
-          </div>
-          {data.editedAt && (
-            <div
-              className="text-xs italic text-muted-foreground"
-              title={`Edited ${format(new Date(data.editedAt), "PPp")}`}
-            >
-              (edited)
-            </div>
-          )}
-        </div>
-
-        <div className="relative flex items-start gap-2">
-          {isEditing ? (
-            <div className="flex w-full flex-col gap-2">
-              <textarea
-                value={editedBody}
-                onChange={(e) => setEditedBody(e.target.value)}
-                className="w-full rounded-lg border border-border bg-background p-2 text-sm text-foreground focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
-                rows={3}
-                autoFocus
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault()
-                    handleEdit()
-                  }
-                  if (e.key === "Escape") {
-                    handleCancelEdit()
-                  }
-                }}
+    <>
+      <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete message?</AlertDialogTitle>
+            <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteConfirm}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <div
+        className={container}
+        role="article"
+        aria-label={`Message from ${data.isAI && characterName ? characterName : data.sender.name}`}
+      >
+        <div className={avatar}>
+          {data.isAI && characterAvatar ? (
+            <div className="relative size-9 overflow-hidden rounded-full">
+              <Image
+                src={characterAvatar}
+                alt={characterName || "AI"}
+                fill
+                className="object-cover"
               />
-              <div className="flex gap-2">
-                <button
-                  onClick={handleEdit}
-                  className="rounded-lg bg-primary px-3 py-1 text-sm text-primary-foreground hover:bg-primary/90"
-                >
-                  Save
-                </button>
-                <button
-                  onClick={handleCancelEdit}
-                  className="rounded border border-border px-3 py-1 text-sm text-secondary-foreground hover:bg-accent"
-                >
-                  Cancel
-                </button>
-              </div>
             </div>
           ) : (
-            <>
-              <div className={message}>
-                {/* Show reply preview if this message is replying to another */}
-                {data.replyTo && (
-                  <div className="mb-2">
-                    <ReplyPreview replyTo={data.replyTo} />
-                  </div>
-                )}
+            <Avatar user={data.sender} />
+          )}
+        </div>
+        <div className={body}>
+          <div className="flex items-center gap-1">
+            <div className="text-sm text-muted-foreground">
+              {data.isAI && characterName ? characterName : data.sender.name}
+            </div>
+            <div
+              className="text-xs text-muted-foreground"
+              aria-label={`Sent at ${format(new Date(data.createdAt), "p")}`}
+            >
+              {format(new Date(data.createdAt), "p")}
+            </div>
+            {data.editedAt && (
+              <div
+                className="text-xs italic text-muted-foreground"
+                title={`Edited ${format(new Date(data.editedAt), "PPp")}`}
+              >
+                (edited)
+              </div>
+            )}
+          </div>
 
-                <ImageModal
-                  src={data.image}
-                  isOpen={imageModalOpen}
-                  onClose={() => setImageModalOpen(false)}
+          <div className="relative flex items-start gap-2">
+            {isEditing ? (
+              <div className="flex w-full flex-col gap-2">
+                <textarea
+                  value={editedBody}
+                  onChange={(e) => setEditedBody(e.target.value)}
+                  className="w-full rounded-lg border border-border bg-background p-2 text-sm text-foreground focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                  rows={3}
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault()
+                      handleEdit()
+                    }
+                    if (e.key === "Escape") {
+                      handleCancelEdit()
+                    }
+                  }}
                 />
-                {data.image ? (
-                  <Image
-                    alt={`Image attachment from ${data.sender.name}`}
-                    height="288"
-                    width="288"
-                    onClick={() => setImageModalOpen(true)}
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleEdit}
+                    className="rounded-lg bg-primary px-3 py-1 text-sm text-primary-foreground hover:bg-primary/90"
+                  >
+                    Save
+                  </button>
+                  <button
+                    onClick={handleCancelEdit}
+                    className="rounded border border-border px-3 py-1 text-sm text-secondary-foreground hover:bg-accent"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className={message}>
+                  {/* Show reply preview if this message is replying to another */}
+                  {data.replyTo && (
+                    <div className="mb-2">
+                      <ReplyPreview replyTo={data.replyTo} />
+                    </div>
+                  )}
+
+                  <ImageModal
                     src={data.image}
-                    className="
+                    isOpen={imageModalOpen}
+                    onClose={() => setImageModalOpen(false)}
+                  />
+                  {data.image ? (
+                    <Image
+                      alt={`Image attachment from ${data.sender.name}`}
+                      height={288}
+                      width={288}
+                      sizes="(max-width: 640px) 100vw, 288px"
+                      onClick={() => setImageModalOpen(true)}
+                      src={data.image}
+                      className="
                       translate
                       cursor-pointer
                       object-cover
                       transition
                       hover:scale-110
                     "
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault()
-                        setImageModalOpen(true)
-                      }
-                    }}
-                    aria-label="Click to view full-size image"
-                  />
-                ) : data.audioUrl ? (
-                  <div className="flex flex-col gap-2">
-                    <audio
-                      controls
-                      preload="metadata"
-                      src={data.audioUrl}
-                      className="w-72 max-w-full"
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault()
+                          setImageModalOpen(true)
+                        }
+                      }}
+                      aria-label="Click to view full-size image"
                     />
-                    {displayBody ? (
-                      <div className="text-sm text-muted-foreground">{displayBody}</div>
-                    ) : null}
-                  </div>
-                ) : data.isAI ? (
-                  displayBody ? (
-                    <MarkdownRenderer content={displayBody} />
-                  ) : isThisRegenerating ? (
-                    <div className="text-sm italic text-muted-foreground">Regenerating...</div>
-                  ) : null
-                ) : (
-                  <div>{displayBody}</div>
-                )}
-              </div>
-
-              {/* Reply button */}
-              {onReply && !data.isDeleted && (
-                <button
-                  onClick={() => onReply(data)}
-                  className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
-                  aria-label="Reply to message"
-                  title="Reply"
-                >
-                  <HiArrowUturnLeft size={16} />
-                </button>
-              )}
-
-              {/* Reaction button */}
-              <div className="relative">
-                <button
-                  onClick={() => setShowReactionPicker(!showReactionPicker)}
-                  className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
-                  aria-label="Add reaction"
-                >
-                  <HiFaceSmile size={16} />
-                </button>
-
-                {showReactionPicker && (
-                  <div className="absolute left-0 z-10 mt-1 flex gap-1 rounded-md border border-border bg-popover p-2 shadow-lg">
-                    {commonEmojis.map((emoji) => (
-                      <button
-                        key={emoji}
-                        onClick={() => handleReaction(emoji)}
-                        className="rounded p-1 text-xl hover:bg-accent"
-                        title={`React with ${emoji}`}
-                      >
-                        {emoji}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Regenerate button - only show for AI messages */}
-              {data.isAI && variants.length > 1 && !data.isDeleted && (
-                <div
-                  className={clsx(
-                    "flex items-center gap-1 rounded-md border border-border bg-background/50 px-1 py-0.5",
-                    (isSwitchingVariant || isThisRegenerating) && "opacity-60"
+                  ) : data.audioUrl ? (
+                    <div className="flex flex-col gap-2">
+                      <audio
+                        controls
+                        preload="metadata"
+                        src={data.audioUrl}
+                        className="w-72 max-w-full"
+                      />
+                      {displayBody ? (
+                        <div className="text-sm text-muted-foreground">{displayBody}</div>
+                      ) : null}
+                    </div>
+                  ) : data.isAI ? (
+                    displayBody ? (
+                      <MarkdownRenderer content={displayBody} />
+                    ) : isThisRegenerating ? (
+                      <div className="text-sm italic text-muted-foreground">Regenerating...</div>
+                    ) : null
+                  ) : (
+                    <div>{displayBody}</div>
                   )}
-                  aria-label="Alternative replies"
-                  title="Alternative replies"
-                >
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const prevIndex =
-                        safeActiveVariant === 0 ? variants.length - 1 : safeActiveVariant - 1
-                      handleSetVariant(prevIndex).catch(() => {
-                        // handled in function
-                      })
-                    }}
-                    disabled={isSwitchingVariant || isThisRegenerating}
-                    className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-50"
-                    aria-label="Previous reply variant"
-                  >
-                    <HiChevronLeft size={16} />
-                  </button>
-                  <span className="min-w-10 text-center text-[10px] text-muted-foreground">
-                    {safeActiveVariant + 1}/{variants.length}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const nextIndex =
-                        safeActiveVariant === variants.length - 1 ? 0 : safeActiveVariant + 1
-                      handleSetVariant(nextIndex).catch(() => {
-                        // handled in function
-                      })
-                    }}
-                    disabled={isSwitchingVariant || isThisRegenerating}
-                    className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-50"
-                    aria-label="Next reply variant"
-                  >
-                    <HiChevronRight size={16} />
-                  </button>
                 </div>
-              )}
 
-              {/* Branch conversation from this point (AI conversations only) */}
-              {isAiConversation && !data.isDeleted && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    handleForkConversation().catch(() => {
-                      // handled in function
-                    })
-                  }}
-                  disabled={isForking}
-                  className={clsx(
-                    "rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground",
-                    isForking && "opacity-60"
-                  )}
-                  aria-label="Branch conversation from here"
-                  title="Branch from here"
-                >
-                  <HiOutlineSquare2Stack size={16} />
-                </button>
-              )}
+                {/* Reply button */}
+                {onReply && !data.isDeleted && (
+                  <button
+                    onClick={() => onReply(data)}
+                    className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+                    aria-label="Reply to message"
+                    title="Reply"
+                  >
+                    <HiArrowUturnLeft size={16} />
+                  </button>
+                )}
 
-              {/* Regenerate button - only show for AI messages */}
-              {data.isAI && onRegenerate && !data.isDeleted && (
-                <button
-                  onClick={() => onRegenerate(data.id)}
-                  disabled={isRegenerating}
-                  className={clsx(
-                    "rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground",
-                    isRegenerating &&
-                      regeneratingMessageId === data.id &&
-                      "animate-spin text-purple-500"
-                  )}
-                  aria-label="Regenerate AI response"
-                  title={
-                    isRegenerating && regeneratingMessageId === data.id
-                      ? "Regenerating..."
-                      : "Regenerate response"
-                  }
-                >
-                  <HiArrowPath size={16} />
-                </button>
-              )}
-
-              {/* Text-to-speech button for AI responses */}
-              {data.isAI && displayBody && isSpeechSupported && !isThisRegenerating && (
-                <button
-                  onClick={handleToggleSpeech}
-                  className={clsx(
-                    "rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground",
-                    isSpeaking && "text-primary"
-                  )}
-                  aria-label={isSpeaking ? "Stop reading message aloud" : "Read message aloud"}
-                  title={isSpeaking ? "Stop reading aloud" : "Read aloud"}
-                >
-                  {isSpeaking ? <HiStopCircle size={16} /> : <HiSpeakerWave size={16} />}
-                </button>
-              )}
-
-              {/* Edit/Delete menu - only show for own messages and not AI messages */}
-              {isOwn && !data.isAI && !data.image && !data.audioUrl && (
+                {/* Reaction button */}
                 <div className="relative">
                   <button
-                    onClick={() => setShowMenu(!showMenu)}
+                    type="button"
+                    onClick={() => setShowReactionPicker(!showReactionPicker)}
                     className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
-                    aria-label="Message options"
+                    aria-label="Add reaction"
+                    aria-expanded={showReactionPicker}
+                    aria-haspopup="true"
                   >
-                    <HiEllipsisVertical size={16} />
+                    <HiFaceSmile size={16} />
                   </button>
 
-                  {showMenu && (
-                    <div className="absolute right-0 z-10 mt-1 w-32 rounded-md border border-border bg-popover shadow-lg">
-                      <button
-                        onClick={() => {
-                          setIsEditing(true)
-                          setShowMenu(false)
-                        }}
-                        className="flex w-full items-center gap-2 px-3 py-2 text-sm text-popover-foreground hover:bg-accent"
-                        disabled={isDeleting}
-                      >
-                        <HiPencil size={16} />
-                        Edit
-                      </button>
-                      <button
-                        onClick={handleDelete}
-                        className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-100 dark:hover:bg-red-900/20"
-                        disabled={isDeleting}
-                      >
-                        <HiTrash size={16} />
-                        {isDeleting ? "Deleting..." : "Delete"}
-                      </button>
+                  {showReactionPicker && (
+                    <div
+                      className="absolute left-0 z-10 mt-1 flex gap-1 rounded-md border border-border bg-popover p-2 shadow-lg"
+                      role="toolbar"
+                      aria-label="Message reactions"
+                    >
+                      {commonEmojis.map((emoji) => (
+                        <button
+                          key={emoji}
+                          type="button"
+                          onClick={() => handleReaction(emoji)}
+                          className="rounded p-1 text-xl hover:bg-accent"
+                          aria-label={`React with ${emoji}`}
+                          title={`React with ${emoji}`}
+                        >
+                          {emoji}
+                        </button>
+                      ))}
                     </div>
                   )}
                 </div>
-              )}
-            </>
+
+                {/* Regenerate button - only show for AI messages */}
+                {data.isAI && variants.length > 1 && !data.isDeleted && (
+                  <div
+                    className={clsx(
+                      "flex items-center gap-1 rounded-md border border-border bg-background/50 px-1 py-0.5",
+                      (isSwitchingVariant || isThisRegenerating) && "opacity-60"
+                    )}
+                    aria-label="Alternative replies"
+                    title="Alternative replies"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const prevIndex =
+                          safeActiveVariant === 0 ? variants.length - 1 : safeActiveVariant - 1
+                        handleSetVariant(prevIndex).catch(() => {
+                          // handled in function
+                        })
+                      }}
+                      disabled={isSwitchingVariant || isThisRegenerating}
+                      className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-50"
+                      aria-label="Previous reply variant"
+                    >
+                      <HiChevronLeft size={16} />
+                    </button>
+                    <span className="min-w-10 text-center text-[10px] text-muted-foreground">
+                      {safeActiveVariant + 1}/{variants.length}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const nextIndex =
+                          safeActiveVariant === variants.length - 1 ? 0 : safeActiveVariant + 1
+                        handleSetVariant(nextIndex).catch(() => {
+                          // handled in function
+                        })
+                      }}
+                      disabled={isSwitchingVariant || isThisRegenerating}
+                      className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-50"
+                      aria-label="Next reply variant"
+                    >
+                      <HiChevronRight size={16} />
+                    </button>
+                  </div>
+                )}
+
+                {/* Branch conversation from this point (AI conversations only) */}
+                {isAiConversation && !data.isDeleted && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleForkConversation().catch(() => {
+                        // handled in function
+                      })
+                    }}
+                    disabled={isForking}
+                    className={clsx(
+                      "rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground",
+                      isForking && "opacity-60"
+                    )}
+                    aria-label="Branch conversation from here"
+                    title="Branch from here"
+                  >
+                    <HiOutlineSquare2Stack size={16} />
+                  </button>
+                )}
+
+                {/* Regenerate button - only show for AI messages */}
+                {data.isAI && onRegenerate && !data.isDeleted && (
+                  <button
+                    onClick={() => onRegenerate(data.id)}
+                    disabled={isRegenerating}
+                    className={clsx(
+                      "rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground",
+                      isRegenerating &&
+                        regeneratingMessageId === data.id &&
+                        "animate-spin text-purple-500"
+                    )}
+                    aria-label="Regenerate AI response"
+                    title={
+                      isRegenerating && regeneratingMessageId === data.id
+                        ? "Regenerating..."
+                        : "Regenerate response"
+                    }
+                  >
+                    <HiArrowPath size={16} />
+                  </button>
+                )}
+
+                {/* Text-to-speech button for AI responses */}
+                {data.isAI && displayBody && isSpeechSupported && !isThisRegenerating && (
+                  <button
+                    onClick={handleToggleSpeech}
+                    className={clsx(
+                      "rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground",
+                      isSpeaking && "text-primary"
+                    )}
+                    aria-label={isSpeaking ? "Stop reading message aloud" : "Read message aloud"}
+                    title={isSpeaking ? "Stop reading aloud" : "Read aloud"}
+                  >
+                    {isSpeaking ? <HiStopCircle size={16} /> : <HiSpeakerWave size={16} />}
+                  </button>
+                )}
+
+                {/* Edit/Delete menu - only show for own messages and not AI messages */}
+                {isOwn && !data.isAI && !data.image && !data.audioUrl && (
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowMenu(!showMenu)}
+                      className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+                      aria-label="Message options"
+                    >
+                      <HiEllipsisVertical size={16} />
+                    </button>
+
+                    {showMenu && (
+                      <div className="absolute right-0 z-10 mt-1 w-32 rounded-md border border-border bg-popover shadow-lg">
+                        <button
+                          onClick={() => {
+                            setIsEditing(true)
+                            setShowMenu(false)
+                          }}
+                          className="flex w-full items-center gap-2 px-3 py-2 text-sm text-popover-foreground hover:bg-accent"
+                          disabled={isDeleting}
+                        >
+                          <HiPencil size={16} />
+                          Edit
+                        </button>
+                        <button
+                          onClick={handleDelete}
+                          className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-100 dark:hover:bg-red-900/20"
+                          disabled={isDeleting}
+                        >
+                          <HiTrash size={16} />
+                          {isDeleting ? "Deleting..." : "Delete"}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          {/* Display reactions */}
+          {Object.keys(reactions).length > 0 && (
+            <div className="mt-1 flex flex-wrap gap-1">
+              {Object.entries(reactions).map(([emoji, userIds]) => {
+                const hasReacted = viewerId && userIds.includes(viewerId)
+                return (
+                  <button
+                    key={emoji}
+                    type="button"
+                    onClick={() => handleReaction(emoji)}
+                    className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-sm transition ${
+                      hasReacted
+                        ? "border-primary bg-primary/10 dark:bg-primary/20"
+                        : "border-border bg-background hover:bg-accent"
+                    }`}
+                    aria-label={`${userIds.length} ${emoji} reaction${userIds.length > 1 ? "s" : ""}, click to toggle`}
+                    aria-pressed={Boolean(hasReacted)}
+                    title={`${userIds.length} reaction${userIds.length > 1 ? "s" : ""}`}
+                  >
+                    <span>{emoji}</span>
+                    <span className="text-xs text-muted-foreground">{userIds.length}</span>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+          {isLast && isOwn && seenList.length > 0 && (
+            <div className="text-xs font-light text-muted-foreground">{`Seen by ${seenList}`}</div>
           )}
         </div>
-
-        {/* Display reactions */}
-        {Object.keys(reactions).length > 0 && (
-          <div className="mt-1 flex flex-wrap gap-1">
-            {Object.entries(reactions).map(([emoji, userIds]) => {
-              const hasReacted = viewerId && userIds.includes(viewerId)
-              return (
-                <button
-                  key={emoji}
-                  onClick={() => handleReaction(emoji)}
-                  className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-sm transition ${
-                    hasReacted
-                      ? "border-primary bg-primary/10 dark:bg-primary/20"
-                      : "border-border bg-background hover:bg-accent"
-                  }`}
-                  title={`${userIds.length} reaction${userIds.length > 1 ? "s" : ""}`}
-                >
-                  <span>{emoji}</span>
-                  <span className="text-xs text-muted-foreground">{userIds.length}</span>
-                </button>
-              )
-            })}
-          </div>
-        )}
-        {isLast && isOwn && seenList.length > 0 && (
-          <div className="text-xs font-light text-muted-foreground">{`Seen by ${seenList}`}</div>
-        )}
       </div>
-    </div>
+    </>
   )
 })
 
