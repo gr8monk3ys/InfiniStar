@@ -26,6 +26,8 @@ import {
   DialogTitle,
 } from "@/app/components/ui/dialog"
 import useConversation from "@/app/(dashboard)/dashboard/hooks/useConversation"
+import useImageGeneration from "@/app/(dashboard)/dashboard/hooks/useImageGeneration"
+import useVoiceRecording from "@/app/(dashboard)/dashboard/hooks/useVoiceRecording"
 import { SuggestionChips } from "@/app/components/suggestions"
 import { isVoiceInputSupported, VoiceInput, type VoiceInputMode } from "@/app/components/voice"
 import { useAiChatStream, type TokenUsage } from "@/app/hooks/useAiChatStream"
@@ -70,28 +72,11 @@ const Form: React.FC<FormProps> = ({
   const { conversationId } = useConversation()
   const [isLoading, setIsLoading] = useState(false)
   const [pendingImage, setPendingImage] = useState<string | null>(null)
-  const [imageGenOpen, setImageGenOpen] = useState(false)
-  const [imageGenPrompt, setImageGenPrompt] = useState("")
-  const [imageGenSize, setImageGenSize] = useState<
-    "512x512" | "1024x1024" | "1024x1792" | "1792x1024"
-  >("1024x1024")
-  const [isGeneratingImage, setIsGeneratingImage] = useState(false)
-  const [isRecordingVoiceMessage, setIsRecordingVoiceMessage] = useState(false)
-  const [isSendingVoiceMessage, setIsSendingVoiceMessage] = useState(false)
   const { token: csrfToken } = useCsrfToken()
   const viewerId = currentUserId ?? undefined
 
-  const voiceRecorderRef = useRef<MediaRecorder | null>(null)
-  const voiceRecorderStreamRef = useRef<MediaStream | null>(null)
-  const voiceChunksRef = useRef<Blob[]>([])
-
   // Check if voice input is supported
   const voiceSupported = isVoiceInputSupported()
-  const voiceMessageSupported =
-    typeof window !== "undefined" &&
-    typeof navigator !== "undefined" &&
-    Boolean(navigator.mediaDevices?.getUserMedia) &&
-    typeof MediaRecorder !== "undefined"
 
   // Suggestions state and hook (only for AI conversations)
   const { preferences: suggestionPrefs } = useSuggestionPreferences()
@@ -144,6 +129,30 @@ const Form: React.FC<FormProps> = ({
   }, [isStreaming, onAIStreamingChange])
 
   const {
+    isRecordingVoiceMessage,
+    isSendingVoiceMessage,
+    voiceMessageSupported,
+    toggleVoiceMessageRecording,
+  } = useVoiceRecording({
+    conversationId,
+    csrfToken,
+    isAI,
+    enableStreaming,
+    sendStreamingMessage,
+  })
+
+  const {
+    isGeneratingImage,
+    imageGenOpen,
+    imageGenPrompt,
+    imageGenSize,
+    setImageGenOpen,
+    setImageGenPrompt,
+    setImageGenSize,
+    handleGenerateImage,
+  } = useImageGeneration({ conversationId, csrfToken })
+
+  const {
     register,
     handleSubmit,
     setValue,
@@ -193,257 +202,6 @@ const Form: React.FC<FormProps> = ({
       formRef.current.requestSubmit()
     }
   }, [getValues])
-
-  const handleGenerateImage = useCallback(async () => {
-    if (!csrfToken) {
-      toast.error("Security token not available. Please refresh the page.")
-      return
-    }
-
-    const prompt = imageGenPrompt.trim()
-    if (!prompt) {
-      toast.error("Enter an image prompt first")
-      return
-    }
-
-    setIsGeneratingImage(true)
-    const loader = toast.loading("Generating image...")
-
-    try {
-      const res = await fetch("/api/ai/image/generate", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-CSRF-Token": csrfToken,
-        },
-        body: JSON.stringify({
-          conversationId,
-          prompt,
-          size: imageGenSize,
-        }),
-      })
-
-      const data = (await res.json().catch(() => null)) as { error?: string } | null
-      if (!res.ok) {
-        throw new Error(data?.error || "Failed to generate image")
-      }
-
-      toast.success("Image sent")
-      setImageGenOpen(false)
-      setImageGenPrompt("")
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to generate image")
-    } finally {
-      toast.dismiss(loader)
-      setIsGeneratingImage(false)
-    }
-  }, [conversationId, csrfToken, imageGenPrompt, imageGenSize])
-
-  const cleanupVoiceRecorder = useCallback(() => {
-    const recorder = voiceRecorderRef.current
-    if (recorder) {
-      // Prevent the "stop" handler from attempting an upload on teardown.
-      recorder.onstop = null
-      try {
-        recorder.stop()
-      } catch {
-        // ignore
-      }
-    }
-    voiceRecorderRef.current = null
-
-    const stream = voiceRecorderStreamRef.current
-    if (stream) {
-      stream.getTracks().forEach((track) => track.stop())
-    }
-    voiceRecorderStreamRef.current = null
-    voiceChunksRef.current = []
-    setIsRecordingVoiceMessage(false)
-  }, [])
-
-  const handleVoiceMessageStop = useCallback(
-    async (mimeType: string) => {
-      if (!csrfToken) {
-        toast.error("Security token not available. Please refresh the page.")
-        cleanupVoiceRecorder()
-        return
-      }
-
-      const chunks = voiceChunksRef.current
-      voiceChunksRef.current = []
-
-      const stream = voiceRecorderStreamRef.current
-      if (stream) {
-        stream.getTracks().forEach((track) => track.stop())
-      }
-      voiceRecorderStreamRef.current = null
-      voiceRecorderRef.current = null
-
-      const blob = new Blob(chunks, { type: mimeType || "audio/webm" })
-      if (blob.size < 1024) {
-        toast.error("Voice message too short")
-        return
-      }
-
-      setIsSendingVoiceMessage(true)
-      const loader = toast.loading("Sending voice message...")
-
-      try {
-        const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
-        const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || "pgc9ehd5"
-        if (!cloudName) {
-          throw new Error("Cloudinary not configured")
-        }
-
-        const uploadForm = new FormData()
-        uploadForm.append("file", blob, "voice-message.webm")
-        uploadForm.append("upload_preset", uploadPreset)
-        uploadForm.append("folder", "infinistar/voice")
-
-        const uploadRes = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/video/upload`, {
-          method: "POST",
-          body: uploadForm,
-        })
-        const uploadJson = (await uploadRes.json().catch(() => null)) as {
-          secure_url?: string
-          url?: string
-          error?: { message?: string }
-        } | null
-
-        const audioUrl = uploadJson?.secure_url ?? uploadJson?.url ?? null
-        if (!uploadRes.ok || !audioUrl) {
-          throw new Error(uploadJson?.error?.message || "Failed to upload voice message")
-        }
-
-        let transcript = ""
-        try {
-          const txRes = await fetch("/api/ai/transcribe", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "X-CSRF-Token": csrfToken,
-            },
-            body: JSON.stringify({ conversationId, audioUrl }),
-          })
-          if (txRes.ok) {
-            const txJson = (await txRes.json().catch(() => null)) as { transcript?: string } | null
-            transcript = typeof txJson?.transcript === "string" ? txJson.transcript : ""
-          }
-        } catch {
-          // best-effort; audio messages can still be sent without transcript
-        }
-
-        const headers = {
-          "X-CSRF-Token": csrfToken,
-          "Content-Type": "application/json",
-        }
-
-        const transcriptTrimmed = transcript.trim()
-
-        if (isAI) {
-          if (transcriptTrimmed) {
-            if (enableStreaming) {
-              await sendStreamingMessage({
-                message: transcriptTrimmed,
-                audioUrl,
-              })
-            } else {
-              await axios.post(
-                "/api/ai/chat",
-                {
-                  message: transcriptTrimmed,
-                  audioUrl,
-                  conversationId,
-                },
-                { headers }
-              )
-            }
-          } else {
-            await axios.post(
-              "/api/messages",
-              {
-                audioUrl,
-                conversationId,
-              },
-              { headers }
-            )
-          }
-        } else {
-          await axios.post(
-            "/api/messages",
-            {
-              message: transcriptTrimmed || undefined,
-              audioUrl,
-              audioTranscript: transcriptTrimmed || undefined,
-              conversationId,
-            },
-            { headers }
-          )
-        }
-
-        toast.success(
-          transcriptTrimmed ? "Voice message sent" : "Voice message sent (no transcript)"
-        )
-      } catch (error) {
-        toast.error(error instanceof Error ? error.message : "Failed to send voice message")
-      } finally {
-        toast.dismiss(loader)
-        setIsSendingVoiceMessage(false)
-      }
-    },
-    [cleanupVoiceRecorder, conversationId, csrfToken, enableStreaming, isAI, sendStreamingMessage]
-  )
-
-  const toggleVoiceMessageRecording = useCallback(async () => {
-    if (isSendingVoiceMessage) {
-      return
-    }
-
-    if (isRecordingVoiceMessage) {
-      try {
-        voiceRecorderRef.current?.stop()
-      } catch {
-        cleanupVoiceRecorder()
-      }
-      setIsRecordingVoiceMessage(false)
-      return
-    }
-
-    if (typeof window === "undefined") {
-      return
-    }
-
-    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
-      toast.error("Voice messages are not supported in this browser.")
-      return
-    }
-
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      voiceRecorderStreamRef.current = stream
-      voiceChunksRef.current = []
-
-      const recorder = new MediaRecorder(stream)
-      recorder.ondataavailable = (event) => {
-        if (event.data && event.data.size > 0) {
-          voiceChunksRef.current.push(event.data)
-        }
-      }
-      recorder.onstop = () => {
-        handleVoiceMessageStop(recorder.mimeType).catch(() => {
-          // handled in function
-        })
-      }
-
-      voiceRecorderRef.current = recorder
-      recorder.start()
-      setIsRecordingVoiceMessage(true)
-      toast.success("Recording voice message...")
-    } catch {
-      toast.error("Microphone permission denied")
-      cleanupVoiceRecorder()
-    }
-  }, [cleanupVoiceRecorder, handleVoiceMessageStop, isRecordingVoiceMessage, isSendingVoiceMessage])
 
   // Handle input change for typing indicator (debounced)
   const handleInputChange = useCallback(
@@ -520,6 +278,13 @@ const Form: React.FC<FormProps> = ({
     }
   }, [])
 
+  // Memoized callback for the voice message record/stop toggle button
+  const handleVoiceMessageToggle = useCallback(() => {
+    toggleVoiceMessageRecording().catch(() => {
+      // handled in function
+    })
+  }, [toggleVoiceMessageRecording])
+
   // Cleanup timeout on unmount
   useEffect(() => {
     return () => {
@@ -528,12 +293,6 @@ const Form: React.FC<FormProps> = ({
       }
     }
   }, [])
-
-  useEffect(() => {
-    return () => {
-      cleanupVoiceRecorder()
-    }
-  }, [cleanupVoiceRecorder])
 
   const onSubmit: SubmitHandler<FieldValues> = async (data) => {
     if (!csrfToken) {
@@ -704,14 +463,13 @@ const Form: React.FC<FormProps> = ({
       )}
 
       <div className="flex w-full items-center gap-2 p-4">
-        <CldUploadButton options={{ maxFiles: 1 }} onUpload={handleUpload} uploadPreset="pgc9ehd5">
-          <HiPhoto
-            size={30}
-            className="text-sky-500"
-            aria-label="Upload image"
-            role="button"
-            tabIndex={0}
-          />
+        <CldUploadButton
+          options={{ maxFiles: 1 }}
+          onUpload={handleUpload}
+          uploadPreset="pgc9ehd5"
+          aria-label="Attach image"
+        >
+          <HiPhoto size={30} className="text-sky-500" aria-hidden="true" />
         </CldUploadButton>
         {isAI && (
           <button
@@ -728,11 +486,7 @@ const Form: React.FC<FormProps> = ({
         {voiceMessageSupported && (
           <button
             type="button"
-            onClick={() => {
-              toggleVoiceMessageRecording().catch(() => {
-                // handled in function
-              })
-            }}
+            onClick={handleVoiceMessageToggle}
             disabled={isLoading || isStreaming || isGeneratingImage || isSendingVoiceMessage}
             className={`rounded-md p-1 transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50 ${
               isRecordingVoiceMessage ? "text-red-600" : "text-sky-600"
@@ -740,6 +494,7 @@ const Form: React.FC<FormProps> = ({
             aria-label={
               isRecordingVoiceMessage ? "Stop voice message recording" : "Record voice message"
             }
+            aria-pressed={isRecordingVoiceMessage}
             title={isRecordingVoiceMessage ? "Stop recording" : "Record voice message"}
           >
             {isRecordingVoiceMessage ? <HiStopCircle size={26} /> : <HiMicrophone size={26} />}
@@ -757,6 +512,7 @@ const Form: React.FC<FormProps> = ({
             errors={errors}
             required={!isAI}
             placeholder={isAI ? "Ask me anything..." : "Write a message"}
+            aria-label="Message"
             onInputChange={handleInputChange}
             onModifierEnter={handleModifierEnterSubmit}
           />
