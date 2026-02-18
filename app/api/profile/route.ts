@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { z } from "zod"
 
-import { verifyCsrfToken } from "@/app/lib/csrf"
+import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import prisma from "@/app/lib/prismadb"
 import getCurrentUser from "@/app/actions/getCurrentUser"
 
@@ -20,32 +20,11 @@ const updateProfileSchema = z.object({
     .or(z.literal("")),
 })
 
-// Helper function to validate CSRF token
-function validateCsrf(request: NextRequest): boolean {
-  const headerToken = request.headers.get("X-CSRF-Token")
-  const cookieHeader = request.headers.get("cookie")
-  let cookieToken: string | null = null
-
-  if (cookieHeader) {
-    const cookies = cookieHeader.split(";").reduce(
-      (acc, cookie) => {
-        const [key, value] = cookie.trim().split("=")
-        acc[key] = value
-        return acc
-      },
-      {} as Record<string, string>
-    )
-    cookieToken = cookies["csrf-token"] || null
-  }
-
-  return verifyCsrfToken(headerToken, cookieToken)
-}
-
 // PATCH /api/profile - Update user profile
 export async function PATCH(request: NextRequest) {
   try {
     // CSRF Protection
-    if (!validateCsrf(request)) {
+    if (!verifyCsrfToken(request.headers.get("X-CSRF-Token"), getCsrfTokenFromRequest(request))) {
       return NextResponse.json({ error: "Invalid CSRF token" }, { status: 403 })
     }
 

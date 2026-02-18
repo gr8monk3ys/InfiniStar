@@ -1,8 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { z } from "zod"
 
-import { verifyCsrfToken } from "@/app/lib/csrf"
+import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import prisma from "@/app/lib/prismadb"
+import { apiLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 import getCurrentUser from "@/app/actions/getCurrentUser"
 
 // Valid email digest options
@@ -17,27 +18,6 @@ const updatePreferencesSchema = z.object({
   notifyOnMention: z.boolean().optional(),
   notifyOnAIComplete: z.boolean().optional(),
 })
-
-// Helper function to validate CSRF token
-function validateCsrf(request: NextRequest): boolean {
-  const headerToken = request.headers.get("X-CSRF-Token")
-  const cookieHeader = request.headers.get("cookie")
-  let cookieToken: string | null = null
-
-  if (cookieHeader) {
-    const cookies = cookieHeader.split(";").reduce(
-      (acc, cookie) => {
-        const [key, value] = cookie.trim().split("=")
-        acc[key] = value
-        return acc
-      },
-      {} as Record<string, string>
-    )
-    cookieToken = cookies["csrf-token"] || null
-  }
-
-  return verifyCsrfToken(headerToken, cookieToken)
-}
 
 // GET /api/notifications/preferences - Get current notification preferences
 export async function GET(_request: NextRequest) {
@@ -85,8 +65,18 @@ export async function GET(_request: NextRequest) {
 // PATCH /api/notifications/preferences - Update notification preferences
 export async function PATCH(request: NextRequest) {
   try {
+    // Rate limiting
+    const identifier = getClientIdentifier(request)
+    const allowed = await Promise.resolve(apiLimiter.check(identifier))
+    if (!allowed) {
+      return NextResponse.json(
+        { error: "Too many requests. Please try again later." },
+        { status: 429 }
+      )
+    }
+
     // CSRF Protection
-    if (!validateCsrf(request)) {
+    if (!verifyCsrfToken(request.headers.get("X-CSRF-Token"), getCsrfTokenFromRequest(request))) {
       return NextResponse.json({ error: "Invalid CSRF token" }, { status: 403 })
     }
 

@@ -115,6 +115,8 @@ export const memoryExtractLimiter = createRateLimiter("memoryExtract", 5, 60000)
 export const templateLimiter = createRateLimiter("template", 30, 60000) // 30 template operations per minute
 export const shareLimiter = createRateLimiter("share", 10, 60000) // 10 share operations per minute
 export const shareJoinLimiter = createRateLimiter("shareJoin", 5, 60000) // 5 join attempts per minute
+export const csrfLimiter = createRateLimiter("csrf", 30, 60000) // 30 CSRF token requests per minute
+export const creatorPaymentLimiter = createRateLimiter("creatorPayment", 5, 600000) // 5 requests per 10 minutes
 
 // Cleanup old entries every 5 minutes (only relevant for in-memory limiters)
 setInterval(() => {
@@ -130,6 +132,8 @@ setInterval(() => {
   templateLimiter.cleanup()
   shareLimiter.cleanup()
   shareJoinLimiter.cleanup()
+  csrfLimiter.cleanup()
+  creatorPaymentLimiter.cleanup()
 }, 300000)
 
 // Helper function to get client identifier

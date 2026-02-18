@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server"
 import { auth } from "@clerk/nextjs/server"
 import { z } from "zod"
 
-import { verifyCsrfToken } from "@/app/lib/csrf"
+import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import { moderateTextModelAssisted } from "@/app/lib/moderation"
 import { canAccessNsfw } from "@/app/lib/nsfw"
 import prisma from "@/app/lib/prismadb"
@@ -17,29 +17,6 @@ const listSchema = z.object({
 const createSchema = z.object({
   body: z.string().min(1, "Comment cannot be empty").max(1000, "Comment too long (max 1000)"),
 })
-
-function getCsrfTokens(request: NextRequest): {
-  headerToken: string | null
-  cookieToken: string | null
-} {
-  const headerToken = request.headers.get("X-CSRF-Token")
-  const cookieHeader = request.headers.get("cookie")
-  let cookieToken: string | null = null
-
-  if (cookieHeader) {
-    const cookies = cookieHeader.split(";").reduce(
-      (acc, cookie) => {
-        const [key, value] = cookie.trim().split("=")
-        acc[key] = value
-        return acc
-      },
-      {} as Record<string, string>
-    )
-    cookieToken = cookies["csrf-token"] || null
-  }
-
-  return { headerToken, cookieToken }
-}
 
 export async function GET(
   request: NextRequest,
@@ -125,7 +102,8 @@ export async function POST(
     return NextResponse.json({ error: "Too many requests" }, { status: 429 })
   }
 
-  const { headerToken, cookieToken } = getCsrfTokens(request)
+  const headerToken = request.headers.get("X-CSRF-Token")
+  const cookieToken = getCsrfTokenFromRequest(request)
   if (!verifyCsrfToken(headerToken, cookieToken)) {
     return NextResponse.json({ error: "Invalid CSRF token" }, { status: 403 })
   }

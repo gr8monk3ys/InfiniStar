@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server"
 import { auth } from "@clerk/nextjs/server"
 import { z } from "zod"
 
-import { verifyCsrfToken } from "@/app/lib/csrf"
+import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import {
   buildModerationDetails,
   moderateTextModelAssisted,
@@ -10,6 +10,7 @@ import {
 } from "@/app/lib/moderation"
 import { canAccessNsfw } from "@/app/lib/nsfw"
 import prisma from "@/app/lib/prismadb"
+import { apiLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 import { getRecommendationSignalsForUser, rankCharactersForUser } from "@/app/lib/recommendations"
 import { sanitizePlainText } from "@/app/lib/sanitize"
 import { slugify } from "@/app/lib/slug"
@@ -170,6 +171,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
+  // Rate limiting
+  const identifier = getClientIdentifier(request)
+  const allowed = await Promise.resolve(apiLimiter.check(identifier))
+  if (!allowed) {
+    return NextResponse.json(
+      { error: "Too many requests. Please try again later." },
+      { status: 429 }
+    )
+  }
+
   const currentUser = await prisma.user.findUnique({
     where: { clerkId: userId },
     select: { id: true, isAdult: true },
@@ -179,20 +190,7 @@ export async function POST(request: NextRequest) {
   }
 
   const headerToken = request.headers.get("X-CSRF-Token")
-  const cookieHeader = request.headers.get("cookie")
-  let cookieToken: string | null = null
-
-  if (cookieHeader) {
-    const cookies = cookieHeader.split(";").reduce(
-      (acc, cookie) => {
-        const [key, value] = cookie.trim().split("=")
-        acc[key] = value
-        return acc
-      },
-      {} as Record<string, string>
-    )
-    cookieToken = cookies["csrf-token"] || null
-  }
+  const cookieToken = getCsrfTokenFromRequest(request)
 
   if (!verifyCsrfToken(headerToken, cookieToken)) {
     return NextResponse.json({ error: "Invalid CSRF token" }, { status: 403 })

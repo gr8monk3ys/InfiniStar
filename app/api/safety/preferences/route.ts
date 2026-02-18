@@ -3,6 +3,7 @@ import { z } from "zod"
 
 import { withCsrfProtection } from "@/app/lib/csrf"
 import prisma from "@/app/lib/prismadb"
+import { apiLimiter } from "@/app/lib/rate-limit"
 import getCurrentUser from "@/app/actions/getCurrentUser"
 
 const updateSchema = z.object({
@@ -48,6 +49,18 @@ export async function GET() {
 
 export const PATCH = withCsrfProtection(async (request: Request) => {
   try {
+    // Rate limiting
+    const forwarded = request.headers.get("x-forwarded-for")
+    const realIp = request.headers.get("x-real-ip")
+    const identifier = forwarded ? forwarded.split(",")[0] : realIp || "unknown"
+    const allowed = await Promise.resolve(apiLimiter.check(identifier))
+    if (!allowed) {
+      return NextResponse.json(
+        { error: "Too many requests. Please try again later." },
+        { status: 429 }
+      )
+    }
+
     const currentUser = await getCurrentUser()
 
     if (!currentUser?.id) {

@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server"
 
-import { verifyCsrfToken } from "@/app/lib/csrf"
+import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import prisma from "@/app/lib/prismadb"
 import { pusherServer } from "@/app/lib/pusher"
 import { getPusherConversationChannel, getPusherUserChannel } from "@/app/lib/pusher-channels"
@@ -14,20 +14,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<I
   try {
     // CSRF Protection
     const headerToken = request.headers.get("X-CSRF-Token")
-    const cookieHeader = request.headers.get("cookie")
-    let cookieToken: string | null = null
-
-    if (cookieHeader) {
-      const cookies = cookieHeader.split(";").reduce(
-        (acc, cookie) => {
-          const [key, value] = cookie.trim().split("=")
-          acc[key] = value
-          return acc
-        },
-        {} as Record<string, string>
-      )
-      cookieToken = cookies["csrf-token"] || null
-    }
+    const cookieToken = getCsrfTokenFromRequest(request)
 
     if (!verifyCsrfToken(headerToken, cookieToken)) {
       return NextResponse.json({ error: "Invalid CSRF token" }, { status: 403 })
@@ -50,13 +37,16 @@ export async function POST(request: NextRequest, { params }: { params: Promise<I
           },
         },
       },
-      include: {
+      select: {
+        id: true,
         messages: {
-          include: {
-            seen: true,
+          select: {
+            id: true,
+            seen: {
+              select: { id: true },
+            },
           },
         },
-        users: true,
       },
     })
 
@@ -110,8 +100,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<I
       updatedMessage
     )
 
-    return new NextResponse("Success")
+    return NextResponse.json({ success: true })
   } catch (error) {
-    return new NextResponse("Error", { status: 500 })
+    console.error("CONVERSATION_SEEN_ERROR:", error)
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

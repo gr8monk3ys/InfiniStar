@@ -4,7 +4,7 @@ import { z } from "zod"
 
 import { getModelForUser } from "@/app/lib/ai-model-routing"
 import { SUPPORTED_MODEL_IDS } from "@/app/lib/ai-models"
-import { verifyCsrfToken } from "@/app/lib/csrf"
+import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import { canAccessNsfw } from "@/app/lib/nsfw"
 import prisma from "@/app/lib/prismadb"
 import { pusherServer } from "@/app/lib/pusher"
@@ -141,20 +141,7 @@ export async function POST(request: NextRequest) {
   try {
     // CSRF Protection
     const headerToken = request.headers.get("X-CSRF-Token")
-    const cookieHeader = request.headers.get("cookie")
-    let cookieToken: string | null = null
-
-    if (cookieHeader) {
-      const cookies = cookieHeader.split(";").reduce(
-        (acc, cookie) => {
-          const [key, value] = cookie.trim().split("=")
-          acc[key] = value
-          return acc
-        },
-        {} as Record<string, string>
-      )
-      cookieToken = cookies["csrf-token"] || null
-    }
+    const cookieToken = getCsrfTokenFromRequest(request)
 
     if (!verifyCsrfToken(headerToken, cookieToken)) {
       return NextResponse.json({ error: "Invalid CSRF token" }, { status: 403 })
@@ -468,25 +455,28 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const existingConversations = await prisma.conversation.findMany({
+    const existingConversation = await prisma.conversation.findFirst({
       where: {
         isGroup: false,
         AND: [
           { users: { some: { id: currentUser.id } } },
           { users: { some: { id: targetUserId } } },
+          { users: { every: { id: { in: [currentUser.id, targetUserId] } } } },
         ],
       },
       include: {
         users: true,
+        messages: {
+          include: {
+            sender: true,
+            seen: true,
+          },
+        },
       },
     })
 
-    const singleConversation = existingConversations.find(
-      (conversation: { users: unknown[] }) => conversation.users.length === 2
-    )
-
-    if (singleConversation) {
-      return NextResponse.json(singleConversation)
+    if (existingConversation) {
+      return NextResponse.json(existingConversation)
     }
 
     const newConversation = await prisma.conversation.create({
@@ -520,6 +510,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(newConversation)
   } catch (error) {
+    console.error("CONVERSATIONS_ERROR:", error)
     return new NextResponse("Internal Error", { status: 500 })
   }
 }

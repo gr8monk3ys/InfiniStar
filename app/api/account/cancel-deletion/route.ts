@@ -1,32 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server"
 
-import { verifyCsrfToken } from "@/app/lib/csrf"
+import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import { sendAccountDeletionCancelledEmail } from "@/app/lib/email"
 import prisma from "@/app/lib/prismadb"
+import { accountDeletionLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 import getCurrentUser from "@/app/actions/getCurrentUser"
-
-/**
- * Helper function to validate CSRF token
- */
-function validateCsrf(request: NextRequest): boolean {
-  const headerToken = request.headers.get("X-CSRF-Token")
-  const cookieHeader = request.headers.get("cookie")
-  let cookieToken: string | null = null
-
-  if (cookieHeader) {
-    const cookies = cookieHeader.split(";").reduce(
-      (acc, cookie) => {
-        const [key, value] = cookie.trim().split("=")
-        acc[key] = value
-        return acc
-      },
-      {} as Record<string, string>
-    )
-    cookieToken = cookies["csrf-token"] || null
-  }
-
-  return verifyCsrfToken(headerToken, cookieToken)
-}
 
 /**
  * POST /api/account/cancel-deletion - Cancel pending account deletion
@@ -35,8 +13,18 @@ function validateCsrf(request: NextRequest): boolean {
  */
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting
+    const identifier = getClientIdentifier(request)
+    const allowed = await Promise.resolve(accountDeletionLimiter.check(identifier))
+    if (!allowed) {
+      return NextResponse.json(
+        { error: "Too many requests. Please try again later." },
+        { status: 429 }
+      )
+    }
+
     // CSRF Protection
-    if (!validateCsrf(request)) {
+    if (!verifyCsrfToken(request.headers.get("X-CSRF-Token"), getCsrfTokenFromRequest(request))) {
       return NextResponse.json(
         { error: "Invalid CSRF token", code: "CSRF_INVALID" },
         { status: 403 }

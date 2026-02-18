@@ -50,12 +50,14 @@ export function verifyCsrfToken(headerToken: string | null, cookieToken: string 
 }
 
 /**
- * Get CSRF token from request cookies (server-side)
+ * Parse the csrf-token value from a raw cookie header string.
+ *
+ * This is the low-level helper used by getCsrfTokenFromRequest and
+ * getCsrfTokenFromCookies. It is intentionally kept synchronous so it
+ * can be called from both Route Handlers and Server Components without
+ * needing to await an extra async boundary.
  */
-export async function getCsrfTokenFromCookies(): Promise<string | null> {
-  const headersList = await headers()
-  const cookieHeader = headersList.get("cookie")
-
+function parseCsrfCookie(cookieHeader: string | null): string | null {
   if (!cookieHeader) {
     return null
   }
@@ -70,6 +72,29 @@ export async function getCsrfTokenFromCookies(): Promise<string | null> {
   )
 
   return cookies[CSRF_COOKIE_NAME] || null
+}
+
+/**
+ * Extract the CSRF token from a NextRequest (or any Fetch-compatible Request).
+ *
+ * Prefer this helper over the inline cookie-parsing block that used to be
+ * copy-pasted into every API route file.
+ *
+ * @example
+ * const cookieToken = getCsrfTokenFromRequest(request)
+ * if (!verifyCsrfToken(request.headers.get("X-CSRF-Token"), cookieToken)) { ... }
+ */
+export function getCsrfTokenFromRequest(request: Request): string | null {
+  return parseCsrfCookie(request.headers.get("cookie"))
+}
+
+/**
+ * Get CSRF token from request cookies (server-side, uses Next.js headers() utility)
+ */
+export async function getCsrfTokenFromCookies(): Promise<string | null> {
+  const headersList = await headers()
+  const cookieHeader = headersList.get("cookie")
+  return parseCsrfCookie(cookieHeader)
 }
 
 /**
@@ -124,20 +149,7 @@ export function withCsrfProtection<T>(
 
     // Get tokens from header and cookie
     const headerToken = request.headers.get("X-CSRF-Token")
-    const cookieHeader = request.headers.get("cookie")
-
-    let cookieToken: string | null = null
-    if (cookieHeader) {
-      const cookies = cookieHeader.split(";").reduce(
-        (acc, cookie) => {
-          const [key, value] = cookie.trim().split("=")
-          acc[key] = value
-          return acc
-        },
-        {} as Record<string, string>
-      )
-      cookieToken = cookies[CSRF_COOKIE_NAME] || null
-    }
+    const cookieToken = getCsrfTokenFromRequest(request)
 
     // Verify tokens match
     if (!verifyCsrfToken(headerToken, cookieToken)) {

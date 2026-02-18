@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server"
 
-import { verifyCsrfToken } from "@/app/lib/csrf"
+import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import prisma from "@/app/lib/prismadb"
 import { pusherServer } from "@/app/lib/pusher"
 import { getPusherUserChannel } from "@/app/lib/pusher-channels"
@@ -14,20 +14,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
   try {
     // CSRF Protection
     const headerToken = request.headers.get("X-CSRF-Token")
-    const cookieHeader = request.headers.get("cookie")
-    let cookieToken: string | null = null
-
-    if (cookieHeader) {
-      const cookies = cookieHeader.split(";").reduce(
-        (acc, cookie) => {
-          const [key, value] = cookie.trim().split("=")
-          acc[key] = value
-          return acc
-        },
-        {} as Record<string, string>
-      )
-      cookieToken = cookies["csrf-token"] || null
-    }
+    const cookieToken = getCsrfTokenFromRequest(request)
 
     if (!verifyCsrfToken(headerToken, cookieToken)) {
       return NextResponse.json({ error: "Invalid CSRF token" }, { status: 403 })
@@ -50,7 +37,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     })
 
     if (!existingConversation) {
-      return new NextResponse("Invalid ID", { status: 400 })
+      return NextResponse.json({ error: "Invalid conversation ID" }, { status: 400 })
     }
 
     const deletedConversation = await prisma.conversation.deleteMany({
@@ -74,6 +61,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
 
     return NextResponse.json(deletedConversation)
   } catch (error) {
-    return NextResponse.json(null)
+    console.error("CONVERSATION_DELETE_ERROR:", error)
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

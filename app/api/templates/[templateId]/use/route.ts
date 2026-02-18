@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server"
 import { auth } from "@clerk/nextjs/server"
 import { z } from "zod"
 
-import { verifyCsrfToken } from "@/app/lib/csrf"
+import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import prisma from "@/app/lib/prismadb"
 import { getClientIdentifier, templateLimiter } from "@/app/lib/rate-limit"
 import {
@@ -39,20 +39,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     // CSRF Protection
     const headerToken = request.headers.get("X-CSRF-Token")
-    const cookieHeader = request.headers.get("cookie")
-    let cookieToken: string | null = null
-
-    if (cookieHeader) {
-      const cookies = cookieHeader.split(";").reduce(
-        (acc, cookie) => {
-          const [key, value] = cookie.trim().split("=")
-          acc[key] = value
-          return acc
-        },
-        {} as Record<string, string>
-      )
-      cookieToken = cookies["csrf-token"] || null
-    }
+    const cookieToken = getCsrfTokenFromRequest(request)
 
     if (!verifyCsrfToken(headerToken, cookieToken)) {
       return NextResponse.json({ error: "Invalid CSRF token" }, { status: 403 })

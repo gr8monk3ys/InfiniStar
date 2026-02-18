@@ -1,33 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { auth } from "@clerk/nextjs/server"
 
-import { verifyCsrfToken } from "@/app/lib/csrf"
+import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import { canAccessNsfw } from "@/app/lib/nsfw"
 import prisma from "@/app/lib/prismadb"
 import { apiLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
-
-function getCsrfTokens(request: NextRequest): {
-  headerToken: string | null
-  cookieToken: string | null
-} {
-  const headerToken = request.headers.get("X-CSRF-Token")
-  const cookieHeader = request.headers.get("cookie")
-  let cookieToken: string | null = null
-
-  if (cookieHeader) {
-    const cookies = cookieHeader.split(";").reduce(
-      (acc, cookie) => {
-        const [key, value] = cookie.trim().split("=")
-        acc[key] = value
-        return acc
-      },
-      {} as Record<string, string>
-    )
-    cookieToken = cookies["csrf-token"] || null
-  }
-
-  return { headerToken, cookieToken }
-}
 
 export async function POST(
   request: NextRequest,
@@ -39,7 +16,8 @@ export async function POST(
     return NextResponse.json({ error: "Too many requests" }, { status: 429 })
   }
 
-  const { headerToken, cookieToken } = getCsrfTokens(request)
+  const headerToken = request.headers.get("X-CSRF-Token")
+  const cookieToken = getCsrfTokenFromRequest(request)
   if (!verifyCsrfToken(headerToken, cookieToken)) {
     return NextResponse.json({ error: "Invalid CSRF token" }, { status: 403 })
   }
@@ -113,7 +91,8 @@ export async function DELETE(
     return NextResponse.json({ error: "Too many requests" }, { status: 429 })
   }
 
-  const { headerToken, cookieToken } = getCsrfTokens(request)
+  const headerToken = request.headers.get("X-CSRF-Token")
+  const cookieToken = getCsrfTokenFromRequest(request)
   if (!verifyCsrfToken(headerToken, cookieToken)) {
     return NextResponse.json({ error: "Invalid CSRF token" }, { status: 403 })
   }

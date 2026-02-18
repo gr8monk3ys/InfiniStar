@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server"
 import { z } from "zod"
 
 import { getAiAccessDecision } from "@/app/lib/ai-access"
-import { verifyCsrfToken } from "@/app/lib/csrf"
+import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import prisma from "@/app/lib/prismadb"
 import { getClientIdentifier, InMemoryRateLimiter } from "@/app/lib/rate-limit"
 import {
@@ -39,20 +39,7 @@ const SuggestionsRequestSchema = z.object({
 export async function POST(request: NextRequest) {
   // CSRF Protection
   const headerToken = request.headers.get("X-CSRF-Token")
-  const cookieHeader = request.headers.get("cookie")
-  let cookieToken: string | null = null
-
-  if (cookieHeader) {
-    const cookies = cookieHeader.split(";").reduce(
-      (acc, cookie) => {
-        const [key, value] = cookie.trim().split("=")
-        acc[key] = value
-        return acc
-      },
-      {} as Record<string, string>
-    )
-    cookieToken = cookies["csrf-token"] || null
-  }
+  const cookieToken = getCsrfTokenFromRequest(request)
 
   if (!verifyCsrfToken(headerToken, cookieToken)) {
     return NextResponse.json(

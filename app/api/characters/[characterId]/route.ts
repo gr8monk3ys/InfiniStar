@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server"
 import { auth } from "@clerk/nextjs/server"
 import { z } from "zod"
 
-import { verifyCsrfToken } from "@/app/lib/csrf"
+import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import {
   buildModerationDetails,
   moderateTextModelAssisted,
@@ -10,6 +10,7 @@ import {
 } from "@/app/lib/moderation"
 import { canAccessNsfw } from "@/app/lib/nsfw"
 import prisma from "@/app/lib/prismadb"
+import { apiLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 import { sanitizePlainText } from "@/app/lib/sanitize"
 import { slugify } from "@/app/lib/slug"
 
@@ -86,6 +87,16 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
+  // Rate limiting
+  const identifier = getClientIdentifier(request)
+  const allowed = await Promise.resolve(apiLimiter.check(identifier))
+  if (!allowed) {
+    return NextResponse.json(
+      { error: "Too many requests. Please try again later." },
+      { status: 429 }
+    )
+  }
+
   const currentUser = await prisma.user.findUnique({
     where: { clerkId: userId },
     select: { id: true, isAdult: true },
@@ -95,20 +106,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   }
 
   const headerToken = request.headers.get("X-CSRF-Token")
-  const cookieHeader = request.headers.get("cookie")
-  let cookieToken: string | null = null
-
-  if (cookieHeader) {
-    const cookies = cookieHeader.split(";").reduce(
-      (acc, cookie) => {
-        const [key, value] = cookie.trim().split("=")
-        acc[key] = value
-        return acc
-      },
-      {} as Record<string, string>
-    )
-    cookieToken = cookies["csrf-token"] || null
-  }
+  const cookieToken = getCsrfTokenFromRequest(request)
 
   if (!verifyCsrfToken(headerToken, cookieToken)) {
     return NextResponse.json({ error: "Invalid CSRF token" }, { status: 403 })
@@ -169,12 +167,14 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: "Invalid name" }, { status: 400 })
     }
     const baseSlug = slugify(sanitized)
-    slug = baseSlug
-    let suffix = 1
-    while (await prisma.character.findFirst({ where: { slug, NOT: { id: existing.id } } })) {
-      suffix += 1
-      slug = `${baseSlug}-${suffix}`
-    }
+    const candidates = [baseSlug, ...Array.from({ length: 9 }, (_, i) => `${baseSlug}-${i + 2}`)]
+    const takenSlugs = await prisma.character.findMany({
+      where: { slug: { in: candidates }, NOT: { id: existing.id } },
+      select: { slug: true },
+    })
+    const takenSet = new Set(takenSlugs.map((c: { slug: string }) => c.slug))
+    const available = candidates.find((candidate) => !takenSet.has(candidate))
+    slug = available ?? `${baseSlug}-${Date.now()}`
   }
 
   const updated = await prisma.character.update({
@@ -228,20 +228,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
   }
 
   const headerToken = request.headers.get("X-CSRF-Token")
-  const cookieHeader = request.headers.get("cookie")
-  let cookieToken: string | null = null
-
-  if (cookieHeader) {
-    const cookies = cookieHeader.split(";").reduce(
-      (acc, cookie) => {
-        const [key, value] = cookie.trim().split("=")
-        acc[key] = value
-        return acc
-      },
-      {} as Record<string, string>
-    )
-    cookieToken = cookies["csrf-token"] || null
-  }
+  const cookieToken = getCsrfTokenFromRequest(request)
 
   if (!verifyCsrfToken(headerToken, cookieToken)) {
     return NextResponse.json({ error: "Invalid CSRF token" }, { status: 403 })

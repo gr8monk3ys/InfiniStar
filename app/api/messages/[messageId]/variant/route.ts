@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { z } from "zod"
 
-import { verifyCsrfToken } from "@/app/lib/csrf"
+import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import prisma from "@/app/lib/prismadb"
 import { pusherServer } from "@/app/lib/pusher"
 import { getPusherConversationChannel } from "@/app/lib/pusher-channels"
@@ -11,29 +11,6 @@ import getCurrentUser from "@/app/actions/getCurrentUser"
 const setVariantSchema = z.object({
   index: z.coerce.number().int().min(0),
 })
-
-function getCsrfTokens(request: NextRequest): {
-  headerToken: string | null
-  cookieToken: string | null
-} {
-  const headerToken = request.headers.get("X-CSRF-Token")
-  const cookieHeader = request.headers.get("cookie")
-  let cookieToken: string | null = null
-
-  if (cookieHeader) {
-    const cookies = cookieHeader.split(";").reduce(
-      (acc, cookie) => {
-        const [key, value] = cookie.trim().split("=")
-        acc[key] = value
-        return acc
-      },
-      {} as Record<string, string>
-    )
-    cookieToken = cookies["csrf-token"] || null
-  }
-
-  return { headerToken, cookieToken }
-}
 
 /**
  * PATCH /api/messages/[messageId]/variant
@@ -52,7 +29,8 @@ export async function PATCH(
   }
 
   // CSRF Protection
-  const { headerToken, cookieToken } = getCsrfTokens(request)
+  const headerToken = request.headers.get("X-CSRF-Token")
+  const cookieToken = getCsrfTokenFromRequest(request)
   if (!verifyCsrfToken(headerToken, cookieToken)) {
     return NextResponse.json({ error: "Invalid CSRF token" }, { status: 403 })
   }

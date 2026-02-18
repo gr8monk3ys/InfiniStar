@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { z } from "zod"
 
-import { verifyCsrfToken } from "@/app/lib/csrf"
+import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import prisma from "@/app/lib/prismadb"
 import { pusherServer } from "@/app/lib/pusher"
 import { getPusherConversationChannel } from "@/app/lib/pusher-channels"
@@ -13,27 +13,6 @@ const editMessageSchema = z.object({
   body: z.string().min(1, "Message cannot be empty").max(5000, "Message too long"),
 })
 
-// Helper function to validate CSRF token
-function validateCsrf(request: NextRequest): boolean {
-  const headerToken = request.headers.get("X-CSRF-Token")
-  const cookieHeader = request.headers.get("cookie")
-  let cookieToken: string | null = null
-
-  if (cookieHeader) {
-    const cookies = cookieHeader.split(";").reduce(
-      (acc, cookie) => {
-        const [key, value] = cookie.trim().split("=")
-        acc[key] = value
-        return acc
-      },
-      {} as Record<string, string>
-    )
-    cookieToken = cookies["csrf-token"] || null
-  }
-
-  return verifyCsrfToken(headerToken, cookieToken)
-}
-
 // PATCH /api/messages/[messageId] - Edit a message
 export async function PATCH(
   request: NextRequest,
@@ -41,7 +20,7 @@ export async function PATCH(
 ) {
   try {
     // CSRF Protection
-    if (!validateCsrf(request)) {
+    if (!verifyCsrfToken(request.headers.get("X-CSRF-Token"), getCsrfTokenFromRequest(request))) {
       return NextResponse.json({ error: "Invalid CSRF token" }, { status: 403 })
     }
 
@@ -129,7 +108,7 @@ export async function DELETE(
 ) {
   try {
     // CSRF Protection
-    if (!validateCsrf(request)) {
+    if (!verifyCsrfToken(request.headers.get("X-CSRF-Token"), getCsrfTokenFromRequest(request))) {
       return NextResponse.json({ error: "Invalid CSRF token" }, { status: 403 })
     }
 

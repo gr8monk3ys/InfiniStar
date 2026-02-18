@@ -10,7 +10,7 @@ import {
   isValidPersonality,
 } from "@/app/lib/ai-personalities"
 import { trackAiUsage } from "@/app/lib/ai-usage"
-import { verifyCsrfToken } from "@/app/lib/csrf"
+import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import {
   buildModerationDetails,
   moderateTextModelAssisted,
@@ -32,20 +32,7 @@ const anthropic = new Anthropic({
 export async function POST(request: NextRequest) {
   // CSRF Protection
   const headerToken = request.headers.get("X-CSRF-Token")
-  const cookieHeader = request.headers.get("cookie")
-  let cookieToken: string | null = null
-
-  if (cookieHeader) {
-    const cookies = cookieHeader.split(";").reduce(
-      (acc, cookie) => {
-        const [key, value] = cookie.trim().split("=")
-        acc[key] = value
-        return acc
-      },
-      {} as Record<string, string>
-    )
-    cookieToken = cookies["csrf-token"] || null
-  }
+  const cookieToken = getCsrfTokenFromRequest(request)
 
   if (!verifyCsrfToken(headerToken, cookieToken)) {
     return new NextResponse(

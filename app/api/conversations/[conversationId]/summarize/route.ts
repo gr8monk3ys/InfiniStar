@@ -4,7 +4,7 @@ import Anthropic from "@anthropic-ai/sdk"
 import { getAiAccessDecision } from "@/app/lib/ai-access"
 import { getFreeTierModel } from "@/app/lib/ai-model-routing"
 import { trackAiUsage } from "@/app/lib/ai-usage"
-import { verifyCsrfToken } from "@/app/lib/csrf"
+import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import prisma from "@/app/lib/prismadb"
 import { aiChatLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 import getCurrentUser from "@/app/actions/getCurrentUser"
@@ -12,27 +12,6 @@ import getCurrentUser from "@/app/actions/getCurrentUser"
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY || "",
 })
-
-// Helper function to validate CSRF token
-function validateCsrf(request: NextRequest): boolean {
-  const headerToken = request.headers.get("X-CSRF-Token")
-  const cookieHeader = request.headers.get("cookie")
-  let cookieToken: string | null = null
-
-  if (cookieHeader) {
-    const cookies = cookieHeader.split(";").reduce(
-      (acc, cookie) => {
-        const [key, value] = cookie.trim().split("=")
-        acc[key] = value
-        return acc
-      },
-      {} as Record<string, string>
-    )
-    cookieToken = cookies["csrf-token"] || null
-  }
-
-  return verifyCsrfToken(headerToken, cookieToken)
-}
 
 // Minimum number of messages required for summarization
 const MIN_MESSAGES_FOR_SUMMARY = 5
@@ -74,7 +53,7 @@ export async function POST(
 ): Promise<NextResponse> {
   try {
     // CSRF Protection
-    if (!validateCsrf(request)) {
+    if (!verifyCsrfToken(request.headers.get("X-CSRF-Token"), getCsrfTokenFromRequest(request))) {
       return NextResponse.json({ error: "Invalid CSRF token" }, { status: 403 })
     }
 

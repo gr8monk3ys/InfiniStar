@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server"
 import { auth } from "@clerk/nextjs/server"
 import { z } from "zod"
 
-import { verifyCsrfToken } from "@/app/lib/csrf"
+import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import prisma from "@/app/lib/prismadb"
 import { sanitizePlainText } from "@/app/lib/sanitize"
 
@@ -38,23 +38,6 @@ function parseReviewerEmails(envValue: string | undefined): string[] {
     .split(",")
     .map((email) => email.trim().toLowerCase())
     .filter((email) => email.length > 0)
-}
-
-function getCookieToken(request: NextRequest): string | null {
-  const cookieHeader = request.headers.get("cookie")
-  if (!cookieHeader) {
-    return null
-  }
-
-  const cookies = cookieHeader.split(";").reduce(
-    (acc, cookie) => {
-      const [key, value] = cookie.trim().split("=")
-      acc[key] = value
-      return acc
-    },
-    {} as Record<string, string>
-  )
-  return cookies["csrf-token"] || null
 }
 
 function canUserReviewAllReports(email: string | null | undefined): boolean {
@@ -122,7 +105,7 @@ export async function POST(request: NextRequest) {
   }
 
   const headerToken = request.headers.get("X-CSRF-Token")
-  const cookieToken = getCookieToken(request)
+  const cookieToken = getCsrfTokenFromRequest(request)
 
   if (!verifyCsrfToken(headerToken, cookieToken)) {
     return NextResponse.json({ error: "Invalid CSRF token" }, { status: 403 })
@@ -158,7 +141,7 @@ export async function PATCH(request: NextRequest) {
   }
 
   const headerToken = request.headers.get("X-CSRF-Token")
-  const cookieToken = getCookieToken(request)
+  const cookieToken = getCsrfTokenFromRequest(request)
   if (!verifyCsrfToken(headerToken, cookieToken)) {
     return NextResponse.json({ error: "Invalid CSRF token" }, { status: 403 })
   }

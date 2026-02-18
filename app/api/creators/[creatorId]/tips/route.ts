@@ -3,8 +3,9 @@ import { auth } from "@clerk/nextjs/server"
 import { z } from "zod"
 
 import { isValidTipAmount } from "@/app/lib/creator-monetization"
-import { verifyCsrfToken } from "@/app/lib/csrf"
+import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import prisma from "@/app/lib/prismadb"
+import { creatorPaymentLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 import { sanitizePlainText } from "@/app/lib/sanitize"
 import { stripe } from "@/app/lib/stripe"
 
@@ -12,24 +13,6 @@ const tipSchema = z.object({
   amountCents: z.number().int().positive(),
   note: z.string().max(400).optional(),
 })
-
-function getCookieToken(request: NextRequest): string | null {
-  const cookieHeader = request.headers.get("cookie")
-  if (!cookieHeader) {
-    return null
-  }
-
-  const cookies = cookieHeader.split(";").reduce(
-    (acc, cookie) => {
-      const [key, value] = cookie.trim().split("=")
-      acc[key] = value
-      return acc
-    },
-    {} as Record<string, string>
-  )
-
-  return cookies["csrf-token"] || null
-}
 
 export async function POST(
   request: NextRequest,
@@ -40,8 +23,18 @@ export async function POST(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
+  // Rate limiting
+  const identifier = getClientIdentifier(request)
+  const allowed = await Promise.resolve(creatorPaymentLimiter.check(identifier))
+  if (!allowed) {
+    return NextResponse.json(
+      { error: "Too many requests. Please try again later." },
+      { status: 429 }
+    )
+  }
+
   const headerToken = request.headers.get("X-CSRF-Token")
-  const cookieToken = getCookieToken(request)
+  const cookieToken = getCsrfTokenFromRequest(request)
   if (!verifyCsrfToken(headerToken, cookieToken)) {
     return NextResponse.json({ error: "Invalid CSRF token" }, { status: 403 })
   }
