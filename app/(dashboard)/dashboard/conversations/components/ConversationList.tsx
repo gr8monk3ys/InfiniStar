@@ -335,93 +335,48 @@ const ConversationList: React.FC<ConversationListProps> = ({
       })
     }
 
+    // archive and unarchive carry the same payload shape — one handler covers both events
     const archiveHandler = (conversation: FullConversationType) => {
       setItems((current) =>
-        current.map((currentConversation) => {
-          if (currentConversation.id === conversation.id) {
-            return {
-              ...currentConversation,
-              archivedBy: conversation.archivedBy,
-              archivedAt: conversation.archivedAt,
-            }
-          }
-          return currentConversation
-        })
+        current.map((currentConversation) =>
+          currentConversation.id === conversation.id
+            ? {
+                ...currentConversation,
+                archivedBy: conversation.archivedBy,
+                archivedAt: conversation.archivedAt,
+              }
+            : currentConversation
+        )
       )
     }
 
-    const unarchiveHandler = (conversation: FullConversationType) => {
-      setItems((current) =>
-        current.map((currentConversation) => {
-          if (currentConversation.id === conversation.id) {
-            return {
-              ...currentConversation,
-              archivedBy: conversation.archivedBy,
-              archivedAt: conversation.archivedAt,
-            }
-          }
-          return currentConversation
-        })
-      )
-    }
-
+    // pin and unpin carry the same payload shape — one handler covers both events
     const pinHandler = (conversation: FullConversationType) => {
       setItems((current) =>
-        current.map((currentConversation) => {
-          if (currentConversation.id === conversation.id) {
-            return {
-              ...currentConversation,
-              pinnedBy: conversation.pinnedBy,
-              pinnedAt: conversation.pinnedAt,
-            }
-          }
-          return currentConversation
-        })
+        current.map((currentConversation) =>
+          currentConversation.id === conversation.id
+            ? {
+                ...currentConversation,
+                pinnedBy: conversation.pinnedBy,
+                pinnedAt: conversation.pinnedAt,
+              }
+            : currentConversation
+        )
       )
     }
 
-    const unpinHandler = (conversation: FullConversationType) => {
-      setItems((current) =>
-        current.map((currentConversation) => {
-          if (currentConversation.id === conversation.id) {
-            return {
-              ...currentConversation,
-              pinnedBy: conversation.pinnedBy,
-              pinnedAt: conversation.pinnedAt,
-            }
-          }
-          return currentConversation
-        })
-      )
-    }
-
+    // mute and unmute carry the same payload shape — one handler covers both events
     const muteHandler = (conversation: FullConversationType) => {
       setItems((current) =>
-        current.map((currentConversation) => {
-          if (currentConversation.id === conversation.id) {
-            return {
-              ...currentConversation,
-              mutedBy: conversation.mutedBy,
-              mutedAt: conversation.mutedAt,
-            }
-          }
-          return currentConversation
-        })
-      )
-    }
-
-    const unmuteHandler = (conversation: FullConversationType) => {
-      setItems((current) =>
-        current.map((currentConversation) => {
-          if (currentConversation.id === conversation.id) {
-            return {
-              ...currentConversation,
-              mutedBy: conversation.mutedBy,
-              mutedAt: conversation.mutedAt,
-            }
-          }
-          return currentConversation
-        })
+        current.map((currentConversation) =>
+          currentConversation.id === conversation.id
+            ? {
+                ...currentConversation,
+                mutedBy: conversation.mutedBy,
+                mutedAt: conversation.mutedAt,
+              }
+            : currentConversation
+        )
       )
     }
 
@@ -429,11 +384,11 @@ const ConversationList: React.FC<ConversationListProps> = ({
     pusherClient.bind("conversation:new", newHandler)
     pusherClient.bind("conversation:remove", removeHandler)
     pusherClient.bind("conversation:archive", archiveHandler)
-    pusherClient.bind("conversation:unarchive", unarchiveHandler)
+    pusherClient.bind("conversation:unarchive", archiveHandler)
     pusherClient.bind("conversation:pin", pinHandler)
-    pusherClient.bind("conversation:unpin", unpinHandler)
+    pusherClient.bind("conversation:unpin", pinHandler)
     pusherClient.bind("conversation:mute", muteHandler)
-    pusherClient.bind("conversation:unmute", unmuteHandler)
+    pusherClient.bind("conversation:unmute", muteHandler)
 
     return () => {
       // Unsubscribe from user channel
@@ -444,11 +399,11 @@ const ConversationList: React.FC<ConversationListProps> = ({
       pusherClient.unbind("conversation:new", newHandler)
       pusherClient.unbind("conversation:remove", removeHandler)
       pusherClient.unbind("conversation:archive", archiveHandler)
-      pusherClient.unbind("conversation:unarchive", unarchiveHandler)
+      pusherClient.unbind("conversation:unarchive", archiveHandler)
       pusherClient.unbind("conversation:pin", pinHandler)
-      pusherClient.unbind("conversation:unpin", unpinHandler)
+      pusherClient.unbind("conversation:unpin", pinHandler)
       pusherClient.unbind("conversation:mute", muteHandler)
-      pusherClient.unbind("conversation:unmute", unmuteHandler)
+      pusherClient.unbind("conversation:unmute", muteHandler)
     }
   }, [currentUserId])
 

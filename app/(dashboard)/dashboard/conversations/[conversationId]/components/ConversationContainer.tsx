@@ -43,6 +43,16 @@ const ConversationContainer: React.FC<ConversationContainerProps> = ({
   const { token: csrfToken } = useCsrfToken()
   const bottomRef = useRef<HTMLDivElement | null>(null)
 
+  // Keep a ref to the current CSRF token so Pusher handlers always read the latest
+  // value without needing to be re-registered when the token resolves from null.
+  const csrfTokenRef = useRef(csrfToken)
+  useEffect(() => {
+    csrfTokenRef.current = csrfToken
+  }, [csrfToken])
+
+  // Debounce ref to avoid calling /seen on every streaming token
+  const seenDebounceRef = useRef<NodeJS.Timeout | null>(null)
+
   // Lift messages state to share with Form for suggestions
   const [messages, setMessages] = useState<FullMessageType[]>(initialMessages)
 
@@ -101,13 +111,17 @@ const ConversationContainer: React.FC<ConversationContainerProps> = ({
     bottomRef?.current?.scrollIntoView()
 
     const messageHandler = (message: FullMessageType) => {
-      if (csrfToken) {
-        axios.post(
-          `/api/conversations/${conversationId}/seen`,
-          {},
-          { headers: { "X-CSRF-Token": csrfToken } }
-        )
-      }
+      // Debounce the /seen call — avoids a network request per streaming token
+      if (seenDebounceRef.current) clearTimeout(seenDebounceRef.current)
+      seenDebounceRef.current = setTimeout(() => {
+        if (csrfTokenRef.current) {
+          axios.post(
+            `/api/conversations/${conversationId}/seen`,
+            {},
+            { headers: { "X-CSRF-Token": csrfTokenRef.current } }
+          )
+        }
+      }, 1000)
 
       setMessages((current) => {
         if (current.some((m) => m.id === message.id)) {
@@ -155,7 +169,9 @@ const ConversationContainer: React.FC<ConversationContainerProps> = ({
       pusherClient.unbind("message:delete", deleteMessageHandler)
       pusherClient.unbind("message:reaction", reactionHandler)
     }
-  }, [conversationId, csrfToken])
+    // csrfToken is intentionally excluded — it is read via csrfTokenRef so handlers
+    // never go stale and the subscription is not torn down when the token resolves.
+  }, [conversationId])
 
   return (
     <>

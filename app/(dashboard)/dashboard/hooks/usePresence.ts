@@ -11,15 +11,23 @@ export default function usePresence() {
   const awayTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const isActiveRef = useRef(true)
 
+  // Keep a ref to the latest CSRF token so event listeners always use the current
+  // value without being torn down and re-registered when the token resolves.
+  const csrfTokenRef = useRef(csrfToken)
   useEffect(() => {
-    if (!userId || !csrfToken) return
+    csrfTokenRef.current = csrfToken
+  }, [csrfToken])
 
-    const headers = { "X-CSRF-Token": csrfToken }
+  useEffect(() => {
+    if (!userId) return
+
+    // Build headers lazily from the ref so callers always use the current token
+    const getHeaders = () => ({ "X-CSRF-Token": csrfTokenRef.current ?? "" })
 
     // Update presence to online when component mounts
     const setOnline = async () => {
       try {
-        await axios.patch("/api/users/presence", { status: "online" }, { headers })
+        await axios.patch("/api/users/presence", { status: "online" }, { headers: getHeaders() })
       } catch (error) {
         console.error("Failed to set online status:", error)
       }
@@ -28,7 +36,7 @@ export default function usePresence() {
     // Update presence to offline when component unmounts or page is hidden
     const setOffline = async () => {
       try {
-        await axios.patch("/api/users/presence", { status: "offline" }, { headers })
+        await axios.patch("/api/users/presence", { status: "offline" }, { headers: getHeaders() })
       } catch (error) {
         console.error("Failed to set offline status:", error)
       }
@@ -37,7 +45,7 @@ export default function usePresence() {
     // Update presence to away after inactivity
     const setAway = async () => {
       try {
-        await axios.patch("/api/users/presence", { status: "away" }, { headers })
+        await axios.patch("/api/users/presence", { status: "away" }, { headers: getHeaders() })
         isActiveRef.current = false
       } catch (error) {
         console.error("Failed to set away status:", error)
@@ -53,7 +61,7 @@ export default function usePresence() {
       // If was away, set back to online
       if (!isActiveRef.current) {
         try {
-          await axios.patch("/api/users/presence", { status: "online" }, { headers })
+          await axios.patch("/api/users/presence", { status: "online" }, { headers: getHeaders() })
           isActiveRef.current = true
         } catch (error) {
           console.error("Failed to set online status:", error)
@@ -110,5 +118,7 @@ export default function usePresence() {
       })
       document.removeEventListener("visibilitychange", handleVisibilityChange)
     }
-  }, [userId, csrfToken])
+    // csrfToken is intentionally excluded — it is read via csrfTokenRef so event
+    // listeners are never torn down and re-registered when the token resolves.
+  }, [userId])
 }

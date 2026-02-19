@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef } from "react"
 import { type Channel, type Members } from "pusher-js"
 
 import { pusherClient } from "@/app/lib/pusher"
@@ -14,15 +14,14 @@ interface PusherMember {
 
 const useActiveChannel = (): void => {
   const { set, add, remove, updatePresence } = useActiveList()
-  const [activeChannel, setActiveChannel] = useState<Channel | null>(null)
+  const channelRef = useRef<Channel | null>(null)
 
   useEffect(() => {
-    let channel = activeChannel
+    // Only subscribe once — channelRef guards against re-subscription on re-renders
+    if (channelRef.current) return
 
-    if (!channel) {
-      channel = pusherClient.subscribe(PUSHER_PRESENCE_CHANNEL)
-      setActiveChannel(channel)
-    }
+    const channel = pusherClient.subscribe(PUSHER_PRESENCE_CHANNEL)
+    channelRef.current = channel
 
     channel.bind("pusher:subscription_succeeded", (members: Members) => {
       const initialMembers: string[] = []
@@ -59,12 +58,12 @@ const useActiveChannel = (): void => {
     )
 
     return () => {
-      if (activeChannel) {
+      if (channelRef.current) {
         pusherClient.unsubscribe(PUSHER_PRESENCE_CHANNEL)
-        setActiveChannel(null)
+        channelRef.current = null
       }
     }
-  }, [activeChannel, set, add, remove, updatePresence])
+  }, [set, add, remove, updatePresence]) // stable Zustand actions; channelRef is intentionally excluded
 }
 
 export default useActiveChannel
