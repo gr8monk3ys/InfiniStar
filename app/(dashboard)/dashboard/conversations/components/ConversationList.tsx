@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import dynamic from "next/dynamic"
 import { useRouter } from "next/navigation"
 import { type User } from "@prisma/client"
@@ -17,11 +17,18 @@ import {
 } from "react-icons/hi2"
 import { MdOutlineGroupAdd } from "react-icons/md"
 
-import { pusherClient } from "@/app/lib/pusher"
-import { getPusherUserChannel } from "@/app/lib/pusher-channels"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/app/components/ui/dropdown-menu"
 import { useGlobalSearchContext } from "@/app/(dashboard)/dashboard/components/GlobalSearchProvider"
 import { useKeyboardShortcutsContext } from "@/app/(dashboard)/dashboard/components/KeyboardShortcutsProvider"
 import useConversation from "@/app/(dashboard)/dashboard/hooks/useConversation"
+import { usePusherConversationSync } from "@/app/(dashboard)/dashboard/hooks/usePusherConversationSync"
 import { TagBadge } from "@/app/components/tags"
 import { useTags } from "@/app/hooks/useTags"
 import { TAG_COLORS, type FullConversationType, type TagColor } from "@/app/types"
@@ -72,19 +79,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
   const [isSceneModalOpen, setIsSceneModalOpen] = useState(false)
   const [showArchived, setShowArchived] = useState(false)
   const [selectedTagId, setSelectedTagId] = useState<string | null>(null)
-  const [showTagFilter, setShowTagFilter] = useState(false)
   const [notificationPrefs, setNotificationPrefs] = useState<NotificationPreferences | null>(null)
-  const itemsRef = useRef(items)
-  const lastNotifiedMessageIdRef = useRef<Map<string, string>>(new Map())
-  const notificationPrefsRef = useRef<NotificationPreferences | null>(notificationPrefs)
-
-  useEffect(() => {
-    itemsRef.current = items
-  }, [items])
-
-  useEffect(() => {
-    notificationPrefsRef.current = notificationPrefs
-  }, [notificationPrefs])
 
   // Fetch user's tags for filtering
   const { tags: userTags } = useTags()
@@ -162,6 +157,9 @@ const ConversationList: React.FC<ConversationListProps> = ({
     }
   }, [currentUserId])
 
+  // Subscribe to Pusher user channel for real-time conversation updates
+  usePusherConversationSync({ currentUserId, items, setItems, notificationPrefs })
+
   // Filter and sort conversations based on archive, pin, and tag status
   const filteredItems = useMemo(() => {
     if (!currentUserId) return items
@@ -216,196 +214,6 @@ const ConversationList: React.FC<ConversationListProps> = ({
 
     return { pinnedItems: pinned, unpinnedItems: unpinned }
   }, [filteredItems, currentUserId])
-
-  useEffect(() => {
-    if (!currentUserId) {
-      return
-    }
-
-    // Subscribe to user-specific channel for personal updates (archive/unarchive)
-    const userChannel = getPusherUserChannel(currentUserId)
-    pusherClient.subscribe(userChannel)
-
-    const updateHandler = (conversation: FullConversationType) => {
-      const incomingMessage = conversation.messages?.[0]
-      if (incomingMessage) {
-        const existingConversation = itemsRef.current.find((c) => c.id === conversation.id)
-        const previousMessageId = existingConversation?.messages?.[0]?.id || null
-        const lastNotifiedId = lastNotifiedMessageIdRef.current.get(conversation.id) || null
-        const shouldConsiderNew =
-          incomingMessage.id !== previousMessageId && incomingMessage.id !== lastNotifiedId
-
-        if (shouldConsiderNew) {
-          lastNotifiedMessageIdRef.current.set(conversation.id, incomingMessage.id)
-
-          const prefs = notificationPrefsRef.current
-          if (
-            prefs &&
-            prefs.browserNotifications &&
-            !prefs.mutedConversations.includes(conversation.id) &&
-            typeof window !== "undefined" &&
-            "Notification" in window &&
-            Notification.permission === "granted" &&
-            typeof document !== "undefined" &&
-            document.hidden
-          ) {
-            const isAiMessage = Boolean(incomingMessage.isAI)
-            const shouldNotifyForType = isAiMessage
-              ? prefs.notifyOnAIComplete
-              : prefs.notifyOnNewMessage
-            const isOwnMessage = !isAiMessage && incomingMessage.senderId === currentUserId
-
-            if (shouldNotifyForType && !isOwnMessage) {
-              const titleFallback = isAiMessage ? "AI reply" : "New message"
-
-              let title = existingConversation?.name || titleFallback
-              if (
-                !existingConversation?.name &&
-                existingConversation &&
-                !existingConversation.isGroup
-              ) {
-                const other = existingConversation.users?.find((u) => u.id !== currentUserId)
-                title = other?.name || titleFallback
-              }
-
-              const preview = incomingMessage.image
-                ? "Sent an image"
-                : incomingMessage.body
-                  ? incomingMessage.body.slice(0, 160)
-                  : "New message"
-
-              const prefix = isAiMessage
-                ? "AI: "
-                : incomingMessage.sender?.name
-                  ? `${incomingMessage.sender.name}: `
-                  : ""
-
-              try {
-                const notification = new Notification(title, {
-                  body: `${prefix}${preview}`,
-                  icon: "/icon-192.png",
-                  tag: conversation.id,
-                })
-
-                notification.onclick = () => {
-                  try {
-                    window.focus()
-                  } catch {
-                    // ignore
-                  }
-                  router.push(`/dashboard/conversations/${conversation.id}`)
-                  notification.close()
-                }
-              } catch {
-                // Ignore notification errors (permissions, unsupported, etc.)
-              }
-            }
-          }
-        }
-      }
-
-      setItems((current) =>
-        current.map((currentConversation) => {
-          if (currentConversation.id === conversation.id) {
-            return {
-              ...currentConversation,
-              messages: conversation.messages,
-            }
-          }
-
-          return currentConversation
-        })
-      )
-    }
-
-    const newHandler = (conversation: FullConversationType) => {
-      setItems((current) => {
-        // Use native array method instead of lodash find
-        if (current.some((c) => c.id === conversation.id)) {
-          return current
-        }
-
-        return [conversation, ...current]
-      })
-    }
-
-    const removeHandler = (conversation: FullConversationType) => {
-      setItems((current) => {
-        return [...current.filter((convo) => convo.id !== conversation.id)]
-      })
-    }
-
-    // archive and unarchive carry the same payload shape — one handler covers both events
-    const archiveHandler = (conversation: FullConversationType) => {
-      setItems((current) =>
-        current.map((currentConversation) =>
-          currentConversation.id === conversation.id
-            ? {
-                ...currentConversation,
-                archivedBy: conversation.archivedBy,
-                archivedAt: conversation.archivedAt,
-              }
-            : currentConversation
-        )
-      )
-    }
-
-    // pin and unpin carry the same payload shape — one handler covers both events
-    const pinHandler = (conversation: FullConversationType) => {
-      setItems((current) =>
-        current.map((currentConversation) =>
-          currentConversation.id === conversation.id
-            ? {
-                ...currentConversation,
-                pinnedBy: conversation.pinnedBy,
-                pinnedAt: conversation.pinnedAt,
-              }
-            : currentConversation
-        )
-      )
-    }
-
-    // mute and unmute carry the same payload shape — one handler covers both events
-    const muteHandler = (conversation: FullConversationType) => {
-      setItems((current) =>
-        current.map((currentConversation) =>
-          currentConversation.id === conversation.id
-            ? {
-                ...currentConversation,
-                mutedBy: conversation.mutedBy,
-                mutedAt: conversation.mutedAt,
-              }
-            : currentConversation
-        )
-      )
-    }
-
-    pusherClient.bind("conversation:update", updateHandler)
-    pusherClient.bind("conversation:new", newHandler)
-    pusherClient.bind("conversation:remove", removeHandler)
-    pusherClient.bind("conversation:archive", archiveHandler)
-    pusherClient.bind("conversation:unarchive", archiveHandler)
-    pusherClient.bind("conversation:pin", pinHandler)
-    pusherClient.bind("conversation:unpin", pinHandler)
-    pusherClient.bind("conversation:mute", muteHandler)
-    pusherClient.bind("conversation:unmute", muteHandler)
-
-    return () => {
-      // Unsubscribe from user channel
-      pusherClient.unsubscribe(userChannel)
-
-      // Unbind all event handlers to prevent memory leaks
-      pusherClient.unbind("conversation:update", updateHandler)
-      pusherClient.unbind("conversation:new", newHandler)
-      pusherClient.unbind("conversation:remove", removeHandler)
-      pusherClient.unbind("conversation:archive", archiveHandler)
-      pusherClient.unbind("conversation:unarchive", archiveHandler)
-      pusherClient.unbind("conversation:pin", pinHandler)
-      pusherClient.unbind("conversation:unpin", pinHandler)
-      pusherClient.unbind("conversation:mute", muteHandler)
-      pusherClient.unbind("conversation:unmute", muteHandler)
-    }
-  }, [currentUserId])
 
   // Register the open new AI conversation callback
   const openNewAIConversationHandler = useCallback(() => {
@@ -587,53 +395,55 @@ const ConversationList: React.FC<ConversationListProps> = ({
                   </button>
                 </div>
               ) : (
-                <div>
-                  <button
-                    onClick={() => setShowTagFilter(!showTagFilter)}
-                    className="flex w-full items-center justify-between rounded-lg border border-border bg-secondary px-4 py-2 text-sm text-secondary-foreground transition hover:bg-accent"
-                    aria-label="Filter by tag"
-                    aria-expanded={showTagFilter}
-                  >
-                    <div className="flex items-center gap-2">
-                      <HiOutlineTag size={18} />
-                      <span>Filter by Tag</span>
-                    </div>
-                    <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                      {userTags.length}
-                    </span>
-                  </button>
-
-                  {/* Tag filter dropdown */}
-                  {showTagFilter && (
-                    <div className="mt-2 max-h-48 overflow-y-auto rounded-lg border border-border bg-card p-2">
-                      {userTags.map((tag) => {
-                        const colorScheme = TAG_COLORS[tag.color as TagColor] || TAG_COLORS.gray
-                        return (
-                          <button
-                            key={tag.id}
-                            onClick={() => {
-                              setSelectedTagId(tag.id)
-                              setShowTagFilter(false)
-                            }}
-                            className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition hover:bg-accent"
-                          >
-                            <span
-                              className={clsx(
-                                "size-3 rounded-full border",
-                                colorScheme.bg,
-                                colorScheme.border
-                              )}
-                            />
-                            <span className="truncate">{tag.name}</span>
-                            <span className="ml-auto text-xs text-muted-foreground">
-                              {tag.conversationCount}
-                            </span>
-                          </button>
-                        )
-                      })}
-                    </div>
-                  )}
-                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      className="flex w-full items-center justify-between rounded-lg border border-border bg-secondary px-4 py-2 text-sm text-secondary-foreground transition hover:bg-accent"
+                      aria-label="Filter by tag"
+                    >
+                      <div className="flex items-center gap-2">
+                        <HiOutlineTag size={18} />
+                        <span>Filter by Tag</span>
+                      </div>
+                      <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                        {userTags.length}
+                      </span>
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuLabel>Filter by tag</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onSelect={() => setSelectedTagId(null)}
+                      className={!selectedTagId ? "font-medium" : ""}
+                    >
+                      All conversations
+                    </DropdownMenuItem>
+                    {userTags.map((tag) => {
+                      const colorScheme = TAG_COLORS[tag.color as TagColor] || TAG_COLORS.gray
+                      return (
+                        <DropdownMenuItem
+                          key={tag.id}
+                          onSelect={() => setSelectedTagId(tag.id)}
+                          className={selectedTagId === tag.id ? "font-medium" : ""}
+                        >
+                          <span
+                            className={clsx(
+                              "mr-2 size-3 shrink-0 rounded-full border",
+                              colorScheme.bg,
+                              colorScheme.border
+                            )}
+                          />
+                          <span className="truncate">{tag.name}</span>
+                          <span className="ml-auto text-xs text-muted-foreground">
+                            {tag.conversationCount}
+                          </span>
+                        </DropdownMenuItem>
+                      )
+                    })}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               )}
             </div>
           )}

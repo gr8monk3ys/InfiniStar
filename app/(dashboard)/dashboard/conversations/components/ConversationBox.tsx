@@ -2,7 +2,6 @@
 
 import { memo, useCallback, useMemo } from "react"
 import { useRouter } from "next/navigation"
-import { useUser } from "@clerk/nextjs"
 import clsx from "clsx"
 import { format } from "date-fns"
 import { BsPinAngleFill } from "react-icons/bs"
@@ -20,6 +19,8 @@ interface ConversationBoxProps {
   /** Whether this conversation is selected via keyboard navigation */
   keyboardSelected?: boolean
   currentUserId?: string | null
+  /** Current user's email address, passed from ConversationList to avoid per-item Clerk subscriptions */
+  currentUserEmail?: string | null
 }
 
 const ConversationBox: React.FC<ConversationBoxProps> = ({
@@ -27,9 +28,9 @@ const ConversationBox: React.FC<ConversationBoxProps> = ({
   selected,
   keyboardSelected,
   currentUserId,
+  currentUserEmail,
 }) => {
   const otherUser = useOtherUser(data)
-  const { user } = useUser()
   const router = useRouter()
 
   const handleClick = useCallback(() => {
@@ -42,8 +43,6 @@ const ConversationBox: React.FC<ConversationBoxProps> = ({
     return messages[messages.length - 1]
   }, [data.messages])
 
-  const userEmail = useMemo(() => user?.emailAddresses[0]?.emailAddress, [user?.emailAddresses])
-
   const hasSeen = useMemo(() => {
     if (!lastMessage) {
       return false
@@ -51,14 +50,15 @@ const ConversationBox: React.FC<ConversationBoxProps> = ({
 
     const seenArray = lastMessage.seen || []
 
-    if (!userEmail) {
+    if (!currentUserEmail) {
       return false
     }
 
     return (
-      seenArray.filter((user: { email?: string | null }) => user.email === userEmail).length !== 0
+      seenArray.filter((user: { email?: string | null }) => user.email === currentUserEmail)
+        .length !== 0
     )
-  }, [userEmail, lastMessage])
+  }, [currentUserEmail, lastMessage])
 
   const lastMessageText = useMemo(() => {
     if (lastMessage?.image) {
@@ -108,7 +108,7 @@ const ConversationBox: React.FC<ConversationBoxProps> = ({
           handleClick()
         }
       }}
-      aria-label={`Open conversation with ${data.name || otherUser?.name}`}
+      aria-label={`Open conversation with ${data.name || otherUser?.name || "this contact"}`}
     >
       {data.isGroup ? <AvatarGroup users={data.users} /> : <Avatar user={otherUser} />}
       <div className="min-w-0 flex-1">

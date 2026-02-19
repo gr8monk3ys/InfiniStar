@@ -60,14 +60,13 @@ export async function processScheduledDeletions(): Promise<{
   })
 
   for (const user of usersToDelete) {
+    // Capture email and name before deletion — the user record will no longer
+    // exist after deleteUserAccount() completes, so we must read these fields now.
+    const userEmail = user.email
+    const userName = user.name
+
     try {
       await deleteUserAccount(user.id)
-
-      // Send confirmation email if we have the email
-      if (user.email) {
-        await sendAccountDeletedEmail(user.email, user.name || "User")
-      }
-
       processed++
       console.warn(`[ACCOUNT_DELETION] Successfully deleted user ${user.id}`)
     } catch (error) {
@@ -75,6 +74,19 @@ export async function processScheduledDeletions(): Promise<{
       const errorMessage = error instanceof Error ? error.message : "Unknown error"
       errors.push(`Failed to delete user ${user.id}: ${errorMessage}`)
       console.error(`[ACCOUNT_DELETION] Failed to delete user ${user.id}:`, error)
+      // Skip the confirmation email — the user was not deleted.
+      continue
+    }
+
+    // Send confirmation email as a best-effort step.  A failed email does NOT
+    // mean the deletion failed — the account has already been removed.
+    if (userEmail) {
+      try {
+        await sendAccountDeletedEmail(userEmail, userName || "User")
+      } catch (emailError) {
+        console.error(`[ACCOUNT_DELETION] Confirmation email failed for ${userEmail}:`, emailError)
+        // Do NOT increment `failed` — the deletion itself succeeded.
+      }
     }
   }
 
@@ -144,7 +156,20 @@ export async function deleteUserAccount(userId: string): Promise<void> {
       where: { userId },
     })
 
-    // 5. Finally, delete the user record
+    // 5. Remove user from conversation array columns (archivedBy, pinnedBy, mutedBy)
+    // Leaving the userId in these arrays would create ghost entries that can never
+    // be cleaned up since the user record no longer exists after deletion.
+    await tx.$executeRaw`
+      UPDATE "conversations"
+      SET "archivedBy" = array_remove("archivedBy", ${userId}),
+          "pinnedBy" = array_remove("pinnedBy", ${userId}),
+          "mutedBy" = array_remove("mutedBy", ${userId})
+      WHERE "archivedBy" @> ARRAY[${userId}]::text[]
+         OR "pinnedBy" @> ARRAY[${userId}]::text[]
+         OR "mutedBy" @> ARRAY[${userId}]::text[]
+    `
+
+    // 6. Finally, delete the user record
     await tx.user.delete({
       where: { id: userId },
     })
