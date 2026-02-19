@@ -85,7 +85,7 @@ interface MemoryManagerProps {
  * - View capacity usage
  */
 const MemoryManager: React.FC<MemoryManagerProps> = ({ className }) => {
-  const { memories, capacity, isLoading, createMemory, deleteMemory } = useMemories()
+  const { memories, capacity, isLoading, createMemory, updateMemory, deleteMemory } = useMemories()
 
   // Form state for creating/editing memories
   const [showForm, setShowForm] = useState(false)
@@ -125,24 +125,43 @@ const MemoryManager: React.FC<MemoryManagerProps> = ({ className }) => {
 
     setIsSubmitting(true)
 
-    const result = await createMemory(
-      formKey
-        .trim()
-        .toLowerCase()
-        .replace(/[^a-z0-9_]/g, "_"),
-      formContent.trim(),
-      {
+    let result
+    if (editingMemory) {
+      // Update existing memory — key is fixed, only content/category/importance change
+      result = await updateMemory(editingMemory.key, {
+        content: formContent.trim(),
         category: formCategory,
         importance: formImportance,
-      }
-    )
+      })
+    } else {
+      result = await createMemory(
+        formKey
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z0-9_]/g, "_"),
+        formContent.trim(),
+        {
+          category: formCategory,
+          importance: formImportance,
+        }
+      )
+    }
 
     if (result) {
       resetForm()
     }
 
     setIsSubmitting(false)
-  }, [formKey, formContent, formCategory, formImportance, createMemory, resetForm])
+  }, [
+    formKey,
+    formContent,
+    formCategory,
+    formImportance,
+    editingMemory,
+    createMemory,
+    updateMemory,
+    resetForm,
+  ])
 
   const handleDelete = useCallback(async () => {
     if (!memoryToDelete) return

@@ -73,14 +73,17 @@ export function AutoDeletePreview({
               leaveFrom="opacity-100 scale-100"
               leaveTo="opacity-0 scale-95"
             >
-              <Dialog.Panel className="w-full max-w-2xl overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all">
+              <Dialog.Panel className="w-full max-w-2xl overflow-hidden rounded-2xl bg-card p-6 text-left align-middle shadow-xl transition-all">
                 {/* Header */}
                 <div className="flex items-start justify-between">
                   <div>
-                    <Dialog.Title as="h3" className="text-lg font-semibold leading-6 text-gray-900">
+                    <Dialog.Title
+                      as="h3"
+                      className="text-lg font-semibold leading-6 text-foreground"
+                    >
                       Auto-Delete Preview
                     </Dialog.Title>
-                    <p className="mt-1 text-sm text-gray-500">
+                    <p className="mt-1 text-sm text-muted-foreground">
                       The following conversations will be deleted based on your settings.
                     </p>
                   </div>
@@ -88,7 +91,7 @@ export function AutoDeletePreview({
                     type="button"
                     onClick={handleClose}
                     disabled={isDeleting}
-                    className="rounded-md text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-sky-500 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="rounded-md text-muted-foreground hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                     aria-label="Close preview"
                   >
                     <HiXMark className="size-6" />
@@ -96,10 +99,10 @@ export function AutoDeletePreview({
                 </div>
 
                 {/* Summary */}
-                <div className="mt-4 rounded-lg border border-yellow-200 bg-yellow-50 p-4">
+                <div className="mt-4 rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-4">
                   <div className="flex items-center gap-2">
-                    <HiExclamationTriangle className="size-5 text-yellow-600" />
-                    <span className="text-sm font-medium text-yellow-800">
+                    <HiExclamationTriangle className="size-5 text-yellow-600 dark:text-yellow-400" />
+                    <span className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
                       {totalCount === 0
                         ? "No conversations match the deletion criteria"
                         : totalCount === 1
@@ -107,7 +110,7 @@ export function AutoDeletePreview({
                           : `${totalCount} conversations will be deleted`}
                     </span>
                   </div>
-                  <p className="mt-2 text-sm text-yellow-700">
+                  <p className="mt-2 text-sm text-yellow-700 dark:text-yellow-300">
                     Conversations older than {retentionDays} days without activity will be
                     permanently deleted.
                   </p>
@@ -120,21 +123,21 @@ export function AutoDeletePreview({
                       {conversations.map((conversation) => (
                         <div
                           key={conversation.id}
-                          className="flex items-center justify-between rounded-lg border border-gray-200 p-3"
+                          className="flex items-center justify-between rounded-lg border border-border p-3"
                         >
                           <div className="flex items-center gap-3">
-                            <div className="flex size-10 items-center justify-center rounded-full bg-gray-100">
+                            <div className="flex size-10 items-center justify-center rounded-full bg-muted">
                               {conversation.isAI ? (
                                 <HiCpuChip className="size-5 text-purple-600" />
                               ) : (
-                                <HiChatBubbleLeftRight className="size-5 text-sky-600" />
+                                <HiChatBubbleLeftRight className="size-5 text-primary" />
                               )}
                             </div>
                             <div>
-                              <p className="text-sm font-medium text-gray-900">
+                              <p className="text-sm font-medium text-foreground">
                                 {conversation.name || "Untitled Conversation"}
                               </p>
-                              <div className="flex items-center gap-2 text-xs text-gray-500">
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
                                 <span>
                                   {conversation.messageCount}{" "}
                                   {conversation.messageCount === 1 ? "message" : "messages"}
@@ -149,7 +152,7 @@ export function AutoDeletePreview({
                           </div>
                           <div className="flex items-center gap-2">
                             {conversation.isArchived && (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-1 text-xs text-gray-600">
+                              <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-1 text-xs text-muted-foreground">
                                 <HiArchiveBox className="size-3" />
                                 Archived
                               </span>
@@ -169,13 +172,13 @@ export function AutoDeletePreview({
                                   </span>
                                 ))}
                                 {conversation.tags.length > 2 && (
-                                  <span className="inline-flex rounded-full bg-gray-100 px-2 py-1 text-xs text-gray-600">
+                                  <span className="inline-flex rounded-full bg-muted px-2 py-1 text-xs text-muted-foreground">
                                     +{conversation.tags.length - 2}
                                   </span>
                                 )}
                               </div>
                             )}
-                            <span className="text-xs text-gray-400">
+                            <span className="text-xs text-muted-foreground">
                               {conversation.daysSinceLastMessage}d ago
                             </span>
                           </div>
@@ -187,12 +190,12 @@ export function AutoDeletePreview({
 
                 {/* Empty State */}
                 {conversations.length === 0 && (
-                  <div className="mt-4 rounded-lg border-2 border-dashed border-gray-200 p-8 text-center">
-                    <HiChatBubbleLeftRight className="mx-auto size-12 text-gray-300" />
-                    <p className="mt-2 text-sm text-gray-500">
+                  <div className="mt-4 rounded-lg border-2 border-dashed border-border p-8 text-center">
+                    <HiChatBubbleLeftRight className="mx-auto size-12 text-muted-foreground/30" />
+                    <p className="mt-2 text-sm text-muted-foreground">
                       No conversations match your auto-delete criteria.
                     </p>
-                    <p className="mt-1 text-xs text-gray-400">
+                    <p className="mt-1 text-xs text-muted-foreground/70">
                       All your conversations are within the retention period or excluded by tags.
                     </p>
                   </div>
@@ -204,7 +207,7 @@ export function AutoDeletePreview({
                     type="button"
                     onClick={handleClose}
                     disabled={isDeleting}
-                    className="inline-flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+                    className="inline-flex w-full justify-center rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-foreground shadow-sm hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
                   >
                     Close
                   </button>
@@ -214,7 +217,7 @@ export function AutoDeletePreview({
                       onClick={onConfirmDelete}
                       disabled={isDeleting}
                       aria-busy={isDeleting}
-                      className="inline-flex w-full justify-center rounded-md border border-transparent bg-red-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+                      className="inline-flex w-full justify-center rounded-md border border-transparent bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground shadow-sm hover:bg-destructive/90 focus:outline-none focus:ring-2 focus:ring-destructive focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
                     >
                       {isDeleting
                         ? "Deleting..."

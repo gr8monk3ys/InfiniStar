@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Plus, X } from "lucide-react"
 import { z } from "zod"
 
@@ -27,6 +27,15 @@ export function ShareInviteForm({
 }: ShareInviteFormProps) {
   const [inputValue, setInputValue] = useState("")
   const [error, setError] = useState<string | null>(null)
+  const errorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (errorTimeoutRef.current) {
+        clearTimeout(errorTimeoutRef.current)
+      }
+    }
+  }, [])
 
   const handleAddEmail = () => {
     const email = inputValue.trim().toLowerCase()
@@ -99,7 +108,7 @@ export function ShareInviteForm({
 
     if (invalidEmails.length > 0) {
       setError(`${invalidEmails.length} invalid email(s) skipped`)
-      setTimeout(() => setError(null), 3000)
+      errorTimeoutRef.current = setTimeout(() => setError(null), 3000)
     }
   }
 

@@ -62,6 +62,15 @@ interface UseMemoriesReturn {
       expiresAt?: string | null
     }
   ) => Promise<AIMemory | null>
+  updateMemory: (
+    key: string,
+    options: {
+      content?: string
+      category?: MemoryCategory
+      importance?: number
+      expiresAt?: string | null
+    }
+  ) => Promise<AIMemory | null>
   deleteMemory: (key: string) => Promise<boolean>
   extractMemories: (conversationId: string, autoSave?: boolean) => Promise<ExtractedMemory[] | null>
 }
@@ -168,6 +177,42 @@ export function useMemories(options?: UseMemoriesOptions): UseMemoriesReturn {
     [capacity]
   )
 
+  const updateMemory = useCallback(
+    async (
+      key: string,
+      options: {
+        content?: string
+        category?: MemoryCategory
+        importance?: number
+        expiresAt?: string | null
+      }
+    ): Promise<AIMemory | null> => {
+      const loader = createLoadingToast("Updating memory...")
+
+      try {
+        const response = await api.patch<MemoryResponse>(
+          `/api/ai/memory/${encodeURIComponent(key)}`,
+          options,
+          { showErrorToast: false }
+        )
+
+        const updatedMemory = response.memory
+
+        setMemories((prev) =>
+          prev.map((m) => (m.key === key ? { ...updatedMemory, isExpired: false } : m))
+        )
+
+        loader.success(response.message || "Memory updated")
+        return updatedMemory
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Failed to update memory"
+        loader.error(message)
+        return null
+      }
+    },
+    []
+  )
+
   const deleteMemory = useCallback(async (key: string): Promise<boolean> => {
     const loader = createLoadingToast("Deleting memory...")
 
@@ -240,6 +285,7 @@ export function useMemories(options?: UseMemoriesOptions): UseMemoriesReturn {
     error,
     refetch: fetchMemories,
     createMemory,
+    updateMemory,
     deleteMemory,
     extractMemories,
   }

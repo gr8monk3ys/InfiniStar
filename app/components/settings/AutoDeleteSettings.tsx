@@ -225,10 +225,10 @@ export function AutoDeleteSettings() {
   if (isLoading) {
     return (
       <div className="animate-pulse space-y-4">
-        <div className="h-4 w-48 rounded bg-gray-200" />
-        <div className="h-10 w-full rounded bg-gray-200" />
-        <div className="h-4 w-32 rounded bg-gray-200" />
-        <div className="h-10 w-full rounded bg-gray-200" />
+        <div className="h-4 w-48 rounded bg-muted" />
+        <div className="h-10 w-full rounded bg-muted" />
+        <div className="h-4 w-32 rounded bg-muted" />
+        <div className="h-10 w-full rounded bg-muted" />
       </div>
     )
   }
@@ -237,20 +237,23 @@ export function AutoDeleteSettings() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h3 className="text-lg font-medium text-gray-900">Auto-Delete Conversations</h3>
-        <p className="mt-1 text-sm text-gray-600">
+        <h3 className="text-lg font-medium text-foreground">Auto-Delete Conversations</h3>
+        <p className="mt-1 text-sm text-muted-foreground">
           Automatically delete old conversations to keep your inbox clean and protect your privacy.
         </p>
       </div>
 
       {/* Enable/Disable Toggle */}
-      <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+      <div className="rounded-lg border border-border bg-muted p-4">
         <div className="flex items-center justify-between">
           <div className="flex-1">
-            <label htmlFor="autoDeleteEnabled" className="block text-sm font-medium text-gray-900">
+            <label
+              htmlFor="autoDeleteEnabled"
+              className="block text-sm font-medium text-foreground"
+            >
               Enable Auto-Delete
             </label>
-            <p className="mt-1 text-sm text-gray-500">
+            <p className="mt-1 text-sm text-muted-foreground">
               When enabled, conversations older than the retention period will be automatically
               deleted.
             </p>
@@ -262,13 +265,13 @@ export function AutoDeleteSettings() {
             aria-checked={enabled}
             onClick={() => setEnabled(!enabled)}
             disabled={isSaving}
-            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
-              enabled ? "bg-sky-600" : "bg-gray-200"
+            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
+              enabled ? "bg-primary" : "bg-muted-foreground/30"
             }`}
           >
             <span className="sr-only">Enable auto-delete</span>
             <span
-              className={`pointer-events-none inline-block size-5 rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+              className={`pointer-events-none inline-block size-5 rounded-full bg-background shadow ring-0 transition duration-200 ease-in-out ${
                 enabled ? "translate-x-5" : "translate-x-0"
               }`}
             />
@@ -297,7 +300,7 @@ export function AutoDeleteSettings() {
                   type="button"
                   onClick={handlePreview}
                   disabled={isPreviewLoading || isSaving}
-                  className="inline-flex items-center gap-2 rounded-md border border-yellow-300 bg-white px-3 py-1.5 text-sm font-medium text-yellow-800 hover:bg-yellow-50 focus:outline-none focus:ring-2 focus:ring-yellow-500 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex items-center gap-2 rounded-md border border-yellow-300 bg-card px-3 py-1.5 text-sm font-medium text-yellow-800 hover:bg-yellow-50 focus:outline-none focus:ring-2 focus:ring-yellow-500 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <HiEye className="size-4" />
                   Preview
@@ -314,7 +317,7 @@ export function AutoDeleteSettings() {
                   type="button"
                   onClick={handleCancelConfirmation}
                   disabled={isSaving}
-                  className="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex items-center rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Cancel
                 </button>
@@ -329,10 +332,10 @@ export function AutoDeleteSettings() {
         <>
           {/* Retention Period */}
           <div>
-            <label htmlFor="retentionPeriod" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="retentionPeriod" className="block text-sm font-medium text-foreground">
               Retention Period
             </label>
-            <p className="mt-1 text-sm text-gray-500">
+            <p className="mt-1 text-sm text-muted-foreground">
               Delete conversations with no activity for longer than this period.
             </p>
             <div className="mt-2 max-w-xs">
@@ -345,12 +348,15 @@ export function AutoDeleteSettings() {
           </div>
 
           {/* Include Archived */}
-          <div className="flex items-center justify-between rounded-lg border border-gray-200 p-4">
+          <div className="flex items-center justify-between rounded-lg border border-border p-4">
             <div className="flex-1">
-              <label htmlFor="includeArchived" className="block text-sm font-medium text-gray-700">
+              <label
+                htmlFor="includeArchived"
+                className="block text-sm font-medium text-foreground"
+              >
                 Include Archived Conversations
               </label>
-              <p className="mt-1 text-sm text-gray-500">
+              <p className="mt-1 text-sm text-muted-foreground">
                 When enabled, archived conversations will also be deleted after the retention
                 period.
               </p>
@@ -362,13 +368,13 @@ export function AutoDeleteSettings() {
               aria-checked={includeArchived}
               onClick={() => setIncludeArchived(!includeArchived)}
               disabled={isSaving || !enabled}
-              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
-                includeArchived && enabled ? "bg-sky-600" : "bg-gray-200"
+              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
+                includeArchived && enabled ? "bg-primary" : "bg-muted-foreground/30"
               }`}
             >
               <span className="sr-only">Include archived conversations</span>
               <span
-                className={`pointer-events-none inline-block size-5 rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                className={`pointer-events-none inline-block size-5 rounded-full bg-background shadow ring-0 transition duration-200 ease-in-out ${
                   includeArchived && enabled ? "translate-x-5" : "translate-x-0"
                 }`}
               />
@@ -378,10 +384,10 @@ export function AutoDeleteSettings() {
           {/* Exclude Tags */}
           {tags.length > 0 && (
             <div>
-              <label className="block text-sm font-medium text-gray-700">
+              <label className="block text-sm font-medium text-foreground">
                 Exclude Tagged Conversations
               </label>
-              <p className="mt-1 text-sm text-gray-500">
+              <p className="mt-1 text-sm text-muted-foreground">
                 Conversations with these tags will never be auto-deleted.
               </p>
               <div className="mt-3 flex flex-wrap gap-2">
@@ -393,10 +399,10 @@ export function AutoDeleteSettings() {
                       type="button"
                       onClick={() => handleTagToggle(tag.id)}
                       disabled={isSaving || !enabled}
-                      className={`inline-flex items-center rounded-full px-3 py-1.5 text-sm font-medium transition-all focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
+                      className={`inline-flex items-center rounded-full px-3 py-1.5 text-sm font-medium transition-all focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
                         isExcluded
-                          ? "bg-sky-100 text-sky-800 ring-2 ring-sky-500"
-                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                          ? "bg-primary/10 text-primary ring-2 ring-primary"
+                          : "bg-muted text-foreground hover:bg-muted/80"
                       }`}
                       aria-pressed={isExcluded}
                     >
@@ -405,13 +411,13 @@ export function AutoDeleteSettings() {
                         style={{ backgroundColor: tag.color }}
                       />
                       {tag.name}
-                      {isExcluded && <span className="ml-1.5 text-sky-600">&#10003;</span>}
+                      {isExcluded && <span className="ml-1.5 text-primary">&#10003;</span>}
                     </button>
                   )
                 })}
               </div>
               {excludedTagIds.length > 0 && (
-                <p className="mt-2 text-xs text-gray-500">
+                <p className="mt-2 text-xs text-muted-foreground">
                   {excludedTagIds.length} tag{excludedTagIds.length === 1 ? "" : "s"} excluded from
                   auto-delete
                 </p>
@@ -421,7 +427,7 @@ export function AutoDeleteSettings() {
 
           {/* Last Run Info */}
           {lastRunDate && (
-            <div className="flex items-center gap-2 text-sm text-gray-500">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <HiClock className="size-4" />
               <span>
                 Last auto-delete run: {format(new Date(lastRunDate), "MMM d, yyyy 'at' h:mm a")}
@@ -430,10 +436,10 @@ export function AutoDeleteSettings() {
           )}
 
           {/* Info Box */}
-          <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+          <div className="rounded-lg border border-primary/20 bg-primary/10 p-4">
             <div className="flex items-start gap-3">
-              <HiInformationCircle className="mt-0.5 size-5 shrink-0 text-blue-600" />
-              <div className="text-sm text-blue-700">
+              <HiInformationCircle className="mt-0.5 size-5 shrink-0 text-primary" />
+              <div className="text-sm text-primary">
                 <p className="font-medium">How Auto-Delete Works</p>
                 <ul className="mt-2 list-inside list-disc space-y-1">
                   <li>
@@ -452,7 +458,7 @@ export function AutoDeleteSettings() {
       )}
 
       {/* Actions */}
-      <div className="flex flex-col gap-3 border-t border-gray-200 pt-6 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex gap-3">
           {enabled && (
             <>
@@ -460,7 +466,7 @@ export function AutoDeleteSettings() {
                 type="button"
                 onClick={handlePreview}
                 disabled={isPreviewLoading || isSaving}
-                className="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-foreground shadow-sm hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <HiEye className="size-4" />
                 {isPreviewLoading ? "Loading..." : "Preview"}
@@ -469,7 +475,7 @@ export function AutoDeleteSettings() {
                 type="button"
                 onClick={handleRunNow}
                 disabled={isDeleting || isSaving}
-                className="inline-flex items-center gap-2 rounded-md border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-700 shadow-sm hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-md border border-destructive/30 bg-card px-4 py-2 text-sm font-medium text-destructive shadow-sm hover:bg-destructive/10 focus:outline-none focus:ring-2 focus:ring-destructive focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <HiTrash className="size-4" />
                 {isDeleting ? "Deleting..." : "Run Now"}
@@ -483,7 +489,7 @@ export function AutoDeleteSettings() {
             onClick={handleSave}
             disabled={isSaving || !hasChanges}
             aria-busy={isSaving}
-            className="inline-flex items-center justify-center rounded-md bg-sky-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isSaving ? "Saving..." : "Save Changes"}
           </button>

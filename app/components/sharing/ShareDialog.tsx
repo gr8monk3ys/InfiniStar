@@ -119,6 +119,8 @@ export function ShareDialog({
       toast.success("Share link created")
     } catch (error) {
       console.error("Failed to create share:", error)
+      const message = error instanceof Error ? error.message : "Failed to create share link"
+      toast.error(message)
     } finally {
       setIsCreating(false)
     }
@@ -188,6 +190,8 @@ export function ShareDialog({
       setEditingShare(null)
     } catch (error) {
       console.error("Failed to update share:", error)
+      const message = error instanceof Error ? error.message : "Failed to update share link"
+      toast.error(message)
     } finally {
       setIsCreating(false)
     }

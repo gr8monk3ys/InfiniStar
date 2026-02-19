@@ -54,26 +54,26 @@ export function ProfileTabContent({
     <form onSubmit={onSubmit} className="space-y-6" aria-label="Profile information form">
       {/* Avatar */}
       <div className="flex items-center gap-4">
-        <div className="relative size-20 overflow-hidden rounded-full bg-gray-200">
+        <div className="relative size-20 overflow-hidden rounded-full bg-muted">
           {user?.image ? (
             <Image
               src={user.image}
-              alt={`${user.name}'s profile picture`}
+              alt={`${user.name ?? "User"}'s profile picture`}
               fill
               className="object-cover"
             />
           ) : (
-            <div className="flex size-full items-center justify-center text-2xl font-semibold text-gray-500">
+            <div className="flex size-full items-center justify-center text-2xl font-semibold text-muted-foreground">
               {user?.name?.charAt(0).toUpperCase() || "U"}
             </div>
           )}
         </div>
         <div className="flex flex-col gap-2">
           <div>
-            <p className="text-sm font-medium text-gray-900">{user?.name}</p>
-            <p className="text-sm text-gray-500">{user?.email}</p>
+            <p className="text-sm font-medium text-foreground">{user?.name}</p>
+            <p className="text-sm text-muted-foreground">{user?.email}</p>
             {(user?.customStatus || user?.customStatusEmoji) && (
-              <p className="mt-1 text-sm text-gray-600">
+              <p className="mt-1 text-sm text-muted-foreground">
                 {user.customStatusEmoji && <span className="mr-1">{user.customStatusEmoji}</span>}
                 {user.customStatus}
               </p>
@@ -84,7 +84,7 @@ export function ProfileTabContent({
               options={{ maxFiles: 1, cropping: true, croppingAspectRatio: 1 }}
               onUpload={onAvatarUpload}
               uploadPreset="pgc9ehd5"
-              className="flex items-center gap-2 rounded-md bg-gray-100 px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-200"
+              className="flex items-center gap-2 rounded-md bg-muted px-3 py-2 text-sm font-medium text-foreground transition hover:bg-muted/80"
             >
               <HiCamera size={16} />
               Change Avatar
@@ -92,7 +92,7 @@ export function ProfileTabContent({
             <button
               type="button"
               onClick={onOpenStatusModal}
-              className="flex items-center gap-2 rounded-md bg-gray-100 px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-200"
+              className="flex items-center gap-2 rounded-md bg-muted px-3 py-2 text-sm font-medium text-foreground transition hover:bg-muted/80"
             >
               <HiChatBubbleLeftRight size={16} />
               Set Status
@@ -103,7 +103,7 @@ export function ProfileTabContent({
 
       {/* Name */}
       <div>
-        <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+        <label htmlFor="name" className="block text-sm font-medium text-foreground">
           Display Name
         </label>
         <input
@@ -113,7 +113,7 @@ export function ProfileTabContent({
           onChange={(e) => setName(e.target.value)}
           required
           disabled={isLoading}
-          className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 disabled:cursor-not-allowed disabled:bg-gray-100"
+          className="mt-1 block w-full rounded-md border border-border bg-background px-3 py-2 text-foreground shadow-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:bg-muted"
           placeholder="Your name"
           maxLength={100}
         />
@@ -121,7 +121,7 @@ export function ProfileTabContent({
 
       {/* Bio */}
       <div>
-        <label htmlFor="bio" className="block text-sm font-medium text-gray-700">
+        <label htmlFor="bio" className="block text-sm font-medium text-foreground">
           Bio
         </label>
         <textarea
@@ -130,16 +130,16 @@ export function ProfileTabContent({
           onChange={(e) => setBio(e.target.value)}
           disabled={isLoading}
           rows={4}
-          className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 disabled:cursor-not-allowed disabled:bg-gray-100"
+          className="mt-1 block w-full rounded-md border border-border bg-background px-3 py-2 text-foreground shadow-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:bg-muted"
           placeholder="Tell us about yourself..."
           maxLength={500}
         />
-        <p className="mt-1 text-sm text-gray-500">{bio.length}/500 characters</p>
+        <p className="mt-1 text-sm text-muted-foreground">{bio.length}/500 characters</p>
       </div>
 
       {/* Location */}
       <div>
-        <label htmlFor="location" className="block text-sm font-medium text-gray-700">
+        <label htmlFor="location" className="block text-sm font-medium text-foreground">
           Location
         </label>
         <input
@@ -148,7 +148,7 @@ export function ProfileTabContent({
           value={location}
           onChange={(e) => setLocation(e.target.value)}
           disabled={isLoading}
-          className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 disabled:cursor-not-allowed disabled:bg-gray-100"
+          className="mt-1 block w-full rounded-md border border-border bg-background px-3 py-2 text-foreground shadow-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:bg-muted"
           placeholder="e.g., San Francisco, CA"
           maxLength={100}
         />
@@ -156,12 +156,12 @@ export function ProfileTabContent({
 
       {/* Website */}
       <div>
-        <label htmlFor="website" className="block text-sm font-medium text-gray-700">
+        <label htmlFor="website" className="block text-sm font-medium text-foreground">
           Website
         </label>
         <div className="relative mt-1">
           <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-            <HiGlobeAlt className="size-5 text-gray-400" aria-hidden="true" />
+            <HiGlobeAlt className="size-5 text-muted-foreground" aria-hidden="true" />
           </div>
           <input
             id="website"
@@ -169,7 +169,7 @@ export function ProfileTabContent({
             value={website}
             onChange={(e) => setWebsite(e.target.value)}
             disabled={isLoading}
-            className="block w-full rounded-md border border-gray-300 py-2 pl-10 pr-3 shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 disabled:cursor-not-allowed disabled:bg-gray-100"
+            className="block w-full rounded-md border border-border bg-background py-2 pl-10 pr-3 text-foreground shadow-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:bg-muted"
             placeholder="https://yourwebsite.com"
             maxLength={200}
           />
@@ -182,7 +182,7 @@ export function ProfileTabContent({
           type="submit"
           disabled={isLoading}
           aria-busy={isLoading}
-          className="rounded-md bg-sky-600 px-4 py-2 text-white hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-md bg-primary px-4 py-2 text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isLoading ? "Saving..." : "Save Changes"}
         </button>

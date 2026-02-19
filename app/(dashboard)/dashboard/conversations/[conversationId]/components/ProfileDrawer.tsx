@@ -124,16 +124,20 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = memo(function ProfileDrawer(
   }, [data.mutedBy, currentUserId])
 
   const handleArchiveToggle = async () => {
+    if (!csrfToken) {
+      toast.error("Security token not available. Please refresh the page.")
+      return
+    }
     setIsArchiving(true)
     try {
       if (isArchived) {
         await api.delete(`/api/conversations/${data.id}/archive`, {
-          headers: csrfToken ? { "X-CSRF-Token": csrfToken } : {},
+          headers: { "X-CSRF-Token": csrfToken },
         })
         toast.success("Conversation unarchived")
       } else {
         await api.post(`/api/conversations/${data.id}/archive`, undefined, {
-          headers: csrfToken ? { "X-CSRF-Token": csrfToken } : {},
+          headers: { "X-CSRF-Token": csrfToken },
         })
         toast.success("Conversation archived")
       }
@@ -146,16 +150,20 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = memo(function ProfileDrawer(
   }
 
   const handlePinToggle = async () => {
+    if (!csrfToken) {
+      toast.error("Security token not available. Please refresh the page.")
+      return
+    }
     setIsPinning(true)
     try {
       if (isPinned) {
         await api.delete(`/api/conversations/${data.id}/pin`, {
-          headers: csrfToken ? { "X-CSRF-Token": csrfToken } : {},
+          headers: { "X-CSRF-Token": csrfToken },
         })
         toast.success("Conversation unpinned")
       } else {
         await api.post(`/api/conversations/${data.id}/pin`, undefined, {
-          headers: csrfToken ? { "X-CSRF-Token": csrfToken } : {},
+          headers: { "X-CSRF-Token": csrfToken },
         })
         toast.success("Conversation pinned")
       }
@@ -168,16 +176,20 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = memo(function ProfileDrawer(
   }
 
   const handleMuteToggle = async () => {
+    if (!csrfToken) {
+      toast.error("Security token not available. Please refresh the page.")
+      return
+    }
     setIsMuting(true)
     try {
       if (isMuted) {
         await api.delete(`/api/conversations/${data.id}/mute`, {
-          headers: csrfToken ? { "X-CSRF-Token": csrfToken } : {},
+          headers: { "X-CSRF-Token": csrfToken },
         })
         toast.success("Conversation unmuted")
       } else {
         await api.post(`/api/conversations/${data.id}/mute`, undefined, {
-          headers: csrfToken ? { "X-CSRF-Token": csrfToken } : {},
+          headers: { "X-CSRF-Token": csrfToken },
         })
         toast.success("Conversation muted")
       }
@@ -191,6 +203,10 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = memo(function ProfileDrawer(
 
   const handleBlockConfirm = async () => {
     if (!otherUser?.id) return
+    if (!csrfToken) {
+      toast.error("Security token not available. Please refresh the page.")
+      return
+    }
     try {
       await api.post(
         "/api/moderation/blocks",
@@ -198,7 +214,7 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = memo(function ProfileDrawer(
           blockedUserId: otherUser.id,
           reason: blockReason.trim() || undefined,
         },
-        { headers: csrfToken ? { "X-CSRF-Token": csrfToken } : {} }
+        { headers: { "X-CSRF-Token": csrfToken } }
       )
       toast.success("User blocked")
     } catch (error) {
@@ -212,6 +228,10 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = memo(function ProfileDrawer(
 
   const handleReportConfirm = async () => {
     if (!otherUser?.id) return
+    if (!csrfToken) {
+      toast.error("Security token not available. Please refresh the page.")
+      return
+    }
     try {
       await api.post(
         "/api/moderation/reports",
@@ -221,7 +241,7 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = memo(function ProfileDrawer(
           reason: "OTHER",
           details: reportReason.trim() || undefined,
         },
-        { headers: csrfToken ? { "X-CSRF-Token": csrfToken } : {} }
+        { headers: { "X-CSRF-Token": csrfToken } }
       )
       toast.success("Report submitted")
     } catch (error) {

@@ -109,28 +109,28 @@ export function NotificationsTabContent({
     return () => {
       cancelled = true
     }
-  }, [browserNotifications, isLoading])
+  }, [browserNotifications])
 
   return (
     <form onSubmit={onSubmit} className="space-y-6" aria-label="Notification preferences form">
       <div>
-        <h3 className="text-lg font-medium text-gray-900">Notification Preferences</h3>
-        <p className="mt-1 text-sm text-gray-600">
+        <h3 className="text-lg font-medium text-foreground">Notification Preferences</h3>
+        <p className="mt-1 text-sm text-muted-foreground">
           Control how and when you receive notifications from InfiniStar.
         </p>
       </div>
 
       {/* Browser Notifications */}
-      <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+      <div className="rounded-lg border border-border bg-muted p-4">
         <div className="flex items-center justify-between">
           <div className="flex-1">
             <label
               htmlFor="browserNotifications"
-              className="block text-sm font-medium text-gray-900"
+              className="block text-sm font-medium text-foreground"
             >
               Browser Notifications
             </label>
-            <p className="mt-1 text-sm text-gray-500">
+            <p className="mt-1 text-sm text-muted-foreground">
               Show notifications while this app is open (best-effort) and enable background push on
               supported browsers. You may need to grant permission in your browser.
             </p>
@@ -163,13 +163,13 @@ export function NotificationsTabContent({
               setBrowserNotifications(true)
             }}
             disabled={isLoading}
-            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
-              browserNotifications ? "bg-sky-600" : "bg-gray-200"
+            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
+              browserNotifications ? "bg-primary" : "bg-input"
             }`}
           >
             <span className="sr-only">Enable browser notifications</span>
             <span
-              className={`pointer-events-none inline-block size-5 rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+              className={`pointer-events-none inline-block size-5 rounded-full bg-background shadow ring-0 transition duration-200 ease-in-out ${
                 browserNotifications ? "translate-x-5" : "translate-x-0"
               }`}
             />
@@ -178,14 +178,14 @@ export function NotificationsTabContent({
       </div>
 
       {/* Background Push (Web Push) */}
-      <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+      <div className="rounded-lg border border-border bg-muted p-4">
         <div className="flex items-center justify-between gap-4">
           <div className="flex-1">
-            <h4 className="text-sm font-medium text-gray-900">Background Push (Beta)</h4>
-            <p className="mt-1 text-sm text-gray-500">
+            <h4 className="text-sm font-medium text-foreground">Background Push (Beta)</h4>
+            <p className="mt-1 text-sm text-muted-foreground">
               Receive notifications even when the app is closed (requires service worker support).
             </p>
-            <p className="mt-2 text-xs text-gray-500">
+            <p className="mt-2 text-xs text-muted-foreground">
               Status:{" "}
               {pushStatusLoading
                 ? "Checking..."
@@ -230,7 +230,7 @@ export function NotificationsTabContent({
                 setPushTestLoading(false)
               }
             }}
-            className="rounded-md bg-sky-600 px-3 py-2 text-sm text-white hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-md bg-primary px-3 py-2 text-sm text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {pushTestLoading ? "Sending..." : "Send Test"}
           </button>
@@ -238,13 +238,16 @@ export function NotificationsTabContent({
       </div>
 
       {/* Email Notifications Master Toggle */}
-      <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+      <div className="rounded-lg border border-border bg-muted p-4">
         <div className="flex items-center justify-between">
           <div className="flex-1">
-            <label htmlFor="emailNotifications" className="block text-sm font-medium text-gray-900">
+            <label
+              htmlFor="emailNotifications"
+              className="block text-sm font-medium text-foreground"
+            >
               Email Notifications
             </label>
-            <p className="mt-1 text-sm text-gray-500">
+            <p className="mt-1 text-sm text-muted-foreground">
               Receive email notifications for important updates and messages.
             </p>
           </div>
@@ -255,13 +258,13 @@ export function NotificationsTabContent({
             aria-checked={emailNotifications}
             onClick={() => setEmailNotifications(!emailNotifications)}
             disabled={isLoading}
-            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
-              emailNotifications ? "bg-sky-600" : "bg-gray-200"
+            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
+              emailNotifications ? "bg-primary" : "bg-input"
             }`}
           >
             <span className="sr-only">Enable email notifications</span>
             <span
-              className={`pointer-events-none inline-block size-5 rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+              className={`pointer-events-none inline-block size-5 rounded-full bg-background shadow ring-0 transition duration-200 ease-in-out ${
                 emailNotifications ? "translate-x-5" : "translate-x-0"
               }`}
             />
@@ -271,10 +274,10 @@ export function NotificationsTabContent({
 
       {/* Email Digest Frequency */}
       <div>
-        <label htmlFor="emailDigest" className="block text-sm font-medium text-gray-700">
+        <label htmlFor="emailDigest" className="block text-sm font-medium text-foreground">
           Email Digest Frequency
         </label>
-        <p className="mt-1 text-sm text-gray-500">
+        <p className="mt-1 text-sm text-muted-foreground">
           Receive a summary of your activity and conversations.
         </p>
         <select
@@ -282,7 +285,7 @@ export function NotificationsTabContent({
           value={emailDigest}
           onChange={(e) => setEmailDigest(e.target.value as "none" | "daily" | "weekly")}
           disabled={isLoading || !emailNotifications}
-          className="mt-2 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500"
+          className="mt-2 block w-full rounded-md border border-border bg-background px-3 py-2 shadow-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
         >
           <option value="none">No digest</option>
           <option value="daily">Daily summary</option>
@@ -292,15 +295,18 @@ export function NotificationsTabContent({
 
       {/* Notification Type Toggles */}
       <div className="space-y-4">
-        <h4 className="text-sm font-medium text-gray-900">Notification Types</h4>
+        <h4 className="text-sm font-medium text-foreground">Notification Types</h4>
 
         {/* New Message Notifications */}
-        <div className="flex items-center justify-between rounded-lg border border-gray-200 p-4">
+        <div className="flex items-center justify-between rounded-lg border border-border p-4">
           <div className="flex-1">
-            <label htmlFor="notifyOnNewMessage" className="block text-sm font-medium text-gray-700">
+            <label
+              htmlFor="notifyOnNewMessage"
+              className="block text-sm font-medium text-foreground"
+            >
               New Messages
             </label>
-            <p className="mt-1 text-sm text-gray-500">
+            <p className="mt-1 text-sm text-muted-foreground">
               Get notified when you receive a new message in a conversation.
             </p>
           </div>
@@ -311,13 +317,13 @@ export function NotificationsTabContent({
             aria-checked={notifyOnNewMessage}
             onClick={() => setNotifyOnNewMessage(!notifyOnNewMessage)}
             disabled={isLoading}
-            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
-              notifyOnNewMessage ? "bg-sky-600" : "bg-gray-200"
+            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
+              notifyOnNewMessage ? "bg-primary" : "bg-input"
             }`}
           >
             <span className="sr-only">Enable new message notifications</span>
             <span
-              className={`pointer-events-none inline-block size-5 rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+              className={`pointer-events-none inline-block size-5 rounded-full bg-background shadow ring-0 transition duration-200 ease-in-out ${
                 notifyOnNewMessage ? "translate-x-5" : "translate-x-0"
               }`}
             />
@@ -325,12 +331,12 @@ export function NotificationsTabContent({
         </div>
 
         {/* Mention Notifications */}
-        <div className="flex items-center justify-between rounded-lg border border-gray-200 p-4">
+        <div className="flex items-center justify-between rounded-lg border border-border p-4">
           <div className="flex-1">
-            <label htmlFor="notifyOnMention" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="notifyOnMention" className="block text-sm font-medium text-foreground">
               Mentions
             </label>
-            <p className="mt-1 text-sm text-gray-500">
+            <p className="mt-1 text-sm text-muted-foreground">
               Get notified when someone mentions you in a conversation.
             </p>
           </div>
@@ -341,13 +347,13 @@ export function NotificationsTabContent({
             aria-checked={notifyOnMention}
             onClick={() => setNotifyOnMention(!notifyOnMention)}
             disabled={isLoading}
-            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
-              notifyOnMention ? "bg-sky-600" : "bg-gray-200"
+            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
+              notifyOnMention ? "bg-primary" : "bg-input"
             }`}
           >
             <span className="sr-only">Enable mention notifications</span>
             <span
-              className={`pointer-events-none inline-block size-5 rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+              className={`pointer-events-none inline-block size-5 rounded-full bg-background shadow ring-0 transition duration-200 ease-in-out ${
                 notifyOnMention ? "translate-x-5" : "translate-x-0"
               }`}
             />
@@ -355,12 +361,15 @@ export function NotificationsTabContent({
         </div>
 
         {/* AI Response Notifications */}
-        <div className="flex items-center justify-between rounded-lg border border-gray-200 p-4">
+        <div className="flex items-center justify-between rounded-lg border border-border p-4">
           <div className="flex-1">
-            <label htmlFor="notifyOnAIComplete" className="block text-sm font-medium text-gray-700">
+            <label
+              htmlFor="notifyOnAIComplete"
+              className="block text-sm font-medium text-foreground"
+            >
               AI Response Complete
             </label>
-            <p className="mt-1 text-sm text-gray-500">
+            <p className="mt-1 text-sm text-muted-foreground">
               Get notified when an AI assistant has finished generating a response.
             </p>
           </div>
@@ -371,13 +380,13 @@ export function NotificationsTabContent({
             aria-checked={notifyOnAIComplete}
             onClick={() => setNotifyOnAIComplete(!notifyOnAIComplete)}
             disabled={isLoading}
-            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
-              notifyOnAIComplete ? "bg-sky-600" : "bg-gray-200"
+            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
+              notifyOnAIComplete ? "bg-primary" : "bg-input"
             }`}
           >
             <span className="sr-only">Enable AI response notifications</span>
             <span
-              className={`pointer-events-none inline-block size-5 rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+              className={`pointer-events-none inline-block size-5 rounded-full bg-background shadow ring-0 transition duration-200 ease-in-out ${
                 notifyOnAIComplete ? "translate-x-5" : "translate-x-0"
               }`}
             />
@@ -386,9 +395,9 @@ export function NotificationsTabContent({
       </div>
 
       {/* Muted Conversations Info */}
-      <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-        <h4 className="text-sm font-medium text-gray-900">Muted Conversations</h4>
-        <p className="mt-1 text-sm text-gray-500">
+      <div className="rounded-lg border border-border bg-muted p-4">
+        <h4 className="text-sm font-medium text-foreground">Muted Conversations</h4>
+        <p className="mt-1 text-sm text-muted-foreground">
           You can mute individual conversations to stop receiving notifications from them. To mute a
           conversation, open it and click the mute button in the conversation settings.
         </p>
@@ -400,7 +409,7 @@ export function NotificationsTabContent({
           type="submit"
           disabled={isLoading}
           aria-busy={isLoading}
-          className="rounded-md bg-sky-600 px-4 py-2 text-white hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-md bg-primary px-4 py-2 text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isLoading ? "Saving..." : "Save Preferences"}
         </button>
