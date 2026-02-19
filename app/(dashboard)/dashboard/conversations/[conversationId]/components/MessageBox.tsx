@@ -82,6 +82,8 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
   const [localBodyOverride, setLocalBodyOverride] = useState<string | null>(null)
   const [isForking, setIsForking] = useState(false)
   const speechUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null)
+  const reactionPickerRef = useRef<HTMLDivElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
 
   const commonEmojis = ["👍", "❤️", "😄", "🎉", "🔥", "👏"]
 
@@ -383,6 +385,34 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
     }
   }, [])
 
+  // Dismiss reaction picker and message menu on click-outside or Escape
+  useEffect(() => {
+    if (!showReactionPicker && !showMenu) return
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (reactionPickerRef.current && !reactionPickerRef.current.contains(e.target as Node)) {
+        setShowReactionPicker(false)
+      }
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setShowMenu(false)
+      }
+    }
+
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setShowReactionPicker(false)
+        setShowMenu(false)
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside)
+    document.addEventListener("keydown", handleEscape)
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+      document.removeEventListener("keydown", handleEscape)
+    }
+  }, [showReactionPicker, showMenu])
+
   // Parse reactions from JSON
   const reactions = (data.reactions as Record<string, string[]>) || {}
   const viewerId = currentUserId || null
@@ -586,7 +616,7 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
                 )}
 
                 {/* Reaction button */}
-                <div className="relative">
+                <div className="relative" ref={reactionPickerRef}>
                   <button
                     type="button"
                     onClick={() => setShowReactionPicker(!showReactionPicker)}
@@ -726,7 +756,7 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
 
                 {/* Edit/Delete menu - only show for own messages and not AI messages */}
                 {isOwn && !data.isAI && !data.image && !data.audioUrl && (
-                  <div className="relative">
+                  <div className="relative" ref={menuRef}>
                     <button
                       onClick={() => setShowMenu(!showMenu)}
                       className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"

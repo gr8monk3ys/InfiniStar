@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { type FieldErrors, type FieldValues, type UseFormRegister } from "react-hook-form"
 
 import { isMac } from "@/app/hooks/useKeyboardShortcuts"
@@ -31,6 +31,17 @@ const MessageInput: React.FC<MessageInputProps> = ({
   "aria-label": ariaLabel,
 }) => {
   const registeredProps = register(id, { required })
+
+  // Detect Mac platform after mount to avoid SSR hydration mismatch.
+  // isMac() reads navigator.platform which is only available client-side.
+  const [isMacOS, setIsMacOS] = useState(false)
+  useEffect(() => {
+    setIsMacOS(
+      typeof navigator !== "undefined" &&
+        (navigator.platform?.toLowerCase().includes("mac") ||
+          navigator.userAgent?.toLowerCase().includes("mac"))
+    )
+  }, [])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     // Call the original register onChange
@@ -66,7 +77,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
         aria-describedby={`${id}-shortcut-hint`}
       />
       <span id={`${id}-shortcut-hint`} className="sr-only">
-        Press {isMac() ? "Cmd" : "Ctrl"}+Enter to send
+        Press {isMacOS ? "Cmd" : "Ctrl"}+Enter to send
       </span>
     </div>
   )
