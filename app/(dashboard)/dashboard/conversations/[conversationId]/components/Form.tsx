@@ -359,19 +359,19 @@ const Form: React.FC<FormProps> = ({
       }
     } else {
       // Send to regular messages endpoint
-      axios
-        .post(
+      setIsLoading(true)
+      try {
+        await axios.post(
           "/api/messages",
-          {
-            ...data,
-            conversationId: conversationId,
-          },
+          { message: trimmedMessage, conversationId: conversationId },
           { headers }
         )
-        .catch((error) => {
-          console.error("Message send error:", error)
-          toast.error("Failed to send message")
-        })
+      } catch (error) {
+        console.error("Message send error:", error)
+        toast.error("Failed to send message")
+      } finally {
+        setIsLoading(false)
+      }
     }
   }
 
