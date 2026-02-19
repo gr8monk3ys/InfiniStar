@@ -261,49 +261,36 @@ export async function deleteOldConversations(userId: string): Promise<AutoDelete
     }
   }
 
-  const deletedIds: string[] = []
   const errors: string[] = []
 
-  for (const conversation of conversationsToDelete) {
-    try {
-      // Get all users in the conversation before deletion
-      const conv = await prisma.conversation.findUnique({
-        where: { id: conversation.id },
-        select: { users: { select: { id: true } } },
-      })
+  // Batch-fetch all conversations with their participants before deletion
+  // so we can fan out Pusher notifications after the bulk delete.
+  const conversationIds = conversationsToDelete.map((c) => c.id)
 
-      // Delete the conversation and its messages
-      await prisma.$transaction([
-        // Delete all messages in the conversation
-        prisma.message.deleteMany({
-          where: { conversationId: conversation.id },
-        }),
-        // Delete the conversation
-        prisma.conversation.delete({
-          where: { id: conversation.id },
-        }),
-      ])
+  const conversationsWithUsers = await prisma.conversation.findMany({
+    where: { id: { in: conversationIds } },
+    select: { id: true, users: { select: { id: true } } },
+  })
 
-      // Notify all users in the conversation about the deletion via Pusher
-      if (conv?.users) {
-        for (const participant of conv.users) {
-          await pusherServer.trigger(
-            getPusherUserChannel(participant.id),
-            "conversation:auto-delete",
-            {
-              conversationId: conversation.id,
-              reason: "auto-delete",
-            }
-          )
-        }
-      }
+  // Bulk delete all messages then all conversations in two queries instead of
+  // N individual transactions.
+  await prisma.message.deleteMany({ where: { conversationId: { in: conversationIds } } })
+  await prisma.conversation.deleteMany({ where: { id: { in: conversationIds } } })
 
-      deletedIds.push(conversation.id)
-    } catch (error) {
-      console.error(`Error deleting conversation ${conversation.id}:`, error)
-      errors.push(`Failed to delete conversation ${conversation.id}`)
-    }
-  }
+  const deletedIds = conversationIds
+
+  // Fan out Pusher triggers for every (conversation, user) pair in parallel.
+  const pusherPromises = conversationsWithUsers.flatMap((conv) =>
+    conv.users.map((user) =>
+      pusherServer
+        .trigger(getPusherUserChannel(user.id), "conversation:auto-delete", {
+          conversationId: conv.id,
+          reason: "auto-delete",
+        })
+        .catch((err: unknown) => console.error(`Pusher trigger failed for user ${user.id}:`, err))
+    )
+  )
+  await Promise.all(pusherPromises)
 
   // Update last run time
   await prisma.user.update({

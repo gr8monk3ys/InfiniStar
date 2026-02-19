@@ -144,7 +144,69 @@ export async function POST(
       const idMap = new Map<string, string>()
       const replyPairs: Array<{ newId: string; oldReplyToId: string }> = []
 
-      for (const message of messagesToCopy) {
+      // Separate messages into those without and with a replyToId.
+      // Non-reply messages can be created in bulk; reply messages must be
+      // created individually so we can capture their new IDs for the
+      // reply-link pass below.
+      const nonReplyMessages = messagesToCopy.filter((m) => !m.replyToId)
+      const replyMessages = messagesToCopy.filter((m) => m.replyToId)
+
+      // Phase 1: bulk-insert all non-reply messages.
+      // createMany doesn't return records, so we fetch them back ordered by
+      // createdAt to rebuild the old-ID → new-ID map.
+      if (nonReplyMessages.length > 0) {
+        await tx.message.createMany({
+          data: nonReplyMessages.map((msg) => ({
+            body: msg.body,
+            image: msg.image,
+            createdAt: msg.createdAt,
+            editedAt: msg.editedAt,
+            isAI: msg.isAI,
+            inputTokens: msg.inputTokens,
+            outputTokens: msg.outputTokens,
+            reactions: msg.reactions ?? undefined,
+            variants: (msg.variants as unknown[]) ?? [],
+            activeVariant: msg.activeVariant,
+            conversationId: createdConversation.id,
+            senderId: msg.senderId,
+          })),
+        })
+
+        // Re-fetch to get the auto-assigned IDs, matching by (conversationId, senderId, createdAt).
+        const inserted = await tx.message.findMany({
+          where: {
+            conversationId: createdConversation.id,
+            replyToId: null,
+          },
+          orderBy: { createdAt: "asc" },
+          select: { id: true, createdAt: true, senderId: true },
+        })
+
+        // Build old → new ID mapping.  Messages are ordered by createdAt asc
+        // in both arrays so a positional zip is reliable when timestamps differ.
+        // Use a stable positional match (same order guaranteed by orderBy).
+        for (let i = 0; i < nonReplyMessages.length; i++) {
+          const newMsg = inserted[i]
+          if (newMsg) {
+            idMap.set(nonReplyMessages[i].id, newMsg.id)
+          }
+        }
+
+        // Wire the seen relationship for the current user on all bulk-created messages.
+        const bulkIds = inserted.map((m) => m.id)
+        if (bulkIds.length > 0) {
+          await tx.$executeRaw`
+            INSERT INTO "_Seen" ("A", "B")
+            SELECT id, ${currentUser.id}::uuid
+            FROM "messages"
+            WHERE id = ANY(${bulkIds}::uuid[])
+            ON CONFLICT DO NOTHING
+          `
+        }
+      }
+
+      // Phase 2: create reply messages individually to capture their new IDs.
+      for (const message of replyMessages) {
         const created = await tx.message.create({
           data: {
             body: message.body,
@@ -155,7 +217,7 @@ export async function POST(
             inputTokens: message.inputTokens,
             outputTokens: message.outputTokens,
             reactions: message.reactions ?? undefined,
-            variants: message.variants ?? [],
+            variants: (message.variants as unknown[]) ?? [],
             activeVariant: message.activeVariant,
             conversationId: createdConversation.id,
             senderId: message.senderId,
@@ -169,11 +231,10 @@ export async function POST(
         })
 
         idMap.set(message.id, created.id)
-        if (message.replyToId) {
-          replyPairs.push({ newId: created.id, oldReplyToId: message.replyToId })
-        }
+        replyPairs.push({ newId: created.id, oldReplyToId: message.replyToId! })
       }
 
+      // Phase 3: patch reply links now that all new IDs are known.
       for (const pair of replyPairs) {
         const mappedReplyToId = idMap.get(pair.oldReplyToId)
         if (!mappedReplyToId) continue

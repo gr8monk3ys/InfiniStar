@@ -12,12 +12,13 @@ import { auth } from "@clerk/nextjs/server"
 import { deleteOldConversations, getAutoDeleteSettings } from "@/app/lib/auto-delete"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import prisma from "@/app/lib/prismadb"
-import { getClientIdentifier, InMemoryRateLimiter } from "@/app/lib/rate-limit"
+import { createRateLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 
-// Special rate limiter for auto-delete run: 1 request per hour
-const autoDeleteRunLimiter = new InMemoryRateLimiter(1, 3600000) // 1 request per hour
+// Special rate limiter for auto-delete run: 1 request per hour.
+// createRateLimiter uses Redis when available, falling back to in-memory.
+const autoDeleteRunLimiter = createRateLimiter("autoDeleteRun", 1, 3600000)
 
-// Cleanup old entries every hour
+// Cleanup old in-memory entries every hour (no-op when Redis is active)
 setInterval(() => {
   autoDeleteRunLimiter.cleanup()
 }, 3600000)

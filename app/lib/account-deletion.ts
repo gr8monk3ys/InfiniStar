@@ -110,29 +110,11 @@ export async function deleteUserAccount(userId: string): Promise<void> {
     })
 
     // 2. Remove user from "seen" relationship on all messages
-    // First, get all messages the user has seen
-    const messagesSeenByUser = await tx.message.findMany({
-      where: {
-        seen: {
-          some: {
-            id: userId,
-          },
-        },
-      },
-      select: { id: true },
-    })
-
-    // Update each message to remove the user from seen relation
-    for (const message of messagesSeenByUser) {
-      await tx.message.update({
-        where: { id: message.id },
-        data: {
-          seen: {
-            disconnect: { id: userId },
-          },
-        },
-      })
-    }
+    // Delete all rows from the implicit join table in one query instead of
+    // fetching each message and disconnecting one by one (avoids N+1).
+    // Prisma names the join table after the relation: "_Seen".
+    // Column "A" = messageId (Message, alphabetically first), "B" = userId (User).
+    await tx.$executeRaw`DELETE FROM "_Seen" WHERE "B" = ${userId}::uuid`
 
     // 3. Remove user from all conversations
     const userConversations = await tx.conversation.findMany({

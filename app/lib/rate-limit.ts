@@ -84,7 +84,7 @@ export class InMemoryRateLimiter implements IRateLimiter {
  */
 let rateLimiterBackendLogged = false
 
-function createRateLimiter(name: string, limit: number, windowMs: number): IRateLimiter {
+export function createRateLimiter(name: string, limit: number, windowMs: number): IRateLimiter {
   const redis = getRedisClient()
 
   if (redis) {
