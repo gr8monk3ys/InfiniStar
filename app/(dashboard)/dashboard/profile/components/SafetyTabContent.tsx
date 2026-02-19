@@ -27,13 +27,13 @@ export function SafetyTabContent({
   return (
     <form onSubmit={onSubmit} className="space-y-6" aria-label="Safety and content settings form">
       <div>
-        <h3 className="text-lg font-medium text-gray-900">Safety &amp; Content</h3>
-        <p className="mt-1 text-sm text-gray-600">
+        <h3 className="text-lg font-medium text-foreground">Safety &amp; Content</h3>
+        <p className="mt-1 text-sm text-muted-foreground">
           Control whether you can view and chat with NSFW (18+) characters.
         </p>
       </div>
 
-      <div className="rounded-lg border border-gray-200 bg-white p-4">
+      <div className="rounded-lg border border-border bg-muted p-4">
         <label className="flex items-start gap-3">
           <input
             type="checkbox"
@@ -44,33 +44,33 @@ export function SafetyTabContent({
               if (!next) setNsfwEnabled(false)
             }}
             disabled={isLoading}
-            className="mt-1 size-4 rounded border-gray-300 text-sky-600 focus:ring-sky-500 disabled:cursor-not-allowed"
+            className="mt-1 size-4 rounded border-border text-primary focus:ring-ring disabled:cursor-not-allowed"
           />
           <span className="flex-1">
-            <span className="block text-sm font-medium text-gray-900">I confirm I am 18+</span>
-            <span className="mt-1 block text-sm text-gray-600">
+            <span className="block text-sm font-medium text-foreground">I confirm I am 18+</span>
+            <span className="mt-1 block text-sm text-muted-foreground">
               Required to enable NSFW content. Turning this off will also disable NSFW.
             </span>
           </span>
         </label>
       </div>
 
-      <div className="rounded-lg border border-gray-200 bg-white p-4">
+      <div className="rounded-lg border border-border bg-muted p-4">
         <label className="flex items-start gap-3">
           <input
             type="checkbox"
             checked={nsfwEnabled}
             onChange={(e) => setNsfwEnabled(e.target.checked)}
             disabled={isLoading || !isAdult}
-            className="mt-1 size-4 rounded border-gray-300 text-sky-600 focus:ring-sky-500 disabled:cursor-not-allowed"
+            className="mt-1 size-4 rounded border-border text-primary focus:ring-ring disabled:cursor-not-allowed"
           />
           <span className="flex-1">
-            <span className="block text-sm font-medium text-gray-900">Enable NSFW content</span>
-            <span className="mt-1 block text-sm text-gray-600">
+            <span className="block text-sm font-medium text-foreground">Enable NSFW content</span>
+            <span className="mt-1 block text-sm text-muted-foreground">
               Shows NSFW characters in Explore and allows starting chats with them.
             </span>
             {nsfwDisabledReason && (
-              <span className="mt-2 block text-xs text-gray-500">{nsfwDisabledReason}</span>
+              <span className="mt-2 block text-xs text-muted-foreground">{nsfwDisabledReason}</span>
             )}
           </span>
         </label>
@@ -81,7 +81,7 @@ export function SafetyTabContent({
           type="submit"
           disabled={isLoading}
           aria-busy={isLoading}
-          className="rounded-md bg-sky-600 px-4 py-2 text-white hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-md bg-primary px-4 py-2 text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isLoading ? "Saving..." : "Save Changes"}
         </button>

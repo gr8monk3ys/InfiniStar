@@ -43,7 +43,7 @@ const StatusModal = dynamic(() => import("@/app/components/modals/StatusModal"),
 
 // Dynamic imports for code splitting - only loaded when tab is active
 const SessionsList = dynamic(() => import("@/app/components/SessionsList"), {
-  loading: () => <div className="h-48 animate-pulse rounded-lg bg-gray-100" />,
+  loading: () => <div className="h-48 animate-pulse rounded-lg bg-muted" />,
   ssr: false,
 })
 
@@ -53,7 +53,7 @@ const TwoFactorSettings = dynamic(
       default: mod.TwoFactorSettings,
     })),
   {
-    loading: () => <div className="h-48 animate-pulse rounded-lg bg-gray-100" />,
+    loading: () => <div className="h-48 animate-pulse rounded-lg bg-muted" />,
     ssr: false,
   }
 )
@@ -61,13 +61,13 @@ const TwoFactorSettings = dynamic(
 const AutoDeleteSettings = dynamic(
   () => import("@/app/components/settings").then((mod) => ({ default: mod.AutoDeleteSettings })),
   {
-    loading: () => <div className="h-48 animate-pulse rounded-lg bg-gray-100" />,
+    loading: () => <div className="h-48 animate-pulse rounded-lg bg-muted" />,
     ssr: false,
   }
 )
 
 const MemoryManager = dynamic(() => import("@/app/components/ai-memory/MemoryManager"), {
-  loading: () => <div className="h-48 animate-pulse rounded-lg bg-gray-100" />,
+  loading: () => <div className="h-48 animate-pulse rounded-lg bg-muted" />,
   ssr: false,
 })
 
@@ -475,28 +475,28 @@ export default function ProfilePage() {
   ]
 
   return (
-    <div className="flex min-h-screen flex-col bg-gray-50">
+    <div className="flex min-h-screen flex-col bg-background">
       {/* Header */}
-      <div className="border-b bg-white">
+      <div className="border-b bg-background">
         <div className="mx-auto max-w-4xl px-4 py-6">
           <div className="flex items-center gap-4">
             <button
               onClick={() => router.push("/dashboard")}
-              className="text-gray-600 hover:text-gray-900"
+              className="text-muted-foreground hover:text-foreground"
               aria-label="Back to dashboard"
             >
               ← Back
             </button>
-            <h1 className="text-2xl font-bold text-gray-900">Profile Settings</h1>
+            <h1 className="text-2xl font-bold text-foreground">Profile Settings</h1>
           </div>
         </div>
       </div>
 
       {/* Content */}
       <div className="mx-auto w-full max-w-4xl px-4 py-8">
-        <div className="rounded-lg bg-white shadow">
+        <div className="rounded-lg bg-card shadow">
           {/* Tabs */}
-          <div className="border-b border-gray-200">
+          <div className="border-b border-border">
             <nav className="-mb-px flex gap-8 px-6" aria-label="Profile tabs">
               {tabs.map((tab) => (
                 <button
@@ -506,14 +506,14 @@ export default function ProfilePage() {
                     activeTab === tab.id
                       ? tab.isDestructive
                         ? "border-red-500 text-red-600"
-                        : "border-sky-500 text-sky-600"
-                      : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                        : "border-primary text-primary"
+                      : "border-transparent text-muted-foreground hover:border-border hover:text-foreground"
                   }`}
                 >
                   {tab.icon}
                   {tab.label}
                   {tab.id === "account" && deletionStatus?.deletionRequested && (
-                    <span className="ml-1 rounded-full bg-yellow-100 px-2 py-0.5 text-xs text-yellow-800">
+                    <span className="ml-1 rounded-full bg-yellow-500/10 px-2 py-0.5 text-xs text-yellow-800 dark:text-yellow-200">
                       Pending
                     </span>
                   )}
@@ -566,8 +566,8 @@ export default function ProfilePage() {
             {activeTab === "security" && (
               <div className="space-y-6" aria-label="Security settings section">
                 <div>
-                  <h3 className="text-lg font-medium text-gray-900">Two-Factor Authentication</h3>
-                  <p className="mt-1 text-sm text-gray-600">
+                  <h3 className="text-lg font-medium text-foreground">Two-Factor Authentication</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">
                     Add an extra layer of security to your account by requiring a verification code
                     in addition to your password when signing in.
                   </p>
@@ -609,8 +609,8 @@ export default function ProfilePage() {
             {activeTab === "sessions" && (
               <div className="space-y-4" aria-label="Session management section">
                 <div>
-                  <h3 className="text-lg font-medium text-gray-900">Active Sessions</h3>
-                  <p className="mt-1 text-sm text-gray-600">
+                  <h3 className="text-lg font-medium text-foreground">Active Sessions</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">
                     Manage devices where you are currently logged in. Revoke access to any session
                     you do not recognize.
                   </p>
@@ -622,27 +622,25 @@ export default function ProfilePage() {
             {activeTab === "appearance" && (
               <div className="space-y-8" aria-label="Appearance settings section">
                 <div>
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                    Appearance
-                  </h3>
-                  <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                  <h3 className="text-lg font-medium text-foreground">Appearance</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">
                     Customize how InfiniStar looks. Choose a preset theme or create your own custom
                     appearance.
                   </p>
                 </div>
 
                 <section>
-                  <h4 className="mb-4 text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                  <h4 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
                     Color Mode
                   </h4>
-                  <div className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+                  <div className="rounded-lg border border-border bg-muted p-4">
                     <DarkModeToggle />
                   </div>
                 </section>
 
-                <div className="border-t border-gray-200 dark:border-gray-700" />
+                <div className="border-t border-border" />
                 <ThemeSelector />
-                <div className="border-t border-gray-200 dark:border-gray-700" />
+                <div className="border-t border-border" />
                 <ThemeCustomizer />
               </div>
             )}
