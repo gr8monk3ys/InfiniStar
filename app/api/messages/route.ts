@@ -236,12 +236,18 @@ export async function POST(request: NextRequest) {
     )
 
     // Notify all users in the conversation
-    updatedConversation.users.forEach((user: { id: string }) => {
-      pusherServer.trigger(getPusherUserChannel(user.id), "conversation:update", {
-        id: conversationId,
-        messages: [newMessage],
-      })
-    })
+    await Promise.all(
+      updatedConversation.users.map((user: { id: string }) =>
+        pusherServer
+          .trigger(getPusherUserChannel(user.id), "conversation:update", {
+            id: conversationId,
+            messages: [newMessage],
+          })
+          .catch((err: unknown) =>
+            console.error(`[messages] Pusher trigger failed for user ${user.id}:`, err)
+          )
+      )
+    )
 
     return NextResponse.json(newMessage)
   } catch (error) {

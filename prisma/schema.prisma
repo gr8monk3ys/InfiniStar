@@ -150,6 +150,9 @@ model Conversation {
   @@index([lastMessageAt])
   @@index([isAI])
   @@index([characterId])
+  @@index([archivedBy], type: Gin)
+  @@index([pinnedBy], type: Gin)
+  @@index([mutedBy], type: Gin)
   @@map("conversations")
 }
 
@@ -264,6 +267,7 @@ model AiUsage {
   @@index([userId])
   @@index([conversationId])
   @@index([createdAt])
+  @@index([userId, createdAt])
   @@map("ai_usage")
 }
 

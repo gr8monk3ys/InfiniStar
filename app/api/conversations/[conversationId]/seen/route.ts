@@ -27,7 +27,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<I
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Find existing conversation and verify user is a participant
+    // Verify user is a participant in this conversation
     const conversation = await prisma.conversation.findFirst({
       where: {
         id: conversationId,
@@ -37,17 +37,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<I
           },
         },
       },
-      select: {
-        id: true,
-        messages: {
-          select: {
-            id: true,
-            seen: {
-              select: { id: true },
-            },
-          },
-        },
-      },
+      select: { id: true },
     })
 
     if (!conversation) {
@@ -57,8 +47,16 @@ export async function POST(request: NextRequest, { params }: { params: Promise<I
       )
     }
 
-    // Find last message
-    const lastMessage = conversation.messages[conversation.messages.length - 1]
+    // Fetch only the last message directly — avoids loading all messages and the
+    // non-deterministic array[length-1] pattern that exists without an orderBy.
+    const lastMessage = await prisma.message.findFirst({
+      where: { conversationId },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        seen: { select: { id: true } },
+      },
+    })
 
     if (!lastMessage) {
       return NextResponse.json(conversation)

@@ -37,7 +37,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     })
 
     if (!existingConversation) {
-      return NextResponse.json({ error: "Invalid conversation ID" }, { status: 400 })
+      return NextResponse.json({ error: "Conversation not found" }, { status: 404 })
     }
 
     const deletedConversation = await prisma.conversation.deleteMany({
