@@ -4,7 +4,6 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { useUser } from "@clerk/nextjs"
-import axios, { isAxiosError } from "axios"
 import clsx from "clsx"
 import { format } from "date-fns"
 import toast from "react-hot-toast"
@@ -22,6 +21,7 @@ import {
   HiTrash,
 } from "react-icons/hi2"
 
+import { api, ApiError } from "@/app/lib/api-client"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -160,19 +160,16 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
     }
 
     try {
-      await axios.patch(
+      await api.patch(
         `/api/messages/${data.id}`,
         { body: editedBody.trim() },
-        { headers: { "X-CSRF-Token": csrfToken } }
+        { headers: { "X-CSRF-Token": csrfToken }, showErrorToast: false }
       )
       toast.success("Message edited")
       setIsEditing(false)
       setShowMenu(false)
     } catch (error) {
-      const message =
-        isAxiosError(error) && error.response?.data?.error
-          ? error.response.data.error
-          : "Failed to edit message"
+      const message = error instanceof ApiError ? error.message : "Failed to edit message"
       toast.error(message)
       setEditedBody(data.body || "")
     }
@@ -190,14 +187,14 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
 
     setIsDeleting(true)
     try {
-      await axios.delete(`/api/messages/${data.id}`, { headers: { "X-CSRF-Token": csrfToken } })
+      await api.delete(`/api/messages/${data.id}`, {
+        headers: { "X-CSRF-Token": csrfToken },
+        showErrorToast: false,
+      })
       toast.success("Message deleted")
       setShowMenu(false)
     } catch (error) {
-      const message =
-        isAxiosError(error) && error.response?.data?.error
-          ? error.response.data.error
-          : "Failed to delete message"
+      const message = error instanceof ApiError ? error.message : "Failed to delete message"
       toast.error(message)
     } finally {
       setIsDeleting(false)
@@ -217,17 +214,14 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
       }
 
       try {
-        await axios.post(
+        await api.post(
           `/api/messages/${data.id}/react`,
           { emoji },
-          { headers: { "X-CSRF-Token": csrfToken } }
+          { headers: { "X-CSRF-Token": csrfToken }, showErrorToast: false }
         )
         setShowReactionPicker(false)
       } catch (error) {
-        const message =
-          isAxiosError(error) && error.response?.data?.error
-            ? error.response.data.error
-            : "Failed to add reaction"
+        const message = error instanceof ApiError ? error.message : "Failed to add reaction"
         toast.error(message)
       }
     },
@@ -258,13 +252,12 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
       setLocalBodyOverride(variants[index])
 
       try {
-        const response = await axios.patch(
+        const updated = await api.patch<{ body?: string | null; activeVariant?: number } | null>(
           `/api/messages/${data.id}/variant`,
           { index },
-          { headers: { "X-CSRF-Token": csrfToken } }
+          { headers: { "X-CSRF-Token": csrfToken }, showErrorToast: false }
         )
 
-        const updated = response.data as { body?: string | null; activeVariant?: number } | null
         if (updated && typeof updated.activeVariant === "number") {
           setLocalActiveVariant(updated.activeVariant)
         }
@@ -272,10 +265,7 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
           setLocalBodyOverride(updated.body)
         }
       } catch (error) {
-        const message =
-          isAxiosError(error) && error.response?.data?.error
-            ? error.response.data.error
-            : "Failed to switch reply variant"
+        const message = error instanceof ApiError ? error.message : "Failed to switch reply variant"
         toast.error(message)
         setLocalActiveVariant(null)
         setLocalBodyOverride(null)
@@ -303,14 +293,13 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
     setIsForking(true)
 
     try {
-      const response = await axios.post(
+      const result = await api.post<{ id?: string } | null>(
         `/api/conversations/${data.conversationId}/fork`,
         { messageId: data.id },
-        { headers: { "X-CSRF-Token": csrfToken } }
+        { headers: { "X-CSRF-Token": csrfToken }, showErrorToast: false }
       )
 
-      const nextConversationId =
-        response.data && typeof response.data.id === "string" ? response.data.id : null
+      const nextConversationId = result && typeof result.id === "string" ? result.id : null
       if (!nextConversationId) {
         throw new Error("Failed to create branch")
       }
@@ -319,11 +308,9 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
       router.push(`/dashboard/conversations/${nextConversationId}`)
     } catch (error) {
       const message =
-        isAxiosError(error) && error.response?.data?.error
-          ? error.response.data.error
-          : error instanceof Error
-            ? error.message
-            : "Failed to create branch"
+        error instanceof ApiError || error instanceof Error
+          ? error.message
+          : "Failed to create branch"
       toast.error(message)
     } finally {
       setIsForking(false)

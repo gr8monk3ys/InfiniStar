@@ -2,7 +2,6 @@
 
 import { Fragment, memo, useMemo, useState } from "react"
 import { Dialog, Transition } from "@headlessui/react"
-import axios, { isAxiosError } from "axios"
 import { format } from "date-fns"
 import toast from "react-hot-toast"
 import { BsPinAngle, BsPinAngleFill } from "react-icons/bs"
@@ -16,6 +15,17 @@ import {
 } from "react-icons/hi2"
 import { IoClose, IoTrash } from "react-icons/io5"
 
+import { api, ApiError } from "@/app/lib/api-client"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/app/components/ui/alert-dialog"
 import useActiveList from "@/app/(dashboard)/dashboard/hooks/useActiveList"
 import useOtherUser from "@/app/(dashboard)/dashboard/hooks/useOtherUser"
 import Avatar from "@/app/components/Avatar"
@@ -48,16 +58,26 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = memo(function ProfileDrawer(
   const [isArchiving, setIsArchiving] = useState(false)
   const [isPinning, setIsPinning] = useState(false)
   const [isMuting, setIsMuting] = useState(false)
+
+  // Block dialog state
+  const [showBlockDialog, setShowBlockDialog] = useState(false)
+  const [blockReason, setBlockReason] = useState("")
+
+  // Report dialog state
+  const [showReportDialog, setShowReportDialog] = useState(false)
+  const [reportReason, setReportReason] = useState("")
+
   const { token: csrfToken } = useCsrfToken()
   const otherUser = useOtherUser(data)
 
   const joinedDate = useMemo(() => {
+    if (!otherUser) return null
     return format(new Date(otherUser.createdAt), "PP")
-  }, [otherUser.createdAt])
+  }, [otherUser])
 
   const title = useMemo(() => {
-    return data.title || otherUser.name
-  }, [data.title, otherUser.name])
+    return data.title || otherUser?.name || "AI Character"
+  }, [data.title, otherUser?.name])
 
   const { members, getPresence } = useActiveList()
   const isActive = otherUser?.id ? members.includes(otherUser.id) : false
@@ -106,21 +126,19 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = memo(function ProfileDrawer(
   const handleArchiveToggle = async () => {
     setIsArchiving(true)
     try {
-      const headers = csrfToken ? { "X-CSRF-Token": csrfToken } : {}
       if (isArchived) {
-        // Unarchive
-        await axios.delete(`/api/conversations/${data.id}/archive`, { headers })
+        await api.delete(`/api/conversations/${data.id}/archive`, {
+          headers: csrfToken ? { "X-CSRF-Token": csrfToken } : {},
+        })
         toast.success("Conversation unarchived")
       } else {
-        // Archive
-        await axios.post(`/api/conversations/${data.id}/archive`, {}, { headers })
+        await api.post(`/api/conversations/${data.id}/archive`, undefined, {
+          headers: csrfToken ? { "X-CSRF-Token": csrfToken } : {},
+        })
         toast.success("Conversation archived")
       }
     } catch (error) {
-      const message =
-        isAxiosError(error) && error.response?.data?.error
-          ? error.response.data.error
-          : "Failed to update archive status"
+      const message = error instanceof ApiError ? error.message : "Failed to update archive status"
       toast.error(message)
     } finally {
       setIsArchiving(false)
@@ -130,21 +148,19 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = memo(function ProfileDrawer(
   const handlePinToggle = async () => {
     setIsPinning(true)
     try {
-      const headers = csrfToken ? { "X-CSRF-Token": csrfToken } : {}
       if (isPinned) {
-        // Unpin
-        await axios.delete(`/api/conversations/${data.id}/pin`, { headers })
+        await api.delete(`/api/conversations/${data.id}/pin`, {
+          headers: csrfToken ? { "X-CSRF-Token": csrfToken } : {},
+        })
         toast.success("Conversation unpinned")
       } else {
-        // Pin
-        await axios.post(`/api/conversations/${data.id}/pin`, {}, { headers })
+        await api.post(`/api/conversations/${data.id}/pin`, undefined, {
+          headers: csrfToken ? { "X-CSRF-Token": csrfToken } : {},
+        })
         toast.success("Conversation pinned")
       }
     } catch (error) {
-      const message =
-        isAxiosError(error) && error.response?.data?.error
-          ? error.response.data.error
-          : "Failed to update pin status"
+      const message = error instanceof ApiError ? error.message : "Failed to update pin status"
       toast.error(message)
     } finally {
       setIsPinning(false)
@@ -154,80 +170,123 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = memo(function ProfileDrawer(
   const handleMuteToggle = async () => {
     setIsMuting(true)
     try {
-      const headers = csrfToken ? { "X-CSRF-Token": csrfToken } : {}
       if (isMuted) {
-        // Unmute
-        await axios.delete(`/api/conversations/${data.id}/mute`, { headers })
+        await api.delete(`/api/conversations/${data.id}/mute`, {
+          headers: csrfToken ? { "X-CSRF-Token": csrfToken } : {},
+        })
         toast.success("Conversation unmuted")
       } else {
-        // Mute
-        await axios.post(`/api/conversations/${data.id}/mute`, {}, { headers })
+        await api.post(`/api/conversations/${data.id}/mute`, undefined, {
+          headers: csrfToken ? { "X-CSRF-Token": csrfToken } : {},
+        })
         toast.success("Conversation muted")
       }
     } catch (error) {
-      const message =
-        isAxiosError(error) && error.response?.data?.error
-          ? error.response.data.error
-          : "Failed to update mute status"
+      const message = error instanceof ApiError ? error.message : "Failed to update mute status"
       toast.error(message)
     } finally {
       setIsMuting(false)
     }
   }
 
-  const handleBlockUser = async () => {
+  const handleBlockConfirm = async () => {
     if (!otherUser?.id) return
-    const reason = window.prompt("Optional: Why are you blocking this user?") || undefined
-
     try {
-      const headers = csrfToken ? { "X-CSRF-Token": csrfToken } : {}
-      await axios.post(
+      await api.post(
         "/api/moderation/blocks",
         {
           blockedUserId: otherUser.id,
-          reason,
+          reason: blockReason.trim() || undefined,
         },
-        { headers }
+        { headers: csrfToken ? { "X-CSRF-Token": csrfToken } : {} }
       )
       toast.success("User blocked")
     } catch (error) {
-      const message =
-        isAxiosError(error) && error.response?.data?.error
-          ? error.response.data.error
-          : "Failed to block user"
+      const message = error instanceof ApiError ? error.message : "Failed to block user"
       toast.error(message)
+    } finally {
+      setShowBlockDialog(false)
+      setBlockReason("")
     }
   }
 
-  const handleReportUser = async () => {
+  const handleReportConfirm = async () => {
     if (!otherUser?.id) return
-    const details = window.prompt("Optional: Provide details for this report") || undefined
-
     try {
-      const headers = csrfToken ? { "X-CSRF-Token": csrfToken } : {}
-      await axios.post(
+      await api.post(
         "/api/moderation/reports",
         {
           targetType: "USER",
           targetId: otherUser.id,
           reason: "OTHER",
-          details,
+          details: reportReason.trim() || undefined,
         },
-        { headers }
+        { headers: csrfToken ? { "X-CSRF-Token": csrfToken } : {} }
       )
       toast.success("Report submitted")
     } catch (error) {
-      const message =
-        isAxiosError(error) && error.response?.data?.error
-          ? error.response.data.error
-          : "Failed to submit report"
+      const message = error instanceof ApiError ? error.message : "Failed to submit report"
       toast.error(message)
+    } finally {
+      setShowReportDialog(false)
+      setReportReason("")
     }
   }
 
   return (
     <>
       <ConfirmModal isOpen={confirmOpen} onClose={() => setConfirmOpen(false)} />
+
+      {/* Block user dialog */}
+      <AlertDialog open={showBlockDialog} onOpenChange={setShowBlockDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Block User</AlertDialogTitle>
+            <AlertDialogDescription>
+              Optionally explain why you are blocking this user.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <textarea
+            className="w-full rounded-md border border-border bg-background p-2 text-sm text-foreground"
+            rows={3}
+            value={blockReason}
+            onChange={(e) => setBlockReason(e.target.value)}
+            placeholder="Reason (optional)..."
+            maxLength={500}
+          />
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setBlockReason("")}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleBlockConfirm}>Block User</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Report user dialog */}
+      <AlertDialog open={showReportDialog} onOpenChange={setShowReportDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Report User</AlertDialogTitle>
+            <AlertDialogDescription>
+              Please describe why you are reporting this user.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <textarea
+            className="w-full rounded-md border border-border bg-background p-2 text-sm text-foreground"
+            rows={3}
+            value={reportReason}
+            onChange={(e) => setReportReason(e.target.value)}
+            placeholder="Describe the issue..."
+            maxLength={500}
+          />
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setReportReason("")}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleReportConfirm} disabled={!reportReason.trim()}>
+              Submit Report
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <Transition.Root show={isOpen} as={Fragment}>
         <Dialog
           as="div"
@@ -260,13 +319,13 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = memo(function ProfileDrawer(
                   leaveTo="translate-x-full"
                 >
                   <Dialog.Panel className="pointer-events-auto w-screen max-w-md">
-                    <div className="flex h-full flex-col overflow-y-scroll bg-white py-6 shadow-xl">
+                    <div className="flex h-full flex-col overflow-y-scroll bg-background py-6 shadow-xl">
                       <div className="px-4 sm:px-6">
                         <div className="flex items-start justify-end">
                           <div className="ml-3 flex h-7 items-center">
                             <button
                               type="button"
-                              className="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                              className="rounded-md bg-background text-muted-foreground hover:text-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
                               onClick={onClose}
                               aria-label="Close panel"
                             >
@@ -282,11 +341,11 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = memo(function ProfileDrawer(
                             {data.isGroup ? (
                               <AvatarGroup users={data.users} />
                             ) : (
-                              <Avatar user={otherUser} />
+                              <Avatar user={otherUser ?? undefined} />
                             )}
                           </div>
-                          <h2 className="text-base font-semibold text-gray-900">{title}</h2>
-                          <div className="text-sm text-gray-500">{statusText}</div>
+                          <h2 className="text-base font-semibold text-foreground">{title}</h2>
+                          <div className="text-sm text-muted-foreground">{statusText}</div>
                           <div className="my-8 flex gap-10">
                             <button
                               type="button"
@@ -298,10 +357,10 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = memo(function ProfileDrawer(
                               aria-label={isPinned ? "Unpin conversation" : "Pin conversation"}
                               aria-disabled={isPinning}
                             >
-                              <div className="flex size-10 items-center justify-center rounded-full bg-neutral-100">
+                              <div className="flex size-10 items-center justify-center rounded-full bg-muted">
                                 {isPinned ? <BsPinAngleFill size={20} /> : <BsPinAngle size={20} />}
                               </div>
-                              <div className="text-sm font-light text-neutral-600">
+                              <div className="text-sm font-light text-muted-foreground">
                                 {isPinned ? "Unpin" : "Pin"}
                               </div>
                             </button>
@@ -315,14 +374,14 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = memo(function ProfileDrawer(
                               aria-label={isMuted ? "Unmute conversation" : "Mute conversation"}
                               aria-disabled={isMuting}
                             >
-                              <div className="flex size-10 items-center justify-center rounded-full bg-neutral-100">
+                              <div className="flex size-10 items-center justify-center rounded-full bg-muted">
                                 {isMuted ? (
                                   <HiOutlineBell size={20} />
                                 ) : (
                                   <HiOutlineBellSlash size={20} />
                                 )}
                               </div>
-                              <div className="text-sm font-light text-neutral-600">
+                              <div className="text-sm font-light text-muted-foreground">
                                 {isMuted ? "Unmute" : "Mute"}
                               </div>
                             </button>
@@ -338,14 +397,14 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = memo(function ProfileDrawer(
                               }
                               aria-disabled={isArchiving}
                             >
-                              <div className="flex size-10 items-center justify-center rounded-full bg-neutral-100">
+                              <div className="flex size-10 items-center justify-center rounded-full bg-muted">
                                 {isArchived ? (
                                   <HiArchiveBoxXMark size={20} />
                                 ) : (
                                   <HiArchiveBox size={20} />
                                 )}
                               </div>
-                              <div className="text-sm font-light text-neutral-600">
+                              <div className="text-sm font-light text-muted-foreground">
                                 {isArchived ? "Unarchive" : "Archive"}
                               </div>
                             </button>
@@ -355,24 +414,24 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = memo(function ProfileDrawer(
                               className="flex cursor-pointer flex-col items-center gap-3 hover:opacity-75"
                               aria-label="Delete conversation"
                             >
-                              <div className="flex size-10 items-center justify-center rounded-full bg-neutral-100">
+                              <div className="flex size-10 items-center justify-center rounded-full bg-muted">
                                 <IoTrash size={20} />
                               </div>
-                              <div className="text-sm font-light text-neutral-600">Delete</div>
+                              <div className="text-sm font-light text-muted-foreground">Delete</div>
                             </button>
                           </div>
-                          {!data.isGroup && (
+                          {!data.isGroup && otherUser && (
                             <div className="flex items-center justify-center gap-3 pb-6">
                               <button
-                                onClick={handleBlockUser}
-                                className="flex items-center gap-2 rounded-md border px-3 py-2 text-xs text-muted-foreground hover:border-foreground hover:text-foreground"
+                                onClick={() => setShowBlockDialog(true)}
+                                className="flex items-center gap-2 rounded-md border border-border px-3 py-2 text-xs text-muted-foreground hover:border-foreground hover:text-foreground"
                               >
                                 <HiOutlineShieldExclamation className="size-4" />
                                 Block
                               </button>
                               <button
-                                onClick={handleReportUser}
-                                className="flex items-center gap-2 rounded-md border px-3 py-2 text-xs text-muted-foreground hover:border-foreground hover:text-foreground"
+                                onClick={() => setShowReportDialog(true)}
+                                className="flex items-center gap-2 rounded-md border border-border px-3 py-2 text-xs text-muted-foreground hover:border-foreground hover:text-foreground"
                               >
                                 <HiOutlineFlag className="size-4" />
                                 Report
@@ -383,10 +442,10 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = memo(function ProfileDrawer(
                             <dl className="space-y-8 px-4 sm:space-y-6 sm:px-6">
                               {data.isGroup && (
                                 <div>
-                                  <dt className="text-sm font-medium text-gray-500 sm:w-40 sm:shrink-0">
+                                  <dt className="text-sm font-medium text-muted-foreground sm:w-40 sm:shrink-0">
                                     Emails
                                   </dt>
-                                  <dd className="mt-1 text-sm text-gray-900 sm:col-span-2">
+                                  <dd className="mt-1 text-sm text-foreground sm:col-span-2">
                                     {data.users
                                       .map((user: { email?: string | null }) => user.email)
                                       .join(", ")}
@@ -395,22 +454,22 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = memo(function ProfileDrawer(
                               )}
                               {!data.isGroup && (
                                 <div>
-                                  <dt className="text-sm font-medium text-gray-500 sm:w-40 sm:shrink-0">
+                                  <dt className="text-sm font-medium text-muted-foreground sm:w-40 sm:shrink-0">
                                     Email
                                   </dt>
-                                  <dd className="mt-1 text-sm text-gray-900 sm:col-span-2">
-                                    {otherUser.email}
+                                  <dd className="mt-1 text-sm text-foreground sm:col-span-2">
+                                    {otherUser?.email ?? ""}
                                   </dd>
                                 </div>
                               )}
-                              {!data.isGroup && (
+                              {!data.isGroup && joinedDate && (
                                 <>
-                                  <hr />
+                                  <hr className="border-border" />
                                   <div>
-                                    <dt className="text-sm font-medium text-gray-500 sm:w-40 sm:shrink-0">
+                                    <dt className="text-sm font-medium text-muted-foreground sm:w-40 sm:shrink-0">
                                       Joined
                                     </dt>
-                                    <dd className="mt-1 text-sm text-gray-900 sm:col-span-2">
+                                    <dd className="mt-1 text-sm text-foreground sm:col-span-2">
                                       <time dateTime={joinedDate}>{joinedDate}</time>
                                     </dd>
                                   </div>
