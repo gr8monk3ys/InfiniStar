@@ -220,8 +220,8 @@ export function sanitizeMessage(dirty: string): string {
     (entity) => DECODE_ENTITIES[entity.toLowerCase()] || entity
   )
 
-  // Convert newlines to <br> tags (preserve line breaks)
-  cleaned = cleaned.replace(/\n/g, "<br>")
+  // Keep newlines as \n — the frontend is responsible for rendering line breaks.
+  // Converting to <br> here would re-introduce raw HTML into a field treated as plain text.
 
   return cleaned.trim()
 }

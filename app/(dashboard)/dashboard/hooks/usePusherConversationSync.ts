@@ -55,7 +55,7 @@ export function usePusherConversationSync({
     }
 
     const userChannel = getPusherUserChannel(currentUserId)
-    pusherClient.subscribe(userChannel)
+    const channel = pusherClient.subscribe(userChannel)
 
     const updateHandler = (conversation: FullConversationType) => {
       const incomingMessage = conversation.messages?.[0]
@@ -210,28 +210,28 @@ export function usePusherConversationSync({
       )
     }
 
-    pusherClient.bind("conversation:update", updateHandler)
-    pusherClient.bind("conversation:new", newHandler)
-    pusherClient.bind("conversation:remove", removeHandler)
-    pusherClient.bind("conversation:archive", archiveHandler)
-    pusherClient.bind("conversation:unarchive", archiveHandler)
-    pusherClient.bind("conversation:pin", pinHandler)
-    pusherClient.bind("conversation:unpin", pinHandler)
-    pusherClient.bind("conversation:mute", muteHandler)
-    pusherClient.bind("conversation:unmute", muteHandler)
+    channel.bind("conversation:update", updateHandler)
+    channel.bind("conversation:new", newHandler)
+    channel.bind("conversation:remove", removeHandler)
+    channel.bind("conversation:archive", archiveHandler)
+    channel.bind("conversation:unarchive", archiveHandler)
+    channel.bind("conversation:pin", pinHandler)
+    channel.bind("conversation:unpin", pinHandler)
+    channel.bind("conversation:mute", muteHandler)
+    channel.bind("conversation:unmute", muteHandler)
 
     return () => {
-      pusherClient.unsubscribe(userChannel)
+      channel.unbind("conversation:update", updateHandler)
+      channel.unbind("conversation:new", newHandler)
+      channel.unbind("conversation:remove", removeHandler)
+      channel.unbind("conversation:archive", archiveHandler)
+      channel.unbind("conversation:unarchive", archiveHandler)
+      channel.unbind("conversation:pin", pinHandler)
+      channel.unbind("conversation:unpin", pinHandler)
+      channel.unbind("conversation:mute", muteHandler)
+      channel.unbind("conversation:unmute", muteHandler)
 
-      pusherClient.unbind("conversation:update", updateHandler)
-      pusherClient.unbind("conversation:new", newHandler)
-      pusherClient.unbind("conversation:remove", removeHandler)
-      pusherClient.unbind("conversation:archive", archiveHandler)
-      pusherClient.unbind("conversation:unarchive", archiveHandler)
-      pusherClient.unbind("conversation:pin", pinHandler)
-      pusherClient.unbind("conversation:unpin", pinHandler)
-      pusherClient.unbind("conversation:mute", muteHandler)
-      pusherClient.unbind("conversation:unmute", muteHandler)
+      pusherClient.unsubscribe(userChannel)
     }
   }, [currentUserId, router, setItems])
 }

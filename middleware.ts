@@ -15,7 +15,7 @@ function applyCorsHeaders(response: Response, origin: string | null) {
   })
 }
 
-export async function proxy(request: NextRequest) {
+export default async function middleware(request: NextRequest) {
   const origin = request.headers.get("origin")
 
   // Handle CORS preflight requests (OPTIONS)

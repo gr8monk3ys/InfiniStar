@@ -35,7 +35,7 @@ const ConversationBox: React.FC<ConversationBoxProps> = ({
 
   const handleClick = useCallback(() => {
     router.push(`/dashboard/conversations/${data.id}`)
-  }, [data, router])
+  }, [data.id, router])
 
   const lastMessage = useMemo(() => {
     const messages = data.messages || []

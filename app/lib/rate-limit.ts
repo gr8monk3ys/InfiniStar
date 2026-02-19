@@ -138,12 +138,22 @@ setInterval(() => {
 
 // Helper function to get client identifier
 export function getClientIdentifier(request: NextRequest): string {
-  // Try to get user email from session
-  // Fall back to IP address
+  // Vercel sets x-vercel-forwarded-for from its own trusted infrastructure — not spoofable by clients.
+  const vercelIp = request.headers.get("x-vercel-forwarded-for")
+  if (vercelIp) return vercelIp.split(",")[0].trim()
+
+  // When behind a single trusted proxy, the rightmost x-forwarded-for value is set by the
+  // proxy itself (not the client), making it more trustworthy than the leftmost value.
   const forwarded = request.headers.get("x-forwarded-for")
+  if (forwarded) {
+    const ips = forwarded.split(",").map((ip) => ip.trim())
+    return ips[ips.length - 1]
+  }
+
   const realIp = request.headers.get("x-real-ip")
-  const ip = forwarded ? forwarded.split(",")[0] : realIp || "unknown"
-  return ip
+  if (realIp) return realIp.trim()
+
+  return "unknown"
 }
 
 // Middleware wrapper for rate limiting

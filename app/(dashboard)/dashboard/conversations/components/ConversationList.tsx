@@ -160,6 +160,13 @@ const ConversationList: React.FC<ConversationListProps> = ({
   // Subscribe to Pusher user channel for real-time conversation updates
   usePusherConversationSync({ currentUserId, items, setItems, notificationPrefs })
 
+  // Derive the current user's email once so we can pass it to ConversationBox
+  // for accurate hasSeen calculation without per-item Clerk subscriptions.
+  const currentUserEmail = useMemo(() => {
+    if (!currentUserId) return null
+    return user.find((u) => u.id === currentUserId)?.email ?? null
+  }, [currentUserId, user])
+
   // Filter and sort conversations based on archive, pin, and tag status
   const filteredItems = useMemo(() => {
     if (!currentUserId) return items
@@ -473,6 +480,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
                       selected={conversationId === item.id}
                       keyboardSelected={selectedConversationIndex === index}
                       currentUserId={currentUserId}
+                      currentUserEmail={currentUserEmail}
                     />
                   ))}
                 </div>
@@ -496,6 +504,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
                         selected={conversationId === item.id}
                         keyboardSelected={selectedConversationIndex === absoluteIndex}
                         currentUserId={currentUserId}
+                        currentUserEmail={currentUserEmail}
                       />
                     )
                   })}

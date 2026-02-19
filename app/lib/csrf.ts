@@ -4,8 +4,12 @@ import crypto from "crypto"
 /**
  * CSRF Token Management
  *
- * Implements Double Submit Cookie pattern for CSRF protection.
- * Tokens are stored in HTTP-only cookies and validated on each mutation request.
+ * Implements the Double Submit Cookie pattern for CSRF protection.
+ * The token is delivered to the client via the /api/csrf JSON endpoint and
+ * also stored in a cookie. The client echoes the token back in the
+ * X-CSRF-Token request header; the server compares header value against
+ * the cookie value. Because the client must be able to read and forward
+ * the cookie value, the cookie must NOT be HttpOnly.
  */
 
 const CSRF_TOKEN_LENGTH = 32
@@ -114,9 +118,11 @@ export function createCsrfCookie(
     sameSite = "strict",
   } = options || {}
 
+  // Note: HttpOnly is intentionally omitted. The Double Submit Cookie pattern
+  // requires JavaScript to read the cookie value and echo it as the X-CSRF-Token
+  // header. HttpOnly would prevent that and silently break CSRF protection.
   const cookieOptions = [
     `${CSRF_COOKIE_NAME}=${token}`,
-    "HttpOnly",
     "Path=/",
     `Max-Age=${maxAge}`,
     `SameSite=${sameSite}`,

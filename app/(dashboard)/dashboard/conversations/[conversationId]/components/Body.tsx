@@ -45,14 +45,16 @@ const Body: React.FC<BodyProps> = memo(function Body({
   isRegenerating = false,
   regeneratingMessageId,
   regeneratingContent,
+  bottomRef,
 }) {
   const parentRef = useRef<HTMLDivElement>(null)
 
   const virtualizer = useVirtualizer({
     count: initialMessages.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => 80,
+    estimateSize: () => 100,
     overscan: 5,
+    measureElement: (element) => element?.getBoundingClientRect().height ?? 100,
   })
 
   // Scroll to the bottom whenever new messages arrive
@@ -75,6 +77,7 @@ const Body: React.FC<BodyProps> = memo(function Body({
           return (
             <div
               key={virtualItem.key}
+              data-index={virtualItem.index}
               style={{
                 position: "absolute",
                 top: 0,
@@ -100,6 +103,8 @@ const Body: React.FC<BodyProps> = memo(function Body({
           )
         })}
       </div>
+      {/* Sentinel element so the parent can scroll to bottom and trigger seen logic */}
+      <div ref={bottomRef} />
     </div>
   )
 })

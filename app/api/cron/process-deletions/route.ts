@@ -24,13 +24,10 @@ export async function GET(request: NextRequest) {
     const authHeader = request.headers.get("authorization")
     const cronSecret = process.env.CRON_SECRET
 
-    // If CRON_SECRET is configured, always enforce it regardless of environment.
-    // Only allow unauthenticated access when CRON_SECRET is not set (local dev with no secret configured).
-    if (cronSecret) {
-      if (authHeader !== `Bearer ${cronSecret}`) {
-        console.warn("[CRON] Unauthorized cron request attempt")
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-      }
+    // CRON_SECRET must always be set. Unauthenticated access is never permitted.
+    if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+      console.warn("[CRON] Unauthorized cron request attempt")
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
     // Get current stats before processing
