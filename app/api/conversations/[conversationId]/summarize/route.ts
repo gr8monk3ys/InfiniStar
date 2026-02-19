@@ -105,6 +105,13 @@ export async function POST(
             sender: true,
           },
         },
+        _count: {
+          select: {
+            messages: {
+              where: { isDeleted: false },
+            },
+          },
+        },
       },
     })
 
@@ -121,12 +128,15 @@ export async function POST(
       return NextResponse.json({ error: "You are not part of this conversation" }, { status: 403 })
     }
 
+    // Use the real total count from _count so the cache invalidates correctly
+    // even when the conversation has more than MAX_MESSAGES_FOR_CONTEXT messages
+    const totalMessageCount = conversation._count.messages
+
     // Check minimum message count
-    const messageCount = conversation.messages.length
-    if (messageCount < MIN_MESSAGES_FOR_SUMMARY) {
+    if (totalMessageCount < MIN_MESSAGES_FOR_SUMMARY) {
       return NextResponse.json(
         {
-          error: `Conversation needs at least ${MIN_MESSAGES_FOR_SUMMARY} messages to generate a summary. Current count: ${messageCount}`,
+          error: `Conversation needs at least ${MIN_MESSAGES_FOR_SUMMARY} messages to generate a summary. Current count: ${totalMessageCount}`,
         },
         { status: 400 }
       )
@@ -137,7 +147,7 @@ export async function POST(
       !forceRegenerate &&
       conversation.summary &&
       conversation.summaryGeneratedAt &&
-      conversation.summaryMessageCount === messageCount
+      conversation.summaryMessageCount === totalMessageCount
     ) {
       // Return cached summary
       const parsedSummary = JSON.parse(conversation.summary) as ConversationSummary
@@ -245,14 +255,14 @@ export async function POST(
       data: {
         summary: JSON.stringify(summary),
         summaryGeneratedAt: now,
-        summaryMessageCount: messageCount,
+        summaryMessageCount: totalMessageCount,
       },
     })
 
     return NextResponse.json({
       summary,
       generatedAt: now,
-      messageCount,
+      messageCount: totalMessageCount,
       cached: false,
     })
   } catch (error: unknown) {

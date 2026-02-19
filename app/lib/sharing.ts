@@ -271,15 +271,36 @@ export async function joinViaShare(
       },
     })
 
-    // Increment use count
-    await prisma.conversationShare.update({
-      where: { id: share.id },
-      data: {
-        useCount: {
-          increment: 1,
+    // Atomically increment use count only if still under the limit to prevent TOCTOU race conditions
+    if (share.maxUses) {
+      const result = await prisma.conversationShare.updateMany({
+        where: {
+          id: share.id,
+          OR: [{ maxUses: null }, { useCount: { lt: share.maxUses } }],
         },
-      },
-    })
+        data: { useCount: { increment: 1 } },
+      })
+      if (result.count === 0) {
+        // Another concurrent request claimed the last slot; roll back the conversation join
+        await prisma.conversation.update({
+          where: { id: share.conversationId },
+          data: {
+            users: {
+              disconnect: { id: userId },
+            },
+          },
+        })
+        return {
+          success: false,
+          error: "This share link has reached its maximum number of uses",
+        }
+      }
+    } else {
+      await prisma.conversationShare.update({
+        where: { id: share.id },
+        data: { useCount: { increment: 1 } },
+      })
+    }
 
     return {
       success: true,

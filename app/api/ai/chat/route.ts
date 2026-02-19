@@ -122,7 +122,7 @@ export async function POST(request: NextRequest) {
           },
         },
         messages: {
-          orderBy: { createdAt: "asc" },
+          orderBy: { createdAt: "desc" },
           take: 20, // Get last 20 messages for context
         },
       },
@@ -208,7 +208,8 @@ export async function POST(request: NextRequest) {
     )
 
     // Build conversation history for Claude
-    const conversationHistory = buildAiConversationHistory(conversation.messages)
+    // Reverse because messages were fetched desc (newest-first) to get the last 20; restore chronological order
+    const conversationHistory = buildAiConversationHistory(conversation.messages.slice().reverse())
 
     // Add the new user message to history
     conversationHistory.push({

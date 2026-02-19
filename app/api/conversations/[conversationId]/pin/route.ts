@@ -51,47 +51,56 @@ export async function POST(
       return NextResponse.json({ error: "Conversation already pinned" }, { status: 400 })
     }
 
-    // Check pin limit (max 5 pinned conversations per user)
-    const pinnedConversationsCount = await prisma.conversation.count({
-      where: {
-        pinnedBy: {
-          has: currentUser.id,
-        },
-      },
-    })
-
-    if (pinnedConversationsCount >= 5) {
-      return NextResponse.json(
-        { error: "You can only pin up to 5 conversations. Unpin one to pin another." },
-        { status: 400 }
-      )
-    }
-
     // Add user to pinnedBy array
     const updatedPinnedBy = [...pinnedBy, currentUser.id]
 
-    // Update conversation
-    const updatedConversation = await prisma.conversation.update({
-      where: { id: conversationId },
-      data: {
-        pinnedBy: updatedPinnedBy,
-        // Set pinnedAt timestamp only if this is the first pin
-        pinnedAt: pinnedBy.length === 0 ? new Date() : conversation.pinnedAt,
-      },
-      include: {
-        users: true,
-        messages: {
+    // Atomically check the pin limit and perform the update to prevent TOCTOU race conditions
+    let updatedConversation
+    try {
+      updatedConversation = await prisma.$transaction(async (tx) => {
+        const pinnedCount = await tx.conversation.count({
+          where: {
+            pinnedBy: {
+              has: currentUser.id,
+            },
+          },
+        })
+
+        if (pinnedCount >= 5) {
+          throw new Error("MAX_PINS_REACHED")
+        }
+
+        return tx.conversation.update({
+          where: { id: conversationId },
+          data: {
+            pinnedBy: updatedPinnedBy,
+            // Set pinnedAt timestamp only if this is the first pin
+            pinnedAt: pinnedBy.length === 0 ? new Date() : conversation.pinnedAt,
+          },
           include: {
-            sender: true,
-            seen: true,
+            users: true,
+            messages: {
+              include: {
+                sender: true,
+                seen: true,
+              },
+              orderBy: {
+                createdAt: "desc",
+              },
+              take: 1,
+            },
           },
-          orderBy: {
-            createdAt: "desc",
-          },
-          take: 1,
-        },
-      },
-    })
+        })
+      })
+    } catch (txError) {
+      if (txError instanceof Error && txError.message === "MAX_PINS_REACHED") {
+        return NextResponse.json(
+          { error: "You can only pin up to 5 conversations. Unpin one to pin another." },
+          { status: 400 }
+        )
+      }
+      throw txError
+    }
 
     // Trigger Pusher event for real-time update (only to the user who pinned)
     await pusherServer.trigger(
