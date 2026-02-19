@@ -270,6 +270,21 @@ export async function POST(req: Request) {
           const currentPeriodEnd = getCurrentPeriodEnd(activeSubscription)
 
           if (userId) {
+            const userExists = await prisma.user.findUnique({
+              where: { id: userId },
+              select: { id: true },
+            })
+            if (!userExists) {
+              stripeLogger.error(
+                { checkoutSessionId: session.id, userId },
+                "[stripe-webhook] User not found for metadata userId"
+              )
+              // Return 200 to prevent Stripe from retrying for a non-existent user
+              return new NextResponse(
+                JSON.stringify({ received: true, warning: "user_not_found" }),
+                { status: 200 }
+              )
+            }
             await prisma.user.update({
               where: { id: userId },
               data: {

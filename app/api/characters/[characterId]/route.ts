@@ -25,7 +25,7 @@ const updateCharacterSchema = z.object({
   tags: z.array(z.string().min(1).max(30)).max(10).optional(),
   isPublic: z.boolean().optional(),
   isNsfw: z.boolean().optional(),
-  featured: z.boolean().optional(),
+  // `featured` can only be set via admin endpoints - not included in user update schema
   category: z.string().max(50).optional(),
 })
 
@@ -191,7 +191,6 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       tags: data.tags?.map((tag) => sanitizePlainText(tag)).filter(Boolean) as string[] | undefined,
       isPublic: data.isPublic,
       isNsfw: data.isNsfw,
-      featured: data.featured,
       category: data.category ? sanitizePlainText(data.category) || undefined : undefined,
     },
   })

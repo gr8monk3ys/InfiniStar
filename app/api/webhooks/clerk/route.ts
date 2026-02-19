@@ -53,8 +53,14 @@ export async function POST(req: Request): Promise<Response> {
         const email = data.email_addresses[0]?.email_address
         const name = `${data.first_name || ""} ${data.last_name || ""}`.trim() || null
 
-        await prisma.user.create({
-          data: {
+        await prisma.user.upsert({
+          where: { clerkId: data.id },
+          update: {
+            email,
+            name,
+            image: data.image_url,
+          },
+          create: {
             clerkId: data.id,
             email,
             name,
