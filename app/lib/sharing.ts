@@ -306,7 +306,7 @@ export async function joinViaShare(
       })
 
     if (!joinResult.success) {
-      return { success: false, error: joinResult.error }
+      return { success: false, error: "error" in joinResult ? joinResult.error : "Failed to join" }
     }
 
     return {

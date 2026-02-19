@@ -5,6 +5,7 @@ import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import prisma from "@/app/lib/prismadb"
 import { pusherServer } from "@/app/lib/pusher"
 import { getPusherConversationChannel } from "@/app/lib/pusher-channels"
+import { apiLimiter } from "@/app/lib/rate-limit"
 import getCurrentUser from "@/app/actions/getCurrentUser"
 
 // Validation schema
@@ -31,6 +32,10 @@ export async function POST(
 
     if (!currentUser?.id || !currentUser?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    if (!apiLimiter.check(currentUser.id)) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 })
     }
 
     // Validate request body

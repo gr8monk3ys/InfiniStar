@@ -4,6 +4,7 @@ import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import prisma from "@/app/lib/prismadb"
 import { pusherServer } from "@/app/lib/pusher"
 import { getPusherConversationChannel, getPusherUserChannel } from "@/app/lib/pusher-channels"
+import { apiLimiter } from "@/app/lib/rate-limit"
 import getCurrentUser from "@/app/actions/getCurrentUser"
 
 interface IParams {
@@ -25,6 +26,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<I
 
     if (!currentUser?.id || !currentUser?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    if (!apiLimiter.check(currentUser.id)) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 })
     }
 
     // Verify user is a participant in this conversation
