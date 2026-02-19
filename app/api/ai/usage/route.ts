@@ -76,8 +76,18 @@ export async function GET(request: NextRequest) {
         // Custom date range from query params
         const startParam = searchParams.get("startDate")
         const endParam = searchParams.get("endDate")
-        if (startParam) startDate = new Date(startParam)
-        if (endParam) endDate = new Date(endParam)
+        if (startParam) {
+          startDate = new Date(startParam)
+          if (isNaN(startDate.getTime())) {
+            return NextResponse.json({ error: "Invalid startDate" }, { status: 400 })
+          }
+        }
+        if (endParam) {
+          endDate = new Date(endParam)
+          if (isNaN(endDate.getTime())) {
+            return NextResponse.json({ error: "Invalid endDate" }, { status: 400 })
+          }
+        }
       }
     }
 

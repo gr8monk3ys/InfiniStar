@@ -98,8 +98,9 @@ export async function GET(
 
     const format = queryValidation.data.format as ExportFormat
 
-    // Fetch conversation with users and messages
-    // Use cursor-based pagination for large conversations
+    // Fetch conversation with users and messages.
+    // Cap at 5000 messages to prevent OOM on very large conversations.
+    const MESSAGE_EXPORT_CAP = 5000
     const conversation = await prisma.conversation.findUnique({
       where: {
         id: conversationId,
@@ -125,6 +126,7 @@ export async function GET(
           orderBy: {
             createdAt: "asc",
           },
+          take: MESSAGE_EXPORT_CAP,
         },
       },
     })
@@ -184,6 +186,9 @@ export async function GET(
     // Generate filename
     const filename = generateExportFilename(exportData.conversationName, format)
 
+    // Indicate if the export was capped (i.e. the conversation has more messages than the limit)
+    const wasCapped = conversation.messages.length >= MESSAGE_EXPORT_CAP
+
     // Return response with appropriate headers for download
     return new NextResponse(content, {
       status: 200,
@@ -193,6 +198,7 @@ export async function GET(
         "Cache-Control": "no-cache, no-store, must-revalidate",
         Pragma: "no-cache",
         Expires: "0",
+        ...(wasCapped && { "X-Export-Capped": `true; limit=${MESSAGE_EXPORT_CAP}` }),
       },
     })
   } catch (error) {

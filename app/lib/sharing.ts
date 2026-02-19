@@ -261,45 +261,52 @@ export async function joinViaShare(
       }
     }
 
-    // Add user to conversation
-    await prisma.conversation.update({
-      where: { id: share.conversationId },
-      data: {
-        users: {
-          connect: { id: userId },
-        },
-      },
-    })
-
-    // Atomically increment use count only if still under the limit to prevent TOCTOU race conditions
-    if (share.maxUses) {
-      const result = await prisma.conversationShare.updateMany({
-        where: {
-          id: share.id,
-          OR: [{ maxUses: null }, { useCount: { lt: share.maxUses } }],
-        },
-        data: { useCount: { increment: 1 } },
-      })
-      if (result.count === 0) {
-        // Another concurrent request claimed the last slot; roll back the conversation join
-        await prisma.conversation.update({
+    // Add user to conversation and increment use count atomically in a single transaction.
+    // This prevents partial updates if either step fails, and eliminates the need for
+    // manual rollback on TOCTOU race conditions.
+    const joinResult = await prisma
+      .$transaction(async (tx) => {
+        // Connect user to conversation
+        await tx.conversation.update({
           where: { id: share.conversationId },
           data: {
             users: {
-              disconnect: { id: userId },
+              connect: { id: userId },
             },
           },
         })
-        return {
-          success: false,
-          error: "This share link has reached its maximum number of uses",
+
+        // Increment use count, enforcing the maxUses limit atomically
+        if (share.maxUses) {
+          const result = await tx.conversationShare.updateMany({
+            where: {
+              id: share.id,
+              useCount: { lt: share.maxUses },
+            },
+            data: { useCount: { increment: 1 } },
+          })
+          if (result.count === 0) {
+            // Another concurrent request claimed the last slot; throw to roll back the transaction
+            throw new Error("SHARE_LIMIT_REACHED")
+          }
+        } else {
+          await tx.conversationShare.update({
+            where: { id: share.id },
+            data: { useCount: { increment: 1 } },
+          })
         }
-      }
-    } else {
-      await prisma.conversationShare.update({
-        where: { id: share.id },
-        data: { useCount: { increment: 1 } },
+
+        return { success: true }
       })
+      .catch((err: Error) => {
+        if (err.message === "SHARE_LIMIT_REACHED") {
+          return { success: false, error: "This share link has reached its maximum number of uses" }
+        }
+        throw err
+      })
+
+    if (!joinResult.success) {
+      return { success: false, error: joinResult.error }
     }
 
     return {

@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
       },
       include: {
         messages: {
-          orderBy: { createdAt: "asc" },
+          orderBy: { createdAt: "desc" },
           take: 20, // Last 20 messages for context
           select: {
             body: true,
@@ -97,9 +97,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Filter out deleted messages and format for extraction
+    // Filter out deleted messages and format for extraction.
+    // Reverse to restore chronological order — messages were fetched desc (newest-first)
+    // to get the last 20, matching the pattern in ai/chat-stream/route.ts.
     const messages = conversation.messages
       .filter((msg: { isDeleted?: boolean; body?: string | null }) => !msg.isDeleted && msg.body)
+      .slice()
+      .reverse()
       .map((msg: { isAI: boolean; body?: string | null }) => ({
         role: msg.isAI ? ("assistant" as const) : ("user" as const),
         content: msg.body || "",

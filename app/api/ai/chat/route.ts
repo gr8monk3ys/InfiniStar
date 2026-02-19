@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server"
 import Anthropic from "@anthropic-ai/sdk"
+import { z } from "zod"
 
 import { getAiAccessDecision } from "@/app/lib/ai-access"
 import { buildAiConversationHistory, buildAiMessageContent } from "@/app/lib/ai-message-content"
@@ -24,6 +25,19 @@ import { aiChatLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 import { sanitizeUrl } from "@/app/lib/sanitize"
 import { sendWebPushToUser } from "@/app/lib/web-push"
 import getCurrentUser from "@/app/actions/getCurrentUser"
+
+// Validation schema matching the chat-stream endpoint schema
+const chatSchema = z.object({
+  message: z.string().max(10000, "Message too long (max 10000 characters)").optional().nullable(),
+  image: z.string().url("Invalid image URL").max(2000, "Image URL too long").optional().nullable(),
+  audioUrl: z
+    .string()
+    .url("Invalid audio URL")
+    .max(2000, "Audio URL too long")
+    .optional()
+    .nullable(),
+  conversationId: z.string().min(1, "Conversation ID is required"),
+})
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY || "",
@@ -73,11 +87,17 @@ export async function POST(request: NextRequest) {
     const allowNsfw = canAccessNsfw(currentUser)
 
     const body = await request.json()
-    const { message, image, audioUrl, conversationId } = body
 
-    if (!conversationId) {
-      return new NextResponse("Conversation ID is required", { status: 400 })
+    // Validate request body with Zod schema
+    const validation = chatSchema.safeParse(body)
+    if (!validation.success) {
+      return new NextResponse(JSON.stringify({ error: validation.error.issues[0].message }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      })
     }
+
+    const { message, image, audioUrl, conversationId } = validation.data
 
     const builtUserContent = buildAiMessageContent(message ?? null, image ?? null)
     const sanitizedMessage = builtUserContent.sanitizedText

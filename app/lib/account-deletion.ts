@@ -129,27 +129,10 @@ export async function deleteUserAccount(userId: string): Promise<void> {
     await tx.$executeRaw`DELETE FROM "_Seen" WHERE "B" = ${userId}::uuid`
 
     // 3. Remove user from all conversations
-    const userConversations = await tx.conversation.findMany({
-      where: {
-        users: {
-          some: {
-            id: userId,
-          },
-        },
-      },
-      select: { id: true },
-    })
-
-    for (const conversation of userConversations) {
-      await tx.conversation.update({
-        where: { id: conversation.id },
-        data: {
-          users: {
-            disconnect: { id: userId },
-          },
-        },
-      })
-    }
+    // Use a single raw DELETE on the implicit join table instead of N individual
+    // conversation.update() calls.  Prisma names this join table "_ConversationToUser"
+    // with "A" = conversationId and "B" = userId (alphabetical model order).
+    await tx.$executeRaw`DELETE FROM "_ConversationToUser" WHERE "B" = ${userId}::uuid`
 
     // 4. Delete AI usage records
     await tx.aiUsage.deleteMany({
