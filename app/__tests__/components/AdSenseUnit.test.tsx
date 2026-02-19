@@ -43,7 +43,7 @@ describe("AdSenseUnit", () => {
       homeInline: "",
       pricingInline: "",
     }
-    delete window.adsbygoogle
+    window.adsbygoogle = undefined as unknown as Array<Record<string, unknown>>
   })
 
   it("renders nothing when AdSense feature flag is disabled", () => {

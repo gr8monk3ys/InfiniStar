@@ -285,7 +285,13 @@ describe("TwoFactorSettings", () => {
       render(<TwoFactorSettings hasPassword={true} />)
 
       await waitFor(() => {
-        expect(screen.getByText(/8 backup codes remaining/i)).toBeInTheDocument()
+        // The text node is preceded by an <HiKey /> icon inside the same <p>, so we
+        // match against the element's full textContent rather than an exact text node.
+        expect(
+          screen.getByText((_, element) =>
+            (element?.textContent ?? "").toLowerCase().includes("8 backup codes remaining")
+          )
+        ).toBeInTheDocument()
       })
     })
 

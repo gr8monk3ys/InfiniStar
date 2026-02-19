@@ -13,6 +13,9 @@ const customJestConfig = {
     "^@/(.*)$": "<rootDir>/$1",
     "^otplib$": "<rootDir>/__mocks__/otplib.js",
   },
+  transformIgnorePatterns: [
+    "/node_modules/(?!(react-icons|@radix-ui|class-variance-authority|tailwind-merge|nanoid|@t3-oss)/)",
+  ],
   collectCoverageFrom: [
     "app/**/*.{js,jsx,ts,tsx}",
     "!app/**/*.d.ts",
