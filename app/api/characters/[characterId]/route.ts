@@ -54,7 +54,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
 
     const currentUser = await prisma.user.findUnique({
       where: { clerkId: userId },
-      select: { id: true, isAdult: true, nsfwEnabled: true },
+      select: { id: true, isAdult: true, nsfwEnabled: true, adultConfirmedAt: true },
     })
 
     const isOwner = currentUser?.id && character.createdById === currentUser.id

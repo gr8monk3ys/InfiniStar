@@ -162,6 +162,7 @@ export async function POST(request: NextRequest) {
         stripeCurrentPeriodEnd: true,
         isAdult: true,
         nsfwEnabled: true,
+        adultConfirmedAt: true,
       },
     })
     if (!currentUser) {

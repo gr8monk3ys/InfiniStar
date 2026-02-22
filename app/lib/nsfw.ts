@@ -1,5 +1,12 @@
 export function canAccessNsfw(
-  user: { isAdult?: boolean | null; nsfwEnabled?: boolean | null } | null | undefined
+  user:
+    | {
+        isAdult?: boolean | null
+        nsfwEnabled?: boolean | null
+        adultConfirmedAt?: Date | null
+      }
+    | null
+    | undefined
 ): boolean {
-  return Boolean(user?.isAdult && user?.nsfwEnabled)
+  return Boolean(user?.isAdult && user?.nsfwEnabled && user?.adultConfirmedAt)
 }

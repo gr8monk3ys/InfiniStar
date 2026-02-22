@@ -65,7 +65,7 @@ export default async function CharacterPage({ params }: CharacterPageProps) {
   const currentUser = userId
     ? await prisma.user.findUnique({
         where: { clerkId: userId },
-        select: { id: true, isAdult: true, nsfwEnabled: true },
+        select: { id: true, isAdult: true, nsfwEnabled: true, adultConfirmedAt: true },
       })
     : null
   const allowNsfw = canAccessNsfw(currentUser)

@@ -42,7 +42,7 @@ export async function GET(
   const currentUser = userId
     ? await prisma.user.findUnique({
         where: { clerkId: userId },
-        select: { id: true, isAdult: true, nsfwEnabled: true },
+        select: { id: true, isAdult: true, nsfwEnabled: true, adultConfirmedAt: true },
       })
     : null
   const allowNsfw = canAccessNsfw(currentUser)
@@ -115,7 +115,7 @@ export async function POST(
 
   const currentUser = await prisma.user.findUnique({
     where: { clerkId: userId },
-    select: { id: true, isAdult: true, nsfwEnabled: true },
+    select: { id: true, isAdult: true, nsfwEnabled: true, adultConfirmedAt: true },
   })
   if (!currentUser) {
     return NextResponse.json({ error: "User not found" }, { status: 401 })
