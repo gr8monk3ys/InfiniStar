@@ -1,6 +1,7 @@
 /**
  * TwoFactorSettings Component Tests
  */
+import { createElement } from "react"
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
@@ -41,8 +42,12 @@ jest.mock("react-hot-toast", () => ({
 jest.mock("next/image", () => ({
   __esModule: true,
   default: (props: { src: string; alt: string; width?: number; height?: number }) => {
-    // eslint-disable-next-line @next/next/no-img-element
-    return <img src={props.src} alt={props.alt} width={props.width} height={props.height} />
+    return createElement("img", {
+      src: props.src,
+      alt: props.alt,
+      width: props.width,
+      height: props.height,
+    })
   },
 }))
 
@@ -285,13 +290,7 @@ describe("TwoFactorSettings", () => {
       render(<TwoFactorSettings hasPassword={true} />)
 
       await waitFor(() => {
-        // The text node is preceded by an <HiKey /> icon inside the same <p>, so we
-        // match against the element's full textContent rather than an exact text node.
-        expect(
-          screen.getByText((_, element) =>
-            (element?.textContent ?? "").toLowerCase().includes("8 backup codes remaining")
-          )
-        ).toBeInTheDocument()
+        expect(screen.getByText(/8 backup codes remaining/i, { selector: "p" })).toBeInTheDocument()
       })
     })
 

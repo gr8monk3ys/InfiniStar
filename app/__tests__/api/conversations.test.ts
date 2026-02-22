@@ -27,7 +27,7 @@ jest.mock("@/app/lib/prismadb", () => ({
   __esModule: true,
   default: {
     user: { findUnique: jest.fn() },
-    conversation: { create: jest.fn(), findMany: jest.fn(), update: jest.fn() },
+    conversation: { create: jest.fn(), findFirst: jest.fn(), update: jest.fn() },
     character: {
       findUnique: jest.fn(),
       findMany: jest.fn(),
@@ -44,6 +44,7 @@ jest.mock("@/app/lib/pusher", () => ({
 
 jest.mock("@/app/lib/csrf", () => ({
   verifyCsrfToken: jest.fn(() => true),
+  getCsrfTokenFromRequest: jest.fn(() => "test-token"),
 }))
 
 jest.mock("@/app/lib/sanitize", () => ({
@@ -87,7 +88,7 @@ beforeEach(() => {
 
 describe("POST /api/conversations", () => {
   it("creates a direct conversation", async () => {
-    ;(prisma.conversation.findMany as jest.Mock).mockResolvedValue([])
+    ;(prisma.conversation.findFirst as jest.Mock).mockResolvedValue(null)
     ;(prisma.conversation.create as jest.Mock).mockResolvedValue(testConversation)
 
     const request = createRequest({ userId: "user-2" })
@@ -99,7 +100,7 @@ describe("POST /api/conversations", () => {
   })
 
   it("returns existing conversation for direct chat", async () => {
-    ;(prisma.conversation.findMany as jest.Mock).mockResolvedValue([testConversation])
+    ;(prisma.conversation.findFirst as jest.Mock).mockResolvedValue(testConversation)
 
     const request = createRequest({ userId: "user-2" })
     const response = await POST(request)

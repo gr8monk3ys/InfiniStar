@@ -20,6 +20,7 @@ jest.mock("@clerk/nextjs/server", () => ({
 jest.mock("@/app/lib/csrf", () => ({
   verifyCsrfToken: (headerToken: string | null, cookieToken: string | null) =>
     mockVerifyCsrfToken(headerToken, cookieToken),
+  getCsrfTokenFromRequest: () => "test-token",
 }))
 
 jest.mock("@/app/lib/sanitize", () => ({

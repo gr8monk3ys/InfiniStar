@@ -23,6 +23,7 @@ jest.mock("@clerk/nextjs/server", () => ({
 
 jest.mock("@/app/lib/csrf", () => ({
   verifyCsrfToken: jest.fn(() => true),
+  getCsrfTokenFromRequest: jest.fn(() => "csrf-token"),
 }))
 
 jest.mock("@/app/lib/rate-limit", () => ({

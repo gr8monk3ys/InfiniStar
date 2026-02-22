@@ -22,6 +22,7 @@ jest.mock("@clerk/nextjs/server", () => ({
 
 jest.mock("@/app/lib/csrf", () => ({
   verifyCsrfToken: (...args: unknown[]) => mockVerifyCsrfToken(...args),
+  getCsrfTokenFromRequest: () => "test-token",
 }))
 
 jest.mock("@/app/lib/prismadb", () => ({

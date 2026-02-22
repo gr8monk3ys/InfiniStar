@@ -63,7 +63,7 @@ describe("Sanitization Functions", () => {
       const input = '<script>alert("xss")</script>Hello\nWorld'
       const result = sanitizeMessage(input)
       expect(result).not.toContain("<script>")
-      expect(result).toContain("Hello<br>World")
+      expect(result).toContain("Hello\nWorld")
     })
 
     it("should handle empty input", () => {

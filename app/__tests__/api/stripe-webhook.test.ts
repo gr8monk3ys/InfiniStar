@@ -21,7 +21,7 @@ import { POST } from "@/app/api/webhooks/stripe/route"
 jest.mock("@/app/lib/prismadb", () => ({
   __esModule: true,
   default: {
-    user: { findFirst: jest.fn(), update: jest.fn() },
+    user: { findFirst: jest.fn(), findUnique: jest.fn(), update: jest.fn() },
     creatorSubscription: { updateMany: jest.fn(), upsert: jest.fn() },
   },
 }))
@@ -135,6 +135,7 @@ describe("POST /api/webhooks/stripe", () => {
       },
     })
     ;(stripe.subscriptions.retrieve as jest.Mock).mockResolvedValue(mockSubscription)
+    ;(prisma.user.findUnique as jest.Mock).mockResolvedValue({ id: "user-1" })
     ;(prisma.user.update as jest.Mock).mockResolvedValue({})
 
     const response = await POST(createWebhookRequest())

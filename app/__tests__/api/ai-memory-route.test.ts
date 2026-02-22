@@ -38,6 +38,7 @@ jest.mock("@/app/lib/prismadb", () => ({
 
 jest.mock("@/app/lib/csrf", () => ({
   verifyCsrfToken: jest.fn(() => true),
+  getCsrfTokenFromRequest: jest.fn(() => "test-token"),
 }))
 
 jest.mock("@/app/lib/rate-limit", () => ({

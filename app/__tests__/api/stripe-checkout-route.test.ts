@@ -24,6 +24,7 @@ jest.mock("@clerk/nextjs/server", () => ({
 
 jest.mock("@/app/lib/csrf", () => ({
   verifyCsrfToken: jest.fn(() => true),
+  getCsrfTokenFromRequest: jest.fn(() => "csrf-token"),
 }))
 
 jest.mock("@/app/lib/rate-limit", () => ({
@@ -46,6 +47,7 @@ jest.mock("@/app/lib/prismadb", () => ({
 jest.mock("@/app/lib/stripe", () => ({
   stripe: {
     customers: {
+      retrieve: jest.fn(),
       create: jest.fn(),
     },
     checkout: {
@@ -82,6 +84,10 @@ describe("POST /api/stripe/checkout", () => {
       name: "Test User",
       stripeCustomerId: null,
       stripeSubscriptionId: null,
+    })
+    ;(stripe.customers.retrieve as jest.Mock).mockResolvedValue({
+      id: "cus_existing",
+      deleted: false,
     })
     ;(stripe.customers.create as jest.Mock).mockResolvedValue({ id: "cus_new" })
     ;(stripe.checkout.sessions.create as jest.Mock).mockResolvedValue({
@@ -146,7 +152,7 @@ describe("POST /api/stripe/checkout", () => {
 
     expect(prisma.user.update).toHaveBeenCalledWith({
       where: { id: "user_1" },
-      data: { stripeCustomerId: "cus_new" },
+      data: { stripeCustomerId: "cus_new", stripeSubscriptionId: null },
     })
 
     expect(stripe.checkout.sessions.create).toHaveBeenCalledWith(
@@ -167,6 +173,10 @@ describe("POST /api/stripe/checkout", () => {
       name: "Test User",
       stripeCustomerId: "cus_existing",
       stripeSubscriptionId: null,
+    })
+    ;(stripe.customers.retrieve as jest.Mock).mockResolvedValue({
+      id: "cus_existing",
+      deleted: false,
     })
 
     const response = await POST(createRequest())
