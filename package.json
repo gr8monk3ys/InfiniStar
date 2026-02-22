@@ -32,6 +32,7 @@
     "ci:release:gate:full": "RUN_E2E=1 RUN_LOAD_SMOKE=1 bash scripts/release_gate.sh",
     "ci:build": "bash -lc 'set -a; [ -f .env.ci.example ] && source .env.ci.example; set +a; SKIP_ENV_VALIDATION=1 bun run build'",
     "seed": "ts-node --compiler-options {\\\"module\\\":\\\"CommonJS\\\"} prisma/seed.ts",
+    "migrate:deploy": "prisma migrate deploy",
     "postinstall": "prisma generate",
     "prepare": "husky"
   },

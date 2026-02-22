@@ -66,6 +66,9 @@ npx jest --testNamePattern="sanitizeMessage"
 npx prisma generate      # Generate Prisma Client
 npx prisma db push       # Push schema changes to database (development)
 npx prisma studio        # Open Prisma Studio to view/edit data
+npx prisma migrate deploy  # Apply pending migrations in production (NOT dev)
+bun run migrate:deploy     # Shorthand for the above
+# WARNING: Production: always use `migrate:deploy`, never `db push`
 bun run seed             # Seed database with test data
 ```
 
