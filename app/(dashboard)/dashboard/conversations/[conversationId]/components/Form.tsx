@@ -1,9 +1,16 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type BaseSyntheticEvent,
+  type ChangeEvent,
+  type RefObject,
+} from "react"
 import dynamic from "next/dynamic"
 import Image from "next/image"
-import axios from "axios"
 import type { CloudinaryUploadWidgetResults } from "next-cloudinary"
 import { useForm, type FieldValues, type SubmitHandler } from "react-hook-form"
 import toast from "react-hot-toast"
@@ -16,6 +23,7 @@ import {
   HiXMark,
 } from "react-icons/hi2"
 
+import { api, ApiError } from "@/app/lib/api-client"
 import { Button } from "@/app/components/ui/button"
 import {
   Dialog,
@@ -32,7 +40,11 @@ import { SuggestionChips } from "@/app/components/suggestions"
 import { isVoiceInputSupported, VoiceInput, type VoiceInputMode } from "@/app/components/voice"
 import { useAiChatStream, type TokenUsage } from "@/app/hooks/useAiChatStream"
 import { useCsrfToken } from "@/app/hooks/useCsrfToken"
-import { useSuggestionPreferences, useSuggestions } from "@/app/hooks/useSuggestions"
+import {
+  useSuggestionPreferences,
+  useSuggestions,
+  type Suggestion,
+} from "@/app/hooks/useSuggestions"
 import { useTokenUsageStore } from "@/app/hooks/useTokenUsage"
 import { useTypingIndicator } from "@/app/hooks/useTypingIndicator"
 import { type FullMessageType } from "@/app/types"
@@ -44,6 +56,570 @@ const CldUploadButton = dynamic(
   () => import("next-cloudinary").then((mod) => mod.CldUploadButton),
   { ssr: false }
 )
+const hasCloudinaryConfig = Boolean(process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME)
+const EMPTY_MESSAGES: FullMessageType[] = []
+
+type ImageSize = "512x512" | "1024x1024" | "1024x1792" | "1792x1024"
+
+interface PendingImagePreviewProps {
+  pendingImage: string
+  onRemove: () => void
+}
+
+function PendingImagePreview({ pendingImage, onRemove }: PendingImagePreviewProps) {
+  return (
+    <div className="mx-4 mt-2 flex items-start gap-3 rounded-lg border border-border/70 bg-muted/40 p-3">
+      <Image
+        src={pendingImage}
+        alt="Pending prompt upload"
+        width={56}
+        height={56}
+        className="size-14 rounded-md border border-border object-cover"
+      />
+      <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
+        <p className="text-xs text-muted-foreground">Image will be sent with your next prompt.</p>
+        <button
+          type="button"
+          className="rounded-full p-1 text-muted-foreground transition hover:bg-accent hover:text-foreground"
+          onClick={onRemove}
+          aria-label="Remove pending image"
+        >
+          <HiXMark size={16} />
+        </button>
+      </div>
+    </div>
+  )
+}
+
+interface ImageGenerationDialogProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  prompt: string
+  size: ImageSize
+  onPromptChange: (value: string) => void
+  onSizeChange: (value: ImageSize) => void
+  onGenerate: () => void
+  isGenerating: boolean
+  isStreaming: boolean
+}
+
+function ImageGenerationDialog({
+  open,
+  onOpenChange,
+  prompt,
+  size,
+  onPromptChange,
+  onSizeChange,
+  onGenerate,
+  isGenerating,
+  isStreaming,
+}: ImageGenerationDialogProps) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Generate image</DialogTitle>
+          <DialogDescription>
+            Creates an AI-generated image and sends it to this conversation.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-3">
+          <label className="block text-sm font-medium text-foreground" htmlFor="image-prompt">
+            Prompt
+          </label>
+          <textarea
+            id="image-prompt"
+            value={prompt}
+            onChange={(e) => onPromptChange(e.target.value)}
+            placeholder="Describe the image you want..."
+            className="min-h-28 w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            maxLength={2000}
+            disabled={isGenerating || isStreaming}
+          />
+
+          <label className="block text-sm font-medium text-foreground" htmlFor="image-size">
+            Size
+          </label>
+          <select
+            id="image-size"
+            value={size}
+            onChange={(e) => onSizeChange(e.target.value as ImageSize)}
+            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            disabled={isGenerating || isStreaming}
+          >
+            <option value="512x512">512x512</option>
+            <option value="1024x1024">1024x1024</option>
+            <option value="1024x1792">1024x1792</option>
+            <option value="1792x1024">1792x1024</option>
+          </select>
+        </div>
+
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={isGenerating}
+          >
+            Cancel
+          </Button>
+          <Button type="button" onClick={onGenerate} disabled={isGenerating || isStreaming}>
+            {isGenerating ? "Generating..." : "Generate"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+interface ComposerRowProps {
+  isAI: boolean
+  onUpload: (result: CloudinaryUploadWidgetResults) => void
+  onOpenImageGenerator: () => void
+  isLoading: boolean
+  isStreaming: boolean
+  voiceMessageSupported: boolean
+  isGeneratingImage: boolean
+  isSendingVoiceMessage: boolean
+  isRecordingVoiceMessage: boolean
+  onVoiceMessageToggle: () => void
+  formRef: RefObject<HTMLFormElement | null>
+  onSubmit: (event?: BaseSyntheticEvent) => void
+  register: ReturnType<typeof useForm<FieldValues>>["register"]
+  errors: ReturnType<typeof useForm<FieldValues>>["formState"]["errors"]
+  onInputChange: (e: ChangeEvent<HTMLInputElement>) => void
+  onModifierEnterSubmit: () => void
+  enableVoiceInput: boolean
+  voiceSupported: boolean
+  onTranscriptApply: (transcript: string, mode: VoiceInputMode) => void
+  currentMessage: string
+  onStateChange: (state: "idle" | "listening" | "processing" | "error") => void
+  onVoiceError: (error: string, message: string) => void
+  canSubmit: boolean
+}
+
+function ComposerRow({
+  isAI,
+  onUpload,
+  onOpenImageGenerator,
+  isLoading,
+  isStreaming,
+  voiceMessageSupported,
+  isGeneratingImage,
+  isSendingVoiceMessage,
+  isRecordingVoiceMessage,
+  onVoiceMessageToggle,
+  formRef,
+  onSubmit,
+  register,
+  errors,
+  onInputChange,
+  onModifierEnterSubmit,
+  enableVoiceInput,
+  voiceSupported,
+  onTranscriptApply,
+  currentMessage,
+  onStateChange,
+  onVoiceError,
+  canSubmit,
+}: ComposerRowProps) {
+  return (
+    <div className="flex w-full items-center gap-2 p-4">
+      {hasCloudinaryConfig ? (
+        <CldUploadButton
+          options={{ maxFiles: 1 }}
+          onUpload={onUpload}
+          uploadPreset="pgc9ehd5"
+          aria-label="Attach image"
+        >
+          <HiPhoto size={30} className="text-sky-500" aria-hidden="true" />
+        </CldUploadButton>
+      ) : (
+        <button
+          type="button"
+          disabled
+          aria-label="Attach image unavailable"
+          title="Image upload is unavailable until Cloudinary is configured."
+          className="cursor-not-allowed rounded-md p-1 opacity-60"
+        >
+          <HiPhoto size={30} className="text-sky-500" aria-hidden="true" />
+        </button>
+      )}
+      {isAI && (
+        <button
+          type="button"
+          onClick={onOpenImageGenerator}
+          disabled={isLoading || isStreaming}
+          className="rounded-md p-1 text-violet-600 transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
+          aria-label="Generate image"
+          title="Generate image"
+        >
+          <HiSparkles size={26} />
+        </button>
+      )}
+      {voiceMessageSupported && (
+        <button
+          type="button"
+          onClick={onVoiceMessageToggle}
+          disabled={isLoading || isStreaming || isGeneratingImage || isSendingVoiceMessage}
+          className={`rounded-md p-1 transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50 ${
+            isRecordingVoiceMessage ? "text-red-600" : "text-sky-600"
+          }`}
+          aria-label={
+            isRecordingVoiceMessage ? "Stop voice message recording" : "Record voice message"
+          }
+          aria-pressed={isRecordingVoiceMessage}
+          title={isRecordingVoiceMessage ? "Stop recording" : "Record voice message"}
+        >
+          {isRecordingVoiceMessage ? <HiStopCircle size={26} /> : <HiMicrophone size={26} />}
+        </button>
+      )}
+      <form
+        ref={formRef}
+        onSubmit={onSubmit}
+        className="flex w-full items-center gap-2 lg:gap-4"
+        aria-label={isAI ? "AI chat message form" : "Send message form"}
+      >
+        <MessageInput
+          id="message"
+          register={register}
+          errors={errors}
+          required={!isAI}
+          placeholder={isAI ? "Ask me anything..." : "Write a message"}
+          aria-label="Message"
+          onInputChange={onInputChange}
+          onModifierEnter={onModifierEnterSubmit}
+        />
+
+        {enableVoiceInput && voiceSupported && (
+          <VoiceInput
+            onTranscriptApply={onTranscriptApply}
+            currentText={currentMessage}
+            showWaveform={false}
+            showLanguageSelector={false}
+            showPreview
+            defaultMode="append"
+            buttonSize="md"
+            enableShortcut
+            disabled={isLoading || isStreaming}
+            onStateChange={onStateChange}
+            onError={onVoiceError}
+          />
+        )}
+
+        <button
+          type="submit"
+          disabled={!canSubmit}
+          aria-label={isAI ? "Send message to AI" : "Send message"}
+          aria-busy={isLoading || isStreaming}
+          aria-disabled={!canSubmit}
+          className={`
+              cursor-pointer
+              rounded-full
+              ${isAI ? "bg-gradient-to-r from-purple-500 to-pink-500" : "bg-sky-500"}
+              p-2
+              transition
+              ${isAI ? "hover:opacity-75" : "hover:bg-sky-600"}
+              ${!canSubmit ? "cursor-not-allowed opacity-50" : ""}
+            `}
+        >
+          <HiPaperAirplane
+            size={18}
+            className={`text-white ${isStreaming ? "animate-pulse" : ""}`}
+            aria-hidden="true"
+          />
+        </button>
+      </form>
+    </div>
+  )
+}
+
+interface FormPanelProps {
+  isAI: boolean
+  shouldShowSuggestions: boolean
+  suggestions: Suggestion[]
+  suggestionsLoading: boolean
+  onSuggestionSelect: (text: string) => void
+  onSuggestionsRefresh: () => void
+  onSuggestionsDismiss: () => void
+  isLoading: boolean
+  isStreaming: boolean
+  pendingImage: string | null
+  onRemovePendingImage: () => void
+  onUpload: (result: CloudinaryUploadWidgetResults) => void
+  onOpenImageGenerator: () => void
+  voiceMessageSupported: boolean
+  isGeneratingImage: boolean
+  isSendingVoiceMessage: boolean
+  isRecordingVoiceMessage: boolean
+  onVoiceMessageToggle: () => void
+  formRef: RefObject<HTMLFormElement | null>
+  onSubmit: (event?: BaseSyntheticEvent) => void
+  register: ComposerRowProps["register"]
+  errors: ComposerRowProps["errors"]
+  onInputChange: (e: ChangeEvent<HTMLInputElement>) => void
+  onModifierEnterSubmit: () => void
+  enableVoiceInput: boolean
+  voiceSupported: boolean
+  onTranscriptApply: (transcript: string, mode: VoiceInputMode) => void
+  currentMessage: string
+  onStateChange: (state: "idle" | "listening" | "processing" | "error") => void
+  onVoiceError: (error: string, message: string) => void
+  canSubmit: boolean
+  imageGenOpen: boolean
+  onImageGenOpenChange: (open: boolean) => void
+  imageGenPrompt: string
+  imageGenSize: ImageSize
+  onImagePromptChange: (value: string) => void
+  onImageSizeChange: (value: ImageSize) => void
+  onImageGenerate: () => void
+}
+
+function FormPanel({
+  isAI,
+  shouldShowSuggestions,
+  suggestions,
+  suggestionsLoading,
+  onSuggestionSelect,
+  onSuggestionsRefresh,
+  onSuggestionsDismiss,
+  isLoading,
+  isStreaming,
+  pendingImage,
+  onRemovePendingImage,
+  onUpload,
+  onOpenImageGenerator,
+  voiceMessageSupported,
+  isGeneratingImage,
+  isSendingVoiceMessage,
+  isRecordingVoiceMessage,
+  onVoiceMessageToggle,
+  formRef,
+  onSubmit,
+  register,
+  errors,
+  onInputChange,
+  onModifierEnterSubmit,
+  enableVoiceInput,
+  voiceSupported,
+  onTranscriptApply,
+  currentMessage,
+  onStateChange,
+  onVoiceError,
+  canSubmit,
+  imageGenOpen,
+  onImageGenOpenChange,
+  imageGenPrompt,
+  imageGenSize,
+  onImagePromptChange,
+  onImageSizeChange,
+  onImageGenerate,
+}: FormPanelProps) {
+  return (
+    <div
+      className="w-full border-t border-border bg-background"
+      role="region"
+      aria-label="Message input area"
+    >
+      {shouldShowSuggestions && (
+        <div className="px-4 pt-2">
+          <SuggestionChips
+            suggestions={suggestions}
+            onSelect={onSuggestionSelect}
+            isLoading={suggestionsLoading}
+            onRefresh={onSuggestionsRefresh}
+            onDismiss={onSuggestionsDismiss}
+            disabled={isLoading || isStreaming}
+          />
+        </div>
+      )}
+      {isAI && pendingImage && (
+        <PendingImagePreview pendingImage={pendingImage} onRemove={onRemovePendingImage} />
+      )}
+      <ComposerRow
+        isAI={isAI}
+        onUpload={onUpload}
+        onOpenImageGenerator={onOpenImageGenerator}
+        isLoading={isLoading}
+        isStreaming={isStreaming}
+        voiceMessageSupported={voiceMessageSupported}
+        isGeneratingImage={isGeneratingImage}
+        isSendingVoiceMessage={isSendingVoiceMessage}
+        isRecordingVoiceMessage={isRecordingVoiceMessage}
+        onVoiceMessageToggle={onVoiceMessageToggle}
+        formRef={formRef}
+        onSubmit={onSubmit}
+        register={register}
+        errors={errors}
+        onInputChange={onInputChange}
+        onModifierEnterSubmit={onModifierEnterSubmit}
+        enableVoiceInput={enableVoiceInput}
+        voiceSupported={voiceSupported}
+        onTranscriptApply={onTranscriptApply}
+        currentMessage={currentMessage}
+        onStateChange={onStateChange}
+        onVoiceError={onVoiceError}
+        canSubmit={canSubmit}
+      />
+      {isAI && (
+        <ImageGenerationDialog
+          open={imageGenOpen}
+          onOpenChange={onImageGenOpenChange}
+          prompt={imageGenPrompt}
+          size={imageGenSize}
+          onPromptChange={onImagePromptChange}
+          onSizeChange={onImageSizeChange}
+          onGenerate={onImageGenerate}
+          isGenerating={isGeneratingImage}
+          isStreaming={isStreaming}
+        />
+      )}
+    </div>
+  )
+}
+
+interface UseMessageSubmitHandlersParams {
+  csrfToken: string | null | undefined
+  pendingImage: string | null
+  isAI: boolean
+  enableStreaming: boolean
+  sendStreamingMessage: (payload: { message?: string; image?: string }) => Promise<boolean>
+  conversationId: string
+  emitTyping: (isTyping: boolean) => void
+  typingTimeoutRef: { current: NodeJS.Timeout | null }
+  setValue: ReturnType<typeof useForm<FieldValues>>["setValue"]
+  setPendingImage: (value: string | null | ((prev: string | null) => string | null)) => void
+  setIsLoading: (value: boolean | ((prev: boolean) => boolean)) => void
+}
+
+function useMessageSubmitHandlers({
+  csrfToken,
+  pendingImage,
+  isAI,
+  enableStreaming,
+  sendStreamingMessage,
+  conversationId,
+  emitTyping,
+  typingTimeoutRef,
+  setValue,
+  setPendingImage,
+  setIsLoading,
+}: UseMessageSubmitHandlersParams) {
+  const onSubmit: SubmitHandler<FieldValues> = useCallback(
+    async (data) => {
+      if (!csrfToken) {
+        toast.error("Security token not available. Please refresh the page.")
+        return
+      }
+      const rawMessage = typeof data.message === "string" ? data.message : ""
+      const trimmedMessage = rawMessage.trim()
+      const queuedImage = pendingImage
+      if (isAI && !trimmedMessage && !queuedImage) {
+        toast.error("Add text or an image before sending")
+        return
+      }
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current)
+      }
+      emitTyping(false)
+      setValue("message", "", { shouldValidate: true })
+      if (isAI) {
+        setPendingImage(null)
+        if (enableStreaming) {
+          const success = await sendStreamingMessage({
+            message: trimmedMessage || undefined,
+            image: queuedImage || undefined,
+          })
+          if (!success && queuedImage) {
+            setPendingImage(queuedImage)
+          }
+        } else {
+          setIsLoading(true)
+          try {
+            await api.post(
+              "/api/ai/chat",
+              {
+                message: trimmedMessage || undefined,
+                image: queuedImage || undefined,
+                conversationId: conversationId,
+              },
+              { retries: 0, showErrorToast: false }
+            )
+          } catch (error) {
+            if (queuedImage) {
+              setPendingImage(queuedImage)
+            }
+            const message =
+              error instanceof ApiError ? error.message : "Failed to send message to AI"
+            toast.error(message)
+          } finally {
+            setIsLoading(false)
+          }
+        }
+      } else {
+        setIsLoading(true)
+        try {
+          await api.post(
+            "/api/messages",
+            { message: trimmedMessage, conversationId: conversationId },
+            { retries: 1, showErrorToast: false }
+          )
+        } catch (error) {
+          const message = error instanceof ApiError ? error.message : "Failed to send message"
+          toast.error(message)
+        } finally {
+          setIsLoading(false)
+        }
+      }
+    },
+    [
+      conversationId,
+      csrfToken,
+      emitTyping,
+      enableStreaming,
+      isAI,
+      pendingImage,
+      sendStreamingMessage,
+      setIsLoading,
+      setPendingImage,
+      setValue,
+      typingTimeoutRef,
+    ]
+  )
+
+  const handleUpload = useCallback(
+    (result: CloudinaryUploadWidgetResults) => {
+      if (!csrfToken) {
+        toast.error("Security token not available. Please refresh the page.")
+        return
+      }
+      if (result.info && typeof result.info !== "string" && result.info.secure_url) {
+        if (isAI) {
+          setPendingImage(result.info.secure_url)
+          toast.success("Image added to prompt")
+        } else {
+          api
+            .post(
+              "/api/messages",
+              {
+                image: result.info.secure_url,
+                conversationId: conversationId,
+              },
+              { retries: 1, showErrorToast: false }
+            )
+            .catch((error: unknown) => {
+              const message = error instanceof ApiError ? error.message : "Failed to upload image"
+              toast.error(message)
+            })
+        }
+      }
+    },
+    [conversationId, csrfToken, isAI, setPendingImage]
+  )
+
+  return { onSubmit, handleUpload }
+}
 
 interface FormProps {
   isAI?: boolean
@@ -66,7 +642,7 @@ const Form: React.FC<FormProps> = ({
   _onTypingChange,
   onAIStreamingChange,
   enableVoiceInput = true,
-  messages = [],
+  messages = EMPTY_MESSAGES,
   currentUserId,
 }) => {
   const { conversationId } = useConversation()
@@ -74,14 +650,9 @@ const Form: React.FC<FormProps> = ({
   const [pendingImage, setPendingImage] = useState<string | null>(null)
   const { token: csrfToken } = useCsrfToken()
   const viewerId = currentUserId ?? undefined
-
-  // Check if voice input is supported
   const voiceSupported = isVoiceInputSupported()
-
-  // Suggestions state and hook (only for AI conversations)
   const { preferences: suggestionPrefs } = useSuggestionPreferences()
   const [showSuggestions, setShowSuggestions] = useState(true)
-
   const {
     suggestions,
     isLoading: suggestionsLoading,
@@ -94,26 +665,17 @@ const Form: React.FC<FormProps> = ({
     enabled: isAI && suggestionPrefs.enabled && showSuggestions,
     autoFetchOnAiResponse: suggestionPrefs.autoShow,
   })
-
-  // Set up typing indicator hook for human-to-human conversations
   const { emitTyping } = useTypingIndicator({
     conversationId,
     currentUserId: viewerId,
   })
-
-  // Debounce ref for typing indicator
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-
-  // Token usage store for sharing with TokenUsageDisplay
   const setLatestUsage = useTokenUsageStore((state) => state.setLatestUsage)
-
-  // Set up streaming hook for AI conversations
   const { sendMessage: sendStreamingMessage, isStreaming } = useAiChatStream({
     conversationId,
     csrfToken,
     onComplete: (_messageId: string, usage?: TokenUsage) => {
       toast.success("AI response complete")
-      // Update token usage store when we receive usage data
       if (usage) {
         setLatestUsage(usage, conversationId)
       }
@@ -122,12 +684,9 @@ const Form: React.FC<FormProps> = ({
       toast.error(`AI error: ${error}`)
     },
   })
-
-  // Notify parent of AI streaming state changes
   useEffect(() => {
     onAIStreamingChange?.(isStreaming)
   }, [isStreaming, onAIStreamingChange])
-
   const {
     isRecordingVoiceMessage,
     isSendingVoiceMessage,
@@ -140,7 +699,6 @@ const Form: React.FC<FormProps> = ({
     enableStreaming,
     sendStreamingMessage,
   })
-
   const {
     isGeneratingImage,
     imageGenOpen,
@@ -151,7 +709,6 @@ const Form: React.FC<FormProps> = ({
     setImageGenSize,
     handleGenerateImage,
   } = useImageGeneration({ conversationId, csrfToken })
-
   const {
     register,
     handleSubmit,
@@ -164,89 +721,57 @@ const Form: React.FC<FormProps> = ({
       message: "",
     },
   })
-
-  // Watch the current message value for voice input preview
   const currentMessage = watch("message")
-
-  // Ref to store onSubmit function for use in keyboard shortcut callback
   const formRef = useRef<HTMLFormElement>(null)
-
-  // Handle suggestion selection - insert into message input
   const handleSuggestionSelect = useCallback(
     (text: string) => {
       const currentValue = getValues("message") || ""
-      // If there's existing text, append with a space; otherwise replace
       const newValue = currentValue.trim() ? `${currentValue.trim()} ${text}` : text
       setValue("message", newValue, { shouldValidate: true })
       clearSuggestions()
-      // Hide suggestions after selection
       setShowSuggestions(false)
-      // Re-show after a delay
       setTimeout(() => setShowSuggestions(true), 1000)
     },
     [getValues, setValue, clearSuggestions]
   )
-
-  // Handle suggestions dismiss
   const handleSuggestionsDismiss = useCallback(() => {
     clearSuggestions()
     setShowSuggestions(false)
-    // Re-enable after some time
     setTimeout(() => setShowSuggestions(true), 30000)
   }, [clearSuggestions])
-
-  // Handle Cmd/Ctrl+Enter shortcut to submit by programmatically requesting form submit
   const handleModifierEnterSubmit = useCallback(() => {
     const values = getValues()
     if (values.message && values.message.trim() && formRef.current) {
       formRef.current.requestSubmit()
     }
   }, [getValues])
-
-  // Handle input change for typing indicator (debounced)
   const handleInputChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      // Only emit typing for non-AI conversations
       if (isAI) return
-
       const hasContent = e.target.value.length > 0
-
-      // Clear existing timeout
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current)
       }
-
       if (hasContent) {
-        // Emit typing = true
         emitTyping(true)
-
-        // Set timeout to clear typing after 3 seconds of no input
         typingTimeoutRef.current = setTimeout(() => {
           emitTyping(false)
         }, 3000)
       } else {
-        // Input is empty, stop typing
         emitTyping(false)
       }
     },
     [isAI, emitTyping]
   )
-
-  // Handle voice input transcript
   const handleVoiceTranscript = useCallback(
     (transcript: string, mode: VoiceInputMode) => {
       const currentValue = getValues("message") || ""
-
       if (mode === "append") {
-        // Append transcript to existing text with a space
         const newValue = currentValue ? `${currentValue} ${transcript}` : transcript
         setValue("message", newValue, { shouldValidate: true })
       } else {
-        // Replace existing text
         setValue("message", transcript, { shouldValidate: true })
       }
-
-      // Emit typing indicator for non-AI conversations
       if (!isAI) {
         emitTyping(true)
         if (typingTimeoutRef.current) {
@@ -259,33 +784,22 @@ const Form: React.FC<FormProps> = ({
     },
     [getValues, setValue, isAI, emitTyping]
   )
-
-  // Handle voice input state changes
   const handleVoiceStateChange = useCallback(
     (state: "idle" | "listening" | "processing" | "error") => {
-      // Show typing indicator when listening
       if (!isAI && state === "listening") {
         emitTyping(true)
       }
     },
     [isAI, emitTyping]
   )
-
-  // Handle voice input errors
   const handleVoiceError = useCallback((error: string, message: string) => {
     if (error !== "aborted") {
       toast.error(message)
     }
   }, [])
-
-  // Memoized callback for the voice message record/stop toggle button
   const handleVoiceMessageToggle = useCallback(() => {
-    toggleVoiceMessageRecording().catch(() => {
-      // handled in function
-    })
+    toggleVoiceMessageRecording().catch(() => {})
   }, [toggleVoiceMessageRecording])
-
-  // Cleanup timeout on unmount
   useEffect(() => {
     return () => {
       if (typingTimeoutRef.current) {
@@ -293,119 +807,19 @@ const Form: React.FC<FormProps> = ({
       }
     }
   }, [])
-
-  const onSubmit: SubmitHandler<FieldValues> = async (data) => {
-    if (!csrfToken) {
-      toast.error("Security token not available. Please refresh the page.")
-      return
-    }
-
-    const rawMessage = typeof data.message === "string" ? data.message : ""
-    const trimmedMessage = rawMessage.trim()
-    const queuedImage = pendingImage
-
-    if (isAI && !trimmedMessage && !queuedImage) {
-      toast.error("Add text or an image before sending")
-      return
-    }
-
-    // Clear typing indicator when message is sent
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current)
-    }
-    emitTyping(false)
-
-    setValue("message", "", { shouldValidate: true })
-
-    const headers = {
-      "X-CSRF-Token": csrfToken,
-      "Content-Type": "application/json",
-    }
-
-    if (isAI) {
-      setPendingImage(null)
-
-      // Use streaming for AI if enabled
-      if (enableStreaming) {
-        const success = await sendStreamingMessage({
-          message: trimmedMessage || undefined,
-          image: queuedImage || undefined,
-        })
-        if (!success && queuedImage) {
-          setPendingImage(queuedImage)
-        }
-      } else {
-        // Fallback to non-streaming endpoint
-        setIsLoading(true)
-        try {
-          await axios.post(
-            "/api/ai/chat",
-            {
-              message: trimmedMessage || undefined,
-              image: queuedImage || undefined,
-              conversationId: conversationId,
-            },
-            { headers }
-          )
-        } catch (error) {
-          if (queuedImage) {
-            setPendingImage(queuedImage)
-          }
-          console.error("AI chat error:", error)
-          toast.error("Failed to send message to AI")
-        } finally {
-          setIsLoading(false)
-        }
-      }
-    } else {
-      // Send to regular messages endpoint
-      setIsLoading(true)
-      try {
-        await axios.post(
-          "/api/messages",
-          { message: trimmedMessage, conversationId: conversationId },
-          { headers }
-        )
-      } catch (error) {
-        console.error("Message send error:", error)
-        toast.error("Failed to send message")
-      } finally {
-        setIsLoading(false)
-      }
-    }
-  }
-
-  const handleUpload = (result: CloudinaryUploadWidgetResults) => {
-    if (!csrfToken) {
-      toast.error("Security token not available. Please refresh the page.")
-      return
-    }
-
-    if (result.info && typeof result.info !== "string" && result.info.secure_url) {
-      if (isAI) {
-        setPendingImage(result.info.secure_url)
-        toast.success("Image added to prompt")
-      } else {
-        axios
-          .post(
-            "/api/messages",
-            {
-              image: result.info.secure_url,
-              conversationId: conversationId,
-            },
-            {
-              headers: { "X-CSRF-Token": csrfToken },
-            }
-          )
-          .catch((error) => {
-            console.error("Image upload error:", error)
-            toast.error("Failed to upload image")
-          })
-      }
-    }
-  }
-
-  // Hide suggestions when user is actively typing
+  const { onSubmit, handleUpload } = useMessageSubmitHandlers({
+    csrfToken,
+    pendingImage,
+    isAI,
+    enableStreaming,
+    sendStreamingMessage,
+    conversationId,
+    emitTyping,
+    typingTimeoutRef,
+    setValue,
+    setPendingImage,
+    setIsLoading,
+  })
   const shouldShowSuggestions =
     isAI &&
     suggestionsEnabled &&
@@ -416,224 +830,55 @@ const Form: React.FC<FormProps> = ({
     (isAI ? Boolean(currentMessage.trim() || pendingImage) : Boolean(currentMessage.trim())) &&
     !isLoading &&
     !isStreaming
+  const handleFormSubmit = handleSubmit(onSubmit)
 
   return (
-    <div
-      className="w-full border-t border-border bg-background"
-      role="region"
-      aria-label="Message input area"
-    >
-      {/* AI Suggestions - shown above the input when available */}
-      {shouldShowSuggestions && (
-        <div className="px-4 pt-2">
-          <SuggestionChips
-            suggestions={suggestions}
-            onSelect={handleSuggestionSelect}
-            isLoading={suggestionsLoading}
-            onRefresh={refreshSuggestions}
-            onDismiss={handleSuggestionsDismiss}
-            disabled={isLoading || isStreaming}
-          />
-        </div>
-      )}
-
-      {isAI && pendingImage && (
-        <div className="mx-4 mt-2 flex items-start gap-3 rounded-lg border border-border/70 bg-muted/40 p-3">
-          <Image
-            src={pendingImage}
-            alt="Pending prompt upload"
-            width={56}
-            height={56}
-            className="size-14 rounded-md border border-border object-cover"
-          />
-          <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
-            <p className="text-xs text-muted-foreground">
-              Image will be sent with your next prompt.
-            </p>
-            <button
-              type="button"
-              className="rounded-full p-1 text-muted-foreground transition hover:bg-accent hover:text-foreground"
-              onClick={() => setPendingImage(null)}
-              aria-label="Remove pending image"
-            >
-              <HiXMark size={16} />
-            </button>
-          </div>
-        </div>
-      )}
-
-      <div className="flex w-full items-center gap-2 p-4">
-        <CldUploadButton
-          options={{ maxFiles: 1 }}
-          onUpload={handleUpload}
-          uploadPreset="pgc9ehd5"
-          aria-label="Attach image"
-        >
-          <HiPhoto size={30} className="text-sky-500" aria-hidden="true" />
-        </CldUploadButton>
-        {isAI && (
-          <button
-            type="button"
-            onClick={() => setImageGenOpen(true)}
-            disabled={isLoading || isStreaming}
-            className="rounded-md p-1 text-violet-600 transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
-            aria-label="Generate image"
-            title="Generate image"
-          >
-            <HiSparkles size={26} />
-          </button>
-        )}
-        {voiceMessageSupported && (
-          <button
-            type="button"
-            onClick={handleVoiceMessageToggle}
-            disabled={isLoading || isStreaming || isGeneratingImage || isSendingVoiceMessage}
-            className={`rounded-md p-1 transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50 ${
-              isRecordingVoiceMessage ? "text-red-600" : "text-sky-600"
-            }`}
-            aria-label={
-              isRecordingVoiceMessage ? "Stop voice message recording" : "Record voice message"
-            }
-            aria-pressed={isRecordingVoiceMessage}
-            title={isRecordingVoiceMessage ? "Stop recording" : "Record voice message"}
-          >
-            {isRecordingVoiceMessage ? <HiStopCircle size={26} /> : <HiMicrophone size={26} />}
-          </button>
-        )}
-        <form
-          ref={formRef}
-          onSubmit={handleSubmit(onSubmit)}
-          className="flex w-full items-center gap-2 lg:gap-4"
-          aria-label={isAI ? "AI chat message form" : "Send message form"}
-        >
-          <MessageInput
-            id="message"
-            register={register}
-            errors={errors}
-            required={!isAI}
-            placeholder={isAI ? "Ask me anything..." : "Write a message"}
-            aria-label="Message"
-            onInputChange={handleInputChange}
-            onModifierEnter={handleModifierEnterSubmit}
-          />
-
-          {/* Voice Input Button */}
-          {enableVoiceInput && voiceSupported && (
-            <VoiceInput
-              onTranscriptApply={handleVoiceTranscript}
-              currentText={currentMessage}
-              showWaveform={false}
-              showLanguageSelector={false}
-              showPreview
-              defaultMode="append"
-              buttonSize="md"
-              enableShortcut
-              disabled={isLoading || isStreaming}
-              onStateChange={handleVoiceStateChange}
-              onError={handleVoiceError}
-            />
-          )}
-
-          <button
-            type="submit"
-            disabled={!canSubmit}
-            aria-label={isAI ? "Send message to AI" : "Send message"}
-            aria-busy={isLoading || isStreaming}
-            aria-disabled={!canSubmit}
-            className={`
-              cursor-pointer
-              rounded-full
-              ${isAI ? "bg-gradient-to-r from-purple-500 to-pink-500" : "bg-sky-500"}
-              p-2
-              transition
-              ${isAI ? "hover:opacity-75" : "hover:bg-sky-600"}
-              ${!canSubmit ? "cursor-not-allowed opacity-50" : ""}
-            `}
-          >
-            <HiPaperAirplane
-              size={18}
-              className={`text-white ${isStreaming ? "animate-pulse" : ""}`}
-              aria-hidden="true"
-            />
-          </button>
-        </form>
-      </div>
-
-      {isAI && (
-        <Dialog
-          open={imageGenOpen}
-          onOpenChange={(open) => {
-            setImageGenOpen(open)
-            if (!open) {
-              setImageGenPrompt("")
-              setImageGenSize("1024x1024")
-            }
-          }}
-        >
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Generate image</DialogTitle>
-              <DialogDescription>
-                Creates an AI-generated image and sends it to this conversation.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-3">
-              <label className="block text-sm font-medium text-foreground" htmlFor="image-prompt">
-                Prompt
-              </label>
-              <textarea
-                id="image-prompt"
-                value={imageGenPrompt}
-                onChange={(e) => setImageGenPrompt(e.target.value)}
-                placeholder="Describe the image you want..."
-                className="min-h-28 w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                maxLength={2000}
-                disabled={isGeneratingImage || isStreaming}
-              />
-
-              <label className="block text-sm font-medium text-foreground" htmlFor="image-size">
-                Size
-              </label>
-              <select
-                id="image-size"
-                value={imageGenSize}
-                onChange={(e) =>
-                  setImageGenSize(
-                    e.target.value as "512x512" | "1024x1024" | "1024x1792" | "1792x1024"
-                  )
-                }
-                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                disabled={isGeneratingImage || isStreaming}
-              >
-                <option value="512x512">512x512</option>
-                <option value="1024x1024">1024x1024</option>
-                <option value="1024x1792">1024x1792</option>
-                <option value="1792x1024">1792x1024</option>
-              </select>
-            </div>
-
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setImageGenOpen(false)}
-                disabled={isGeneratingImage}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="button"
-                onClick={handleGenerateImage}
-                disabled={isGeneratingImage || isStreaming}
-              >
-                {isGeneratingImage ? "Generating..." : "Generate"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      )}
-    </div>
+    <FormPanel
+      isAI={isAI}
+      shouldShowSuggestions={shouldShowSuggestions}
+      suggestions={suggestions}
+      suggestionsLoading={suggestionsLoading}
+      onSuggestionSelect={handleSuggestionSelect}
+      onSuggestionsRefresh={refreshSuggestions}
+      onSuggestionsDismiss={handleSuggestionsDismiss}
+      isLoading={isLoading}
+      isStreaming={isStreaming}
+      pendingImage={pendingImage}
+      onRemovePendingImage={() => setPendingImage(null)}
+      onUpload={handleUpload}
+      onOpenImageGenerator={() => setImageGenOpen(true)}
+      voiceMessageSupported={voiceMessageSupported}
+      isGeneratingImage={isGeneratingImage}
+      isSendingVoiceMessage={isSendingVoiceMessage}
+      isRecordingVoiceMessage={isRecordingVoiceMessage}
+      onVoiceMessageToggle={handleVoiceMessageToggle}
+      formRef={formRef}
+      onSubmit={handleFormSubmit}
+      register={register}
+      errors={errors}
+      onInputChange={handleInputChange}
+      onModifierEnterSubmit={handleModifierEnterSubmit}
+      enableVoiceInput={enableVoiceInput}
+      voiceSupported={voiceSupported}
+      onTranscriptApply={handleVoiceTranscript}
+      currentMessage={currentMessage}
+      onStateChange={handleVoiceStateChange}
+      onVoiceError={handleVoiceError}
+      canSubmit={canSubmit}
+      imageGenOpen={imageGenOpen}
+      onImageGenOpenChange={(open) => {
+        setImageGenOpen(open)
+        if (!open) {
+          setImageGenPrompt("")
+          setImageGenSize("1024x1024")
+        }
+      }}
+      imageGenPrompt={imageGenPrompt}
+      imageGenSize={imageGenSize as ImageSize}
+      onImagePromptChange={setImageGenPrompt}
+      onImageSizeChange={setImageGenSize}
+      onImageGenerate={handleGenerateImage}
+    />
   )
 }
 
