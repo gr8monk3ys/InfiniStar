@@ -130,7 +130,12 @@ jest.mock("@/app/lib/sanitize", () => ({
 // Fixtures
 // ------------------------------------------------------------------
 
-const SUPPORTER = {
+const SUPPORTER: {
+  id: string
+  email: string
+  name: string
+  stripeCustomerId: string | null
+} = {
   id: "supporter-db-1",
   email: "supporter@example.com",
   name: "Alice Supporter",

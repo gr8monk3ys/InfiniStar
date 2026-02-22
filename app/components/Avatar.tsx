@@ -5,7 +5,7 @@ import type { User } from "@prisma/client"
 import useActiveList from "@/app/(dashboard)/dashboard/hooks/useActiveList"
 
 interface AvatarProps {
-  user?: User
+  user?: User | null
   className?: string
   showPresence?: boolean
 }
@@ -42,7 +42,7 @@ const Avatar: FC<AvatarProps> = ({ user, className, showPresence = true }) => {
       <Image
         fill
         sizes="44px"
-        src={user?.image || "/placeholder.jpg"}
+        src={user?.image || "/icon-192.png"}
         alt={altText}
         className="object-cover"
       />

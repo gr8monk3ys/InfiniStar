@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server"
+import { type Prisma } from "@prisma/client"
 import { z } from "zod"
 
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
@@ -14,6 +15,16 @@ const forkSchema = z.object({
 })
 
 const MAX_FORK_MESSAGES = 200
+
+function normalizeVariantsForCreateMany(
+  variants: Prisma.JsonValue | null | undefined
+): Prisma.InputJsonValue | undefined {
+  if (variants === null || variants === undefined) {
+    return undefined
+  }
+
+  return variants as Prisma.InputJsonValue
+}
 
 /**
  * POST /api/conversations/[conversationId]/fork
@@ -165,7 +176,7 @@ export async function POST(
             inputTokens: msg.inputTokens,
             outputTokens: msg.outputTokens,
             reactions: msg.reactions ?? undefined,
-            variants: (msg.variants as unknown[]) ?? [],
+            variants: normalizeVariantsForCreateMany(msg.variants),
             activeVariant: msg.activeVariant,
             conversationId: createdConversation.id,
             senderId: msg.senderId,
@@ -217,7 +228,7 @@ export async function POST(
             inputTokens: message.inputTokens,
             outputTokens: message.outputTokens,
             reactions: message.reactions ?? undefined,
-            variants: (message.variants as unknown[]) ?? [],
+            variants: normalizeVariantsForCreateMany(message.variants),
             activeVariant: message.activeVariant,
             conversationId: createdConversation.id,
             senderId: message.senderId,
