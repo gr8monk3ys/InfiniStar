@@ -7,6 +7,26 @@ import prisma from "@/app/lib/prismadb"
 import { apiLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 import { stripe } from "@/app/lib/stripe"
 
+function isMissingStripeCustomerError(error: unknown): boolean {
+  if (!error || typeof error !== "object") {
+    return false
+  }
+
+  const stripeError = error as {
+    type?: string
+    code?: string
+    param?: string
+  }
+
+  return (
+    stripeError.type === "StripeInvalidRequestError" &&
+    stripeError.code === "resource_missing" &&
+    (stripeError.param === "customer" ||
+      stripeError.param === "id" ||
+      stripeError.param === undefined)
+  )
+}
+
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     // Rate limiting
@@ -60,6 +80,23 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // Create or retrieve Stripe customer
     let customerId = user.stripeCustomerId
 
+    // A customer id may become stale if Stripe accounts/keys are rotated.
+    // Verify it before using it so checkout can self-heal instead of 500ing.
+    if (customerId) {
+      try {
+        const existingCustomer = await stripe.customers.retrieve(customerId)
+        if ("deleted" in existingCustomer && existingCustomer.deleted) {
+          customerId = null
+        }
+      } catch (error) {
+        if (isMissingStripeCustomerError(error)) {
+          customerId = null
+        } else {
+          throw error
+        }
+      }
+    }
+
     if (!customerId) {
       const customer = await stripe.customers.create({
         email: user.email ?? undefined,
@@ -73,7 +110,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
       await prisma.user.update({
         where: { id: user.id },
-        data: { stripeCustomerId: customerId },
+        data: {
+          stripeCustomerId: customerId,
+          stripeSubscriptionId: null,
+        },
       })
     }
 
