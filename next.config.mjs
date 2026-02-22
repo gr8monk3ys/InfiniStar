@@ -13,7 +13,36 @@ function isEnabled(value) {
   return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on"
 }
 
+function parseUrlOrigin(value) {
+  if (!value) {
+    return null
+  }
+
+  try {
+    return new URL(value).origin
+  } catch {
+    return null
+  }
+}
+
 function buildDefaultContentSecurityPolicy(reportUri) {
+  const sentryConnectOrigins = new Set([
+    "https://*.ingest.sentry.io",
+    "https://*.ingest.us.sentry.io",
+    "https://*.ingest.de.sentry.io",
+  ])
+
+  const sentryDsnOrigin = parseUrlOrigin(process.env.NEXT_PUBLIC_SENTRY_DSN)
+  const sentryOtlpOrigin = parseUrlOrigin(process.env.SENTRY_OTLP_TRACES_URL)
+
+  if (sentryDsnOrigin) {
+    sentryConnectOrigins.add(sentryDsnOrigin)
+  }
+
+  if (sentryOtlpOrigin) {
+    sentryConnectOrigins.add(sentryOtlpOrigin)
+  }
+
   const directives = [
     ["default-src", ["'self'"]],
     ["base-uri", ["'self'"]],
@@ -61,7 +90,7 @@ function buildDefaultContentSecurityPolicy(reportUri) {
         "https://*.pusher.com",
         "https://sockjs.pusher.com",
         "wss://*.pusher.com",
-        "https://*.ingest.sentry.io",
+        ...sentryConnectOrigins,
         "https://www.google-analytics.com",
         "https://googleads.g.doubleclick.net",
         "https://pagead2.googlesyndication.com",
