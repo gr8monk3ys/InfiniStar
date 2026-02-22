@@ -1,31 +1,70 @@
 "use client"
 
-import { useMemo } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 
-interface SafetyTabContentProps {
-  isAdult: boolean
-  setIsAdult: (value: boolean) => void
-  nsfwEnabled: boolean
-  setNsfwEnabled: (value: boolean) => void
-  isLoading: boolean
-  onSubmit: (e: React.FormEvent) => void
-}
+import { api, ApiError, createLoadingToast } from "@/app/lib/api-client"
 
-export function SafetyTabContent({
-  isAdult,
-  setIsAdult,
-  nsfwEnabled,
-  setNsfwEnabled,
-  isLoading,
-  onSubmit,
-}: SafetyTabContentProps) {
+export function SafetyTabContent() {
+  const [isLoading, setIsLoading] = useState(false)
+  const [isAdult, setIsAdult] = useState(false)
+  const [nsfwEnabled, setNsfwEnabled] = useState(false)
+
+  const fetchSafetyPreferences = useCallback(async () => {
+    try {
+      const response = await api.get<{
+        preferences: {
+          isAdult: boolean
+          nsfwEnabled: boolean
+        }
+      }>("/api/safety/preferences", { showErrorToast: false })
+      setIsAdult(response.preferences.isAdult)
+      setNsfwEnabled(response.preferences.nsfwEnabled)
+    } catch {
+      // Defaults are fine
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchSafetyPreferences()
+  }, [fetchSafetyPreferences])
+
+  const handleSafetySubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsLoading(true)
+
+    const loader = createLoadingToast("Saving safety settings...")
+
+    try {
+      const response = await api.patch<{
+        message: string
+        preferences: {
+          isAdult: boolean
+          nsfwEnabled: boolean
+        }
+      }>("/api/safety/preferences", { isAdult, nsfwEnabled }, { retries: 1, showErrorToast: false })
+
+      loader.success(response.message)
+      setIsAdult(response.preferences.isAdult)
+      setNsfwEnabled(response.preferences.nsfwEnabled)
+    } catch (error) {
+      const message = error instanceof ApiError ? error.message : "Failed to save safety settings"
+      loader.error(message)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   const nsfwDisabledReason = useMemo(() => {
     if (!isAdult) return "Confirm 18+ to enable NSFW content."
     return null
   }, [isAdult])
 
   return (
-    <form onSubmit={onSubmit} className="space-y-6" aria-label="Safety and content settings form">
+    <form
+      onSubmit={handleSafetySubmit}
+      className="space-y-6"
+      aria-label="Safety and content settings form"
+    >
       <div>
         <h3 className="text-lg font-medium text-foreground">Safety &amp; Content</h3>
         <p className="mt-1 text-sm text-muted-foreground">

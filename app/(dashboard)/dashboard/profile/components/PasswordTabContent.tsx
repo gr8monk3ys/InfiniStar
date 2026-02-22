@@ -1,28 +1,53 @@
 "use client"
 
-interface PasswordTabContentProps {
-  currentPassword: string
-  setCurrentPassword: (value: string) => void
-  newPassword: string
-  setNewPassword: (value: string) => void
-  confirmPassword: string
-  setConfirmPassword: (value: string) => void
-  isLoading: boolean
-  onSubmit: (e: React.FormEvent) => void
-}
+import { useState } from "react"
+import toast from "react-hot-toast"
 
-export function PasswordTabContent({
-  currentPassword,
-  setCurrentPassword,
-  newPassword,
-  setNewPassword,
-  confirmPassword,
-  setConfirmPassword,
-  isLoading,
-  onSubmit,
-}: PasswordTabContentProps) {
+import { api, ApiError, createLoadingToast } from "@/app/lib/api-client"
+
+export function PasswordTabContent() {
+  const [isLoading, setIsLoading] = useState(false)
+  const [currentPassword, setCurrentPassword] = useState("")
+  const [newPassword, setNewPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (newPassword !== confirmPassword) {
+      toast.error("New passwords do not match")
+      return
+    }
+
+    if (newPassword.length < 8) {
+      toast.error("Password must be at least 8 characters")
+      return
+    }
+
+    setIsLoading(true)
+    const loader = createLoadingToast("Changing password...")
+
+    try {
+      const response = await api.patch<{ message: string }>(
+        "/api/profile",
+        { currentPassword, newPassword },
+        { retries: 1, showErrorToast: false }
+      )
+
+      loader.success(response.message)
+      setCurrentPassword("")
+      setNewPassword("")
+      setConfirmPassword("")
+    } catch (error) {
+      const message = error instanceof ApiError ? error.message : "Failed to change password"
+      loader.error(message)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   return (
-    <form onSubmit={onSubmit} className="space-y-6" aria-label="Change password form">
+    <form onSubmit={handlePasswordSubmit} className="space-y-6" aria-label="Change password form">
       <p className="text-sm text-muted-foreground">
         Choose a strong password to keep your account secure.
       </p>

@@ -1,48 +1,133 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import toast from "react-hot-toast"
 
-import { api, createLoadingToast } from "@/app/lib/api-client"
+import { api, ApiError, createLoadingToast } from "@/app/lib/api-client"
 
-interface NotificationsTabContentProps {
-  emailNotifications: boolean
-  setEmailNotifications: (value: boolean) => void
-  emailDigest: "none" | "daily" | "weekly"
-  setEmailDigest: (value: "none" | "daily" | "weekly") => void
-  browserNotifications: boolean
-  setBrowserNotifications: (value: boolean) => void
-  notifyOnNewMessage: boolean
-  setNotifyOnNewMessage: (value: boolean) => void
-  notifyOnMention: boolean
-  setNotifyOnMention: (value: boolean) => void
-  notifyOnAIComplete: boolean
-  setNotifyOnAIComplete: (value: boolean) => void
-  isLoading: boolean
-  onSubmit: (e: React.FormEvent) => void
+// ---------------------------------------------------------------------------
+// Push helpers (previously lived in page.tsx)
+// ---------------------------------------------------------------------------
+
+function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4)
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/")
+  const rawData = window.atob(base64)
+  const buffer = new ArrayBuffer(rawData.length)
+  const outputArray = new Uint8Array(buffer)
+  for (let i = 0; i < rawData.length; i++) {
+    outputArray[i] = rawData.charCodeAt(i)
+  }
+  return outputArray
 }
 
-export function NotificationsTabContent({
-  emailNotifications,
-  setEmailNotifications,
-  emailDigest,
-  setEmailDigest,
-  browserNotifications,
-  setBrowserNotifications,
-  notifyOnNewMessage,
-  setNotifyOnNewMessage,
-  notifyOnMention,
-  setNotifyOnMention,
-  notifyOnAIComplete,
-  setNotifyOnAIComplete,
-  isLoading,
-  onSubmit,
-}: NotificationsTabContentProps) {
+async function syncBackgroundPushForDevice(enabled: boolean) {
+  if (typeof window === "undefined") return
+  if (!("Notification" in window)) return
+  if (!("serviceWorker" in navigator)) return
+  if (!("PushManager" in window)) return
+
+  if (!enabled) {
+    const reg = await navigator.serviceWorker.getRegistration()
+    if (!reg) return
+
+    const sub = await reg.pushManager.getSubscription()
+    if (!sub) return
+
+    const endpoint = sub.endpoint
+    await sub.unsubscribe().catch(() => {
+      // best-effort
+    })
+
+    await api.delete("/api/notifications/push", {
+      data: { endpoint },
+      showErrorToast: false,
+      retries: 0,
+    })
+
+    return
+  }
+
+  if (Notification.permission !== "granted") {
+    const permission = await Notification.requestPermission()
+    if (permission !== "granted") {
+      return
+    }
+  }
+
+  const status = await api.get<{ configured: boolean; publicKey: string | null }>(
+    "/api/notifications/push",
+    { showErrorToast: false, retries: 0 }
+  )
+
+  if (!status.configured || !status.publicKey) {
+    return
+  }
+
+  const reg = await navigator.serviceWorker.register("/sw.js")
+  const existingSub = await reg.pushManager.getSubscription()
+  const subscription =
+    existingSub ??
+    (await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(status.publicKey),
+    }))
+
+  await api.post(
+    "/api/notifications/push",
+    { subscription: subscription.toJSON(), userAgent: navigator.userAgent },
+    { showErrorToast: false, retries: 0 }
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+
+export function NotificationsTabContent() {
+  const [isLoading, setIsLoading] = useState(false)
+
+  const [emailNotifications, setEmailNotifications] = useState(true)
+  const [emailDigest, setEmailDigest] = useState<"none" | "daily" | "weekly">("none")
+  const [browserNotifications, setBrowserNotifications] = useState(false)
+  const [notifyOnNewMessage, setNotifyOnNewMessage] = useState(true)
+  const [notifyOnMention, setNotifyOnMention] = useState(true)
+  const [notifyOnAIComplete, setNotifyOnAIComplete] = useState(true)
+
   const [pushSupported, setPushSupported] = useState(false)
   const [pushConfigured, setPushConfigured] = useState<boolean | null>(null)
   const [pushSubscribed, setPushSubscribed] = useState<boolean | null>(null)
   const [pushStatusLoading, setPushStatusLoading] = useState(false)
   const [pushTestLoading, setPushTestLoading] = useState(false)
+
+  const fetchNotificationPreferences = useCallback(async () => {
+    try {
+      const response = await api.get<{
+        preferences: {
+          emailNotifications: boolean
+          emailDigest: "none" | "daily" | "weekly"
+          browserNotifications: boolean
+          notifyOnNewMessage: boolean
+          notifyOnMention: boolean
+          notifyOnAIComplete: boolean
+          mutedConversations: string[]
+        }
+      }>("/api/notifications/preferences", { showErrorToast: false })
+      const prefs = response.preferences
+      setEmailNotifications(prefs.emailNotifications)
+      setEmailDigest(prefs.emailDigest)
+      setBrowserNotifications(prefs.browserNotifications)
+      setNotifyOnNewMessage(prefs.notifyOnNewMessage)
+      setNotifyOnMention(prefs.notifyOnMention)
+      setNotifyOnAIComplete(prefs.notifyOnAIComplete)
+    } catch {
+      // Use defaults if fetch fails
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchNotificationPreferences()
+  }, [fetchNotificationPreferences])
 
   useEffect(() => {
     let cancelled = false
@@ -111,8 +196,49 @@ export function NotificationsTabContent({
     }
   }, [browserNotifications])
 
+  const handleNotificationsSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsLoading(true)
+
+    const loader = createLoadingToast("Saving notification preferences...")
+
+    try {
+      const response = await api.patch<{ message: string }>(
+        "/api/notifications/preferences",
+        {
+          emailNotifications,
+          emailDigest,
+          browserNotifications,
+          notifyOnNewMessage,
+          notifyOnMention,
+          notifyOnAIComplete,
+        },
+        { retries: 1, showErrorToast: false }
+      )
+
+      loader.success(response.message)
+
+      // Best-effort: keep this device in sync with the saved preference.
+      try {
+        await syncBackgroundPushForDevice(browserNotifications)
+      } catch {
+        // Ignore push sync failures; prefs still saved.
+      }
+    } catch (error) {
+      const message =
+        error instanceof ApiError ? error.message : "Failed to save notification preferences"
+      loader.error(message)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   return (
-    <form onSubmit={onSubmit} className="space-y-6" aria-label="Notification preferences form">
+    <form
+      onSubmit={handleNotificationsSubmit}
+      className="space-y-6"
+      aria-label="Notification preferences form"
+    >
       <div>
         <h3 className="text-lg font-medium text-foreground">Notification Preferences</h3>
         <p className="mt-1 text-sm text-muted-foreground">

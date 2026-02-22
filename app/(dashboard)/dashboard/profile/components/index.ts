@@ -1,5 +1,7 @@
 export { ProfileTabContent } from "./ProfileTabContent"
 export { PasswordTabContent } from "./PasswordTabContent"
+export { SecurityTabContent } from "./SecurityTabContent"
 export { SafetyTabContent } from "./SafetyTabContent"
 export { NotificationsTabContent } from "./NotificationsTabContent"
 export { AccountTabContent } from "./AccountTabContent"
+export { AccountTabBadge } from "./AccountTabBadge"
