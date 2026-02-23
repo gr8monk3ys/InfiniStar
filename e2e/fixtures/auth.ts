@@ -23,22 +23,25 @@ export async function login(
   try {
     await page.goto("/sign-in?redirect_url=%2Fdashboard%2Fconversations")
 
-    // Clerk can use identifier/email depending on config.
+    // Clerk can run either a one-step email+password form or a two-step flow
+    // that asks for identifier first and password second.
     const identifierInput = page
-      .locator('input[name="identifier"], input[name="emailAddress"], input[type="email"]')
+      .locator(
+        'input[name="identifier"]:visible, input[name="emailAddress"]:visible, input[type="email"]:visible'
+      )
       .first()
     await identifierInput.waitFor({ timeout: 7000 })
     await identifierInput.fill(email)
 
-    const passwordInput = page.locator('input[name="password"], input[type="password"]').first()
-    await passwordInput.fill(password)
+    const continueButton = page.getByRole("button", { name: /^continue$/i }).first()
+    await continueButton.click()
 
-    // Submit
-    const submitButton = page
-      .getByRole("button", { name: /continue|sign in/i })
+    const passwordInput = page
+      .locator('input[name="password"]:visible, input[type="password"]:visible')
       .first()
-      .or(page.locator('button[type="submit"]').first())
-    await submitButton.click()
+    await passwordInput.waitFor({ timeout: 7000 })
+    await passwordInput.fill(password)
+    await continueButton.click()
 
     // Wait for redirect to dashboard (or error)
     await page.waitForURL(/\/dashboard(\/|$)/, { timeout: 15000 })

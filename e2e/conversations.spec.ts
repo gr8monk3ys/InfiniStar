@@ -45,10 +45,12 @@ test.describe("Conversations", () => {
       test("should display empty state when no conversations", async ({ page }) => {
         await page.goto("/dashboard/conversations")
 
-        const emptyState = page.getByText(/no conversations|start a conversation/i)
-        const conversationItems = page
-          .locator("[data-testid=conversation-item]")
-          .or(page.locator("aside li, aside a"))
+        const emptyState = page.getByText(
+          /no conversations|no active conversations|start a new conversation|select a chat/i
+        )
+        const conversationItems = page.locator(
+          '[data-testid="conversation-item"], button[aria-label*="Open conversation"], aside a[href*="/conversations/"]'
+        )
 
         const hasEmptyState = await emptyState.isVisible().catch(() => false)
         const hasConversations = (await conversationItems.count()) > 0
@@ -108,11 +110,16 @@ test.describe("Conversations", () => {
 
       test("should have search functionality", async ({ page }) => {
         await page.goto("/dashboard/conversations")
-        const searchElement = page.locator(
-          'input[placeholder*="search"], button[aria-label*="search"], [data-testid="search"]'
-        )
+        const searchButton = page.getByRole("button", { name: /search conversations/i }).first()
+        const searchElement = page
+          .locator(
+            'input[placeholder*="search"], button[aria-label*="search"], [data-testid="search"]'
+          )
+          .first()
 
-        await expect(searchElement.first()).toBeVisible()
+        const hasSearchButton = await searchButton.isVisible().catch(() => false)
+        const hasSearchElement = await searchElement.isVisible().catch(() => false)
+        expect(hasSearchButton || hasSearchElement).toBe(true)
       })
 
       test("should be responsive on mobile viewport", async ({ page }) => {
