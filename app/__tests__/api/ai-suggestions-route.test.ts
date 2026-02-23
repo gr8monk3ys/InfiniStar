@@ -18,6 +18,7 @@ const mockVerifyCsrfToken = jest.fn()
 const mockGetAiAccessDecision = jest.fn()
 const mockGenerateSuggestions = jest.fn()
 const mockGetCachedSuggestions = jest.fn()
+const mockRateLimitCheckFn = jest.fn()
 
 jest.mock("@/app/actions/getCurrentUser", () => ({
   __esModule: true,
@@ -38,18 +39,10 @@ jest.mock("@/app/lib/csrf", () => ({
   getCsrfTokenFromRequest: () => "test-token",
 }))
 
-// The suggestions route uses InMemoryRateLimiter instantiated inline.
-// We mock the entire rate-limit module to control it.
-jest.mock("@/app/lib/rate-limit", () => {
-  const checkFn = jest.fn()
-  return {
-    InMemoryRateLimiter: jest.fn().mockImplementation(() => ({
-      check: () => checkFn(),
-    })),
-    getClientIdentifier: () => "127.0.0.1",
-    __checkFn: checkFn,
-  }
-})
+jest.mock("@/app/lib/rate-limit", () => ({
+  suggestionsLimiter: { check: () => mockRateLimitCheckFn() },
+  getClientIdentifier: () => "127.0.0.1",
+}))
 
 jest.mock("@/app/lib/ai-access", () => ({
   getAiAccessDecision: (userId: string) => mockGetAiAccessDecision(userId),
@@ -59,9 +52,6 @@ jest.mock("@/app/lib/suggestions", () => ({
   generateSuggestions: (...args: unknown[]) => mockGenerateSuggestions(...args),
   getCachedSuggestions: (...args: unknown[]) => mockGetCachedSuggestions(...args),
 }))
-
-// Access the internal check fn so we can control it per test
-const rateLimitModule = jest.requireMock("@/app/lib/rate-limit")
 
 function createRequest(body: Record<string, unknown>): NextRequest {
   return new NextRequest("http://localhost:3000/api/ai/suggestions", {
@@ -93,7 +83,7 @@ const testSuggestions = [
 beforeEach(() => {
   jest.clearAllMocks()
   mockVerifyCsrfToken.mockReturnValue(true)
-  rateLimitModule.__checkFn.mockReturnValue(true)
+  mockRateLimitCheckFn.mockReturnValue(true)
   mockGetCurrentUser.mockResolvedValue(testUser)
   mockConversationFindFirst.mockResolvedValue(testConversation)
   mockGetAiAccessDecision.mockResolvedValue({
@@ -117,7 +107,7 @@ describe("POST /api/ai/suggestions", () => {
   })
 
   it("returns 429 when rate limit is exceeded", async () => {
-    rateLimitModule.__checkFn.mockReturnValue(false)
+    mockRateLimitCheckFn.mockReturnValue(false)
     const response = await POST(createRequest({ conversationId: "conv-1", type: "continue" }))
     expect(response.status).toBe(429)
     const data = await response.json()

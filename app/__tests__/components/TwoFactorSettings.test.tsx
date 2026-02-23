@@ -1,6 +1,8 @@
 /**
  * TwoFactorSettings Component Tests
  */
+import "@testing-library/jest-dom"
+
 import { createElement } from "react"
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"

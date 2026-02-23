@@ -50,17 +50,16 @@ describe("monetization helpers", () => {
   })
 
   it("evaluates feature flags from environment values", async () => {
-    process.env.NEXT_PUBLIC_ENABLE_AFFILIATE_LINKS = "true"
-    process.env.NEXT_PUBLIC_ENABLE_ADSENSE = "1"
-    process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID = "ca-pub-test"
-    process.env.NEXT_PUBLIC_ADSENSE_SLOT_HOME_INLINE = "1111"
+    const { isEnabled } = await import("@/app/lib/monetization")
 
-    const { monetizationConfig } = await import("@/app/lib/monetization")
-
-    expect(monetizationConfig.enableAffiliateLinks).toBe(true)
-    expect(monetizationConfig.enableAdSense).toBe(true)
-    expect(monetizationConfig.adSenseClientId).toBe("ca-pub-test")
-    expect(monetizationConfig.adSenseSlots.homeInline).toBe("1111")
+    expect(isEnabled("true")).toBe(true)
+    expect(isEnabled("1")).toBe(true)
+    expect(isEnabled("yes")).toBe(true)
+    expect(isEnabled("on")).toBe(true)
+    expect(isEnabled("false")).toBe(false)
+    expect(isEnabled("0")).toBe(false)
+    expect(isEnabled(undefined)).toBe(false)
+    expect(isEnabled("")).toBe(false)
   })
 
   it("filters affiliate partners with empty URLs", async () => {
@@ -68,9 +67,10 @@ describe("monetization helpers", () => {
     process.env.NEXT_PUBLIC_AFFILIATE_NOTION_URL = ""
     process.env.NEXT_PUBLIC_AFFILIATE_GRAMMARLY_URL = "https://example.com/grammarly"
 
-    const { affiliatePartners } = await import("@/app/lib/monetization")
+    const { buildAffiliatePartnersFromEnv } = await import("@/app/lib/monetization")
+    const partners = buildAffiliatePartnersFromEnv()
 
-    expect(affiliatePartners.map((partner) => partner.id)).toEqual(["anthropic", "grammarly"])
+    expect(partners.map((partner) => partner.id)).toEqual(["anthropic", "grammarly"])
   })
 
   it("builds a first-party affiliate redirect path", async () => {
@@ -94,6 +94,7 @@ describe("monetization helpers", () => {
     process.env.NEXT_PUBLIC_AFFILIATE_NOTION_URL = ""
     process.env.NEXT_PUBLIC_AFFILIATE_GRAMMARLY_URL = ""
 
+    // getAffiliatePartner reads env vars lazily, so env changes apply immediately
     const { getAffiliatePartner } = await import("@/app/lib/monetization")
 
     expect(getAffiliatePartner("anthropic")?.id).toBe("anthropic")

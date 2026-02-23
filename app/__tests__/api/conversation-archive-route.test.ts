@@ -43,7 +43,9 @@ jest.mock("@/app/lib/pusher", () => ({
 }))
 
 jest.mock("@/app/lib/pusher-channels", () => ({
+  PUSHER_PRESENCE_CHANNEL: "presence-messenger",
   getPusherUserChannel: (id: string) => `private-user-${id}`,
+  getPusherConversationChannel: (id: string) => `private-conversation-${id}`,
 }))
 
 jest.mock("@/app/lib/rate-limit", () => {

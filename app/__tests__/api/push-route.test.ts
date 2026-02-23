@@ -27,6 +27,7 @@ jest.mock("@/app/lib/prismadb", () => ({
 
 jest.mock("@/app/lib/web-push", () => ({
   getVapidPublicKey: () => "test-public-key",
+  sendWebPushToUser: jest.fn(),
 }))
 
 function createRequest(url: string, method: string, body?: unknown): NextRequest {

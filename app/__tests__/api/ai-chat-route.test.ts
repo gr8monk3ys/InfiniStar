@@ -61,6 +61,7 @@ jest.mock("@/app/lib/pusher", () => ({
 }))
 
 jest.mock("@/app/lib/pusher-channels", () => ({
+  PUSHER_PRESENCE_CHANNEL: "presence-messenger",
   getPusherConversationChannel: (id: string) => `private-conversation-${id}`,
   getPusherUserChannel: (id: string) => `private-user-${id}`,
 }))
@@ -104,6 +105,7 @@ jest.mock("@/app/lib/ai-model-routing", () => ({
 
 jest.mock("@/app/lib/web-push", () => ({
   sendWebPushToUser: (...args: unknown[]) => mockSendWebPush(...args),
+  getVapidPublicKey: () => null,
 }))
 
 jest.mock("@/app/lib/ai-personalities", () => ({
@@ -112,16 +114,14 @@ jest.mock("@/app/lib/ai-personalities", () => ({
   getSystemPrompt: () => "You are a helpful assistant.",
 }))
 
-jest.mock("@anthropic-ai/sdk", () => {
-  return {
-    __esModule: true,
-    default: jest.fn().mockImplementation(() => ({
-      messages: {
-        create: (...args: unknown[]) => mockAnthropicCreate(...args),
-      },
-    })),
-  }
-})
+jest.mock("@/app/lib/anthropic", () => ({
+  __esModule: true,
+  default: {
+    messages: {
+      create: (...args: unknown[]) => mockAnthropicCreate(...args),
+    },
+  },
+}))
 
 // ---- Helpers ----
 

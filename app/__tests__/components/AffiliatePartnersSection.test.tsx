@@ -1,36 +1,77 @@
+import "@testing-library/jest-dom"
+
 import { render, screen } from "@testing-library/react"
 
+import { AffiliatePartnersSection } from "@/app/components/monetization/AffiliatePartnersSection"
+
+// Mutable config object so tests can change it without jest.resetModules()
+const mockMonetizationConfig = {
+  enableAffiliateLinks: false,
+  enableAdSense: false,
+  adSenseClientId: "",
+  adSenseSlots: { homeInline: "", pricingInline: "" },
+}
+
+const mockAffiliatePartners: Array<{
+  id: string
+  name: string
+  description: string
+  ctaLabel: string
+  url: string
+}> = []
+
+jest.mock("@/app/lib/monetization", () => ({
+  monetizationConfig: mockMonetizationConfig,
+  get affiliatePartners() {
+    return mockAffiliatePartners
+  },
+  buildAffiliateRedirectPath: (partnerId: string, sourcePage: string) => {
+    const source = sourcePage
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9_-]+/g, "-")
+    return `/api/affiliate/${partnerId}?source=${source}`
+  },
+}))
+
 describe("AffiliatePartnersSection", () => {
-  const originalEnv = process.env
-
   beforeEach(() => {
-    jest.resetModules()
-    process.env = { ...originalEnv }
+    mockMonetizationConfig.enableAffiliateLinks = false
+    mockAffiliatePartners.length = 0
   })
 
-  afterAll(() => {
-    process.env = originalEnv
-  })
-
-  it("does not render when feature flag is disabled", async () => {
-    process.env.NEXT_PUBLIC_ENABLE_AFFILIATE_LINKS = "false"
-    process.env.NEXT_PUBLIC_AFFILIATE_ANTHROPIC_URL = "https://example.com/claude"
-
-    const { AffiliatePartnersSection } =
-      await import("@/app/components/monetization/AffiliatePartnersSection")
+  it("does not render when feature flag is disabled", () => {
+    mockMonetizationConfig.enableAffiliateLinks = false
+    mockAffiliatePartners.push({
+      id: "anthropic",
+      name: "Claude Pro",
+      description: "desc",
+      ctaLabel: "View Claude Pro",
+      url: "https://example.com/claude",
+    })
 
     const { container } = render(<AffiliatePartnersSection sourcePage="pricing" />)
     expect(container).toBeEmptyDOMElement()
   })
 
-  it("renders links to internal tracking endpoint when enabled", async () => {
-    process.env.NEXT_PUBLIC_ENABLE_AFFILIATE_LINKS = "true"
-    process.env.NEXT_PUBLIC_AFFILIATE_ANTHROPIC_URL = "https://example.com/claude"
-    process.env.NEXT_PUBLIC_AFFILIATE_NOTION_URL = ""
-    process.env.NEXT_PUBLIC_AFFILIATE_GRAMMARLY_URL = "https://example.com/grammarly"
-
-    const { AffiliatePartnersSection } =
-      await import("@/app/components/monetization/AffiliatePartnersSection")
+  it("renders links to internal tracking endpoint when enabled", () => {
+    mockMonetizationConfig.enableAffiliateLinks = true
+    mockAffiliatePartners.push(
+      {
+        id: "anthropic",
+        name: "Claude Pro",
+        description: "Upgrade for higher message limits.",
+        ctaLabel: "View Claude Pro",
+        url: "https://example.com/claude",
+      },
+      {
+        id: "grammarly",
+        name: "Grammarly",
+        description: "Improve tone and clarity.",
+        ctaLabel: "View Grammarly",
+        url: "https://example.com/grammarly",
+      }
+    )
 
     render(<AffiliatePartnersSection sourcePage="Pricing Page" />)
 

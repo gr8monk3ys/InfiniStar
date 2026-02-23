@@ -89,7 +89,9 @@ jest.mock("@/app/lib/pusher", () => ({
 }))
 
 jest.mock("@/app/lib/pusher-channels", () => ({
+  PUSHER_PRESENCE_CHANNEL: "presence-messenger",
   getPusherUserChannel: (id: string) => `private-user-${id}`,
+  getPusherConversationChannel: (id: string) => `private-conversation-${id}`,
 }))
 
 // getCurrentUser wraps auth() + prisma; mock directly for simplicity

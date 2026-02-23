@@ -14,6 +14,7 @@ jest.mock("@/app/actions/getCurrentUser", () => ({
 
 jest.mock("@/app/lib/web-push", () => ({
   sendWebPushToUser: (...args: unknown[]) => mockSendWebPushToUser(...args),
+  getVapidPublicKey: () => null,
 }))
 
 function createRequest(): NextRequest {

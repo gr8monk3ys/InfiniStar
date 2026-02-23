@@ -30,6 +30,7 @@ jest.mock("@/app/lib/pusher", () => ({
 }))
 
 jest.mock("@/app/lib/pusher-channels", () => ({
+  PUSHER_PRESENCE_CHANNEL: "presence-messenger",
   getPusherConversationChannel: () => "conversation-channel",
   getPusherUserChannel: () => "user-channel",
 }))

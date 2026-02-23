@@ -55,7 +55,9 @@ jest.mock("@/app/lib/pusher", () => ({
 }))
 
 jest.mock("@/app/lib/pusher-channels", () => ({
-  getPusherConversationChannel: (id: string) => "private-conversation-" + id,
+  PUSHER_PRESENCE_CHANNEL: "presence-messenger",
+  getPusherUserChannel: (id: string) => `private-user-${id}`,
+  getPusherConversationChannel: (id: string) => `private-conversation-${id}`,
 }))
 
 jest.mock("@/app/lib/csrf", () => ({
@@ -90,13 +92,13 @@ jest.mock("@/app/lib/ai-personalities", () => ({
   getSystemPrompt: () => "You are a helpful assistant.",
 }))
 
-jest.mock("@anthropic-ai/sdk", () => ({
+jest.mock("@/app/lib/anthropic", () => ({
   __esModule: true,
-  default: jest.fn().mockImplementation(() => ({
+  default: {
     messages: {
       stream: (...args: unknown[]) => mockAnthropicStream(...args),
     },
-  })),
+  },
 }))
 
 function createRequest(body: Record<string, unknown>): NextRequest {
