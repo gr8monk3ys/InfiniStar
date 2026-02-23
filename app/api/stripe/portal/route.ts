@@ -7,6 +7,26 @@ import prisma from "@/app/lib/prismadb"
 import { apiLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 import { stripe } from "@/app/lib/stripe"
 
+function isMissingStripeCustomerError(error: unknown): boolean {
+  if (!error || typeof error !== "object") {
+    return false
+  }
+
+  const stripeError = error as {
+    type?: string
+    code?: string
+    param?: string
+  }
+
+  return (
+    stripeError.type === "StripeInvalidRequestError" &&
+    stripeError.code === "resource_missing" &&
+    (stripeError.param === "customer" ||
+      stripeError.param === "id" ||
+      stripeError.param === undefined)
+  )
+}
+
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     // Rate limiting
@@ -38,19 +58,42 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const user = await prisma.user.findUnique({
       where: { clerkId: userId },
       select: {
+        id: true,
         stripeCustomerId: true,
       },
     })
 
-    if (!user?.stripeCustomerId) {
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 })
+    }
+
+    if (!user.stripeCustomerId) {
       return NextResponse.json({ error: "No billing account found" }, { status: 400 })
     }
 
-    // Create Stripe billing portal session
-    const portalSession = await stripe.billingPortal.sessions.create({
-      customer: user.stripeCustomerId,
-      return_url: `${env.NEXT_PUBLIC_APP_URL}/dashboard`,
-    })
+    let portalSession
+    try {
+      // Create Stripe billing portal session
+      portalSession = await stripe.billingPortal.sessions.create({
+        customer: user.stripeCustomerId,
+        return_url: `${env.NEXT_PUBLIC_APP_URL}/dashboard`,
+      })
+    } catch (error) {
+      if (!isMissingStripeCustomerError(error)) {
+        throw error
+      }
+
+      // Stored customer no longer exists for the active Stripe account.
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          stripeCustomerId: null,
+          stripeSubscriptionId: null,
+        },
+      })
+
+      return NextResponse.json({ error: "No billing account found" }, { status: 400 })
+    }
 
     return NextResponse.json({ url: portalSession.url })
   } catch (error) {

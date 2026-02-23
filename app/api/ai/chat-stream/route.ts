@@ -1,5 +1,4 @@
 import { type NextRequest } from "next/server"
-import Anthropic from "@anthropic-ai/sdk"
 import { z } from "zod"
 
 import { getAiAccessDecision } from "@/app/lib/ai-access"
@@ -12,6 +11,7 @@ import {
   isValidPersonality,
 } from "@/app/lib/ai-personalities"
 import { trackAiUsage } from "@/app/lib/ai-usage"
+import anthropic from "@/app/lib/anthropic"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import {
   buildModerationDetails,
@@ -38,10 +38,6 @@ const chatStreamSchema = z.object({
     .optional()
     .nullable(),
   conversationId: z.string().min(1, "Conversation ID is required"),
-})
-
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY || "",
 })
 
 /**

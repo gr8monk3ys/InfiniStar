@@ -14,6 +14,10 @@ const presenceSchema = z.object({
   customStatusEmoji: z.string().max(10, "Emoji too long").optional().nullable(),
 })
 
+const shouldBroadcastPresence = Boolean(
+  process.env.PUSHER_APP_ID && process.env.NEXT_PUBLIC_PUSHER_APP_KEY && process.env.PUSHER_SECRET
+)
+
 // PATCH /api/users/presence - Update user presence status
 export async function PATCH(request: NextRequest) {
   try {
@@ -66,14 +70,20 @@ export async function PATCH(request: NextRequest) {
       data: updateData,
     })
 
-    // Broadcast presence update to the authenticated presence channel.
-    await pusherServer.trigger(PUSHER_PRESENCE_CHANNEL, "user:presence", {
-      userId: currentUser.id,
-      presenceStatus: updatedUser.presenceStatus,
-      lastSeenAt: updatedUser.lastSeenAt,
-      customStatus: updatedUser.customStatus,
-      customStatusEmoji: updatedUser.customStatusEmoji,
-    })
+    // Presence persistence must not fail when realtime credentials are missing.
+    if (shouldBroadcastPresence) {
+      try {
+        await pusherServer.trigger(PUSHER_PRESENCE_CHANNEL, "user:presence", {
+          userId: currentUser.id,
+          presenceStatus: updatedUser.presenceStatus,
+          lastSeenAt: updatedUser.lastSeenAt,
+          customStatus: updatedUser.customStatus,
+          customStatusEmoji: updatedUser.customStatusEmoji,
+        })
+      } catch (error) {
+        console.error("PRESENCE_BROADCAST_ERROR", error)
+      }
+    }
 
     return NextResponse.json({
       message: "Presence updated successfully",

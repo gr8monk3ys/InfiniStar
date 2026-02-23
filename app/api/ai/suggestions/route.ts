@@ -4,7 +4,7 @@ import { z } from "zod"
 import { getAiAccessDecision } from "@/app/lib/ai-access"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import prisma from "@/app/lib/prismadb"
-import { getClientIdentifier, InMemoryRateLimiter } from "@/app/lib/rate-limit"
+import { getClientIdentifier, suggestionsLimiter } from "@/app/lib/rate-limit"
 import {
   generateSuggestions,
   getCachedSuggestions,
@@ -13,12 +13,6 @@ import {
 } from "@/app/lib/suggestions"
 import getCurrentUser from "@/app/actions/getCurrentUser"
 import { type FullMessageType } from "@/app/types"
-
-/**
- * Rate limiter for suggestions endpoint
- * 30 requests per minute to prevent abuse while allowing reasonable usage
- */
-const suggestionsLimiter = new InMemoryRateLimiter(30, 60000)
 
 /**
  * Request body schema
