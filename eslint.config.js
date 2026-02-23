@@ -17,6 +17,7 @@ module.exports = [
       "coverage/**",
       "playwright-report/**",
       "test-results/**",
+      "tmp/**",
     ],
   },
   {
