@@ -1,3 +1,5 @@
+import "@testing-library/jest-dom"
+
 import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
@@ -7,6 +9,10 @@ import { PricingCtaButton } from "@/app/(marketing)/pricing/PricingCtaButton"
 
 const mockPost = jest.fn()
 const mockToastError = jest.fn()
+const mockUseCsrfToken = jest.fn<{ token: string | null; loading: boolean }, []>(() => ({
+  token: "csrf-token",
+  loading: false,
+}))
 
 jest.mock("@/app/lib/api-client", () => {
   class MockApiError extends Error {
@@ -34,10 +40,7 @@ jest.mock("react-hot-toast", () => ({
 }))
 
 jest.mock("@/app/hooks/useCsrfToken", () => ({
-  useCsrfToken: jest.fn(() => ({
-    token: "csrf-token",
-    loading: false,
-  })),
+  useCsrfToken: () => mockUseCsrfToken(),
 }))
 
 jest.mock("@/app/lib/navigation", () => ({
@@ -47,6 +50,7 @@ jest.mock("@/app/lib/navigation", () => ({
 describe("PricingCtaButton", () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    mockUseCsrfToken.mockReturnValue({ token: "csrf-token", loading: false })
   })
 
   it("renders sign-in link when user is signed out", () => {
@@ -125,13 +129,7 @@ describe("PricingCtaButton", () => {
   })
 
   it("shows error when CSRF token is unavailable", async () => {
-    const { useCsrfToken } = jest.requireMock("@/app/hooks/useCsrfToken") as {
-      useCsrfToken: jest.Mock
-    }
-    useCsrfToken.mockReturnValue({
-      token: null,
-      loading: false,
-    })
+    mockUseCsrfToken.mockReturnValue({ token: null, loading: false })
 
     const user = userEvent.setup()
     render(<PricingCtaButton isSignedIn={true} isPro={false} />)
