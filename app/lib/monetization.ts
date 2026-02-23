@@ -8,7 +8,7 @@ export interface AffiliatePartner {
 
 const AFFILIATE_SOURCE_FALLBACK = "unknown"
 
-function isEnabled(value: string | undefined): boolean {
+export function isEnabled(value: string | undefined): boolean {
   if (!value) {
     return false
   }
@@ -17,48 +17,60 @@ function isEnabled(value: string | undefined): boolean {
   return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on"
 }
 
+// Use getter properties so env vars are re-read on each access (supports test overrides)
 export const monetizationConfig = {
-  enableAffiliateLinks: isEnabled(process.env.NEXT_PUBLIC_ENABLE_AFFILIATE_LINKS),
-  enableAdSense: isEnabled(process.env.NEXT_PUBLIC_ENABLE_ADSENSE),
-  adSenseClientId: process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID ?? "",
-  adSenseSlots: {
-    homeInline: process.env.NEXT_PUBLIC_ADSENSE_SLOT_HOME_INLINE ?? "",
-    pricingInline: process.env.NEXT_PUBLIC_ADSENSE_SLOT_PRICING_INLINE ?? "",
+  get enableAffiliateLinks() {
+    return isEnabled(process.env.NEXT_PUBLIC_ENABLE_AFFILIATE_LINKS)
+  },
+  get enableAdSense() {
+    return isEnabled(process.env.NEXT_PUBLIC_ENABLE_ADSENSE)
+  },
+  get adSenseClientId() {
+    return process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID ?? ""
+  },
+  get adSenseSlots() {
+    return {
+      homeInline: process.env.NEXT_PUBLIC_ADSENSE_SLOT_HOME_INLINE ?? "",
+      pricingInline: process.env.NEXT_PUBLIC_ADSENSE_SLOT_PRICING_INLINE ?? "",
+    }
   },
 }
 
-const rawAffiliatePartners = [
-  {
-    id: "anthropic",
-    name: "Claude Pro",
-    description: "Upgrade for higher message limits and faster response tiers.",
-    ctaLabel: "View Claude Pro",
-    url: process.env.NEXT_PUBLIC_AFFILIATE_ANTHROPIC_URL,
-  },
-  {
-    id: "notion",
-    name: "Notion AI",
-    description: "Organize AI workflows, docs, and knowledge in one workspace.",
-    ctaLabel: "View Notion AI",
-    url: process.env.NEXT_PUBLIC_AFFILIATE_NOTION_URL,
-  },
-  {
-    id: "grammarly",
-    name: "Grammarly",
-    description: "Improve tone and clarity for prompts, drafts, and responses.",
-    ctaLabel: "View Grammarly",
-    url: process.env.NEXT_PUBLIC_AFFILIATE_GRAMMARLY_URL,
-  },
-]
+export function buildAffiliatePartnersFromEnv(): AffiliatePartner[] {
+  const raw = [
+    {
+      id: "anthropic",
+      name: "Claude Pro",
+      description: "Upgrade for higher message limits and faster response tiers.",
+      ctaLabel: "View Claude Pro",
+      url: process.env.NEXT_PUBLIC_AFFILIATE_ANTHROPIC_URL,
+    },
+    {
+      id: "notion",
+      name: "Notion AI",
+      description: "Organize AI workflows, docs, and knowledge in one workspace.",
+      ctaLabel: "View Notion AI",
+      url: process.env.NEXT_PUBLIC_AFFILIATE_NOTION_URL,
+    },
+    {
+      id: "grammarly",
+      name: "Grammarly",
+      description: "Improve tone and clarity for prompts, drafts, and responses.",
+      ctaLabel: "View Grammarly",
+      url: process.env.NEXT_PUBLIC_AFFILIATE_GRAMMARLY_URL,
+    },
+  ]
 
-export const affiliatePartners: AffiliatePartner[] = rawAffiliatePartners
-  .filter((partner) => Boolean(partner.url && partner.url.trim().length > 0))
-  .map((partner) => ({
-    ...partner,
-    url: partner.url!.trim(),
-  }))
+  return raw
+    .filter((partner) => Boolean(partner.url && partner.url.trim().length > 0))
+    .map((partner) => ({
+      ...partner,
+      url: partner.url!.trim(),
+    }))
+}
 
-const affiliatePartnersById = new Map(affiliatePartners.map((partner) => [partner.id, partner]))
+// Static array for client components (evaluated once at module load)
+export const affiliatePartners: AffiliatePartner[] = buildAffiliatePartnersFromEnv()
 
 export function normalizeAffiliateSource(sourcePage: string | null | undefined): string {
   if (!sourcePage) {
@@ -75,7 +87,9 @@ export function normalizeAffiliateSource(sourcePage: string | null | undefined):
 }
 
 export function getAffiliatePartner(partnerId: string): AffiliatePartner | null {
-  return affiliatePartnersById.get(partnerId) ?? null
+  // Read from env vars at call time so tests can set env vars without module reload
+  const partners = buildAffiliatePartnersFromEnv()
+  return partners.find((p) => p.id === partnerId) ?? null
 }
 
 export function buildAffiliateRedirectPath(partnerId: string, sourcePage: string): string {

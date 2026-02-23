@@ -117,6 +117,7 @@ export const shareLimiter = createRateLimiter("share", 10, 60000) // 10 share op
 export const shareJoinLimiter = createRateLimiter("shareJoin", 5, 60000) // 5 join attempts per minute
 export const csrfLimiter = createRateLimiter("csrf", 30, 60000) // 30 CSRF token requests per minute
 export const creatorPaymentLimiter = createRateLimiter("creatorPayment", 5, 600000) // 5 requests per 10 minutes
+export const suggestionsLimiter = createRateLimiter("suggestions", 30, 60000) // 30 suggestion requests per minute
 
 // Cleanup old entries every 5 minutes (only relevant for in-memory limiters)
 setInterval(() => {
@@ -134,6 +135,7 @@ setInterval(() => {
   shareJoinLimiter.cleanup()
   csrfLimiter.cleanup()
   creatorPaymentLimiter.cleanup()
+  suggestionsLimiter.cleanup()
 }, 300000)
 
 // Helper function to get client identifier
