@@ -11,18 +11,10 @@ export default function usePresence() {
   const awayTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const isActiveRef = useRef(true)
 
-  // Keep a ref to the latest CSRF token so event listeners always use the current
-  // value without being torn down and re-registered when the token resolves.
-  const csrfTokenRef = useRef(csrfToken)
   useEffect(() => {
-    csrfTokenRef.current = csrfToken
-  }, [csrfToken])
+    if (!userId || !csrfToken) return
 
-  useEffect(() => {
-    if (!userId) return
-
-    // Build headers lazily from the ref so callers always use the current token
-    const getHeaders = () => ({ "X-CSRF-Token": csrfTokenRef.current ?? "" })
+    const getHeaders = () => ({ "X-CSRF-Token": csrfToken })
 
     // Update presence to online when component mounts
     const setOnline = async () => {
@@ -118,7 +110,5 @@ export default function usePresence() {
       })
       document.removeEventListener("visibilitychange", handleVisibilityChange)
     }
-    // csrfToken is intentionally excluded — it is read via csrfTokenRef so event
-    // listeners are never torn down and re-registered when the token resolves.
-  }, [userId])
+  }, [userId, csrfToken])
 }

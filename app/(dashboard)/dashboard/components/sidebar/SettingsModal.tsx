@@ -26,6 +26,7 @@ const CldUploadButton = dynamic(
   () => import("next-cloudinary").then((mod) => mod.CldUploadButton),
   { ssr: false }
 )
+const hasCloudinaryConfig = Boolean(process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME)
 
 interface SettingsModalProps {
   isOpen?: boolean
@@ -33,7 +34,7 @@ interface SettingsModalProps {
   currentUser: User
 }
 
-const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, currentUser = {} }) => {
+const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, currentUser }) => {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false)
@@ -118,18 +119,29 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, currentU
                     width="48"
                     height="48"
                     className="rounded-full"
-                    src={image || currentUser?.image || "/images/placeholder.jpg"}
+                    src={image || currentUser?.image || "/icon-192.png"}
                     alt="Avatar"
                   />
-                  <CldUploadButton
-                    options={{ maxFiles: 1 }}
-                    onUpload={handleUpload}
-                    uploadPreset="pgc9ehd5"
-                  >
-                    <Button disabled={isLoading} secondary type="button">
+                  {hasCloudinaryConfig ? (
+                    <CldUploadButton
+                      options={{ maxFiles: 1 }}
+                      onUpload={handleUpload}
+                      uploadPreset="pgc9ehd5"
+                    >
+                      <Button disabled={isLoading} secondary type="button">
+                        Change
+                      </Button>
+                    </CldUploadButton>
+                  ) : (
+                    <Button
+                      disabled
+                      secondary
+                      type="button"
+                      title="Avatar upload is unavailable until Cloudinary is configured."
+                    >
                       Change
                     </Button>
-                  </CldUploadButton>
+                  )}
                 </div>
               </div>
               <div>

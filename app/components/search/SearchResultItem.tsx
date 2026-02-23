@@ -27,6 +27,7 @@ interface AvatarProps {
 
 function Avatar({ name, email, image, className = "", size = "md" }: AvatarProps) {
   const sizeClasses = size === "sm" ? "size-8" : "size-10"
+  const imageSizes = size === "sm" ? "32px" : "40px"
   const altText = name
     ? `${name}'s profile picture`
     : email
@@ -35,7 +36,13 @@ function Avatar({ name, email, image, className = "", size = "md" }: AvatarProps
 
   return (
     <div className={`relative shrink-0 overflow-hidden rounded-full ${sizeClasses} ${className}`}>
-      <Image fill src={image || "/placeholder.jpg"} alt={altText} className="object-cover" />
+      <Image
+        fill
+        sizes={imageSizes}
+        src={image || "/icon-192.png"}
+        alt={altText}
+        className="object-cover"
+      />
     </div>
   )
 }
@@ -44,26 +51,57 @@ function Avatar({ name, email, image, className = "", size = "md" }: AvatarProps
  * Render highlighted text with [hl]...[/hl] markers
  */
 function HighlightedText({ text }: { text: string }) {
-  const parts = text.split(/\[hl\]|\[\/hl\]/)
-  /* eslint-disable react/no-array-index-key */
+  const segments: Array<{ key: string; text: string; highlighted: boolean }> = []
+  const markerRegex = /\[hl\]([\s\S]*?)\[\/hl\]/g
+  let lastIndex = 0
+  let match = markerRegex.exec(text)
+
+  while (match) {
+    const plainText = text.slice(lastIndex, match.index)
+    if (plainText) {
+      segments.push({
+        key: `plain-${lastIndex}`,
+        text: plainText,
+        highlighted: false,
+      })
+    }
+
+    segments.push({
+      key: `hl-${match.index}`,
+      text: match[1],
+      highlighted: true,
+    })
+
+    lastIndex = match.index + match[0].length
+    match = markerRegex.exec(text)
+  }
+
+  const trailingText = text.slice(lastIndex)
+  if (trailingText) {
+    segments.push({
+      key: `plain-${lastIndex}`,
+      text: trailingText,
+      highlighted: false,
+    })
+  }
+
   return (
     <>
-      {parts.map((part, index) => {
-        if (index % 2 === 1) {
+      {segments.map((segment) => {
+        if (segment.highlighted) {
           return (
             <mark
-              key={`hl-${index}`}
+              key={segment.key}
               className="rounded bg-yellow-200 px-0.5 font-medium text-gray-900"
             >
-              {part}
+              {segment.text}
             </mark>
           )
         }
-        return <span key={`text-${index}`}>{part}</span>
+        return <span key={segment.key}>{segment.text}</span>
       })}
     </>
   )
-  /* eslint-enable react/no-array-index-key */
 }
 
 /**

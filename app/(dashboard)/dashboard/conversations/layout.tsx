@@ -11,15 +11,17 @@ import ConversationList from "./components/ConversationList"
 export const dynamic = "force-dynamic"
 
 export default async function ConversationsLayout({ children }: { children: React.ReactNode }) {
-  const conversations = await getConversations()
-  const user = await getUsers()
-  const currentUser = await getCurrentUser()
+  const [conversations, user, currentUser] = await Promise.all([
+    getConversations(),
+    getUsers(),
+    getCurrentUser(),
+  ])
 
   return (
-    <Sidebar>
-      <GlobalSearchProvider>
-        <KeyboardShortcutsProvider>
-          <PresenceProvider>
+    <GlobalSearchProvider>
+      <KeyboardShortcutsProvider>
+        <PresenceProvider>
+          <Sidebar>
             <div className="h-full">
               <ConversationList
                 user={user}
@@ -29,9 +31,9 @@ export default async function ConversationsLayout({ children }: { children: Reac
               />
               {children}
             </div>
-          </PresenceProvider>
-        </KeyboardShortcutsProvider>
-      </GlobalSearchProvider>
-    </Sidebar>
+          </Sidebar>
+        </PresenceProvider>
+      </KeyboardShortcutsProvider>
+    </GlobalSearchProvider>
   )
 }

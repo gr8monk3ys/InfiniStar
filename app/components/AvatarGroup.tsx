@@ -8,7 +8,7 @@ interface AvatarGroupProps {
   users: User[]
 }
 
-const AvatarGroup: React.FC<AvatarGroupProps> = ({ users = [] }) => {
+const AvatarGroup: React.FC<AvatarGroupProps> = ({ users }) => {
   const slicedUsers = useMemo(() => users.slice(0, 3), [users])
 
   const positionMap = {
@@ -34,7 +34,7 @@ const AvatarGroup: React.FC<AvatarGroupProps> = ({ users = [] }) => {
           <Image
             fill
             sizes="21px"
-            src={user?.image || "/placeholder.jpg"}
+            src={user?.image || "/icon-192.png"}
             alt={`${user.name}'s avatar`}
             className="object-cover"
           />
