@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-InfiniStar is an AI chatbot application built with Next.js 15 (App Router), featuring subscription-based access via Stripe, real-time messaging with Pusher, and a conversational interface. The application uses Postgres (Neon) for data persistence via Prisma ORM and Clerk for authentication.
+InfiniStar is an AI chatbot application built with Next.js 16 (App Router), featuring subscription-based access via Stripe, real-time messaging with Pusher, and a conversational interface. The application uses Postgres (Neon) for data persistence via Prisma ORM and Clerk for authentication.
 
 **Key Features:**
 
@@ -49,18 +49,19 @@ bun run format:write     # Format code with Prettier
 bun run format:check     # Check code formatting
 
 # Testing
-bun run test                 # Run all Jest tests
-bun run test:watch           # Run tests in watch mode
-bun run test:coverage        # Run tests with coverage report
+# IMPORTANT: Use `bun test` directly — `npx jest` hangs on Node v25 + @sentry/node ESM conflict
+bun test                          # Run all unit tests (Bun's Jest-compatible runner)
+bun test app/__tests__/lib/sanitize.test.ts  # Run a single test file
+bun test --test-name-pattern "sanitizeMessage"  # Run tests matching a pattern
 bun run test:e2e             # Run Playwright E2E tests
 bun run test:e2e:ui          # Run E2E tests with Playwright UI
 bun run test:e2e:headed      # Run E2E tests in headed browser
 
-# Run a single test file
-npx jest app/__tests__/lib/sanitize.test.ts
-
-# Run tests matching a pattern
-npx jest --testNamePattern="sanitizeMessage"
+# Known test runner limitations (Bun's Jest-compatible runner is incomplete):
+# - jest.resetModules() is NOT implemented → 62 pre-existing failures
+# - jest.requireMock() is NOT implemented → 6 pre-existing failures
+# - Component tests needing jsdom fail (no window/document) → 25 pre-existing failures
+# Total: ~111 pre-existing failures in the test suite; new tests must avoid these APIs
 
 # Database
 npx prisma generate      # Generate Prisma Client
@@ -76,7 +77,7 @@ bun run seed             # Seed database with test data
 
 ### Next.js App Router Structure
 
-The project uses Next.js 15 App Router with route groups:
+The project uses Next.js 16 App Router with route groups:
 
 - `app/(auth)/` - Authentication pages (Clerk sign-in and sign-up)
   - `sign-in/[[...sign-in]]/` - Clerk sign-in page
@@ -602,6 +603,7 @@ try {
 
 ## Important Notes
 
+- **Test UUIDs**: Zod v4 (`^4.3.6`) enforces strict RFC 4122 UUID validation. In tests, use UUIDs with valid version digit (3rd group must start `1`–`5`) and valid variant bits (4th group must start `8`, `9`, `a`, or `b`). Example that works: `11111111-1111-4111-8111-111111111111`. Example that fails: `11111111-1111-1111-1111-111111111111`.
 - **Prisma Client**: Use the singleton instance from `app/lib/prismadb.ts`. It exports both `default` (as `prisma`) and named `db` export. Uses Neon adapter (`@prisma/adapter-neon`) with WebSocket support.
 - **No `app/libs/` directory**: Only `app/lib/` exists. All utility files are in `app/lib/`.
 - **Route Groups**: Parentheses in directory names like `(dashboard)` are Next.js route groups - they don't appear in URLs
@@ -619,7 +621,7 @@ try {
 - **Environment Setup**: See `.env.local.example` for complete setup guide; use `SETUP.md` for service configuration
 - **Sentry**: Optional error monitoring via `@sentry/nextjs`. Configure with `SENTRY_*` environment variables.
 - **Cron Jobs**: Two cron endpoints protected by `CRON_SECRET`: `/api/cron/auto-delete` (conversation cleanup) and `/api/cron/process-deletions` (GDPR account deletion processing)
-- **Next.js Version**: Uses Next.js 16 (`next@^16.1.6`) with App Router
+- **Next.js Version**: Uses Next.js 16 (`next@^16.1.6`) with App Router. Note: package.json still says "Next.js 15" in some places; the actual installed version is `^16.1.6`.
 
 ## Security Best Practices
 
