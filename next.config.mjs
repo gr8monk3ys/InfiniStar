@@ -25,6 +25,30 @@ function parseUrlOrigin(value) {
   }
 }
 
+function parseClerkPublishableKeyOrigin(key) {
+  if (!key) {
+    return null
+  }
+
+  const match = key.match(/^pk_(?:test|live)_(.+)$/)
+  if (!match) {
+    return null
+  }
+
+  try {
+    const encoded = match[1].replace(/-/g, "+").replace(/_/g, "/")
+    const padding = "=".repeat((4 - (encoded.length % 4)) % 4)
+    const decoded = Buffer.from(`${encoded}${padding}`, "base64").toString("utf8")
+    const frontendApi = decoded.split("$")[0]?.trim()
+    if (!frontendApi || !frontendApi.includes(".")) {
+      return null
+    }
+    return `https://${frontendApi}`
+  } catch {
+    return null
+  }
+}
+
 function buildDefaultContentSecurityPolicy(reportUri) {
   const sentryConnectOrigins = new Set([
     "https://*.ingest.sentry.io",
@@ -43,6 +67,14 @@ function buildDefaultContentSecurityPolicy(reportUri) {
     sentryConnectOrigins.add(sentryOtlpOrigin)
   }
 
+  const clerkOrigins = new Set(["https://*.clerk.com", "https://*.clerk.accounts.dev"])
+  const clerkPublishableKeyOrigin = parseClerkPublishableKeyOrigin(
+    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+  )
+  if (clerkPublishableKeyOrigin) {
+    clerkOrigins.add(clerkPublishableKeyOrigin)
+  }
+
   const directives = [
     ["default-src", ["'self'"]],
     ["base-uri", ["'self'"]],
@@ -54,8 +86,7 @@ function buildDefaultContentSecurityPolicy(reportUri) {
         "'self'",
         "'unsafe-inline'",
         "https://js.stripe.com",
-        "https://*.clerk.com",
-        "https://*.clerk.accounts.dev",
+        ...clerkOrigins,
         "https://widget.cloudinary.com",
         "https://www.googletagmanager.com",
         "https://pagead2.googlesyndication.com",
@@ -83,8 +114,7 @@ function buildDefaultContentSecurityPolicy(reportUri) {
       [
         "'self'",
         "https://api.clerk.com",
-        "https://*.clerk.com",
-        "https://*.clerk.accounts.dev",
+        ...clerkOrigins,
         "https://api.stripe.com",
         "https://api.cloudinary.com",
         "https://*.pusher.com",
@@ -103,6 +133,7 @@ function buildDefaultContentSecurityPolicy(reportUri) {
         "https://js.stripe.com",
         "https://hooks.stripe.com",
         "https://checkout.stripe.com",
+        ...clerkOrigins,
         "https://widget.cloudinary.com",
         "https://googleads.g.doubleclick.net",
       ],
