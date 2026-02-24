@@ -11,19 +11,31 @@ jest.mock("next/script", () => ({
   ),
 }))
 
-const mockMonetizationConfig = {
-  enableAffiliateLinks: false,
-  enableAdSense: false,
-  adSenseClientId: "",
-  adSenseSlots: {
-    homeInline: "",
-    pricingInline: "",
-  },
-}
-
 jest.mock("@/app/lib/monetization", () => ({
-  monetizationConfig: mockMonetizationConfig,
+  monetizationConfig: {
+    enableAffiliateLinks: false,
+    enableAdSense: false,
+    adSenseClientId: "",
+    adSenseSlots: {
+      homeInline: "",
+      pricingInline: "",
+    },
+  },
 }))
+
+const { monetizationConfig: mockMonetizationConfig } = jest.requireMock(
+  "@/app/lib/monetization"
+) as {
+  monetizationConfig: {
+    enableAffiliateLinks: boolean
+    enableAdSense: boolean
+    adSenseClientId: string
+    adSenseSlots: {
+      homeInline: string
+      pricingInline: string
+    }
+  }
+}
 
 describe("AdSenseUnit", () => {
   beforeEach(() => {

@@ -45,9 +45,10 @@ jobs:
         run: bun run typecheck
 
       - name: Run tests
-        # Use `bun test` directly — `bun run test` invokes jest which hangs on
-        # Node v25 + @sentry/node ESM conflict. See CLAUDE.md for details.
-        run: bun test
+        # Run Jest (project test baseline). `--runInBand` improves determinism
+        # for module-mocking-heavy suites in CI. `--forceExit` avoids hangs
+        # from known open-handle leakage in a few suites.
+        run: bun run test --runInBand --forceExit
         env:
           CI: true
 

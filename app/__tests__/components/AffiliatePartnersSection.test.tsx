@@ -4,27 +4,14 @@ import { render, screen } from "@testing-library/react"
 
 import { AffiliatePartnersSection } from "@/app/components/monetization/AffiliatePartnersSection"
 
-// Mutable config object so tests can change it without jest.resetModules()
-const mockMonetizationConfig = {
-  enableAffiliateLinks: false,
-  enableAdSense: false,
-  adSenseClientId: "",
-  adSenseSlots: { homeInline: "", pricingInline: "" },
-}
-
-const mockAffiliatePartners: Array<{
-  id: string
-  name: string
-  description: string
-  ctaLabel: string
-  url: string
-}> = []
-
 jest.mock("@/app/lib/monetization", () => ({
-  monetizationConfig: mockMonetizationConfig,
-  get affiliatePartners() {
-    return mockAffiliatePartners
+  monetizationConfig: {
+    enableAffiliateLinks: false,
+    enableAdSense: false,
+    adSenseClientId: "",
+    adSenseSlots: { homeInline: "", pricingInline: "" },
   },
+  affiliatePartners: [],
   buildAffiliateRedirectPath: (partnerId: string, sourcePage: string) => {
     const source = sourcePage
       .trim()
@@ -33,6 +20,25 @@ jest.mock("@/app/lib/monetization", () => ({
     return `/api/affiliate/${partnerId}?source=${source}`
   },
 }))
+
+const monetizationMock = jest.requireMock("@/app/lib/monetization") as {
+  monetizationConfig: {
+    enableAffiliateLinks: boolean
+    enableAdSense: boolean
+    adSenseClientId: string
+    adSenseSlots: { homeInline: string; pricingInline: string }
+  }
+  affiliatePartners: Array<{
+    id: string
+    name: string
+    description: string
+    ctaLabel: string
+    url: string
+  }>
+}
+
+const mockMonetizationConfig = monetizationMock.monetizationConfig
+const mockAffiliatePartners = monetizationMock.affiliatePartners
 
 describe("AffiliatePartnersSection", () => {
   beforeEach(() => {

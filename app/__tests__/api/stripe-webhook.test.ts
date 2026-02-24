@@ -39,6 +39,11 @@ jest.mock("@/app/lib/logger", () => ({
     info: jest.fn(),
     warn: jest.fn(),
   },
+  dbLogger: {
+    error: jest.fn(),
+    info: jest.fn(),
+    warn: jest.fn(),
+  },
 }))
 
 jest.mock("next/headers", () => ({
