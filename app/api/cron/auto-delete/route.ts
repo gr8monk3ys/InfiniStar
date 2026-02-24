@@ -1,6 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server"
 
 import { runAutoDeleteForAllUsers } from "@/app/lib/auto-delete"
+import { apiLogger } from "@/app/lib/logger"
+
+const CRON_TIMEOUT_MS = 55_000
 
 /**
  * GET /api/cron/auto-delete - Process auto-delete for all users
@@ -26,15 +29,20 @@ export async function GET(request: NextRequest) {
 
     // CRON_SECRET must always be set. Unauthenticated access is never permitted.
     if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
-      console.warn("[CRON] Unauthorized cron request attempt")
+      apiLogger.warn("Unauthorized cron request attempt on /api/cron/auto-delete")
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Run auto-delete for all users
-    const result = await runAutoDeleteForAllUsers()
+    // Race the work against a 55s timeout to stay within Vercel's function limit
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("Cron timeout after 55s")), CRON_TIMEOUT_MS)
+    )
 
-    console.warn(
-      `[CRON] Auto-delete processed for ${result.processedUsers} users, ${result.totalDeleted} conversations deleted`
+    const result = await Promise.race([runAutoDeleteForAllUsers(), timeoutPromise])
+
+    apiLogger.info(
+      { processedUsers: result.processedUsers, totalDeleted: result.totalDeleted },
+      "Auto-delete cron completed"
     )
 
     return NextResponse.json({
@@ -43,7 +51,18 @@ export async function GET(request: NextRequest) {
       totalDeleted: result.totalDeleted,
     })
   } catch (error: unknown) {
-    console.error("[CRON] Error processing auto-delete:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    const isTimeout = error instanceof Error && error.message.includes("Cron timeout")
+    apiLogger.error(
+      { err: error },
+      isTimeout ? "Auto-delete cron timed out" : "Auto-delete cron failed"
+    )
+    return NextResponse.json(
+      {
+        error: isTimeout
+          ? "Cron timed out — partial work may have completed"
+          : "Internal server error",
+      },
+      { status: 500 }
+    )
   }
 }

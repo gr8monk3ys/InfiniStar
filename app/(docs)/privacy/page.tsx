@@ -1,3 +1,8 @@
+export const metadata = {
+  title: "Privacy Policy | InfiniStar",
+  description: "InfiniStar privacy policy — how we collect and use your data.",
+}
+
 export default function IndexPage() {
   return (
     <section className="container grid items-center gap-6 pb-8 pt-6 md:py-10">

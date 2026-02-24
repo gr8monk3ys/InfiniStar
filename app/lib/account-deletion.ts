@@ -20,6 +20,7 @@
  */
 
 import { sendAccountDeletedEmail } from "@/app/lib/email"
+import { apiLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
 
 // Anonymized values for deleted content
@@ -68,12 +69,12 @@ export async function processScheduledDeletions(): Promise<{
     try {
       await deleteUserAccount(user.id)
       processed++
-      console.warn(`[ACCOUNT_DELETION] Successfully deleted user ${user.id}`)
+      apiLogger.info({ userId: user.id }, "Account deletion completed")
     } catch (error) {
       failed++
       const errorMessage = error instanceof Error ? error.message : "Unknown error"
       errors.push(`Failed to delete user ${user.id}: ${errorMessage}`)
-      console.error(`[ACCOUNT_DELETION] Failed to delete user ${user.id}:`, error)
+      apiLogger.error({ err: error, userId: user.id }, "Account deletion failed")
       // Skip the confirmation email — the user was not deleted.
       continue
     }
@@ -84,7 +85,10 @@ export async function processScheduledDeletions(): Promise<{
       try {
         await sendAccountDeletedEmail(userEmail, userName || "User")
       } catch (emailError) {
-        console.error(`[ACCOUNT_DELETION] Confirmation email failed for ${userEmail}:`, emailError)
+        apiLogger.error(
+          { err: emailError, email: userEmail },
+          "Account deletion confirmation email failed"
+        )
         // Do NOT increment `failed` — the deletion itself succeeded.
       }
     }

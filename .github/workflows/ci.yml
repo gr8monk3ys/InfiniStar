@@ -13,7 +13,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -45,18 +45,11 @@ jobs:
         run: bun run typecheck
 
       - name: Run tests
-        run: bun run test
+        # Use `bun test` directly — `bun run test` invokes jest which hangs on
+        # Node v25 + @sentry/node ESM conflict. See CLAUDE.md for details.
+        run: bun test
         env:
           CI: true
-
-      - name: Upload coverage
-        if: success() || failure()
-        uses: codecov/codecov-action@v5
-        continue-on-error: true
-        with:
-          files: ./coverage/lcov.info
-          flags: unittests
-          name: codecov-umbrella
 
   build:
     name: Build
@@ -65,7 +58,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -88,7 +81,7 @@ jobs:
         run: SKIP_ENV_VALIDATION=1 bun run build
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v4
         with:
           name: build
           path: .next
@@ -100,7 +93,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2

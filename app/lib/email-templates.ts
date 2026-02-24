@@ -390,6 +390,61 @@ Thank you for being part of InfiniStar.
   }
 }
 
+export interface PaymentFailedEmailParams {
+  name: string
+  billingUrl: string
+}
+
+export function getPaymentFailedEmailTemplate(params: PaymentFailedEmailParams) {
+  const { name, billingUrl } = params
+
+  const html = wrapHtml(`
+  <h2 style="${STYLES.h2Danger}">Payment Failed</h2>
+
+  <p>Hi ${name},</p>
+
+  <p>We were unable to process your InfiniStar PRO subscription payment. Your card may have expired or have insufficient funds.</p>
+
+  <div style="${STYLES.alertDanger}">
+    <p style="${STYLES.alertDangerText}">
+      ⚠ Your PRO access will continue for a few days while Stripe retries the payment. After that, your account will revert to the free tier.
+    </p>
+  </div>
+
+  <p>To keep your PRO benefits, please update your payment method:</p>
+
+  ${createButton("Update Payment Method", billingUrl)}
+
+  <p style="${STYLES.muted}">
+    If you have any questions, reply to this email or contact us at support@infinistar.app.
+  </p>
+
+  <p style="${STYLES.veryMuted}">
+    If you believe this is an error, please check with your bank or try a different card.
+  </p>`)
+
+  const text = `Payment Failed
+
+Hi ${name},
+
+We were unable to process your InfiniStar PRO subscription payment. Your card may have expired or have insufficient funds.
+
+⚠ Your PRO access will continue for a few days while Stripe retries the payment. After that, your account will revert to the free tier.
+
+To keep your PRO benefits, please update your payment method:
+${billingUrl}
+
+If you have any questions, reply to this email or contact us at support@infinistar.app.
+
+© ${getCurrentYear()} InfiniStar. All rights reserved.`
+
+  return {
+    subject: "Action required: Payment failed - InfiniStar",
+    html,
+    text,
+  }
+}
+
 export interface TwoFactorEnabledEmailParams {
   name: string
   profileUrl: string

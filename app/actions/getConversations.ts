@@ -1,3 +1,4 @@
+import { dbLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
 import { type FullConversationType } from "@/app/types"
 
@@ -15,6 +16,7 @@ const getConversations = async (): Promise<FullConversationType[]> => {
       orderBy: {
         lastMessageAt: "desc",
       },
+      take: 100,
       where: {
         users: {
           some: {
@@ -46,7 +48,7 @@ const getConversations = async (): Promise<FullConversationType[]> => {
 
     return conversations
   } catch (error) {
-    console.error("GET_CONVERSATIONS_ERROR:", error)
+    dbLogger.error({ err: error }, "Failed to fetch conversations")
     return []
   }
 }

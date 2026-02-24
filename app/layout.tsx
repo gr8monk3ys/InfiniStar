@@ -5,6 +5,7 @@ import { ClerkProvider } from "@clerk/nextjs"
 
 import { siteConfig } from "@/config/site"
 import { cn } from "@/app/lib/utils"
+import { CookieBanner } from "@/app/components/CookieBanner"
 import { ThemeCustomProvider } from "@/app/components/providers/ThemeCustomProvider"
 import { ServiceWorkerRegister } from "@/app/components/pwa/ServiceWorkerRegister"
 import { SiteHeader } from "@/app/components/site-header"
@@ -23,6 +24,22 @@ export const metadata: Metadata = {
     icon: "/favicon-32x32.png",
     shortcut: "/favicon-16x16.png",
     apple: "/apple-touch-icon.png",
+  },
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: siteConfig.url,
+    title: siteConfig.name,
+    description: siteConfig.description,
+    siteName: siteConfig.name,
+    images: [
+      {
+        url: `${siteConfig.url}/opengraph-image`,
+        width: 1200,
+        height: 630,
+        alt: siteConfig.name,
+      },
+    ],
   },
 }
 
@@ -54,6 +71,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
               <TailwindIndicator />
             </ThemeCustomProvider>
           </ThemeProvider>
+          <CookieBanner />
         </body>
       </html>
     </ClerkProvider>

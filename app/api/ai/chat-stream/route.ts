@@ -243,6 +243,11 @@ export async function POST(request: NextRequest) {
       content: builtUserContent.content,
     })
 
+    // AbortController that merges client disconnect and 60s hard timeout
+    const abortController = new AbortController()
+    const timeoutId = setTimeout(() => abortController.abort(), 60_000)
+    request.signal.addEventListener("abort", () => abortController.abort())
+
     // Create a ReadableStream for streaming response
     const stream = new ReadableStream({
       async start(controller) {
@@ -279,12 +284,15 @@ export async function POST(request: NextRequest) {
 
         try {
           // Call Anthropic API with streaming and system prompt (including memories)
-          const stream = await anthropic.messages.stream({
-            model: modelToUse,
-            max_tokens: 1024,
-            system: systemPrompt, // Add system prompt for personality + memories
-            messages: conversationHistory,
-          })
+          const stream = await anthropic.messages.stream(
+            {
+              model: modelToUse,
+              max_tokens: 1024,
+              system: systemPrompt, // Add system prompt for personality + memories
+              messages: conversationHistory,
+            },
+            { signal: abortController.signal }
+          )
 
           // Stream the response
           for await (const chunk of stream) {
@@ -391,9 +399,11 @@ export async function POST(request: NextRequest) {
           })
           controller.enqueue(encoder.encode(`data: ${completeData}\n\n`))
 
+          clearTimeout(timeoutId)
           controller.close()
           await pushPromise
         } catch (error) {
+          clearTimeout(timeoutId)
           console.error("Streaming error:", error)
 
           // Send error to client

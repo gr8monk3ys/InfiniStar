@@ -1,3 +1,4 @@
+import { type Metadata } from "next"
 import Image from "next/image"
 import { notFound } from "next/navigation"
 import { auth } from "@clerk/nextjs/server"
@@ -13,6 +14,24 @@ import { CreatorSupportCard } from "@/app/components/monetization/CreatorSupport
 import FollowCreatorButton from "./FollowCreatorButton"
 
 export const dynamic = "force-dynamic"
+
+export async function generateMetadata({ params }: CreatorProfilePageProps): Promise<Metadata> {
+  const { userId } = await params
+  const creator = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { name: true, bio: true, image: true },
+  })
+  if (!creator) return {}
+  return {
+    title: `${creator.name} | InfiniStar Creator`,
+    description: creator.bio || `Explore ${creator.name}'s AI characters on InfiniStar.`,
+    openGraph: {
+      title: `${creator.name} | InfiniStar Creator`,
+      description: creator.bio || undefined,
+      images: creator.image ? [{ url: creator.image }] : undefined,
+    },
+  }
+}
 
 interface CreatorCharacter {
   id: string

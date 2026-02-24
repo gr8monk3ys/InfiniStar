@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server"
 
 import { getDeletionStats, processScheduledDeletions } from "@/app/lib/account-deletion"
+import { apiLogger } from "@/app/lib/logger"
 
 /**
  * GET /api/cron/process-deletions - Process scheduled account deletions
@@ -26,7 +27,7 @@ export async function GET(request: NextRequest) {
 
     // CRON_SECRET must always be set. Unauthenticated access is never permitted.
     if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
-      console.warn("[CRON] Unauthorized cron request attempt")
+      apiLogger.warn("Unauthorized cron request attempt on /api/cron/process-deletions")
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
@@ -39,9 +40,14 @@ export async function GET(request: NextRequest) {
     // Get stats after processing
     const statsAfter = await getDeletionStats()
 
-    console.warn(
-      `[CRON] Processed ${result.processed} deletions, ${result.failed} failed. ` +
-        `Remaining: ${statsAfter.pendingDeletions} pending, ${statsAfter.overdueForDeletion} overdue.`
+    apiLogger.info(
+      {
+        processed: result.processed,
+        failed: result.failed,
+        remainingPending: statsAfter.pendingDeletions,
+        remainingOverdue: statsAfter.overdueForDeletion,
+      },
+      "Account deletion cron completed"
     )
 
     return NextResponse.json({
@@ -55,7 +61,7 @@ export async function GET(request: NextRequest) {
       },
     })
   } catch (error: unknown) {
-    console.error("[CRON] Error processing deletions:", error)
+    apiLogger.error({ err: error }, "Account deletion cron failed")
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

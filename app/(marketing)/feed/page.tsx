@@ -14,6 +14,11 @@ export const metadata = {
   title: "Community Feed | InfiniStar",
   description:
     "See trending characters, discover new creators, and follow what the InfiniStar community is building.",
+  openGraph: {
+    title: "Community Feed | InfiniStar",
+    description:
+      "See trending characters, discover new creators, and follow what the InfiniStar community is building.",
+  },
 }
 
 export const dynamic = "force-dynamic"

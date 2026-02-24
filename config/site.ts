@@ -1,8 +1,10 @@
 export type SiteConfig = typeof siteConfig
 
 export const siteConfig = {
-  name: "Infinistar",
-  description: "Interact with AI to have a good time with.",
+  name: "InfiniStar",
+  description:
+    "Chat with AI characters — anime heroes, fantasy companions, creative personalities, and more. Powered by Claude.",
+  url: process.env.NEXT_PUBLIC_APP_URL || "https://infinistar.app",
   mainNav: [
     {
       title: "Home",
@@ -22,7 +24,6 @@ export const siteConfig = {
     },
   ],
   links: {
-    twitter: "https://twitter.com/shadcn",
     github: "https://github.com/gr8monk3ys/Infinistar",
     docs: "https://github.com/gr8monk3ys/Infinistar#readme",
   },

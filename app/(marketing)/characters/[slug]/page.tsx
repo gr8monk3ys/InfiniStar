@@ -1,3 +1,4 @@
+import { type Metadata } from "next"
 import Image from "next/image"
 import Link from "next/link"
 import { notFound } from "next/navigation"
@@ -44,6 +45,24 @@ interface CharacterPageProps {
 }
 
 export const dynamic = "force-dynamic"
+
+export async function generateMetadata({ params }: CharacterPageProps): Promise<Metadata> {
+  const { slug } = await params
+  const character = await prisma.character.findUnique({
+    where: { slug },
+    select: { name: true, tagline: true, description: true, avatarUrl: true },
+  })
+  if (!character) return {}
+  return {
+    title: `${character.name} | InfiniStar`,
+    description: character.tagline || character.description || undefined,
+    openGraph: {
+      title: `${character.name} | InfiniStar`,
+      description: character.tagline || character.description || undefined,
+      images: character.avatarUrl ? [{ url: character.avatarUrl }] : undefined,
+    },
+  }
+}
 
 export default async function CharacterPage({ params }: CharacterPageProps) {
   const { slug } = await params

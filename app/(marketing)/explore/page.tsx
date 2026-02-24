@@ -10,6 +10,11 @@ export const metadata = {
   title: "Explore Characters | InfiniStar",
   description:
     "Discover community-created AI characters. Chat with anime heroes, fantasy companions, helpful assistants, and more.",
+  openGraph: {
+    title: "Explore Characters | InfiniStar",
+    description:
+      "Discover community-created AI characters. Chat with anime heroes, fantasy companions, helpful assistants, and more.",
+  },
 }
 
 export const dynamic = "force-dynamic"

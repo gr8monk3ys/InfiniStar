@@ -2,8 +2,10 @@ import { headers } from "next/headers"
 import { NextResponse } from "next/server"
 import type Stripe from "stripe"
 
+import { sendPaymentFailedEmail } from "@/app/lib/email"
 import { stripeLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
+import { getRedisClient } from "@/app/lib/redis"
 import { stripe } from "@/app/lib/stripe"
 
 function getCurrentPeriodEnd(subscription: Stripe.Subscription): Date | null {
@@ -250,6 +252,18 @@ export async function POST(req: Request) {
     return new NextResponse(`Webhook Error: ${message}`, { status: 400 })
   }
 
+  // Idempotency guard: skip events we've already processed (Stripe retries on non-2xx)
+  const redis = getRedisClient()
+  if (redis) {
+    const idempotencyKey = `stripe:event:${event.id}`
+    // SET EX NX returns "OK" on first write, null if key already existed
+    const result = await redis.set(idempotencyKey, "1", "EX", 172800, "NX")
+    if (result === null) {
+      stripeLogger.info({ eventId: event.id, type: event.type }, "Duplicate Stripe event skipped")
+      return new NextResponse(null, { status: 200 })
+    }
+  }
+
   if (event.type === "checkout.session.completed") {
     const session = event.data.object as Stripe.Checkout.Session
     const flowType = session.metadata?.flowType
@@ -432,6 +446,15 @@ export async function POST(req: Request) {
             { invoiceId: invoice.id, subscriptionId, userId: user?.id ?? null },
             `Stripe payment failed${user ? "" : " (user not found in database)"}`
           )
+
+          if (user?.email) {
+            await sendPaymentFailedEmail(user.email, user.name || "there").catch((emailError) => {
+              stripeLogger.error(
+                { err: emailError, userId: user.id },
+                "Failed to send payment failure email"
+              )
+            })
+          }
         }
       }
     } else {

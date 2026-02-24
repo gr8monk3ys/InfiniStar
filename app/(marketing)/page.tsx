@@ -12,6 +12,16 @@ import { buttonVariants } from "@/app/components/ui/button"
 import { AdSenseUnit } from "@/app/components/monetization/AdSenseUnit"
 import { AffiliatePartnersSection } from "@/app/components/monetization/AffiliatePartnersSection"
 
+export const metadata = {
+  title: "InfiniStar — Chat with AI Characters",
+  description:
+    "Chat with anime heroes, fantasy companions, and creative AI personalities. Powered by Claude.",
+  openGraph: {
+    title: "InfiniStar — Chat with AI Characters",
+    description: "Chat with anime heroes, fantasy companions, and creative AI personalities.",
+  },
+}
+
 export default async function IndexPage() {
   return (
     <>

@@ -13,6 +13,7 @@ import {
   getAccountDeletedEmailTemplate,
   getAccountDeletionCancelledEmailTemplate,
   getAccountDeletionPendingEmailTemplate,
+  getPaymentFailedEmailTemplate,
   getWelcomeEmailTemplate,
 } from "./email-templates"
 
@@ -148,6 +149,22 @@ export async function sendAccountDeletionCancelledEmail(
   const config = getEmailConfig()
   const dashboardUrl = `${config.appUrl}/dashboard/conversations`
   const template = getAccountDeletionCancelledEmailTemplate({ name, dashboardUrl })
+
+  return sendEmail({
+    to: email,
+    subject: template.subject,
+    htmlBody: template.html,
+    textBody: template.text,
+  })
+}
+
+/**
+ * Send payment failed notification email
+ */
+export async function sendPaymentFailedEmail(email: string, name: string): Promise<boolean> {
+  const config = getEmailConfig()
+  const billingUrl = `${config.appUrl}/api/stripe/portal`
+  const template = getPaymentFailedEmailTemplate({ name, billingUrl })
 
   return sendEmail({
     to: email,

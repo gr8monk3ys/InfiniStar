@@ -14,7 +14,11 @@ import { AffiliatePartnersSection } from "@/app/components/monetization/Affiliat
 
 export const metadata = {
   title: "Pricing | InfiniStar",
-  description: "Simple, transparent pricing for AI conversations",
+  description: "Simple, transparent pricing for AI conversations.",
+  openGraph: {
+    title: "Pricing | InfiniStar",
+    description: "Simple, transparent pricing for AI conversations.",
+  },
 }
 
 export default async function PricingPage() {

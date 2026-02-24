@@ -1,6 +1,7 @@
 import { headers } from "next/headers"
 import { Webhook } from "svix"
 
+import { sendWelcomeEmail } from "@/app/lib/email"
 import prisma from "@/app/lib/prismadb"
 
 interface ClerkWebhookEvent {
@@ -68,6 +69,11 @@ export async function POST(req: Request): Promise<Response> {
             emailVerified: new Date(),
           },
         })
+
+        // Fire-and-forget: don't let email failure fail the webhook
+        if (email) {
+          void sendWelcomeEmail(email, name || "there")
+        }
         break
       }
 
