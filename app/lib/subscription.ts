@@ -1,9 +1,12 @@
 import { freePlan, proPlan } from "@/config/subscriptions"
-import { db } from "@/app/lib/prismadb"
+import prisma from "@/app/lib/prismadb"
 import { type UserSubscriptionPlan } from "@/app/types"
 
+/** 24-hour buffer so users aren't cut off while Stripe processes renewal payments. */
+const PRO_GRACE_PERIOD_MS = 24 * 60 * 60 * 1000
+
 export async function getUserSubscriptionPlan(userId: string): Promise<UserSubscriptionPlan> {
-  const user = await db.user.findFirst({
+  const user = await prisma.user.findFirst({
     where: {
       id: userId,
     },
@@ -23,7 +26,7 @@ export async function getUserSubscriptionPlan(userId: string): Promise<UserSubsc
   const isPro = Boolean(
     user.stripePriceId &&
     user.stripeCurrentPeriodEnd &&
-    user.stripeCurrentPeriodEnd.getTime() + 86_400_000 > Date.now()
+    user.stripeCurrentPeriodEnd.getTime() + PRO_GRACE_PERIOD_MS > Date.now()
   )
 
   const plan = isPro ? proPlan : freePlan

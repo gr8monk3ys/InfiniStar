@@ -18,10 +18,19 @@ jest.mock("@/app/lib/rate-limit", () => ({
 }))
 
 jest.mock("@/app/lib/logger", () => ({
+  __esModule: true,
+  default: {
+    child: jest.fn().mockReturnValue({ warn: jest.fn(), info: jest.fn(), error: jest.fn() }),
+  },
   apiLogger: {
+    warn: jest.fn(),
     info: (payload: unknown, message: string) => mockInfo(payload, message),
     error: (payload: unknown, message: string) => mockError(payload, message),
   },
+  authLogger: { warn: jest.fn(), info: jest.fn(), error: jest.fn() },
+  aiLogger: { warn: jest.fn(), info: jest.fn(), error: jest.fn() },
+  stripeLogger: { warn: jest.fn(), info: jest.fn(), error: jest.fn() },
+  dbLogger: { warn: jest.fn(), info: jest.fn(), error: jest.fn() },
 }))
 
 jest.mock("@/app/lib/prismadb", () => ({

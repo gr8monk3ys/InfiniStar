@@ -86,6 +86,7 @@ model User {
   following            UserFollow[]        @relation("UserFollows")
   followers            UserFollow[]        @relation("UserFollowers")
 
+  @@index([deletionRequested, deletionScheduledFor])
   @@map("users")
 }
 

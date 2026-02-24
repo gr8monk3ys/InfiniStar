@@ -4,6 +4,7 @@ import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import prisma from "@/app/lib/prismadb"
 import { pusherServer } from "@/app/lib/pusher"
 import { getPusherConversationChannel } from "@/app/lib/pusher-channels"
+import { apiLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 import getCurrentUser from "@/app/actions/getCurrentUser"
 
 interface IParams {
@@ -28,6 +29,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<I
 
     if (!verifyCsrfToken(headerToken, cookieToken)) {
       return NextResponse.json({ error: "Invalid CSRF token" }, { status: 403 })
+    }
+
+    // Rate limiting
+    if (!(await Promise.resolve(apiLimiter.check(getClientIdentifier(request))))) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 })
     }
 
     const currentUser = await getCurrentUser()

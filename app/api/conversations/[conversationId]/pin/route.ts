@@ -4,6 +4,7 @@ import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import prisma from "@/app/lib/prismadb"
 import { pusherServer } from "@/app/lib/pusher"
 import { getPusherUserChannel } from "@/app/lib/pusher-channels"
+import { apiLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 import getCurrentUser from "@/app/actions/getCurrentUser"
 
 // POST /api/conversations/[conversationId]/pin - Pin a conversation
@@ -18,6 +19,11 @@ export async function POST(
     }
 
     const currentUser = await getCurrentUser()
+
+    // Rate limiting
+    if (!(await Promise.resolve(apiLimiter.check(getClientIdentifier(request))))) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 })
+    }
     const { conversationId } = await params
 
     if (!currentUser?.id || !currentUser?.email) {
@@ -125,6 +131,11 @@ export async function DELETE(
     // CSRF Protection
     if (!verifyCsrfToken(request.headers.get("X-CSRF-Token"), getCsrfTokenFromRequest(request))) {
       return NextResponse.json({ error: "Invalid CSRF token" }, { status: 403 })
+    }
+
+    // Rate limiting
+    if (!(await Promise.resolve(apiLimiter.check(getClientIdentifier(request))))) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 })
     }
 
     const currentUser = await getCurrentUser()
