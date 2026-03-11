@@ -71,8 +71,12 @@ function buildDefaultContentSecurityPolicy(reportUri) {
   const clerkPublishableKeyOrigin = parseClerkPublishableKeyOrigin(
     process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
   )
+  const clerkProxyOrigin = parseUrlOrigin(process.env.NEXT_PUBLIC_CLERK_PROXY_URL)
   if (clerkPublishableKeyOrigin) {
     clerkOrigins.add(clerkPublishableKeyOrigin)
+  }
+  if (clerkProxyOrigin) {
+    clerkOrigins.add(clerkProxyOrigin)
   }
 
   const directives = [

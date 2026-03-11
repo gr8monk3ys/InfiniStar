@@ -1,11 +1,11 @@
 import "@/app/globals.css"
 
 import { type Metadata, type Viewport } from "next"
-import { ClerkProvider } from "@clerk/nextjs"
 
 import { siteConfig } from "@/config/site"
 import { cn } from "@/app/lib/utils"
 import { CookieBanner } from "@/app/components/CookieBanner"
+import { AuthProvider } from "@/app/components/providers/AuthProvider"
 import { ThemeCustomProvider } from "@/app/components/providers/ThemeCustomProvider"
 import { ServiceWorkerRegister } from "@/app/components/pwa/ServiceWorkerRegister"
 import { SiteHeader } from "@/app/components/site-header"
@@ -57,10 +57,10 @@ interface RootLayoutProps {
 
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
-    <ClerkProvider>
-      <html lang="en" suppressHydrationWarning>
-        <head />
-        <body className={cn("min-h-screen bg-background antialiased")}>
+    <html lang="en" suppressHydrationWarning>
+      <head />
+      <body className={cn("min-h-screen bg-background antialiased")}>
+        <AuthProvider>
           <ToasterContext />
           <ServiceWorkerRegister />
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
@@ -73,8 +73,8 @@ export default function RootLayout({ children }: RootLayoutProps) {
             </ThemeCustomProvider>
           </ThemeProvider>
           <CookieBanner />
-        </body>
-      </html>
-    </ClerkProvider>
+        </AuthProvider>
+      </body>
+    </html>
   )
 }

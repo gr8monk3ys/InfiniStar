@@ -25,6 +25,7 @@ Use `.env.template` as the checklist. At minimum, production should set:
 NEXT_PUBLIC_APP_URL=
 
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
+NEXT_PUBLIC_CLERK_PROXY_URL=/api/clerk-proxy
 CLERK_SECRET_KEY=
 CLERK_WEBHOOK_SECRET=
 
@@ -84,6 +85,7 @@ Both require `Authorization: Bearer <CRON_SECRET>`.
 
 - Use a production Clerk instance, not test/dev credentials
 - Add the production domain and redirect URLs
+- Set `NEXT_PUBLIC_CLERK_PROXY_URL=/api/clerk-proxy` and keep the `/api/clerk-proxy/*` route reachable on the app origin
 - Configure OAuth providers in Clerk if needed
 - Point the Clerk webhook to `/api/webhooks/clerk`
 

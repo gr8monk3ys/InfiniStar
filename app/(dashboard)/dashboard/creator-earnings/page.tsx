@@ -10,6 +10,8 @@ export const metadata = {
   description: "Track creator support revenue, subscribers, and top supporters.",
 }
 
+export const dynamic = "force-dynamic"
+
 export default async function CreatorEarningsPage() {
   const currentUser = await getCurrentUser()
   if (!currentUser?.id) {

@@ -35,6 +35,7 @@ export const env = createEnv({
   },
   client: {
     NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: z.string().min(1),
+    NEXT_PUBLIC_CLERK_PROXY_URL: z.string().min(1).default("/api/clerk-proxy"),
     NEXT_PUBLIC_CLERK_SIGN_IN_URL: z.string().min(1).default("/sign-in"),
     NEXT_PUBLIC_CLERK_SIGN_UP_URL: z.string().min(1).default("/sign-up"),
     NEXT_PUBLIC_APP_URL: z.string().min(1),
@@ -70,6 +71,7 @@ export const env = createEnv({
     REDIS_URL: process.env.REDIS_URL,
     AFFILIATE_ANALYTICS_ALLOWED_EMAILS: process.env.AFFILIATE_ANALYTICS_ALLOWED_EMAILS,
     NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
+    NEXT_PUBLIC_CLERK_PROXY_URL: process.env.NEXT_PUBLIC_CLERK_PROXY_URL,
     NEXT_PUBLIC_CLERK_SIGN_IN_URL: process.env.NEXT_PUBLIC_CLERK_SIGN_IN_URL,
     NEXT_PUBLIC_CLERK_SIGN_UP_URL: process.env.NEXT_PUBLIC_CLERK_SIGN_UP_URL,
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,

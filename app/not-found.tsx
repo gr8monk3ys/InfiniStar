@@ -4,6 +4,8 @@ import { HiOutlineChatBubbleLeftRight, HiOutlineHome } from "react-icons/hi2"
 import { cn } from "@/app/lib/utils"
 import { buttonVariants } from "@/app/components/ui/button"
 
+export const dynamic = "force-dynamic"
+
 export default function NotFound() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4 text-center">

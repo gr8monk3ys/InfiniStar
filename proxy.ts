@@ -4,6 +4,7 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server"
 import { getCorsHeaders, handleCorsPreflightRequest } from "@/app/lib/cors"
 
 const isProtectedRoute = createRouteMatcher(["/dashboard(.*)"])
+const isClerkProxyRoute = createRouteMatcher(["/api/clerk-proxy(.*)"])
 const shouldBypassClerkHandshake =
   process.env.SKIP_CLERK_AUTH_HANDSHAKE === "1" || process.env.SKIP_CLERK_AUTH_HANDSHAKE === "true"
 
@@ -19,6 +20,12 @@ export default async function proxy(request: NextRequest) {
 
   if (request.method === "OPTIONS") {
     return handleCorsPreflightRequest(origin)
+  }
+
+  if (isClerkProxyRoute(request)) {
+    const response = NextResponse.next()
+    applyCorsHeaders(response, origin)
+    return response
   }
 
   const clerkHandler = clerkMiddleware(async (auth, req) => {
