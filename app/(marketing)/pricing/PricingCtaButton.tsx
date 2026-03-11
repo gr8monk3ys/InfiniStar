@@ -22,7 +22,7 @@ export function PricingCtaButton({ isSignedIn, isPro, className }: PricingCtaBut
 
   if (!isSignedIn) {
     return (
-      <Link href="/sign-in" className={cn(buttonVariants({ size: "lg" }), className)}>
+      <Link href="/sign-up" className={cn(buttonVariants({ size: "lg" }), className)}>
         Upgrade to PRO
       </Link>
     )

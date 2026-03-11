@@ -120,7 +120,7 @@ export const creatorPaymentLimiter = createRateLimiter("creatorPayment", 5, 6000
 export const suggestionsLimiter = createRateLimiter("suggestions", 30, 60000) // 30 suggestion requests per minute
 
 // Cleanup old entries every 5 minutes (only relevant for in-memory limiters)
-setInterval(() => {
+const cleanupInterval = setInterval(() => {
   apiLimiter.cleanup()
   authLimiter.cleanup()
   aiChatLimiter.cleanup()
@@ -137,6 +137,8 @@ setInterval(() => {
   creatorPaymentLimiter.cleanup()
   suggestionsLimiter.cleanup()
 }, 300000)
+
+cleanupInterval.unref?.()
 
 // Helper function to get client identifier
 export function getClientIdentifier(request: NextRequest): string {

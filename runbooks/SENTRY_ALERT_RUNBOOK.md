@@ -14,7 +14,7 @@ This runbook standardizes issue-alert coverage in Sentry.
 SENTRY_AUTH_TOKEN="sntrys_..." \
 SENTRY_ORG="your-org" \
 SENTRY_PROJECT="your-project" \
-npm run ops:sentry:alerts:audit
+bun run ops:sentry:alerts:audit
 ```
 
 ## Audit Outcome
@@ -26,5 +26,5 @@ npm run ops:sentry:alerts:audit
 
 1. Create or update issue alert rules in Sentry project settings.
 2. Ensure each critical rule has an on-call action target.
-3. Re-run `npm run ops:sentry:alerts:audit` until passing.
+3. Re-run `bun run ops:sentry:alerts:audit` until passing.
 4. Capture output in release evidence.

@@ -1,5 +1,7 @@
 # Migration Guide - Recent Fixes
 
+> Historical note: this file captures an earlier migration snapshot and may reference superseded tooling or auth patterns. Use `README.md`, `SETUP.md`, `DEPLOYMENT.md`, `SECURITY.md`, and `PRODUCTION_PARITY_CHECKLIST.md` as the current source of truth.
+
 This document outlines all the critical fixes applied to InfiniStar and what you need to know.
 
 ## What Was Fixed
@@ -7,13 +9,11 @@ This document outlines all the critical fixes applied to InfiniStar and what you
 ### 🔴 Critical Infrastructure Issues
 
 1. **Duplicate Directory Consolidation**
-
    - **What:** Removed conflicting `/app/libs/` directory
    - **Impact:** All imports now consistently use `/app/lib/`
    - **Action Required:** None (already updated)
 
 2. **Environment Variables**
-
    - **What:** Added missing Pusher and Google OAuth variables
    - **Impact:** Real-time features and Google login now work
    - **Action Required:** Update your `.env.local` with new variables (see SETUP.md)
@@ -26,7 +26,6 @@ This document outlines all the critical fixes applied to InfiniStar and what you
 ### 🟠 Core Feature Fixes
 
 4. **Real-time Messaging**
-
    - **What:**
      - Created Pusher auth endpoint at `/api/pusher/auth`
      - Added Pusher event triggers to messages API
@@ -35,7 +34,6 @@ This document outlines all the critical fixes applied to InfiniStar and what you
    - **Action Required:** Configure Pusher credentials in `.env.local`
 
 5. **Type Safety**
-
    - **What:** Fixed all TypeScript errors and inconsistencies
    - **Impact:** Code now passes `npm run typecheck`
    - **Action Required:** None
@@ -48,19 +46,16 @@ This document outlines all the critical fixes applied to InfiniStar and what you
 ### 🟡 Quality Improvements
 
 7. **Input Validation**
-
    - **What:** Added Zod validation to registration endpoint
    - **Impact:** Better error messages, duplicate email prevention
    - **Action Required:** None
 
 8. **Stripe Webhooks**
-
    - **What:** Fixed invoice payment webhook to use customer ID
    - **Impact:** Recurring payments now update user subscriptions correctly
    - **Action Required:** Test with Stripe CLI
 
 9. **Navigation Routes**
-
    - **What:** Fixed conversation routes to use `/dashboard/conversations`
    - **Impact:** Navigation now works correctly
    - **Action Required:** None

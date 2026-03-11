@@ -190,6 +190,7 @@ export default async function CharacterPage({ params }: CharacterPageProps) {
               src={character.coverImageUrl}
               alt={`${character.name} cover`}
               fill
+              sizes="100vw"
               className="object-cover"
               priority
             />
@@ -207,6 +208,7 @@ export default async function CharacterPage({ params }: CharacterPageProps) {
                   src={character.avatarUrl}
                   alt={character.name}
                   fill
+                  sizes="(max-width: 640px) 112px, 128px"
                   className="object-cover"
                   priority
                 />
@@ -323,6 +325,7 @@ export default async function CharacterPage({ params }: CharacterPageProps) {
                         src={character.avatarUrl}
                         alt=""
                         fill
+                        sizes="32px"
                         className="object-cover"
                         aria-hidden="true"
                       />
@@ -382,6 +385,7 @@ export default async function CharacterPage({ params }: CharacterPageProps) {
                       src={character.createdBy.image}
                       alt={character.createdBy.name || "Creator"}
                       fill
+                      sizes="40px"
                       className="object-cover"
                     />
                   </div>

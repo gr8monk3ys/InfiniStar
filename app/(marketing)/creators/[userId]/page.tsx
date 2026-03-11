@@ -1,3 +1,4 @@
+import { Suspense } from "react"
 import { type Metadata } from "next"
 import Image from "next/image"
 import { notFound } from "next/navigation"
@@ -174,7 +175,13 @@ export default async function CreatorProfilePage({ params }: CreatorProfilePageP
       <div className="flex flex-col items-center gap-4 text-center">
         {user.image ? (
           <div className="relative size-24 overflow-hidden rounded-full border-2">
-            <Image src={user.image} alt={user.name || "Creator"} fill className="object-cover" />
+            <Image
+              src={user.image}
+              alt={user.name || "Creator"}
+              fill
+              sizes="96px"
+              className="object-cover"
+            />
           </div>
         ) : (
           <div className="flex size-24 items-center justify-center rounded-full border-2 bg-primary/10 text-3xl font-bold text-primary">
@@ -236,12 +243,23 @@ export default async function CreatorProfilePage({ params }: CreatorProfilePageP
         )}
       </div>
 
-      <CreatorSupportCard
-        creatorId={user.id}
-        creatorName={user.name || "Creator"}
-        initialSummary={summary}
-        initialViewerSubscription={viewerSubscription}
-      />
+      <Suspense fallback={<CreatorSupportCardFallback creatorName={user.name || "Creator"} />}>
+        <CreatorSupportCard
+          creatorId={user.id}
+          creatorName={user.name || "Creator"}
+          initialSummary={summary}
+          initialViewerSubscription={viewerSubscription}
+        />
+      </Suspense>
     </section>
+  )
+}
+
+function CreatorSupportCardFallback({ creatorName }: { creatorName: string }) {
+  return (
+    <div className="rounded-xl border bg-card p-6 shadow-sm">
+      <h2 className="text-lg font-semibold">Support {creatorName}</h2>
+      <p className="mt-2 text-sm text-muted-foreground">Loading creator support options...</p>
+    </div>
   )
 }

@@ -37,7 +37,7 @@ ensure_local_smoke_server() {
 
   smoke_port="${BASH_REMATCH[3]:-80}"
   SKIP_ENV_VALIDATION=1 SKIP_CLERK_AUTH_HANDSHAKE=1 NEXT_PUBLIC_APP_URL="$LOAD_SMOKE_BASE_URL" PORT="$smoke_port" \
-    npm run start >/tmp/release-gate-smoke-server.log 2>&1 &
+    bun run start >/tmp/release-gate-smoke-server.log 2>&1 &
   LOAD_SMOKE_SERVER_PID=$!
 
   for _ in {1..45}; do
@@ -55,31 +55,31 @@ ensure_local_smoke_server() {
 trap cleanup EXIT
 
 log_step "Running formatter check"
-npm run format:check
+bun run format:check
 
 log_step "Running ESLint"
-npm run lint
+bun run lint
 
 log_step "Running TypeScript checks"
-npm run typecheck
+bun run typecheck
 
 log_step "Running unit/API tests"
-npm test -- --runInBand --forceExit
+bun run test --runInBand
 
 if [[ "$RUN_BUILD" == "1" ]]; then
   log_step "Running production build"
-  npm run build
+  bun run build
 fi
 
 if [[ "$RUN_E2E" == "1" ]]; then
   log_step "Running end-to-end tests"
-  npm run test:e2e -- --reporter=line
+  bun run test:e2e -- --reporter=line
 fi
 
 if [[ "$RUN_LOAD_SMOKE" == "1" ]]; then
   log_step "Running load smoke check"
   ensure_local_smoke_server
-  npm run test:load:smoke -- \
+  bun run test:load:smoke -- \
     --base-url="$LOAD_SMOKE_BASE_URL" \
     --endpoints="$LOAD_SMOKE_ENDPOINTS" \
     --requests="$LOAD_SMOKE_REQUESTS" \

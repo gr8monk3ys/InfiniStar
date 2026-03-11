@@ -55,7 +55,7 @@ export default defineConfig({
     : {
         command:
           process.env.PLAYWRIGHT_WEB_SERVER_COMMAND ||
-          `bash -lc 'set -a; [ -f .env.ci.example ] && source .env.ci.example; set +a; SKIP_ENV_VALIDATION=1 SKIP_CLERK_AUTH_HANDSHAKE=${skipClerkAuthHandshake} NEXT_PUBLIC_APP_URL=http://localhost:3101 PORT=3101 npm run build && SKIP_ENV_VALIDATION=1 SKIP_CLERK_AUTH_HANDSHAKE=${skipClerkAuthHandshake} NEXT_PUBLIC_APP_URL=http://localhost:3101 PORT=3101 npm run start'`,
+          `bash -lc 'set -a; [ -f .env.ci.example ] && source .env.ci.example; set +a; SKIP_ENV_VALIDATION=1 SKIP_CLERK_AUTH_HANDSHAKE=${skipClerkAuthHandshake} NEXT_PUBLIC_APP_URL=http://localhost:3101 PORT=3101 bun run build && SKIP_ENV_VALIDATION=1 SKIP_CLERK_AUTH_HANDSHAKE=${skipClerkAuthHandshake} NEXT_PUBLIC_APP_URL=http://localhost:3101 PORT=3101 bun run start'`,
         url: defaultBaseURL,
         reuseExistingServer: false,
         timeout: 180000,

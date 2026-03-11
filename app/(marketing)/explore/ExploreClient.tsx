@@ -3,7 +3,13 @@
 import { useCallback, useMemo, useState } from "react"
 import Link from "next/link"
 import toast from "react-hot-toast"
-import { HiMagnifyingGlass, HiOutlineFire, HiOutlineSparkles } from "react-icons/hi2"
+import {
+  HiMagnifyingGlass,
+  HiOutlineFire,
+  HiOutlineRocketLaunch,
+  HiOutlineSparkles,
+  HiOutlineUsers,
+} from "react-icons/hi2"
 
 import { CHARACTER_CATEGORIES } from "@/app/lib/character-categories"
 import { cn } from "@/app/lib/utils"
@@ -37,6 +43,27 @@ interface ExploreClientProps {
 
 const TABS = [{ id: "all", name: "All" }, ...CHARACTER_CATEGORIES.filter((c) => c.id !== "general")]
 
+const STARTER_ARCHETYPES = [
+  {
+    label: "Companion",
+    title: "Late-night confidant",
+    description:
+      "A warm, emotionally present character for check-ins, flirting, and longer personal chats.",
+  },
+  {
+    label: "Roleplay",
+    title: "Questline architect",
+    description:
+      "A worldbuilding partner who can keep the lore straight while moving the scene forward.",
+  },
+  {
+    label: "Tutor",
+    title: "Sharp study coach",
+    description:
+      "A helper with enough backbone to challenge your thinking instead of praising every draft.",
+  },
+]
+
 export default function ExploreClient({
   featured,
   trending,
@@ -47,6 +74,7 @@ export default function ExploreClient({
   const [searchQuery, setSearchQuery] = useState("")
   const [likedIds, setLikedIds] = useState<string[]>(initialLikedIds)
   const { token } = useCsrfToken()
+  const hasAnyCharacters = featured.length > 0 || trending.length > 0 || all.length > 0
 
   const filteredAll = useMemo(() => {
     let items = all
@@ -128,6 +156,93 @@ export default function ExploreClient({
     [token]
   )
 
+  if (!hasAnyCharacters) {
+    return (
+      <div className="flex flex-col gap-10">
+        <section className="relative overflow-hidden rounded-3xl border border-border/50 bg-gradient-to-br from-primary/5 via-background to-sky-500/5 px-6 py-16 md:px-12 md:py-24">
+          <div className="pointer-events-none absolute right-0 top-0 h-56 w-56 rounded-full bg-primary/10 blur-3xl" />
+          <div className="relative mx-auto max-w-3xl text-center">
+            <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 text-sm text-primary">
+              <HiOutlineSparkles className="size-4" />
+              Launch edition marketplace
+            </div>
+            <h1 className="font-heading mt-6 text-3xl font-bold leading-tight tracking-tighter md:text-5xl lg:text-6xl">
+              The public catalog is opening up now
+            </h1>
+            <p className="mx-auto mt-4 max-w-2xl text-base text-muted-foreground md:text-lg">
+              There are no public characters live yet, so the best UX move is to make that feel
+              intentional: publish early, shape the front page, and set the tone for the community.
+            </p>
+            <div className="mt-8 flex flex-wrap justify-center gap-3">
+              <Link href="/dashboard/characters/new" className={cn(buttonVariants({ size: "lg" }))}>
+                <HiOutlineRocketLaunch className="mr-2 size-5" />
+                Create the first character
+              </Link>
+              <Link
+                href="/feed"
+                className={cn(buttonVariants({ variant: "outline", size: "lg" }), "gap-2")}
+              >
+                <HiOutlineUsers className="size-5" />
+                Visit Creator Feed
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <div className="mb-6 flex items-center gap-2">
+            <HiOutlineSparkles className="size-5 text-primary" />
+            <h2 className="text-xl font-bold">Good first lanes to build</h2>
+          </div>
+          <div className="grid gap-4 md:grid-cols-3">
+            {STARTER_ARCHETYPES.map((archetype) => (
+              <article
+                key={archetype.title}
+                className="rounded-3xl border border-border/50 bg-card/70 p-6 shadow-sm"
+              >
+                <p className="text-xs font-medium uppercase tracking-[0.2em] text-primary">
+                  {archetype.label}
+                </p>
+                <h3 className="mt-4 text-xl font-semibold">{archetype.title}</h3>
+                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                  {archetype.description}
+                </p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="rounded-3xl border border-border/50 bg-muted/30 px-6 py-12 text-center md:px-12">
+          <h2 className="text-2xl font-bold md:text-3xl">Why publish early?</h2>
+          <p className="mx-auto mt-3 max-w-2xl text-muted-foreground">
+            Early creators do not just add inventory. They define what this place feels like when
+            new users arrive.
+          </p>
+          <div className="mt-8 grid gap-4 md:grid-cols-3">
+            <div className="rounded-2xl border border-border/50 bg-background/80 p-5">
+              <p className="text-sm font-semibold text-foreground">Own the first impression</p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                New visitors remember the first memorable character more than any marketing copy.
+              </p>
+            </div>
+            <div className="rounded-2xl border border-border/50 bg-background/80 p-5">
+              <p className="text-sm font-semibold text-foreground">Set a quality bar</p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Strong public examples teach later creators what “good” looks like on the platform.
+              </p>
+            </div>
+            <div className="rounded-2xl border border-border/50 bg-background/80 p-5">
+              <p className="text-sm font-semibold text-foreground">Build your creator profile early</p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                You get more room to establish your tone before the marketplace gets crowded.
+              </p>
+            </div>
+          </div>
+        </section>
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col gap-10">
       {/* Hero Section */}
@@ -138,8 +253,8 @@ export default function ExploreClient({
             Discover AI Characters
           </h1>
           <p className="mt-4 text-base text-muted-foreground md:text-lg">
-            Browse thousands of community-created characters. Chat with anime heroes, fantasy
-            companions, helpful assistants, and more.
+            Browse creator-made characters across roleplay, fandom, companionship, tutoring, and
+            stranger niches that feel authored instead of generic.
           </p>
 
           {/* Search Bar */}
@@ -241,20 +356,27 @@ export default function ExploreClient({
         </div>
 
         {filteredAll.length === 0 ? (
-          <div className="flex flex-col items-center rounded-xl border border-dashed py-16 text-center">
-            <p className="text-sm text-muted-foreground">
+          <div className="rounded-2xl border border-dashed px-6 py-12 text-center">
+            <h3 className="text-lg font-semibold">Nothing matched this cut</h3>
+            <p className="mx-auto mt-3 max-w-lg text-sm text-muted-foreground">
               No characters found
-              {searchQuery ? ` matching "${searchQuery}"` : " in this category"}.
+              {searchQuery ? ` matching "${searchQuery}"` : " in this category"}. Try widening the
+              search, or clear the filters and browse what is already getting traction.
             </p>
-            <button
-              onClick={() => {
-                setSearchQuery("")
-                setActiveCategory("all")
-              }}
-              className="mt-3 text-sm font-medium text-primary hover:underline"
-            >
-              Clear filters
-            </button>
+            <div className="mt-6 flex flex-wrap justify-center gap-3">
+              <button
+                onClick={() => {
+                  setSearchQuery("")
+                  setActiveCategory("all")
+                }}
+                className={cn(buttonVariants({ variant: "outline" }))}
+              >
+                Clear filters
+              </button>
+              <Link href="/feed" className={cn(buttonVariants({ variant: "ghost" }))}>
+                Visit creator feed
+              </Link>
+            </div>
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">

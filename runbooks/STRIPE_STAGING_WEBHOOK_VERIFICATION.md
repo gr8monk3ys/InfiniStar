@@ -14,7 +14,7 @@ Use this runbook before every payment release and after Stripe credential change
 ```bash
 STAGING_WEBHOOK_URL="https://staging.example.com/api/webhooks/stripe" \
 STRIPE_WEBHOOK_SECRET="whsec_..." \
-npm run ops:stripe:webhook:verify
+bun run ops:stripe:webhook:verify
 ```
 
 ## What The Script Validates

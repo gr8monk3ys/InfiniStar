@@ -42,56 +42,93 @@ const CHARACTER_SELECT = {
   },
 } as const
 
+interface ExploreCharacter {
+  id: string
+  slug: string
+  name: string
+  tagline: string | null
+  avatarUrl: string | null
+  createdAt: Date
+  createdById: string
+  category: string
+  usageCount: number
+  likeCount: number
+  commentCount: number
+  featured: boolean
+  isNsfw: boolean
+  createdBy: {
+    id: string
+    name: string | null
+    image: string | null
+  } | null
+}
+
 export default async function ExplorePage() {
   const { userId } = await auth()
 
   // Look up the Prisma user if logged in
-  const currentUser = userId
-    ? await prisma.user.findUnique({
+  let currentUser:
+    | {
+        id: string
+        isAdult: boolean
+        nsfwEnabled: boolean
+        adultConfirmedAt: Date | null
+      }
+    | null = null
+
+  if (userId) {
+    try {
+      currentUser = await prisma.user.findUnique({
         where: { clerkId: userId },
         select: { id: true, isAdult: true, nsfwEnabled: true, adultConfirmedAt: true },
       })
-    : null
+    } catch (error) {
+      console.error("Failed to load current user for explore page", error)
+    }
+  }
   const allowNsfw = canAccessNsfw(currentUser)
   const publicCharacterWhere = allowNsfw ? { isPublic: true } : { isPublic: true, isNsfw: false }
 
-  const [featuredRaw, trendingRaw, allRaw, likedRecords] = await Promise.all([
-    // Featured characters
-    prisma.character.findMany({
-      where: { ...publicCharacterWhere, featured: true },
-      orderBy: { usageCount: "desc" },
-      take: 24,
-      select: CHARACTER_SELECT,
-    }),
+  let featuredRaw: ExploreCharacter[] = []
+  let trendingRaw: ExploreCharacter[] = []
+  let allRaw: ExploreCharacter[] = []
+  let likedRecords: Array<{ characterId: string }> = []
+  let recommendationSignals = null
 
-    // Trending characters
-    prisma.character.findMany({
-      where: publicCharacterWhere,
-      orderBy: [{ usageCount: "desc" }, { commentCount: "desc" }, { likeCount: "desc" }],
-      take: 80,
-      select: CHARACTER_SELECT,
-    }),
+  try {
+    ;[featuredRaw, trendingRaw, allRaw, likedRecords] = await Promise.all([
+      prisma.character.findMany({
+        where: { ...publicCharacterWhere, featured: true },
+        orderBy: { usageCount: "desc" },
+        take: 24,
+        select: CHARACTER_SELECT,
+      }),
+      prisma.character.findMany({
+        where: publicCharacterWhere,
+        orderBy: [{ usageCount: "desc" }, { commentCount: "desc" }, { likeCount: "desc" }],
+        take: 80,
+        select: CHARACTER_SELECT,
+      }),
+      prisma.character.findMany({
+        where: publicCharacterWhere,
+        orderBy: { createdAt: "desc" },
+        take: 120,
+        select: CHARACTER_SELECT,
+      }),
+      currentUser?.id
+        ? prisma.characterLike.findMany({
+            where: { userId: currentUser.id },
+            select: { characterId: true },
+          })
+        : Promise.resolve([]),
+    ])
 
-    // All public characters (newest first)
-    prisma.character.findMany({
-      where: publicCharacterWhere,
-      orderBy: { createdAt: "desc" },
-      take: 120,
-      select: CHARACTER_SELECT,
-    }),
-
-    // User's liked character IDs
-    currentUser?.id
-      ? prisma.characterLike.findMany({
-          where: { userId: currentUser.id },
-          select: { characterId: true },
-        })
-      : Promise.resolve([]),
-  ])
-
-  const recommendationSignals = currentUser?.id
-    ? await getRecommendationSignalsForUser(currentUser.id)
-    : null
+    recommendationSignals = currentUser?.id
+      ? await getRecommendationSignalsForUser(currentUser.id)
+      : null
+  } catch (error) {
+    console.error("Failed to load explore page data", error)
+  }
 
   const featured = recommendationSignals
     ? rankCharactersForUser(featuredRaw, recommendationSignals).slice(0, 6)

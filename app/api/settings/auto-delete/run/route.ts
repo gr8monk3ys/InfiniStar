@@ -19,9 +19,11 @@ import { createRateLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 const autoDeleteRunLimiter = createRateLimiter("autoDeleteRun", 1, 3600000)
 
 // Cleanup old in-memory entries every hour (no-op when Redis is active)
-setInterval(() => {
+const autoDeleteRunCleanupInterval = setInterval(() => {
   autoDeleteRunLimiter.cleanup()
 }, 3600000)
+
+autoDeleteRunCleanupInterval.unref?.()
 
 /**
  * POST /api/settings/auto-delete/run

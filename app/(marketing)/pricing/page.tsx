@@ -1,16 +1,13 @@
 import Link from "next/link"
 import { auth } from "@clerk/nextjs/server"
-import { HiCheck, HiOutlineSparkles } from "react-icons/hi2"
+import { HiCheck, HiOutlineBolt, HiOutlineShieldCheck, HiOutlineSparkles } from "react-icons/hi2"
 
 import { freePlan, proPlan } from "@/config/subscriptions"
-import { monetizationConfig } from "@/app/lib/monetization"
 import prisma from "@/app/lib/prismadb"
 import { getUserSubscriptionPlan } from "@/app/lib/subscription"
 import { cn } from "@/app/lib/utils"
 import { buttonVariants } from "@/app/components/ui/button"
 import { PricingCtaButton } from "@/app/(marketing)/pricing/PricingCtaButton"
-import { AdSenseUnit } from "@/app/components/monetization/AdSenseUnit"
-import { AffiliatePartnersSection } from "@/app/components/monetization/AffiliatePartnersSection"
 
 export const metadata = {
   title: "Pricing | InfiniStar",
@@ -44,11 +41,27 @@ export default async function PricingPage() {
       {/* Header */}
       <div className="mx-auto flex w-full flex-col gap-4 text-center md:max-w-3xl">
         <h1 className="font-heading text-3xl font-bold leading-[1.1] sm:text-4xl md:text-5xl">
-          Simple, Transparent Pricing
+          Pricing for curious chatters and serious creators
         </h1>
         <p className="text-lg leading-normal text-muted-foreground sm:text-xl">
-          Start free with 50 messages per month. Upgrade to PRO for higher limits and better models.
+          Start free, learn the product, and only upgrade when you want higher limits, better
+          models, and more room to build.
         </p>
+      </div>
+
+      <div className="mx-auto flex w-full max-w-4xl flex-wrap items-center justify-center gap-3 text-sm text-muted-foreground">
+        <span className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background px-4 py-2">
+          <HiOutlineSparkles className="size-4 text-primary" />
+          50 messages every month on free
+        </span>
+        <span className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background px-4 py-2">
+          <HiOutlineBolt className="size-4 text-primary" />
+          Faster and deeper model access on PRO
+        </span>
+        <span className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background px-4 py-2">
+          <HiOutlineShieldCheck className="size-4 text-primary" />
+          Billing through Stripe with cancel-anytime control
+        </span>
       </div>
 
       {/* Pricing Cards */}
@@ -77,10 +90,10 @@ export default async function PricingPage() {
           </ul>
 
           <Link
-            href={isSignedIn ? "/dashboard" : "/sign-in"}
+            href={isSignedIn ? "/dashboard" : "/sign-up"}
             className={cn(buttonVariants({ variant: "outline", size: "lg" }), "w-full")}
           >
-            {isSignedIn ? "Go to Dashboard" : "Get Started Free"}
+            {isSignedIn ? "Go to Dashboard" : "Create Free Account"}
           </Link>
         </div>
 
@@ -123,15 +136,6 @@ export default async function PricingPage() {
           />
         </div>
       </div>
-
-      {monetizationConfig.enableAdSense && monetizationConfig.adSenseSlots.pricingInline ? (
-        <div className="mx-auto w-full max-w-4xl rounded-xl border border-border/50 bg-card/40 p-4 md:p-6">
-          <p className="mb-3 text-xs uppercase tracking-wide text-muted-foreground">Sponsored</p>
-          <AdSenseUnit slot={monetizationConfig.adSenseSlots.pricingInline} />
-        </div>
-      ) : null}
-
-      <AffiliatePartnersSection sourcePage="pricing" />
 
       {/* FAQ Section */}
       <div className="mx-auto mt-8 w-full max-w-3xl">

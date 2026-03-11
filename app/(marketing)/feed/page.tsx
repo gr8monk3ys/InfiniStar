@@ -56,76 +56,129 @@ interface CreatorSummary {
   totalLikeCount: number
 }
 
+interface FeedCharacter {
+  id: string
+  slug: string
+  name: string
+  tagline: string | null
+  avatarUrl: string | null
+  createdAt: Date
+  createdById: string
+  category: string
+  usageCount: number
+  likeCount: number
+  commentCount: number
+  featured: boolean
+  isNsfw: boolean
+  createdBy: {
+    id: string
+    name: string | null
+    image: string | null
+  } | null
+}
+
+interface FeedCreatorRow {
+  id: string
+  name: string | null
+  image: string | null
+  bio: string | null
+  characters: Array<{ usageCount: number; likeCount: number }>
+}
+
 export default async function FeedPage() {
   const { userId } = await auth()
-  const currentUser = userId
-    ? await prisma.user.findUnique({
+  let currentUser:
+    | {
+        id: string
+        isAdult: boolean
+        nsfwEnabled: boolean
+        adultConfirmedAt: Date | null
+      }
+    | null = null
+
+  if (userId) {
+    try {
+      currentUser = await prisma.user.findUnique({
         where: { clerkId: userId },
         select: { id: true, isAdult: true, nsfwEnabled: true, adultConfirmedAt: true },
       })
-    : null
+    } catch (error) {
+      console.error("Failed to load current user for feed page", error)
+    }
+  }
   const allowNsfw = canAccessNsfw(currentUser)
   const publicCharacterWhere = allowNsfw ? { isPublic: true } : { isPublic: true, isNsfw: false }
 
-  const [trendingRaw, freshRaw, creatorRows] = await Promise.all([
-    prisma.character.findMany({
-      where: publicCharacterWhere,
-      orderBy: [{ usageCount: "desc" }, { commentCount: "desc" }, { likeCount: "desc" }],
-      take: 60,
-      select: CHARACTER_SELECT,
-    }),
-    prisma.character.findMany({
-      where: publicCharacterWhere,
-      orderBy: { createdAt: "desc" },
-      take: 60,
-      select: CHARACTER_SELECT,
-    }),
-    prisma.user.findMany({
-      where: {
-        characters: {
-          some: publicCharacterWhere,
-        },
-      },
-      select: {
-        id: true,
-        name: true,
-        image: true,
-        bio: true,
-        characters: {
-          where: publicCharacterWhere,
-          select: { usageCount: true, likeCount: true },
-        },
-      },
-      take: 30,
-    }),
-  ])
+  let trendingRaw: FeedCharacter[] = []
+  let freshRaw: FeedCharacter[] = []
+  let creatorRows: FeedCreatorRow[] = []
+  let recommendationSignals = null
+  let followingCreatorIds: string[] = []
+  let followingRaw: FeedCharacter[] = []
 
-  const recommendationSignals = currentUser?.id
-    ? await getRecommendationSignalsForUser(currentUser.id)
-    : null
-
-  const followingCreatorIds = currentUser?.id
-    ? (
-        await prisma.userFollow.findMany({
-          where: { followerId: currentUser.id },
-          select: { followingId: true },
-          take: 1000,
-        })
-      ).map((row) => row.followingId)
-    : []
-
-  const followingRaw =
-    followingCreatorIds.length > 0
-      ? await prisma.character.findMany({
-          where: {
-            ...publicCharacterWhere,
-            createdById: { in: followingCreatorIds },
+  try {
+    ;[trendingRaw, freshRaw, creatorRows] = await Promise.all([
+      prisma.character.findMany({
+        where: publicCharacterWhere,
+        orderBy: [{ usageCount: "desc" }, { commentCount: "desc" }, { likeCount: "desc" }],
+        take: 60,
+        select: CHARACTER_SELECT,
+      }),
+      prisma.character.findMany({
+        where: publicCharacterWhere,
+        orderBy: { createdAt: "desc" },
+        take: 60,
+        select: CHARACTER_SELECT,
+      }),
+      prisma.user.findMany({
+        where: {
+          characters: {
+            some: publicCharacterWhere,
           },
-          orderBy: [{ createdAt: "desc" }, { usageCount: "desc" }],
-          take: 60,
-          select: CHARACTER_SELECT,
-        })
+        },
+        select: {
+          id: true,
+          name: true,
+          image: true,
+          bio: true,
+          characters: {
+            where: publicCharacterWhere,
+            select: { usageCount: true, likeCount: true },
+          },
+        },
+        take: 30,
+      }),
+    ])
+
+    recommendationSignals = currentUser?.id
+      ? await getRecommendationSignalsForUser(currentUser.id)
+      : null
+
+    followingCreatorIds = currentUser?.id
+      ? (
+          await prisma.userFollow.findMany({
+            where: { followerId: currentUser.id },
+            select: { followingId: true },
+            take: 1000,
+          })
+        ).map((row) => row.followingId)
       : []
+
+    followingRaw =
+      followingCreatorIds.length > 0
+        ? await prisma.character.findMany({
+            where: {
+              ...publicCharacterWhere,
+              createdById: { in: followingCreatorIds },
+            },
+            orderBy: [{ createdAt: "desc" }, { usageCount: "desc" }],
+            take: 60,
+            select: CHARACTER_SELECT,
+          })
+        : []
+  } catch (error) {
+    console.error("Failed to load feed page data", error)
+  }
 
   const trendingCharacters = recommendationSignals
     ? rankCharactersForUser(trendingRaw, recommendationSignals).slice(0, 8)

@@ -1,9 +1,15 @@
 import { SignIn } from "@clerk/nextjs"
 
+import { AuthShell, authAppearance } from "@/app/components/auth/AuthShell"
+
 export default function SignInPage() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-100">
-      <SignIn />
-    </div>
+    <AuthShell
+      eyebrow="Welcome Back"
+      title="Sign in and pick up where the conversation left off."
+      description="Get back to your characters, creator subscriptions, saved memory, and published worlds."
+    >
+      <SignIn appearance={authAppearance} signUpUrl="/sign-up" />
+    </AuthShell>
   )
 }
