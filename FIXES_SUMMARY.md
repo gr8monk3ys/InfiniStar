@@ -1,5 +1,7 @@
 # InfiniStar - Complete Fixes Summary
 
+> Historical note: this file is a point-in-time fix log, not the current operational guide. For the current stack and launch requirements, use `README.md`, `SETUP.md`, `DEPLOYMENT.md`, `SECURITY.md`, and `PRODUCTION_PARITY_CHECKLIST.md`.
+
 ## Overview
 
 InfiniStar has been transformed from a **non-functional codebase with 27+ critical issues** into a **fully operational real-time messaging application** with proper authentication, subscriptions, and type safety.

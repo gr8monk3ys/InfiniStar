@@ -20,9 +20,11 @@ export default async function ChatPage({
   params: Promise<{ conversationId: string }>
 }) {
   const { conversationId } = await params
-  const conversation = await getConversationById(conversationId)
-  const messages = await getMessages(conversationId)
-  const currentUser = await getCurrentUser()
+  const [conversation, messages, currentUser] = await Promise.all([
+    getConversationById(conversationId),
+    getMessages(conversationId),
+    getCurrentUser(),
+  ])
 
   if (!conversation) {
     return (

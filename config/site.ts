@@ -26,5 +26,6 @@ export const siteConfig = {
   links: {
     github: "https://github.com/gr8monk3ys/Infinistar",
     docs: "https://github.com/gr8monk3ys/Infinistar#readme",
+    support: "mailto:support@infinistar.app",
   },
 }

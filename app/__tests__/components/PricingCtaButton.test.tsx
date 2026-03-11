@@ -53,11 +53,11 @@ describe("PricingCtaButton", () => {
     mockUseCsrfToken.mockReturnValue({ token: "csrf-token", loading: false })
   })
 
-  it("renders sign-in link when user is signed out", () => {
+  it("renders sign-up link when user is signed out", () => {
     render(<PricingCtaButton isSignedIn={false} isPro={false} />)
 
     const link = screen.getByRole("link", { name: /upgrade to pro/i })
-    expect(link).toHaveAttribute("href", "/sign-in")
+    expect(link).toHaveAttribute("href", "/sign-up")
   })
 
   it("calls checkout endpoint for non-PRO users", async () => {

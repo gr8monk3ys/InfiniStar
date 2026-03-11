@@ -15,7 +15,7 @@ export const env = createEnv({
     POSTMARK_SIGN_IN_TEMPLATE: z.string().min(1),
     POSTMARK_ACTIVATION_TEMPLATE: z.string().min(1),
     STRIPE_API_KEY: z.string().min(1),
-    STRIPE_WEBHOOK_SECRET: z.string().min(1),
+    STRIPE_WEBHOOK_SECRET: z.string().min(1).optional(),
     STRIPE_PRO_MONTHLY_PLAN_ID: z.string().min(1),
     PUSHER_APP_ID: z.string().min(1),
     PUSHER_SECRET: z.string().min(1),

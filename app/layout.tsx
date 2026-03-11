@@ -14,6 +14,7 @@ import { ThemeProvider } from "@/app/components/theme-provider"
 import ToasterContext from "@/app/context/ToasterContext"
 
 export const metadata: Metadata = {
+  metadataBase: new URL(siteConfig.url),
   title: {
     default: siteConfig.name,
     template: `%s - ${siteConfig.name}`,

@@ -18,7 +18,7 @@ Run this drill regularly to verify backup recoverability.
 ```bash
 DATABASE_URL="postgresql://..." \
 DRILL_DATABASE_URL="postgresql://..." \
-npm run ops:db:backup-restore:drill
+bun run ops:db:backup-restore:drill
 ```
 
 ## What The Script Verifies

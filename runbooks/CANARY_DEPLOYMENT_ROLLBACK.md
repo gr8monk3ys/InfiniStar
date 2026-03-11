@@ -7,7 +7,7 @@ Reduce release risk by validating changes on a small traffic slice before full r
 ## Canary Steps
 
 1. Pre-check
-   - `npm run ci:release:gate` passing on release commit
+   - `bun run ci:release:gate` passing on release commit
    - No open `SEV1` incidents
 2. Deploy canary
    - Route 5% traffic to canary for 15 minutes

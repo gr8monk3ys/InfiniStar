@@ -63,7 +63,7 @@ export function SuggestionChips({
 
     const container = scrollContainerRef.current
     if (container) {
-      container.addEventListener("scroll", updateScrollState)
+      container.addEventListener("scroll", updateScrollState, { passive: true })
       window.addEventListener("resize", updateScrollState)
 
       return () => {
@@ -95,14 +95,14 @@ export function SuggestionChips({
         case "ArrowLeft":
           e.preventDefault()
           if (index > 0) {
-            setFocusedIndex(index - 1)
+            setFocusedIndex(() => index - 1)
             chipRefs.current[index - 1]?.focus()
           }
           break
         case "ArrowRight":
           e.preventDefault()
           if (index < suggestions.length - 1) {
-            setFocusedIndex(index + 1)
+            setFocusedIndex(() => index + 1)
             chipRefs.current[index + 1]?.focus()
           }
           break
@@ -166,9 +166,9 @@ export function SuggestionChips({
         {isLoading ? (
           // Loading skeleton
           <>
-            {[1, 2, 3].map((i) => (
+            {["skeleton-1", "skeleton-2", "skeleton-3"].map((skeletonKey) => (
               <div
-                key={i}
+                key={skeletonKey}
                 className="h-7 w-32 shrink-0 animate-pulse rounded-full bg-muted"
                 aria-hidden="true"
               />

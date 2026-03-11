@@ -1,60 +1,63 @@
-# Production Readiness and Parity Checklist
+# Production Readiness Checklist
 
-This checklist is the release gate for shipping InfiniStar as a reliable and commercially viable AI chat product.
+Last reviewed: March 8, 2026
 
-## 1. Automated Quality Gate
+This file is the launch gate for shipping InfiniStar as a production product.
 
-- [x] `npm run format:check`
-- [x] `npm run lint`
-- [x] `npm run typecheck`
-- [x] `npm test -- --runInBand`
-- [x] `npm run build`
-- [x] `npm run test:e2e -- --reporter=line` (10 passed, 0 skipped in default/public suite)
-- [x] `npm run test:e2e:auth -- --reporter=line` (3 passed auth UI baseline)
-- [ ] Credentialed auth E2E suites with `E2E_TEST_EMAIL` + `E2E_TEST_PASSWORD` (attempted on 2026-02-20 with provided credentials; 22 suites executed but authenticated login failed, yielding 19 failures and 3 auth-page baseline passes; root cause validated in production as Clerk dev-browser handshake loop from test/dev keys)
-- [x] `npm run test:load:smoke -- --base-url=http://localhost:3100 --endpoints=/,/pricing`
-- [x] `npm run ci:release:gate` available for local/CI execution
+## Verified on March 8, 2026
 
-## 2. Core Product Features
+- [x] `bun run format:check`
+- [x] `bun run lint`
+- [x] `bun run typecheck`
+- [x] `bun run test --runInBand` (`56/56` suites, `677/677` tests)
+- [x] `bun run build`
+- [x] Next 16 proxy convention adopted (`proxy.ts`)
+- [x] Root metadata now sets `metadataBase`
+- [x] Unit tests exit cleanly without `--forceExit`
 
-- [x] Authenticated chat, message persistence, and conversation management
-- [x] AI generation endpoints with moderation guardrails
-- [x] Explore + feed discovery experiences
-- [x] Moderation reporting API with reviewer update flow (`PATCH /api/moderation/reports`)
-- [x] Creator monetization primitives (tips, subscriptions, summary APIs)
-- [x] Affiliate links and analytics aggregation APIs
-- [x] Optional AdSense units with environment-based feature flags
+## Product Surface
 
-## 3. Security and Compliance Baseline
+- [x] Authenticated chat and conversation management
+- [x] AI chat, regeneration, image generation, and transcription endpoints
+- [x] Creator profiles, follows, tips, subscriptions, and summary APIs
+- [x] Explore/feed discovery and public character pages
+- [x] Moderation reporting and reviewer flows
+- [x] Affiliate links and summary reporting
 
-- [x] CSRF verification on write endpoints
-- [x] Global security headers in Next config
-- [x] Auth checks on restricted analytics and creator endpoints
-- [x] CSP policy implemented with override/report-only controls
-- [x] Secrets rotation runbook documented (`runbooks/SECRETS_ROTATION_RUNBOOK.md`)
+## Security and Runtime Baseline
 
-## 4. Commercial Validation
+- [x] Clerk-based auth and protected dashboard routing
+- [x] CSRF checks on mutation routes
+- [x] Global security headers and CSP
+- [x] Stripe webhook signature verification
+- [x] Cron endpoints protected by `CRON_SECRET`
+- [x] `/api/health` reports degraded status when critical dependencies are unavailable
 
-- [x] Affiliate click tracking persisted and queryable
-- [x] Creator support flows exposed via API + UI
-- [x] Stripe webhooks verified in production (`2026-02-20`: valid signatures accepted and invalid signatures rejected at `https://infini-star.vercel.app/api/webhooks/stripe` after correcting `STRIPE_WEBHOOK_SECRET` + redeploy)
-- [ ] Revenue dashboard with weekly MRR/churn reporting in ops cadence
+## Operational Readiness
 
-## 5. Operational Readiness
+- [ ] Redis configured in production via `REDIS_URL`
+- [ ] Clerk production instance configured with live production credentials
+- [ ] Stripe live secret, live price id, and production webhook configured
+- [ ] Credentialed auth E2E suite passing with real production-like credentials
+- [ ] Load smoke executed against the deployed environment
+- [ ] Sentry alerts verified for the production project
+- [ ] Backup/restore drill rerun against the current production schema
 
-- [ ] Redis configured for production (`REDIS_URL`) so rate limiting and 2FA token storage work across instances (validated locally on 2026-02-20 with `REDIS_URL=redis://127.0.0.1:6379` + local Postgres: `/api/health` returned `200` with `{\"database\":\"connected\",\"redis\":\"connected\"}`; Vercel Upstash install attempted on 2026-02-20 but blocked until marketplace terms acceptance in dashboard)
-- [x] Sentry alert rules verified against production severity thresholds (passed on 2026-02-20 after creating `Critical/P0 issue alert`; audit now reports 2 active rules, 2 with actions, and 1 critical/P0)
-- [ ] Clerk + Stripe production live-mode keys configured (production currently uses Clerk test/dev instance and Stripe test keys; live key rotation pending)
-- [x] Incident response runbook documented (`runbooks/INCIDENT_RESPONSE_RUNBOOK.md`)
-- [x] DB backup/restore drill executed and documented (passed on 2026-02-20 via Dockerized Postgres tooling: backup + restore to isolated `infinistar_ci_drill`, 21 public tables restored)
-- [x] Canary deployment + rollback runbook documented (`runbooks/CANARY_DEPLOYMENT_ROLLBACK.md`)
+## Documentation State
 
-## Recommended Run Order
+- [x] README reflects Bun + Clerk + Next.js 16
+- [x] SETUP guide reflects current environment and service requirements
+- [x] DEPLOYMENT guide reflects the maintained Vercel deployment path
+- [x] SECURITY guide reflects the current auth/CORS/CSRF/runtime model
+- [ ] Historical docs such as `MIGRATION.md`, `FIXES_SUMMARY.md`, and older planning notes still need archival cleanup or explicit labeling
 
-1. `npm run ci:release:gate`
-2. `RUN_E2E=1 npm run ci:release:gate`
-3. Start app and run `RUN_LOAD_SMOKE=1 npm run ci:release:gate`
-4. Verify Stripe webhook behavior in staging: `npm run ops:stripe:webhook:verify`
-5. Audit Sentry issue alert rules: `npm run ops:sentry:alerts:audit`
-6. Execute DB drill in isolated environment: `npm run ops:db:backup-restore:drill`
-7. Close remaining unchecked items above before production launch
+## Recommended Release Order
+
+1. `bun run ci:release:gate`
+2. `bun run test:e2e`
+3. `bun run test:e2e:auth`
+4. `bun run test:load:smoke -- --base-url=https://<your-domain>`
+5. `bun run ops:stripe:webhook:verify`
+6. `bun run ops:sentry:alerts:audit`
+7. Confirm `/api/health` is healthy in production
+8. Close every unchecked item above before launch

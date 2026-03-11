@@ -1,16 +1,19 @@
+import Image from "next/image"
 import Link from "next/link"
 import {
+  HiArrowTrendingUp,
   HiOutlineBolt,
   HiOutlineChatBubbleLeftRight,
+  HiOutlineRocketLaunch,
   HiOutlineShieldCheck,
   HiOutlineSparkles,
+  HiOutlineUsers,
 } from "react-icons/hi2"
 
-import { monetizationConfig } from "@/app/lib/monetization"
+import prisma from "@/app/lib/prismadb"
 import { cn } from "@/app/lib/utils"
 import { buttonVariants } from "@/app/components/ui/button"
-import { AdSenseUnit } from "@/app/components/monetization/AdSenseUnit"
-import { AffiliatePartnersSection } from "@/app/components/monetization/AffiliatePartnersSection"
+import { CharacterCard } from "@/app/components/characters/CharacterCard"
 
 export const metadata = {
   title: "InfiniStar — Chat with AI Characters",
@@ -22,7 +25,128 @@ export const metadata = {
   },
 }
 
+const HOME_CHARACTER_SELECT = {
+  id: true,
+  slug: true,
+  name: true,
+  tagline: true,
+  avatarUrl: true,
+  category: true,
+  usageCount: true,
+  likeCount: true,
+  commentCount: true,
+  isNsfw: true,
+  createdBy: {
+    select: {
+      id: true,
+      name: true,
+      image: true,
+    },
+  },
+} as const
+
+const starterArchetypes = [
+  {
+    name: "Late-Night Confidant",
+    category: "Romance / Companion",
+    description:
+      "A warm, emotionally aware character for comfort, flirting, and long conversations that do not feel disposable.",
+  },
+  {
+    name: "Questline Architect",
+    category: "Fantasy / Roleplay",
+    description:
+      "A story-forward guide who can pull you into a world, keep the lore straight, and escalate tension scene by scene.",
+  },
+  {
+    name: "Sharp Study Coach",
+    category: "Education / Helper",
+    description:
+      "A tutor with enough backbone to challenge you, not just agree with every half-finished idea.",
+  },
+]
+
 export default async function IndexPage() {
+  let featuredCharacters: Array<{
+    id: string
+    slug: string
+    name: string
+    tagline: string | null
+    avatarUrl: string | null
+    category: string
+    usageCount: number
+    likeCount: number
+    commentCount: number
+    isNsfw: boolean
+    createdBy: {
+      id: string
+      name: string | null
+      image: string | null
+    } | null
+  }> = []
+  let creatorRows: Array<{
+    id: string
+    name: string | null
+    image: string | null
+    bio: string | null
+    characters: Array<{ usageCount: number; likeCount: number }>
+  }> = []
+
+  try {
+    ;[featuredCharacters, creatorRows] = await Promise.all([
+      prisma.character.findMany({
+        where: { isPublic: true, isNsfw: false },
+        orderBy: [{ featured: "desc" }, { usageCount: "desc" }, { createdAt: "desc" }],
+        take: 3,
+        select: HOME_CHARACTER_SELECT,
+      }),
+      prisma.user.findMany({
+        where: {
+          characters: {
+            some: { isPublic: true, isNsfw: false },
+          },
+        },
+        select: {
+          id: true,
+          name: true,
+          image: true,
+          bio: true,
+          characters: {
+            where: { isPublic: true, isNsfw: false },
+            select: { usageCount: true, likeCount: true },
+          },
+        },
+        take: 12,
+      }),
+    ])
+  } catch (error) {
+    console.error("Failed to load homepage marketplace data", error)
+  }
+
+  const creatorSpotlights = creatorRows
+    .map((creator) => {
+      const publicCharacterCount = creator.characters.length
+      const totalUsageCount = creator.characters.reduce(
+        (sum, character) => sum + character.usageCount,
+        0
+      )
+      const totalLikeCount = creator.characters.reduce((sum, character) => sum + character.likeCount, 0)
+
+      return {
+        id: creator.id,
+        name: creator.name,
+        image: creator.image,
+        bio: creator.bio,
+        publicCharacterCount,
+        totalUsageCount,
+        totalLikeCount,
+      }
+    })
+    .sort((a, b) => b.totalUsageCount - a.totalUsageCount)
+    .slice(0, 3)
+
+  const hasMarketplaceContent = featuredCharacters.length > 0 || creatorSpotlights.length > 0
+
   return (
     <>
       {/* Hero Section - Big impact, gradient glow background */}
@@ -38,33 +162,33 @@ export default async function IndexPage() {
           {/* Badge */}
           <div className="inline-flex animate-fade-in-up items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-sm text-primary">
             <HiOutlineSparkles className="size-4" />
-            <span>Powered by Claude AI</span>
+            <span>Creator-built character platform</span>
           </div>
 
           {/* Main headline */}
           <h1 className="font-heading animate-fade-in-up text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl">
-            Chat with <span className="gradient-text">AI Characters</span>
+            Find <span className="gradient-text">AI Characters</span>
             <br />
-            That Feel Alive
+            Worth Coming Back To
           </h1>
 
           {/* Subtitle */}
           <p className="max-w-2xl animate-fade-in-up text-lg text-muted-foreground sm:text-xl">
-            Create and chat with unique AI personalities. From helpful assistants to creative
-            companions — powered by the most advanced AI models.
+            Explore creator-made personalities for roleplay, romance, tutoring, and worldbuilding.
+            Save favorites, keep context, and publish your own when you are ready.
           </p>
 
           {/* CTA buttons */}
           <div className="flex animate-fade-in-up flex-col gap-4 sm:flex-row">
             <Link
-              href="/sign-in"
+              href="/sign-up"
               className={cn(
                 buttonVariants({ variant: "default", size: "lg" }),
                 "gradient-bg gap-2 border-0 text-white shadow-lg shadow-violet-500/25 hover:shadow-violet-500/40"
               )}
             >
-              <HiOutlineChatBubbleLeftRight className="size-5" />
-              Start Chatting Free
+              <HiOutlineRocketLaunch className="size-5" />
+              Create Free Account
             </Link>
             <Link
               href="/explore"
@@ -78,30 +202,143 @@ export default async function IndexPage() {
           {/* Trust badges */}
           <div className="mt-4 flex flex-wrap items-center justify-center gap-8 text-sm text-muted-foreground">
             <span className="flex items-center gap-2">
-              <HiOutlineShieldCheck className="size-4 text-green-500" />
-              No credit card required
+              <HiOutlineChatBubbleLeftRight className="size-4 text-primary" />
+              Browse creator-made characters
             </span>
             <span className="flex items-center gap-2">
               <HiOutlineBolt className="size-4 text-yellow-500" />
-              50 free messages/month
+              Keep memory and context in the thread
             </span>
             <span className="flex items-center gap-2">
-              <HiOutlineSparkles className="size-4 text-primary" />
-              All personalities included
+              <HiOutlineShieldCheck className="size-4 text-green-500" />
+              Publish and monetize your own
             </span>
           </div>
         </div>
       </section>
 
-      {/* Features Section - 3 large cards instead of 8 small ones */}
       <section className="relative border-y border-border/50 py-16 md:py-24">
+        <div className="container max-w-6xl">
+          <div className="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div className="max-w-2xl">
+              <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-medium uppercase tracking-[0.2em] text-primary">
+                <HiArrowTrendingUp className="size-4" />
+                What the product actually feels like
+              </div>
+              <h2 className="font-heading mt-4 text-3xl font-bold md:text-4xl">
+                Start with something specific, not a blank prompt
+              </h2>
+              <p className="mt-3 text-lg text-muted-foreground">
+                The best public characters feel authored. If the marketplace is still warming up,
+                use these starter lanes as the kind of experience InfiniStar is built for.
+              </p>
+            </div>
+
+            <Link
+              href="/feed"
+              className={cn(buttonVariants({ variant: "outline" }), "w-fit gap-2")}
+            >
+              <HiOutlineUsers className="size-4" />
+              Visit Creator Feed
+            </Link>
+          </div>
+
+          {hasMarketplaceContent ? (
+            <div className="grid gap-8 lg:grid-cols-[minmax(0,1.35fr)_minmax(18rem,0.85fr)]">
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {featuredCharacters.map((character) => (
+                  <CharacterCard key={character.id} character={character} />
+                ))}
+              </div>
+
+              <div className="rounded-3xl border border-border/50 bg-card/70 p-6 shadow-sm">
+                <div className="flex items-center gap-2 text-sm font-medium text-primary">
+                  <HiOutlineUsers className="size-4" />
+                  Creator spotlights
+                </div>
+                <div className="mt-6 space-y-4">
+                  {creatorSpotlights.map((creator) => (
+                    <Link
+                      key={creator.id}
+                      href={`/creators/${creator.id}`}
+                      className="group block rounded-2xl border border-border/60 bg-background/80 p-4 transition-colors hover:border-primary/30 hover:bg-accent/20"
+                    >
+                      <div className="flex items-center gap-3">
+                        {creator.image ? (
+                          <div className="relative size-12 overflow-hidden rounded-2xl border border-border/60">
+                            <Image
+                              src={creator.image}
+                              alt={creator.name || "Creator"}
+                              fill
+                              sizes="48px"
+                              className="object-cover"
+                            />
+                          </div>
+                        ) : (
+                          <div className="flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-base font-semibold text-primary">
+                            {(creator.name || "?").slice(0, 1).toUpperCase()}
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <p className="truncate font-semibold group-hover:text-primary">
+                            {creator.name || "Anonymous Creator"}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {creator.publicCharacterCount} public character
+                            {creator.publicCharacterCount !== 1 ? "s" : ""}
+                          </p>
+                        </div>
+                      </div>
+                      {creator.bio ? (
+                        <p className="mt-3 line-clamp-2 text-sm text-muted-foreground">
+                          {creator.bio}
+                        </p>
+                      ) : null}
+                      <div className="mt-4 flex gap-4 text-xs text-muted-foreground">
+                        <span>{creator.totalUsageCount.toLocaleString()} chats</span>
+                        <span>{creator.totalLikeCount.toLocaleString()} likes</span>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-3">
+              {starterArchetypes.map((archetype) => (
+                <article
+                  key={archetype.name}
+                  className="rounded-3xl border border-border/50 bg-card/70 p-6 shadow-sm"
+                >
+                  <p className="text-xs font-medium uppercase tracking-[0.2em] text-primary">
+                    {archetype.category}
+                  </p>
+                  <h3 className="mt-4 text-xl font-semibold">{archetype.name}</h3>
+                  <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                    {archetype.description}
+                  </p>
+                  <Link
+                    href="/sign-up"
+                    className={cn(buttonVariants({ variant: "ghost" }), "mt-6 px-0 text-primary")}
+                  >
+                    Start building this vibe
+                  </Link>
+                </article>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Features Section - 3 large cards instead of 8 small ones */}
+      <section className="relative py-16 md:py-24">
         <div className="container max-w-6xl">
           <div className="mb-12 text-center">
             <h2 className="font-heading text-3xl font-bold md:text-4xl">
-              Why Choose <span className="gradient-text">InfiniStar</span>
+              Why the product feels more intentional
             </h2>
             <p className="mt-4 text-lg text-muted-foreground">
-              Everything you need for next-level AI conversations
+              The goal is not “more AI.” The goal is a conversation you actually want to keep going.
             </p>
           </div>
 
@@ -109,27 +346,27 @@ export default async function IndexPage() {
             {[
               {
                 icon: HiOutlineSparkles,
-                title: "Unique AI Personalities",
+                title: "Characters with a point of view",
                 description:
-                  "Choose from 7 distinct personalities or create your own custom AI character with unique traits and conversation styles.",
+                  "Profiles, greetings, tags, and creator-defined tone give each character a stronger identity before the first reply.",
                 gradient: "from-violet-500/10 to-purple-500/10",
                 iconColor: "text-violet-500",
               },
               {
                 icon: HiOutlineBolt,
-                title: "Smart Memory & Context",
+                title: "Memory that keeps the thread",
                 description:
-                  "AI that remembers your conversations and builds context over time. Get smarter, more personalized responses.",
+                  "Longer chats do not need to restart from zero. Save context, revisit favorites, and keep continuity over time.",
                 gradient: "from-blue-500/10 to-cyan-500/10",
                 iconColor: "text-blue-500",
               },
               {
-                icon: HiOutlineShieldCheck,
-                title: "Enterprise Security",
+                icon: HiOutlineRocketLaunch,
+                title: "Creator tools built into the platform",
                 description:
-                  "2FA authentication, encrypted storage, CSRF protection, and rate limiting. Your data stays private and secure.",
-                gradient: "from-green-500/10 to-emerald-500/10",
-                iconColor: "text-green-500",
+                  "Publish characters, earn support, and build an audience without stitching together a separate storefront.",
+                gradient: "from-amber-500/10 to-orange-500/10",
+                iconColor: "text-amber-500",
               },
             ].map((feature) => (
               <div
@@ -160,11 +397,11 @@ export default async function IndexPage() {
           <div className="grid items-center gap-12 lg:grid-cols-2">
             <div>
               <h2 className="font-heading text-3xl font-bold md:text-4xl">
-                Powered by the Best <span className="gradient-text">AI Models</span>
+                Fast when you want it, deeper when you need it
               </h2>
               <p className="mt-4 text-lg text-muted-foreground">
-                Choose the model that matches your needs. From lightning-fast responses to deep,
-                nuanced conversations.
+                Choose a lightweight model for speed or step up when you want longer, more nuanced
+                character responses.
               </p>
 
               <div className="mt-8 space-y-4">
@@ -229,17 +466,6 @@ export default async function IndexPage() {
         </div>
       </section>
 
-      <AffiliatePartnersSection sourcePage="homepage" />
-
-      {monetizationConfig.enableAdSense && monetizationConfig.adSenseSlots.homeInline ? (
-        <section className="container pb-8 md:pb-14">
-          <div className="mx-auto max-w-4xl rounded-xl border border-border/50 bg-card/40 p-4 md:p-6">
-            <p className="mb-3 text-xs uppercase tracking-wide text-muted-foreground">Sponsored</p>
-            <AdSenseUnit slot={monetizationConfig.adSenseSlots.homeInline} />
-          </div>
-        </section>
-      ) : null}
-
       {/* CTA Section */}
       <section className="relative overflow-hidden border-t border-border/50 py-16 md:py-24">
         <div className="pointer-events-none absolute inset-0">
@@ -249,27 +475,27 @@ export default async function IndexPage() {
         </div>
         <div className="container relative flex max-w-3xl flex-col items-center gap-6 text-center">
           <h2 className="font-heading text-3xl font-bold md:text-4xl">
-            Ready to Meet Your AI Companion?
+            Ready to build a character people remember?
           </h2>
           <p className="text-lg text-muted-foreground">
-            Join thousands of users creating and chatting with unique AI characters. Start free,
-            upgrade anytime.
+            Create your account, explore what other creators are publishing, and put your own voice
+            on the front page while the catalog is still early.
           </p>
           <div className="flex flex-col gap-4 sm:flex-row">
             <Link
-              href="/sign-in"
+              href="/sign-up"
               className={cn(
                 buttonVariants({ size: "lg" }),
                 "gradient-bg gap-2 border-0 text-white shadow-lg shadow-violet-500/25"
               )}
             >
-              Get Started Free
+              Create Free Account
             </Link>
             <Link
-              href="/pricing"
+              href="/explore"
               className={cn(buttonVariants({ variant: "outline", size: "lg" }))}
             >
-              View Pricing
+              Explore Characters
             </Link>
           </div>
         </div>

@@ -33,8 +33,8 @@ This runbook defines how to rotate production secrets for InfiniStar without dow
 3. Update staging first
    - Apply new secret in staging environment variables.
    - Redeploy staging and run:
-     - `npm run ci:release:gate`
-     - `npm run ops:stripe:webhook:verify` (for Stripe changes)
+     - `bun run ci:release:gate`
+     - `bun run ops:stripe:webhook:verify` (for Stripe changes)
 4. Validate staging
    - Auth login flows work.
    - Payments + webhook events process.
