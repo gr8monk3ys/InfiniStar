@@ -366,7 +366,7 @@ Component structure:
   - `tags/` - Tag management components
   - `templates/` - Message template components
   - `themes/` - Theme customization components
-  - Core: `Avatar.tsx`, `AvatarGroup.tsx`, `Button.tsx`, `EmptyState.tsx`, `ErrorBoundary.tsx`, `icons.tsx`, `SessionsList.tsx`, `site-header.tsx`, etc.
+  - Core: `Avatar.tsx`, `AvatarGroup.tsx`, `Button.tsx`, `EmptyState.tsx`, `icons.tsx`, `SessionsList.tsx`, `site-header.tsx`, etc.
 - `app/(dashboard)/dashboard/conversations/components/` - Conversation-specific components (ConversationBox, ConversationList)
 - `app/(dashboard)/dashboard/conversations/[conversationId]/components/` - Conversation detail components (Body, ConversationContainer, ExportDropdown, Form, Header, MessageBox, MessageInput, ProfileDrawer, ReplyPreview, TokenUsageDisplay, TypingIndicator, etc.)
 - `app/(dashboard)/dashboard/profile/components/` - Profile page tab components (ProfileTabContent, PasswordTabContent, NotificationsTabContent, AccountTabContent)

@@ -4,6 +4,10 @@ InfiniStar is a Next.js 16 application for AI chat, creator discovery, subscript
 
 Production launch status is tracked in [PRODUCTION_PARITY_CHECKLIST.md](PRODUCTION_PARITY_CHECKLIST.md).
 
+## Preview
+
+![InfiniStar home page preview](docs/screenshots/home.png)
+
 ## Core Features
 
 - AI chat and streaming responses

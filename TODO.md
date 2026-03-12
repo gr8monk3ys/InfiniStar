@@ -1,5 +1,7 @@
 # TODO.md - InfiniStar Development Tasks
 
+> Historical note: this file is an archived planning snapshot. It still references earlier NextAuth-era work and old milestones. Use `README.md`, `SETUP.md`, `DEPLOYMENT.md`, `SECURITY.md`, and `PRODUCTION_PARITY_CHECKLIST.md` as the current source of truth.
+
 ## Current Status: ✅ FUNCTIONAL
 
 The application is now fully functional with all critical fixes completed. TypeScript passes, build succeeds, and core features are implemented.
