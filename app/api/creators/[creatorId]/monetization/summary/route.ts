@@ -1,8 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server"
-import { auth } from "@clerk/nextjs/server"
 
 import { toMonthlyRecurringCents } from "@/app/lib/creator-monetization"
 import prisma from "@/app/lib/prismadb"
+import getCurrentUser from "@/app/actions/getCurrentUser"
 
 interface CreatorSupportSummary {
   tipCount: number
@@ -53,7 +53,7 @@ export async function GET(
     return NextResponse.json({ error: "Creator not found" }, { status: 404 })
   }
 
-  const [tips, activeSubscriptions, authResult] = await Promise.all([
+  const [tips, activeSubscriptions, viewerUser] = await Promise.all([
     prisma.creatorTip.findMany({
       where: {
         creatorId: creator.id,
@@ -77,7 +77,7 @@ export async function GET(
       },
       take: 500,
     }),
-    auth(),
+    getCurrentUser(),
   ])
 
   const summary = buildSummary(
@@ -85,18 +85,11 @@ export async function GET(
     activeSubscriptions as Array<{ amountCents: number; interval: "MONTHLY" | "YEARLY" }>
   )
 
-  const viewerUserId = authResult.userId
-    ? await prisma.user.findUnique({
-        where: { clerkId: authResult.userId },
-        select: { id: true },
-      })
-    : null
-
-  const viewerSubscription = viewerUserId?.id
+  const viewerSubscription = viewerUser?.id
     ? await prisma.creatorSubscription.findUnique({
         where: {
           supporterId_creatorId: {
-            supporterId: viewerUserId.id,
+            supporterId: viewerUser.id,
             creatorId: creator.id,
           },
         },

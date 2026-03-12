@@ -22,6 +22,7 @@ import {
 import { verifyCsrfToken } from "@/app/lib/csrf"
 import prisma from "@/app/lib/prismadb"
 import { apiLimiter } from "@/app/lib/rate-limit"
+import getCurrentUser from "@/app/actions/getCurrentUser"
 import { POST as previewPOST } from "@/app/api/settings/auto-delete/preview/route"
 import { GET, PATCH } from "@/app/api/settings/auto-delete/route"
 import { POST as runPOST } from "@/app/api/settings/auto-delete/run/route"
@@ -30,6 +31,11 @@ import { POST as runPOST } from "@/app/api/settings/auto-delete/run/route"
 
 jest.mock("@clerk/nextjs/server", () => ({
   auth: jest.fn(() => Promise.resolve({ userId: "clerk_abc" })),
+}))
+
+jest.mock("@/app/actions/getCurrentUser", () => ({
+  __esModule: true,
+  default: jest.fn(() => Promise.resolve({ id: "11111111-1111-4111-8111-111111111111" })),
 }))
 
 jest.mock("@/app/lib/prismadb", () => ({
@@ -115,6 +121,7 @@ function makeRunRequest(): NextRequest {
 beforeEach(() => {
   jest.clearAllMocks()
   ;(auth as unknown as jest.Mock).mockResolvedValue({ userId: "clerk_abc" })
+  ;(getCurrentUser as jest.Mock).mockResolvedValue({ id: USER_ID })
   ;(prisma.user.findUnique as jest.Mock).mockResolvedValue({ id: USER_ID })
   ;(verifyCsrfToken as jest.Mock).mockReturnValue(true)
   ;(apiLimiter.check as jest.Mock).mockReturnValue(true)
@@ -138,14 +145,14 @@ beforeEach(() => {
 
 describe("GET /api/settings/auto-delete", () => {
   it("returns 401 when not authenticated", async () => {
-    ;(auth as unknown as jest.Mock).mockResolvedValue({ userId: null })
+    ;(getCurrentUser as jest.Mock).mockResolvedValue(null)
 
     const response = await GET()
     expect(response.status).toBe(401)
   })
 
-  it("returns 401 when user not found in database", async () => {
-    ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(null)
+  it("returns 401 when the current user cannot be resolved", async () => {
+    ;(getCurrentUser as jest.Mock).mockResolvedValue(null)
 
     const response = await GET()
     expect(response.status).toBe(401)
@@ -178,7 +185,7 @@ describe("GET /api/settings/auto-delete", () => {
 
 describe("PATCH /api/settings/auto-delete", () => {
   it("returns 401 when not authenticated", async () => {
-    ;(auth as unknown as jest.Mock).mockResolvedValue({ userId: null })
+    ;(getCurrentUser as jest.Mock).mockResolvedValue(null)
 
     const response = await PATCH(makePatchRequest({ autoDeleteEnabled: true }))
     expect(response.status).toBe(401)
@@ -257,7 +264,7 @@ describe("PATCH /api/settings/auto-delete", () => {
 
 describe("POST /api/settings/auto-delete/preview", () => {
   it("returns 401 when not authenticated", async () => {
-    ;(auth as unknown as jest.Mock).mockResolvedValue({ userId: null })
+    ;(getCurrentUser as jest.Mock).mockResolvedValue(null)
 
     const response = await previewPOST(makePreviewRequest())
     expect(response.status).toBe(401)

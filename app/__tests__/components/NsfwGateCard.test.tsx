@@ -11,8 +11,8 @@ jest.mock("@/app/lib/api-client", () => ({
   createLoadingToast: () => ({ success: jest.fn(), error: jest.fn() }),
 }))
 
-jest.mock("@clerk/nextjs", () => ({
-  useAuth: () => ({ isSignedIn: true }),
+jest.mock("@/app/hooks/useAppAuth", () => ({
+  useAppAuth: () => ({ isSignedIn: true }),
 }))
 
 jest.mock("next/navigation", () => ({

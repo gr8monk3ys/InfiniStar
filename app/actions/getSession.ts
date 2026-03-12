@@ -1,24 +1,19 @@
-import { auth, currentUser } from "@clerk/nextjs/server"
+import { getAuthSession } from "@/app/lib/auth"
 
 export default async function getSession() {
-  const { userId } = await auth()
+  const session = await getAuthSession()
 
-  if (!userId) {
-    return null
-  }
-
-  const user = await currentUser()
-
-  if (!user) {
+  if (!session) {
     return null
   }
 
   return {
+    authMode: session.authMode,
     user: {
-      id: userId,
-      email: user.emailAddresses[0]?.emailAddress,
-      name: user.firstName ? `${user.firstName} ${user.lastName || ""}`.trim() : null,
-      image: user.imageUrl,
+      id: session.user.id,
+      email: session.user.email,
+      name: session.user.name,
+      image: session.user.image,
     },
   }
 }

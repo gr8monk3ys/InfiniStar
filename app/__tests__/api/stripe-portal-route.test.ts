@@ -3,12 +3,12 @@
  */
 
 import { NextRequest } from "next/server"
-import { auth } from "@clerk/nextjs/server"
 
 import { verifyCsrfToken } from "@/app/lib/csrf"
 import prisma from "@/app/lib/prismadb"
 import { apiLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 import { stripe } from "@/app/lib/stripe"
+import getCurrentUser from "@/app/actions/getCurrentUser"
 import { POST } from "@/app/api/stripe/portal/route"
 
 jest.mock("@/env.mjs", () => ({
@@ -17,8 +17,9 @@ jest.mock("@/env.mjs", () => ({
   },
 }))
 
-jest.mock("@clerk/nextjs/server", () => ({
-  auth: jest.fn(),
+jest.mock("@/app/actions/getCurrentUser", () => ({
+  __esModule: true,
+  default: jest.fn(),
 }))
 
 jest.mock("@/app/lib/csrf", () => ({
@@ -71,7 +72,7 @@ describe("POST /api/stripe/portal", () => {
     ;(apiLimiter.check as jest.Mock).mockReturnValue(true)
     ;(getClientIdentifier as jest.Mock).mockReturnValue("127.0.0.1")
     ;(verifyCsrfToken as jest.Mock).mockReturnValue(true)
-    ;(auth as unknown as jest.Mock).mockResolvedValue({ userId: "clerk_123" })
+    ;(getCurrentUser as jest.Mock).mockResolvedValue({ id: "user_1" })
     ;(prisma.user.findUnique as jest.Mock).mockResolvedValue({
       stripeCustomerId: "cus_123",
     })
@@ -95,7 +96,7 @@ describe("POST /api/stripe/portal", () => {
   })
 
   it("returns 401 when not authenticated", async () => {
-    ;(auth as unknown as jest.Mock).mockResolvedValue({ userId: null })
+    ;(getCurrentUser as jest.Mock).mockResolvedValue(null)
 
     const response = await POST(createRequest())
     expect(response.status).toBe(401)

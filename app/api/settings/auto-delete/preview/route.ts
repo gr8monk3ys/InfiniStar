@@ -5,12 +5,11 @@
  */
 
 import { NextResponse, type NextRequest } from "next/server"
-import { auth } from "@clerk/nextjs/server"
 
 import { getAutoDeletePreview } from "@/app/lib/auto-delete"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
-import prisma from "@/app/lib/prismadb"
 import { apiLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
+import getCurrentUser from "@/app/actions/getCurrentUser"
 
 /**
  * POST /api/settings/auto-delete/preview
@@ -36,16 +35,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid CSRF token" }, { status: 403 })
     }
 
-    const { userId } = await auth()
-
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
-    const currentUser = await prisma.user.findUnique({
-      where: { clerkId: userId },
-      select: { id: true },
-    })
+    const currentUser = await getCurrentUser()
     if (!currentUser) {
       return NextResponse.json({ error: "User not found" }, { status: 401 })
     }

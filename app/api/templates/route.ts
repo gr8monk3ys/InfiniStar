@@ -1,5 +1,4 @@
 import { NextResponse, type NextRequest } from "next/server"
-import { auth } from "@clerk/nextjs/server"
 import { z } from "zod"
 
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
@@ -13,6 +12,7 @@ import {
   getUserTemplates,
   validateTemplateData,
 } from "@/app/lib/templates"
+import getCurrentUser from "@/app/actions/getCurrentUser"
 import { TEMPLATE_CATEGORIES, TEMPLATE_CONSTRAINTS, TEMPLATE_SHORTCUT_PATTERN } from "@/app/types"
 
 // Validation schema for creating a template
@@ -67,16 +67,7 @@ const queryParamsSchema = z.object({
  */
 export async function GET(request: NextRequest) {
   try {
-    const { userId } = await auth()
-
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
-    const currentUser = await prisma.user.findUnique({
-      where: { clerkId: userId },
-      select: { id: true },
-    })
+    const currentUser = await getCurrentUser()
     if (!currentUser) {
       return NextResponse.json({ error: "User not found" }, { status: 401 })
     }
@@ -142,16 +133,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid CSRF token" }, { status: 403 })
     }
 
-    const { userId } = await auth()
-
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
-    const currentUser = await prisma.user.findUnique({
-      where: { clerkId: userId },
-      select: { id: true },
-    })
+    const currentUser = await getCurrentUser()
     if (!currentUser) {
       return NextResponse.json({ error: "User not found" }, { status: 401 })
     }

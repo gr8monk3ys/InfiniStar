@@ -3,15 +3,16 @@
  */
 
 import { NextRequest } from "next/server"
-import { auth } from "@clerk/nextjs/server"
 
 import { verifyCsrfToken } from "@/app/lib/csrf"
 import prisma from "@/app/lib/prismadb"
 import { apiLimiter } from "@/app/lib/rate-limit"
+import getCurrentUser from "@/app/actions/getCurrentUser"
 import { DELETE } from "@/app/api/character-comments/[commentId]/route"
 
-jest.mock("@clerk/nextjs/server", () => ({
-  auth: jest.fn(),
+jest.mock("@/app/actions/getCurrentUser", () => ({
+  __esModule: true,
+  default: jest.fn(),
 }))
 
 jest.mock("@/app/lib/rate-limit", () => ({
@@ -44,14 +45,11 @@ function createRequest(): NextRequest {
   })
 }
 
-const mockAuth = auth as unknown as jest.Mock
-
 beforeEach(() => {
   jest.clearAllMocks()
   ;(apiLimiter.check as jest.Mock).mockReturnValue(true)
   ;(verifyCsrfToken as jest.Mock).mockReturnValue(true)
-  mockAuth.mockResolvedValue({ userId: "clerk-user-1" })
-  ;(prisma.user.findUnique as jest.Mock).mockResolvedValue({ id: "user-1" })
+  ;(getCurrentUser as jest.Mock).mockResolvedValue({ id: "user-1" })
   ;(prisma.characterComment.findUnique as jest.Mock).mockResolvedValue({
     id: "comment-1",
     authorId: "user-1",

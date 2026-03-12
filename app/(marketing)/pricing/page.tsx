@@ -1,13 +1,12 @@
 import Link from "next/link"
-import { auth } from "@clerk/nextjs/server"
 import { HiCheck, HiOutlineBolt, HiOutlineShieldCheck, HiOutlineSparkles } from "react-icons/hi2"
 
 import { freePlan, proPlan } from "@/config/subscriptions"
-import prisma from "@/app/lib/prismadb"
 import { getUserSubscriptionPlan } from "@/app/lib/subscription"
 import { cn } from "@/app/lib/utils"
 import { buttonVariants } from "@/app/components/ui/button"
 import { PricingCtaButton } from "@/app/(marketing)/pricing/PricingCtaButton"
+import getCurrentUser from "@/app/actions/getCurrentUser"
 
 export const metadata = {
   title: "Pricing | InfiniStar",
@@ -23,21 +22,14 @@ export const metadata = {
 }
 
 export default async function PricingPage() {
-  const { userId } = await auth()
-  const isSignedIn = Boolean(userId)
+  const currentUser = await getCurrentUser()
+  const isSignedIn = Boolean(currentUser)
 
   let isPro = false
 
-  if (userId) {
-    const user = await prisma.user.findUnique({
-      where: { clerkId: userId },
-      select: { id: true },
-    })
-
-    if (user) {
-      const plan = await getUserSubscriptionPlan(user.id)
-      isPro = plan.isPro
-    }
+  if (currentUser?.id) {
+    const plan = await getUserSubscriptionPlan(currentUser.id)
+    isPro = plan.isPro
   }
 
   return (

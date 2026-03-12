@@ -12,12 +12,12 @@
  */
 
 import { NextRequest } from "next/server"
-import { auth } from "@clerk/nextjs/server"
 
 import { verifyCsrfToken } from "@/app/lib/csrf"
 import prisma from "@/app/lib/prismadb"
 import { apiLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 import { stripe } from "@/app/lib/stripe"
+import getCurrentUser from "@/app/actions/getCurrentUser"
 // ---- Imports (after mocks) ----
 
 import { POST } from "@/app/api/stripe/checkout/route"
@@ -31,8 +31,9 @@ jest.mock("@/env.mjs", () => ({
   },
 }))
 
-jest.mock("@clerk/nextjs/server", () => ({
-  auth: jest.fn(),
+jest.mock("@/app/actions/getCurrentUser", () => ({
+  __esModule: true,
+  default: jest.fn(),
 }))
 
 jest.mock("@/app/lib/csrf", () => ({
@@ -97,7 +98,7 @@ const baseUser = {
 
 beforeEach(() => {
   jest.clearAllMocks()
-  ;(auth as unknown as jest.Mock).mockResolvedValue({ userId: "clerk_abc" })
+  ;(getCurrentUser as jest.Mock).mockResolvedValue({ id: "user-db-1" })
   ;(verifyCsrfToken as jest.Mock).mockReturnValue(true)
   ;(apiLimiter.check as jest.Mock).mockReturnValue(true)
   ;(getClientIdentifier as jest.Mock).mockReturnValue("127.0.0.1")
@@ -130,7 +131,7 @@ describe("POST /api/stripe/checkout", () => {
     })
 
     it("returns 401 when user is not authenticated", async () => {
-      ;(auth as unknown as jest.Mock).mockResolvedValue({ userId: null })
+      ;(getCurrentUser as jest.Mock).mockResolvedValue(null)
 
       const response = await POST(createRequest())
       expect(response.status).toBe(401)
@@ -306,12 +307,12 @@ describe("POST /api/stripe/checkout", () => {
   })
 
   describe("User lookup", () => {
-    it("looks up the user by Clerk userId", async () => {
+    it("looks up the user by internal app user id", async () => {
       await POST(createRequest())
 
       expect(prisma.user.findUnique).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { clerkId: "clerk_abc" },
+          where: { id: "user-db-1" },
         })
       )
     })

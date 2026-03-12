@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { useAuth } from "@clerk/nextjs"
 import { formatDistanceToNow } from "date-fns"
 import {
   AlertCircle,
@@ -28,6 +27,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/app/components/ui/card"
+import { useAppAuth } from "@/app/hooks/useAppAuth"
 
 interface ShareInfo {
   id: string
@@ -42,7 +42,7 @@ interface ShareInfo {
 export default function JoinPageClient() {
   const params = useParams()
   const router = useRouter()
-  const { isSignedIn, isLoaded } = useAuth()
+  const { isSignedIn, isLoaded } = useAppAuth()
   const token = params.token as string
   const isAuthenticated = Boolean(isLoaded && isSignedIn)
 

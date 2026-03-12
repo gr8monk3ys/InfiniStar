@@ -1,5 +1,4 @@
 import { NextResponse, type NextRequest } from "next/server"
-import { auth } from "@clerk/nextjs/server"
 import { z } from "zod"
 
 import { isValidTipAmount } from "@/app/lib/creator-monetization"
@@ -8,6 +7,7 @@ import prisma from "@/app/lib/prismadb"
 import { creatorPaymentLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 import { sanitizePlainText } from "@/app/lib/sanitize"
 import { stripe } from "@/app/lib/stripe"
+import getCurrentUser from "@/app/actions/getCurrentUser"
 
 const tipSchema = z.object({
   amountCents: z.number().int().positive(),
@@ -18,11 +18,6 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ creatorId: string }> }
 ) {
-  const { userId } = await auth()
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
   // Rate limiting
   const identifier = getClientIdentifier(request)
   const allowed = await Promise.resolve(creatorPaymentLimiter.check(identifier))
@@ -39,10 +34,7 @@ export async function POST(
     return NextResponse.json({ error: "Invalid CSRF token" }, { status: 403 })
   }
 
-  const currentUser = await prisma.user.findUnique({
-    where: { clerkId: userId },
-    select: { id: true, email: true, name: true, stripeCustomerId: true },
-  })
+  const currentUser = await getCurrentUser()
   if (!currentUser) {
     return NextResponse.json({ error: "User not found" }, { status: 401 })
   }

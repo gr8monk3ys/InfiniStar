@@ -6,8 +6,9 @@ export const env = createEnv({
     (process.env.SKIP_ENV_VALIDATION ?? "").toLowerCase()
   ),
   server: {
-    CLERK_SECRET_KEY: z.string().min(1),
+    CLERK_SECRET_KEY: z.string().min(1).optional(),
     CLERK_WEBHOOK_SECRET: z.string().min(1).optional(),
+    ENABLE_FALLBACK_AUTH: z.string().optional(),
     DATABASE_URL: z.string().min(1),
     DIRECT_URL: z.string().min(1).optional(),
     SMTP_FROM: z.string().min(1),
@@ -34,7 +35,8 @@ export const env = createEnv({
     AFFILIATE_ANALYTICS_ALLOWED_EMAILS: z.string().optional(),
   },
   client: {
-    NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: z.string().min(1),
+    NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: z.string().min(1).optional(),
+    NEXT_PUBLIC_CLERK_IS_SATELLITE: z.string().optional(),
     NEXT_PUBLIC_CLERK_PROXY_URL: z.string().min(1).default("/api/clerk-proxy"),
     NEXT_PUBLIC_CLERK_SIGN_IN_URL: z.string().min(1).default("/sign-in"),
     NEXT_PUBLIC_CLERK_SIGN_UP_URL: z.string().min(1).default("/sign-up"),
@@ -46,6 +48,7 @@ export const env = createEnv({
   runtimeEnv: {
     CLERK_SECRET_KEY: process.env.CLERK_SECRET_KEY,
     CLERK_WEBHOOK_SECRET: process.env.CLERK_WEBHOOK_SECRET,
+    ENABLE_FALLBACK_AUTH: process.env.ENABLE_FALLBACK_AUTH,
     DATABASE_URL: process.env.DATABASE_URL,
     DIRECT_URL: process.env.DIRECT_URL,
     SMTP_FROM: process.env.SMTP_FROM,
@@ -71,6 +74,7 @@ export const env = createEnv({
     REDIS_URL: process.env.REDIS_URL,
     AFFILIATE_ANALYTICS_ALLOWED_EMAILS: process.env.AFFILIATE_ANALYTICS_ALLOWED_EMAILS,
     NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
+    NEXT_PUBLIC_CLERK_IS_SATELLITE: process.env.NEXT_PUBLIC_CLERK_IS_SATELLITE,
     NEXT_PUBLIC_CLERK_PROXY_URL: process.env.NEXT_PUBLIC_CLERK_PROXY_URL,
     NEXT_PUBLIC_CLERK_SIGN_IN_URL: process.env.NEXT_PUBLIC_CLERK_SIGN_IN_URL,
     NEXT_PUBLIC_CLERK_SIGN_UP_URL: process.env.NEXT_PUBLIC_CLERK_SIGN_UP_URL,

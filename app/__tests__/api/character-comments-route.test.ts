@@ -3,17 +3,18 @@
  */
 
 import { NextRequest } from "next/server"
-import { auth } from "@clerk/nextjs/server"
 
 import { verifyCsrfToken } from "@/app/lib/csrf"
 import { moderateTextModelAssisted } from "@/app/lib/moderation"
 import { canAccessNsfw } from "@/app/lib/nsfw"
 import prisma from "@/app/lib/prismadb"
 import { apiLimiter } from "@/app/lib/rate-limit"
+import getCurrentUser from "@/app/actions/getCurrentUser"
 import { GET, POST } from "@/app/api/characters/[characterId]/comments/route"
 
-jest.mock("@clerk/nextjs/server", () => ({
-  auth: jest.fn(),
+jest.mock("@/app/actions/getCurrentUser", () => ({
+  __esModule: true,
+  default: jest.fn(),
 }))
 
 jest.mock("@/app/lib/prismadb", () => ({
@@ -64,8 +65,6 @@ function createRequest(method: string, body?: unknown) {
   })
 }
 
-const mockAuth = auth as unknown as jest.Mock
-
 beforeEach(() => {
   jest.clearAllMocks()
   ;(apiLimiter.check as jest.Mock).mockReturnValue(true)
@@ -75,7 +74,7 @@ beforeEach(() => {
     categories: [],
   })
   ;(canAccessNsfw as jest.Mock).mockReturnValue(true)
-  mockAuth.mockResolvedValue({ userId: null })
+  ;(getCurrentUser as jest.Mock).mockResolvedValue(null)
 })
 
 describe("GET /api/characters/[characterId]/comments", () => {
@@ -93,8 +92,7 @@ describe("GET /api/characters/[characterId]/comments", () => {
 
 describe("POST /api/characters/[characterId]/comments", () => {
   it("creates a comment", async () => {
-    mockAuth.mockResolvedValue({ userId: "clerk-user-1" })
-    ;(prisma.user.findUnique as jest.Mock).mockResolvedValue({
+    ;(getCurrentUser as jest.Mock).mockResolvedValue({
       id: "user-1",
       isAdult: true,
       nsfwEnabled: true,

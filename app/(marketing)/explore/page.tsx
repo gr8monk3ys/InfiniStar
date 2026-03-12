@@ -1,8 +1,7 @@
-import { auth } from "@clerk/nextjs/server"
-
 import { canAccessNsfw } from "@/app/lib/nsfw"
 import prisma from "@/app/lib/prismadb"
 import { getRecommendationSignalsForUser, rankCharactersForUser } from "@/app/lib/recommendations"
+import getCurrentUser from "@/app/actions/getCurrentUser"
 
 import ExploreClient from "./ExploreClient"
 
@@ -77,26 +76,7 @@ function getFirstSearchParam(value: string | string[] | undefined) {
 
 export default async function ExplorePage({ searchParams }: ExplorePageProps) {
   const resolvedSearchParams = (await searchParams) ?? {}
-  const { userId } = await auth()
-
-  // Look up the Prisma user if logged in
-  let currentUser: {
-    id: string
-    isAdult: boolean
-    nsfwEnabled: boolean
-    adultConfirmedAt: Date | null
-  } | null = null
-
-  if (userId) {
-    try {
-      currentUser = await prisma.user.findUnique({
-        where: { clerkId: userId },
-        select: { id: true, isAdult: true, nsfwEnabled: true, adultConfirmedAt: true },
-      })
-    } catch (error) {
-      console.error("Failed to load current user for explore page", error)
-    }
-  }
+  const currentUser = await getCurrentUser()
   const allowNsfw = canAccessNsfw(currentUser)
   const publicCharacterWhere = allowNsfw ? { isPublic: true } : { isPublic: true, isNsfw: false }
 

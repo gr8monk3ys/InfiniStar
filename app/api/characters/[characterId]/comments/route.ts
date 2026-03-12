@@ -1,5 +1,4 @@
 import { NextResponse, type NextRequest } from "next/server"
-import { auth } from "@clerk/nextjs/server"
 import { z } from "zod"
 
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
@@ -8,6 +7,7 @@ import { canAccessNsfw } from "@/app/lib/nsfw"
 import prisma from "@/app/lib/prismadb"
 import { apiLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 import { sanitizePlainText } from "@/app/lib/sanitize"
+import getCurrentUser from "@/app/actions/getCurrentUser"
 
 const listSchema = z.object({
   limit: z.string().optional(),
@@ -38,13 +38,7 @@ export async function GET(
   const limit = Math.min(parseInt(parsedQuery.data.limit || "20", 10), 50)
   const cursor = parsedQuery.data.cursor || undefined
 
-  const { userId } = await auth()
-  const currentUser = userId
-    ? await prisma.user.findUnique({
-        where: { clerkId: userId },
-        select: { id: true, isAdult: true, nsfwEnabled: true, adultConfirmedAt: true },
-      })
-    : null
+  const currentUser = await getCurrentUser()
   const allowNsfw = canAccessNsfw(currentUser)
 
   const character = await prisma.character.findUnique({
@@ -108,15 +102,7 @@ export async function POST(
     return NextResponse.json({ error: "Invalid CSRF token" }, { status: 403 })
   }
 
-  const { userId } = await auth()
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
-  const currentUser = await prisma.user.findUnique({
-    where: { clerkId: userId },
-    select: { id: true, isAdult: true, nsfwEnabled: true, adultConfirmedAt: true },
-  })
+  const currentUser = await getCurrentUser()
   if (!currentUser) {
     return NextResponse.json({ error: "User not found" }, { status: 401 })
   }

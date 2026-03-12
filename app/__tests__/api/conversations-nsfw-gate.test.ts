@@ -4,21 +4,18 @@
 
 import { NextRequest } from "next/server"
 
-const mockAuth = jest.fn()
-const mockUserFindUnique = jest.fn()
+const mockGetCurrentUser = jest.fn()
 const mockCharacterFindUnique = jest.fn()
 const mockConversationCreate = jest.fn()
 
-jest.mock("@clerk/nextjs/server", () => ({
-  auth: () => mockAuth(),
+jest.mock("@/app/actions/getCurrentUser", () => ({
+  __esModule: true,
+  default: (...args: unknown[]) => mockGetCurrentUser(...args),
 }))
 
 jest.mock("@/app/lib/prismadb", () => ({
   __esModule: true,
   default: {
-    user: {
-      findUnique: (args: unknown) => mockUserFindUnique(args),
-    },
     character: {
       findUnique: (args: unknown) => mockCharacterFindUnique(args),
     },
@@ -45,8 +42,7 @@ describe("/api/conversations NSFW gating", () => {
     jest.resetModules()
     jest.clearAllMocks()
 
-    mockAuth.mockResolvedValue({ userId: "clerk-1" })
-    mockUserFindUnique.mockResolvedValue({
+    mockGetCurrentUser.mockResolvedValue({
       id: "user-1",
       email: "user@example.com",
       stripePriceId: null,

@@ -1,16 +1,17 @@
 import Link from "next/link"
-import { auth } from "@clerk/nextjs/server"
 
 import { buttonVariants } from "@/app/components/ui/button"
+import getSession from "@/app/actions/getSession"
 import { ThemeToggleCompact } from "@/app/components/theme-toggle"
 
 export async function HeaderActions() {
-  const { userId } = await auth()
+  const session = await getSession()
+  const isSignedIn = Boolean(session?.user)
 
   return (
     <nav className="flex items-center space-x-2">
       <ThemeToggleCompact />
-      {userId ? (
+      {isSignedIn ? (
         <Link href="/dashboard" className={buttonVariants({ size: "sm", variant: "gradient" })}>
           Open App
         </Link>

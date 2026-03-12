@@ -1,11 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { env } from "@/env.mjs"
-import { auth } from "@clerk/nextjs/server"
 
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import prisma from "@/app/lib/prismadb"
 import { apiLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 import { stripe } from "@/app/lib/stripe"
+import getCurrentUser from "@/app/actions/getCurrentUser"
 
 function isMissingStripeCustomerError(error: unknown): boolean {
   if (!error || typeof error !== "object") {
@@ -48,15 +48,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     // Authentication
-    const { userId } = await auth()
+    const currentUser = await getCurrentUser()
 
-    if (!userId) {
+    if (!currentUser?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
     // Check if user already has an active subscription
     const user = await prisma.user.findUnique({
-      where: { clerkId: userId },
+      where: { id: currentUser.id },
       select: {
         id: true,
         email: true,

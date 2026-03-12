@@ -12,10 +12,10 @@
  *   DELETE /api/creators/[creatorId]/subscription — cancel a subscription
  *
  * Both tip and subscription routes:
- *   - require Clerk authentication (auth())
+ *   - require an authenticated current user
  *   - apply rate limiting (creatorPaymentLimiter)
  *   - require CSRF token on mutating methods
- *   - look up the current user via prisma.user.findUnique({ clerkId })
+ *   - resolve the current user through the shared auth helper
  *   - look up the creator via prisma.user.findUnique({ id: creatorId })
  *   - create a Stripe checkout session
  *   - persist tip / subscription record to the database
@@ -28,6 +28,7 @@ import { NextRequest } from "next/server"
 // ------------------------------------------------------------------
 
 const mockAuth = jest.fn()
+const mockGetCurrentUser = jest.fn()
 const mockVerifyCsrfToken = jest.fn()
 const mockGetCsrfTokenFromRequest = jest.fn()
 const mockUserFindUnique = jest.fn()
@@ -46,6 +47,11 @@ const mockIsValidSubscriptionPlan = jest.fn()
 
 jest.mock("@clerk/nextjs/server", () => ({
   auth: () => mockAuth(),
+}))
+
+jest.mock("@/app/actions/getCurrentUser", () => ({
+  __esModule: true,
+  default: (...args: unknown[]) => mockGetCurrentUser(...args),
 }))
 
 jest.mock("@/app/lib/csrf", () => ({
@@ -184,23 +190,23 @@ function makeSubRequest(
 // ------------------------------------------------------------------
 
 /**
- * Sets up the user findUnique mock for tip/subscription flows where the route
- * calls prisma.user.findUnique twice: once for the current user (by clerkId)
- * and once for the creator (by id). We reset the mock fully before each call
- * so queued Once values never leak between tests.
+ * Sets up the creator lookup for the tips route. The current user now comes
+ * from the shared auth helper, so prisma only resolves the creator here.
  */
 function setupUserMocksForTip(
   currentUser: typeof SUPPORTER | null = SUPPORTER,
   creator: typeof CREATOR | null = CREATOR
 ) {
+  mockGetCurrentUser.mockResolvedValue(currentUser)
   mockUserFindUnique.mockReset()
-  mockUserFindUnique.mockResolvedValueOnce(currentUser).mockResolvedValueOnce(creator)
+  mockUserFindUnique.mockResolvedValueOnce(creator)
 }
 
 function setupUserMocksForSub(
   currentUser: typeof SUPPORTER | null = SUPPORTER,
   creator: typeof CREATOR | null = CREATOR
 ) {
+  mockGetCurrentUser.mockResolvedValue(currentUser ? { id: currentUser.id } : null)
   mockUserFindUnique.mockReset()
   mockUserFindUnique.mockResolvedValueOnce(currentUser).mockResolvedValueOnce(creator)
 }
@@ -227,7 +233,7 @@ describe("POST /api/creators/[creatorId]/tips", () => {
     mockStripeCustomersCreate.mockReset()
     mockStripeCheckoutSessionsCreate.mockReset()
 
-    mockAuth.mockResolvedValue({ userId: "clerk_supporter" })
+    mockGetCurrentUser.mockResolvedValue(SUPPORTER)
     mockVerifyCsrfToken.mockReturnValue(true)
     mockGetCsrfTokenFromRequest.mockReturnValue("test-csrf")
     mockCreatorPaymentLimiterCheck.mockReturnValue(true)
@@ -257,8 +263,7 @@ describe("POST /api/creators/[creatorId]/tips", () => {
   }
 
   it("returns 401 when not authenticated", async () => {
-    mockAuth.mockResolvedValue({ userId: null })
-    // Route checks auth() first — user findUnique won't be called
+    mockGetCurrentUser.mockResolvedValue(null)
     mockUserFindUnique.mockReset()
     const res = await callTip(CREATOR.id, { amountCents: 500 })
     expect(res.status).toBe(401)
@@ -402,7 +407,7 @@ describe("POST /api/creators/[creatorId]/subscription", () => {
     mockStripeCheckoutSessionsCreate.mockReset()
     mockCreatorSubscriptionUpsert.mockReset()
 
-    mockAuth.mockResolvedValue({ userId: "clerk_supporter" })
+    mockGetCurrentUser.mockResolvedValue({ id: SUPPORTER.id })
     mockVerifyCsrfToken.mockReturnValue(true)
     mockGetCsrfTokenFromRequest.mockReturnValue("test-csrf")
     mockCreatorPaymentLimiterCheck.mockReturnValue(true)
@@ -426,8 +431,7 @@ describe("POST /api/creators/[creatorId]/subscription", () => {
   }
 
   it("returns 401 when not authenticated", async () => {
-    mockAuth.mockResolvedValue({ userId: null })
-    // getCurrentUserProfile returns null when userId is falsy
+    mockGetCurrentUser.mockResolvedValue(null)
     mockUserFindUnique.mockReset()
     mockUserFindUnique.mockResolvedValue(null)
     const res = await callSubPost(CREATOR.id, VALID_PLAN_BODY)
@@ -536,11 +540,9 @@ describe("DELETE /api/creators/[creatorId]/subscription", () => {
     mockStripeSubscriptionsUpdate.mockReset()
     mockCreatorSubscriptionUpdate.mockReset()
 
-    mockAuth.mockResolvedValue({ userId: "clerk_supporter" })
+    mockGetCurrentUser.mockResolvedValue({ id: SUPPORTER.id })
     mockVerifyCsrfToken.mockReturnValue(true)
     mockGetCsrfTokenFromRequest.mockReturnValue("test-csrf")
-    // The subscription DELETE route calls getCurrentUserProfile() which only
-    // calls prisma.user.findUnique once (for the current user)
     mockUserFindUnique.mockResolvedValueOnce(SUPPORTER)
     mockCreatorSubscriptionFindUnique.mockResolvedValue(ACTIVE_SUBSCRIPTION)
     mockStripeSubscriptionsUpdate.mockResolvedValue({})
@@ -554,7 +556,7 @@ describe("DELETE /api/creators/[creatorId]/subscription", () => {
   }
 
   it("returns 401 when not authenticated", async () => {
-    mockAuth.mockResolvedValue({ userId: null })
+    mockGetCurrentUser.mockResolvedValue(null)
     mockUserFindUnique.mockResolvedValue(null)
     const res = await callSubDelete(CREATOR.id)
     expect(res.status).toBe(401)

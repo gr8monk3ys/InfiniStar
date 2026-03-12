@@ -3,11 +3,11 @@
 import { useCallback, useEffect, useState } from "react"
 import dynamic from "next/dynamic"
 import Image from "next/image"
-import { useUser } from "@clerk/nextjs"
 import type { CloudinaryUploadWidgetResults } from "next-cloudinary"
 import { HiCamera, HiChatBubbleLeftRight, HiGlobeAlt } from "react-icons/hi2"
 
 import { api, ApiError, createLoadingToast } from "@/app/lib/api-client"
+import { useAppAuth } from "@/app/hooks/useAppAuth"
 
 // Dynamic imports to avoid build-time Cloudinary validation and defer modal
 const CldUploadButton = dynamic(
@@ -23,7 +23,7 @@ const StatusModal = dynamic(() => import("@/app/components/modals/StatusModal"),
 const hasCloudinaryConfig = Boolean(process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME)
 
 export function ProfileTabContent() {
-  const { user, isLoaded } = useUser()
+  const { user, isLoaded, refresh } = useAppAuth()
   const [isLoading, setIsLoading] = useState(false)
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false)
 
@@ -34,7 +34,7 @@ export function ProfileTabContent() {
 
   useEffect(() => {
     if (isLoaded && user) {
-      setName(user.fullName || user.firstName || "")
+      setName(user.name || "")
     }
   }, [isLoaded, user])
 
@@ -57,13 +57,13 @@ export function ProfileTabContent() {
         )
 
         loader.success("Avatar updated successfully")
-        await user?.reload()
+        await refresh()
       } catch (error) {
         const message = error instanceof ApiError ? error.message : "Failed to update avatar"
         loader.error(message)
       }
     },
-    [user]
+    [refresh]
   )
 
   const handleProfileSubmit = async (e: React.FormEvent) => {
@@ -85,7 +85,7 @@ export function ProfileTabContent() {
       )
 
       loader.success(response.message)
-      await user?.reload()
+      await refresh()
     } catch (error) {
       const message = error instanceof ApiError ? error.message : "Failed to update profile"
       loader.error(message)
@@ -96,9 +96,9 @@ export function ProfileTabContent() {
 
   const userData = user
     ? {
-        name: user.fullName || user.firstName || undefined,
-        email: user.emailAddresses[0]?.emailAddress,
-        image: user.imageUrl,
+        name: user.name || undefined,
+        email: user.email,
+        image: user.image,
         customStatus: undefined as string | undefined,
         customStatusEmoji: undefined as string | undefined,
       }

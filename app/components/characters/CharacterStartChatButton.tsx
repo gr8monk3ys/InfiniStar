@@ -1,15 +1,15 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { useAuth } from "@clerk/nextjs"
 import toast from "react-hot-toast"
 
 import { Button } from "@/app/components/ui/button"
+import { useAppAuth } from "@/app/hooks/useAppAuth"
 import { useCsrfToken } from "@/app/hooks/useCsrfToken"
 
 export function CharacterStartChatButton({ characterId }: { characterId: string }) {
   const router = useRouter()
-  const { userId, isSignedIn } = useAuth()
+  const { userId, isSignedIn } = useAppAuth()
   const { token } = useCsrfToken()
 
   const handleStart = async () => {

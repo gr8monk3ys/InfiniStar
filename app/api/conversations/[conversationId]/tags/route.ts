@@ -1,5 +1,4 @@
 import { NextResponse, type NextRequest } from "next/server"
-import { auth } from "@clerk/nextjs/server"
 import { z } from "zod"
 
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
@@ -7,6 +6,7 @@ import prisma from "@/app/lib/prismadb"
 import { pusherServer } from "@/app/lib/pusher"
 import { getPusherUserChannel } from "@/app/lib/pusher-channels"
 import { getClientIdentifier, tagLimiter } from "@/app/lib/rate-limit"
+import getCurrentUser from "@/app/actions/getCurrentUser"
 
 // Validation schema for adding a tag to conversation
 const addTagSchema = z.object({
@@ -26,16 +26,7 @@ interface RouteParams {
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const { conversationId } = await params
-    const { userId } = await auth()
-
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
-    const currentUser = await prisma.user.findUnique({
-      where: { clerkId: userId },
-      select: { id: true },
-    })
+    const currentUser = await getCurrentUser()
     if (!currentUser) {
       return NextResponse.json({ error: "User not found" }, { status: 401 })
     }
@@ -99,16 +90,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: "Invalid CSRF token" }, { status: 403 })
     }
 
-    const { userId } = await auth()
-
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
-    const currentUser = await prisma.user.findUnique({
-      where: { clerkId: userId },
-      select: { id: true, email: true },
-    })
+    const currentUser = await getCurrentUser()
     if (!currentUser) {
       return NextResponse.json({ error: "User not found" }, { status: 401 })
     }

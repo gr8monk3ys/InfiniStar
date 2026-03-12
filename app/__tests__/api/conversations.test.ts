@@ -9,18 +9,19 @@
  */
 
 import { NextRequest } from "next/server"
-import { auth } from "@clerk/nextjs/server"
 
 import { verifyCsrfToken } from "@/app/lib/csrf"
 import prisma from "@/app/lib/prismadb"
+import getCurrentUser from "@/app/actions/getCurrentUser"
 // ---- Imports ----
 
 import { POST } from "@/app/api/conversations/route"
 
 // ---- Mocks ----
 
-jest.mock("@clerk/nextjs/server", () => ({
-  auth: jest.fn(() => Promise.resolve({ userId: "clerk_123" })),
+jest.mock("@/app/actions/getCurrentUser", () => ({
+  __esModule: true,
+  default: jest.fn(() => Promise.resolve({ id: "user-1", email: "test@example.com" })),
 }))
 
 jest.mock("@/app/lib/prismadb", () => ({
@@ -80,8 +81,7 @@ const testConversation = {
 
 beforeEach(() => {
   jest.clearAllMocks()
-  ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(testUser)
-  ;(auth as unknown as jest.Mock).mockResolvedValue({ userId: "clerk_123" })
+  ;(getCurrentUser as jest.Mock).mockResolvedValue(testUser)
   ;(verifyCsrfToken as jest.Mock).mockReturnValue(true)
   ;(prisma.character.findMany as jest.Mock).mockResolvedValue([])
 })
@@ -289,7 +289,7 @@ describe("POST /api/conversations", () => {
   })
 
   it("returns 401 when not authenticated", async () => {
-    ;(auth as unknown as jest.Mock).mockResolvedValue({ userId: null })
+    ;(getCurrentUser as jest.Mock).mockResolvedValue(null)
 
     const request = createRequest({ userId: "user-2" })
     const response = await POST(request)

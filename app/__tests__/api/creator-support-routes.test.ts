@@ -4,7 +4,7 @@
 
 import { NextRequest } from "next/server"
 
-const mockAuth = jest.fn()
+const mockGetCurrentUser = jest.fn()
 const mockVerifyCsrfToken = jest.fn()
 const mockUserFindUnique = jest.fn()
 const mockUserUpdate = jest.fn()
@@ -16,8 +16,9 @@ const mockStripeCustomersCreate = jest.fn()
 const mockStripeCheckoutSessionsCreate = jest.fn()
 const mockStripeSubscriptionsUpdate = jest.fn()
 
-jest.mock("@clerk/nextjs/server", () => ({
-  auth: () => mockAuth(),
+jest.mock("@/app/actions/getCurrentUser", () => ({
+  __esModule: true,
+  default: (...args: unknown[]) => mockGetCurrentUser(...args),
 }))
 
 jest.mock("@/app/lib/csrf", () => ({
@@ -74,7 +75,12 @@ function createRequest(url: string, method: "POST" | "DELETE", body?: Record<str
 describe("creator support routes", () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    mockAuth.mockResolvedValue({ userId: "clerk_123" })
+    mockGetCurrentUser.mockResolvedValue({
+      id: "supporter-1",
+      email: "supporter@example.com",
+      name: "Supporter",
+      stripeCustomerId: null,
+    })
     mockVerifyCsrfToken.mockReturnValue(true)
     mockStripeCustomersCreate.mockResolvedValue({ id: "cus_test_1" })
     mockStripeCheckoutSessionsCreate.mockResolvedValue({
@@ -87,14 +93,7 @@ describe("creator support routes", () => {
   it("creates a tip for a creator", async () => {
     const { POST } = await import("@/app/api/creators/[creatorId]/tips/route")
 
-    mockUserFindUnique
-      .mockResolvedValueOnce({
-        id: "supporter-1",
-        email: "supporter@example.com",
-        name: "Supporter",
-        stripeCustomerId: null,
-      })
-      .mockResolvedValueOnce({ id: "creator-1", name: "Creator" })
+    mockUserFindUnique.mockResolvedValueOnce({ id: "creator-1", name: "Creator" })
     mockCreatorTipCreate.mockResolvedValue({
       id: "tip-1",
       supporterId: "supporter-1",
@@ -125,14 +124,13 @@ describe("creator support routes", () => {
   it("rejects self-tipping", async () => {
     const { POST } = await import("@/app/api/creators/[creatorId]/tips/route")
 
-    mockUserFindUnique
-      .mockResolvedValueOnce({
-        id: "supporter-1",
-        email: "supporter@example.com",
-        name: "Supporter",
-        stripeCustomerId: "cus_existing",
-      })
-      .mockResolvedValueOnce({ id: "supporter-1", name: "Supporter" })
+    mockGetCurrentUser.mockResolvedValue({
+      id: "supporter-1",
+      email: "supporter@example.com",
+      name: "Supporter",
+      stripeCustomerId: "cus_existing",
+    })
+    mockUserFindUnique.mockResolvedValueOnce({ id: "supporter-1", name: "Supporter" })
 
     const request = createRequest("http://localhost:3000/api/creators/supporter-1/tips", "POST", {
       amountCents: 500,

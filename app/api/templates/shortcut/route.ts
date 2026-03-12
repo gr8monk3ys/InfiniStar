@@ -1,9 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server"
-import { auth } from "@clerk/nextjs/server"
 import { z } from "zod"
 
-import prisma from "@/app/lib/prismadb"
 import { findTemplateByShortcut, getUserTemplates } from "@/app/lib/templates"
+import getCurrentUser from "@/app/actions/getCurrentUser"
 
 // Query params schema
 const queryParamsSchema = z.object({
@@ -24,16 +23,7 @@ const queryParamsSchema = z.object({
  */
 export async function GET(request: NextRequest) {
   try {
-    const { userId } = await auth()
-
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
-    const currentUser = await prisma.user.findUnique({
-      where: { clerkId: userId },
-      select: { id: true },
-    })
+    const currentUser = await getCurrentUser()
     if (!currentUser) {
       return NextResponse.json({ error: "User not found" }, { status: 401 })
     }

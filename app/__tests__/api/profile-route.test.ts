@@ -21,6 +21,10 @@ const mockUserUpdate = jest.fn()
 const mockClerkGetUser = jest.fn()
 const mockClerkVerifyPassword = jest.fn()
 const mockClerkUpdateUser = jest.fn()
+const mockHashFallbackPassword = jest.fn()
+const mockIsFallbackClerkId = jest.fn()
+const mockVerifyFallbackPassword = jest.fn()
+const originalEnv = process.env
 
 jest.mock("@/app/lib/csrf", () => ({
   verifyCsrfToken: (...args: unknown[]) => mockVerifyCsrfToken(...args),
@@ -67,6 +71,12 @@ jest.mock("@/app/actions/getCurrentUser", () => ({
   default: jest.fn(),
 }))
 
+jest.mock("@/app/lib/fallback-auth", () => ({
+  hashFallbackPassword: (...args: unknown[]) => mockHashFallbackPassword(...args),
+  isFallbackClerkId: (...args: unknown[]) => mockIsFallbackClerkId(...args),
+  verifyFallbackPassword: (...args: unknown[]) => mockVerifyFallbackPassword(...args),
+}))
+
 jest.mock("@clerk/nextjs/server", () => ({
   clerkClient: jest.fn(async () => ({
     users: {
@@ -85,6 +95,7 @@ const CURRENT_USER = {
   id: "user-11111111-1111-4111-8111-111111111111",
   clerkId: "user_clerk_123",
   email: "alice@example.com",
+  hashedPassword: "existing-local-hash",
   name: "Alice",
 }
 
@@ -94,6 +105,7 @@ const DB_USER = {
   email: "alice@example.com",
   image: "https://example.com/avatar.png",
   bio: "I love building things.",
+  hashedPassword: "existing-local-hash",
   location: "San Francisco, CA",
   website: "https://alice.dev",
   emailVerified: new Date("2024-01-01"),
@@ -101,6 +113,14 @@ const DB_USER = {
   createdAt: new Date("2024-01-01"),
   updatedAt: new Date("2024-06-01"),
 }
+
+beforeEach(() => {
+  process.env = { ...originalEnv, CLERK_SECRET_KEY: "test_clerk_secret" }
+})
+
+afterAll(() => {
+  process.env = originalEnv
+})
 
 // ------------------------------------------------------------------
 // Helpers
@@ -212,6 +232,9 @@ describe("PATCH /api/profile", () => {
     mockClerkGetUser.mockResolvedValue({ passwordEnabled: true, twoFactorEnabled: true })
     mockClerkVerifyPassword.mockResolvedValue({ verified: true })
     mockClerkUpdateUser.mockResolvedValue({ id: CURRENT_USER.clerkId })
+    mockHashFallbackPassword.mockResolvedValue("hashed-next-password")
+    mockIsFallbackClerkId.mockReturnValue(false)
+    mockVerifyFallbackPassword.mockResolvedValue(true)
   })
 
   it("returns 403 when CSRF token is invalid", async () => {
@@ -286,6 +309,40 @@ describe("PATCH /api/profile", () => {
       password: "new-password-123",
       signOutOfOtherSessions: false,
     })
+    expect(mockUserUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: CURRENT_USER.id },
+        data: { hashedPassword: "hashed-next-password" },
+      })
+    )
+  })
+
+  it("changes password through fallback auth without Clerk", async () => {
+    getCurrentUser.mockResolvedValue({
+      ...CURRENT_USER,
+      clerkId: "fallback_user_123",
+      hashedPassword: "stored-fallback-hash",
+    })
+    mockIsFallbackClerkId.mockReturnValue(true)
+    mockUserUpdate.mockResolvedValue(DB_USER)
+
+    const res = await PATCH(
+      makePatchRequest({
+        currentPassword: "old-password",
+        newPassword: "new-password-123",
+      })
+    )
+
+    expect(res.status).toBe(200)
+    expect(mockVerifyFallbackPassword).toHaveBeenCalledWith("old-password", "stored-fallback-hash")
+    expect(mockClerkVerifyPassword).not.toHaveBeenCalled()
+    expect(mockClerkUpdateUser).not.toHaveBeenCalled()
+    expect(mockUserUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: CURRENT_USER.id },
+        data: { hashedPassword: "hashed-next-password" },
+      })
+    )
   })
 
   it("returns 400 when current password is incorrect", async () => {

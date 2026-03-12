@@ -2,15 +2,15 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { useAuth } from "@clerk/nextjs"
 import toast from "react-hot-toast"
 
 import { Button } from "@/app/components/ui/button"
+import { useAppAuth } from "@/app/hooks/useAppAuth"
 import { useCsrfToken } from "@/app/hooks/useCsrfToken"
 
 export function CharacterRemixButton({ characterId }: { characterId: string }) {
   const router = useRouter()
-  const { isSignedIn } = useAuth()
+  const { isSignedIn } = useAppAuth()
   const { token } = useCsrfToken()
   const [isLoading, setIsLoading] = useState(false)
 

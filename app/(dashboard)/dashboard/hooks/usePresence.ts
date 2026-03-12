@@ -1,12 +1,12 @@
 import { useEffect, useRef } from "react"
-import { useAuth } from "@clerk/nextjs"
 import axios from "axios"
 
+import { useAppAuth } from "@/app/hooks/useAppAuth"
 import { useCsrfToken } from "@/app/hooks/useCsrfToken"
 
 // Track user activity and update presence status
 export default function usePresence() {
-  const { userId } = useAuth()
+  const { userId } = useAppAuth()
   const { token: csrfToken } = useCsrfToken()
   const awayTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const isActiveRef = useRef(true)

@@ -1,5 +1,4 @@
 import { NextResponse, type NextRequest } from "next/server"
-import { auth } from "@clerk/nextjs/server"
 import { z } from "zod"
 
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
@@ -13,6 +12,7 @@ import prisma from "@/app/lib/prismadb"
 import { apiLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 import { sanitizePlainText } from "@/app/lib/sanitize"
 import { slugify } from "@/app/lib/slug"
+import getCurrentUser from "@/app/actions/getCurrentUser"
 
 const updateCharacterSchema = z.object({
   name: z.string().min(3).max(60).optional(),
@@ -47,15 +47,10 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
   }
 
   if (character.isPublic && character.isNsfw) {
-    const { userId } = await auth()
-    if (!userId) {
+    const currentUser = await getCurrentUser()
+    if (!currentUser) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
     }
-
-    const currentUser = await prisma.user.findUnique({
-      where: { clerkId: userId },
-      select: { id: true, isAdult: true, nsfwEnabled: true, adultConfirmedAt: true },
-    })
 
     const isOwner = currentUser?.id && character.createdById === currentUser.id
     if (!isOwner && !canAccessNsfw(currentUser)) {
@@ -64,14 +59,10 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
   }
 
   if (!character.isPublic) {
-    const { userId } = await auth()
-    if (!userId) {
+    const currentUser = await getCurrentUser()
+    if (!currentUser) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
     }
-    const currentUser = await prisma.user.findUnique({
-      where: { clerkId: userId },
-      select: { id: true },
-    })
     if (!currentUser || character.createdById !== currentUser.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
     }
@@ -81,12 +72,6 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
 }
 
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
-  const { userId } = await auth()
-
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
   // Rate limiting
   const identifier = getClientIdentifier(request)
   const allowed = await Promise.resolve(apiLimiter.check(identifier))
@@ -97,10 +82,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     )
   }
 
-  const currentUser = await prisma.user.findUnique({
-    where: { clerkId: userId },
-    select: { id: true, isAdult: true },
-  })
+  const currentUser = await getCurrentUser()
   if (!currentUser) {
     return NextResponse.json({ error: "User not found" }, { status: 401 })
   }
@@ -212,16 +194,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 }
 
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
-  const { userId } = await auth()
-
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
-  const currentUser = await prisma.user.findUnique({
-    where: { clerkId: userId },
-    select: { id: true },
-  })
+  const currentUser = await getCurrentUser()
   if (!currentUser) {
     return NextResponse.json({ error: "User not found" }, { status: 401 })
   }

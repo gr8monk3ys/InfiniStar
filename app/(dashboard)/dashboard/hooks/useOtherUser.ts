@@ -1,21 +1,22 @@
 import { useMemo } from "react"
-import { useUser } from "@clerk/nextjs"
 import { type User } from "@prisma/client"
+
+import { useAppAuth } from "@/app/hooks/useAppAuth"
 
 import { type FullConversationType } from "../../../types"
 
 const useOtherUser = (conversation: FullConversationType | { users: User[] }): User | null => {
-  const { user } = useUser()
+  const { user } = useAppAuth()
 
   const otherUser = useMemo(() => {
-    const currentUserEmail = user?.emailAddresses[0]?.emailAddress
+    const currentUserEmail = user?.email
 
     const filtered = conversation.users.filter(
       (u: { email?: string | null }) => u.email !== currentUserEmail
     )
 
     return filtered[0] ?? null
-  }, [user?.emailAddresses, conversation.users])
+  }, [conversation.users, user?.email])
 
   return otherUser
 }

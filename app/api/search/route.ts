@@ -1,10 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server"
-import { auth } from "@clerk/nextjs/server"
 
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
-import prisma from "@/app/lib/prismadb"
 import { apiLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 import { advancedSearch, getSearchFacets, getSearchSuggestions } from "@/app/lib/search"
+import getCurrentUser from "@/app/actions/getCurrentUser"
 import {
   DEFAULT_SEARCH_FILTERS,
   MAX_SEARCH_LIMIT,
@@ -64,27 +63,13 @@ export async function GET(request: NextRequest): Promise<NextResponse<AdvancedSe
 
   try {
     // Authentication
-    const { userId } = await auth()
+    const currentUser = await getCurrentUser()
 
-    if (!userId) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Unauthorized. Please log in to search.",
-        },
-        { status: 401 }
-      )
-    }
-
-    const currentUser = await prisma.user.findUnique({
-      where: { clerkId: userId },
-      select: { id: true },
-    })
     if (!currentUser) {
       return NextResponse.json(
         {
           success: false,
-          error: "User not found.",
+          error: "Unauthorized. Please log in to search.",
         },
         { status: 401 }
       )
@@ -282,27 +267,13 @@ export async function POST(request: NextRequest): Promise<NextResponse<SearchSug
 
   try {
     // Authentication
-    const { userId } = await auth()
+    const currentUser = await getCurrentUser()
 
-    if (!userId) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Unauthorized. Please log in.",
-        },
-        { status: 401 }
-      )
-    }
-
-    const currentUser = await prisma.user.findUnique({
-      where: { clerkId: userId },
-      select: { id: true },
-    })
     if (!currentUser) {
       return NextResponse.json(
         {
           success: false,
-          error: "User not found.",
+          error: "Unauthorized. Please log in.",
         },
         { status: 401 }
       )

@@ -2,13 +2,13 @@ import { Suspense } from "react"
 import { type Metadata } from "next"
 import Image from "next/image"
 import { notFound } from "next/navigation"
-import { auth } from "@clerk/nextjs/server"
 import { format } from "date-fns"
 import { HiCalendar, HiChatBubbleLeftRight, HiGlobeAlt } from "react-icons/hi2"
 
 import { toMonthlyRecurringCents } from "@/app/lib/creator-monetization"
 import { canAccessNsfw } from "@/app/lib/nsfw"
 import prisma from "@/app/lib/prismadb"
+import getCurrentUser from "@/app/actions/getCurrentUser"
 import { PublicCharacterCard } from "@/app/components/characters/PublicCharacterCard"
 import { CreatorSupportCard } from "@/app/components/monetization/CreatorSupportCard"
 
@@ -58,13 +58,7 @@ interface CreatorProfilePageProps {
 export default async function CreatorProfilePage({ params }: CreatorProfilePageProps) {
   const { userId } = await params
 
-  const { userId: viewerClerkId } = await auth()
-  const viewerUser = viewerClerkId
-    ? await prisma.user.findUnique({
-        where: { clerkId: viewerClerkId },
-        select: { id: true, isAdult: true, nsfwEnabled: true, adultConfirmedAt: true },
-      })
-    : null
+  const viewerUser = await getCurrentUser()
   const allowNsfw = canAccessNsfw(viewerUser)
   const publicCharacterWhere = allowNsfw ? { isPublic: true } : { isPublic: true, isNsfw: false }
 

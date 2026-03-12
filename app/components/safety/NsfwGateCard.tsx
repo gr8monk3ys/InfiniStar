@@ -2,7 +2,6 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { useAuth } from "@clerk/nextjs"
 
 import { api, ApiError, createLoadingToast } from "@/app/lib/api-client"
 import { Button } from "@/app/components/ui/button"
@@ -14,10 +13,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/app/components/ui/dialog"
+import { useAppAuth } from "@/app/hooks/useAppAuth"
 
 export function NsfwGateCard() {
   const router = useRouter()
-  const { isSignedIn } = useAuth()
+  const { isSignedIn } = useAppAuth()
   const [dialogOpen, setDialogOpen] = useState(false)
   const [ageConfirmed, setAgeConfirmed] = useState(false)
   const [isLoading, setIsLoading] = useState(false)

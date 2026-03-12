@@ -1,12 +1,12 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 import { redirect } from "next/navigation"
-import { auth } from "@clerk/nextjs/server"
 import { HiOutlineHeart } from "react-icons/hi2"
 
 import prisma from "@/app/lib/prismadb"
 import { cn } from "@/app/lib/utils"
 import { buttonVariants } from "@/app/components/ui/button"
+import getCurrentUser from "@/app/actions/getCurrentUser"
 
 import FavoritesGrid from "./FavoritesGrid"
 
@@ -38,13 +38,7 @@ export const metadata: Metadata = {
 }
 
 export default async function FavoritesPage() {
-  const { userId } = await auth()
-  if (!userId) redirect("/sign-in")
-
-  const currentUser = await prisma.user.findUnique({
-    where: { clerkId: userId },
-    select: { id: true },
-  })
+  const currentUser = await getCurrentUser()
   if (!currentUser) redirect("/sign-in")
 
   const likes = await prisma.characterLike.findMany({

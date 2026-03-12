@@ -9,31 +9,22 @@
  */
 
 import { NextRequest } from "next/server"
-import { auth } from "@clerk/nextjs/server"
 import { MemoryCategory } from "@prisma/client"
 
 import { canCreateMemory, getMemoryByKey, getUserMemories, saveMemory } from "@/app/lib/ai-memory"
 import { verifyCsrfToken } from "@/app/lib/csrf"
-import prisma from "@/app/lib/prismadb"
 import { memoryLimiter } from "@/app/lib/rate-limit"
 import { sanitizePlainText } from "@/app/lib/sanitize"
+import getCurrentUser from "@/app/actions/getCurrentUser"
 // ---- Imports (after mocks) ----
 
 import { GET, POST } from "@/app/api/ai/memory/route"
 
 // ---- Mocks ----
 
-jest.mock("@clerk/nextjs/server", () => ({
-  auth: jest.fn(() => Promise.resolve({ userId: "clerk_123" })),
-}))
-
-jest.mock("@/app/lib/prismadb", () => ({
+jest.mock("@/app/actions/getCurrentUser", () => ({
   __esModule: true,
-  default: {
-    user: {
-      findUnique: jest.fn(),
-    },
-  },
+  default: jest.fn(() => Promise.resolve({ id: "user-1" })),
 }))
 
 jest.mock("@/app/lib/csrf", () => ({
@@ -118,8 +109,7 @@ const testMemory = {
 
 beforeEach(() => {
   jest.clearAllMocks()
-  ;(auth as unknown as jest.Mock).mockResolvedValue({ userId: "clerk_123" })
-  ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(testUser)
+  ;(getCurrentUser as jest.Mock).mockResolvedValue(testUser)
   ;(verifyCsrfToken as jest.Mock).mockReturnValue(true)
   ;(memoryLimiter.check as jest.Mock).mockReturnValue(true)
   ;(getUserMemories as jest.Mock).mockResolvedValue([testMemory])
@@ -131,7 +121,7 @@ beforeEach(() => {
 
 describe("GET /api/ai/memory", () => {
   it("returns 401 when not authenticated", async () => {
-    ;(auth as unknown as jest.Mock).mockResolvedValue({ userId: null })
+    ;(getCurrentUser as jest.Mock).mockResolvedValue(null)
 
     const request = createGetRequest()
     const response = await GET(request)
@@ -139,8 +129,8 @@ describe("GET /api/ai/memory", () => {
     expect(response.status).toBe(401)
   })
 
-  it("returns 401 when user is not found in database", async () => {
-    ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(null)
+  it("returns 401 when the current user cannot be resolved", async () => {
+    ;(getCurrentUser as jest.Mock).mockResolvedValue(null)
 
     const request = createGetRequest()
     const response = await GET(request)
@@ -230,15 +220,11 @@ describe("GET /api/ai/memory", () => {
     expect(data.memories).toHaveLength(0)
   })
 
-  it("queries database with the clerk user id", async () => {
+  it("loads memories for the current app user", async () => {
     const request = createGetRequest()
     await GET(request)
 
-    expect(prisma.user.findUnique).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { clerkId: "clerk_123" },
-      })
-    )
+    expect(getUserMemories).toHaveBeenCalledWith("user-1", expect.any(Object))
   })
 
   it("returns 500 when database throws an error", async () => {
@@ -277,7 +263,7 @@ describe("POST /api/ai/memory", () => {
   })
 
   it("returns 401 when not authenticated", async () => {
-    ;(auth as unknown as jest.Mock).mockResolvedValue({ userId: null })
+    ;(getCurrentUser as jest.Mock).mockResolvedValue(null)
 
     const request = createPostRequest({
       key: "test_key",
@@ -288,8 +274,8 @@ describe("POST /api/ai/memory", () => {
     expect(response.status).toBe(401)
   })
 
-  it("returns 401 when user is not found in database", async () => {
-    ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(null)
+  it("returns 401 when the current user cannot be resolved", async () => {
+    ;(getCurrentUser as jest.Mock).mockResolvedValue(null)
 
     const request = createPostRequest({
       key: "test_key",

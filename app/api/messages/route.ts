@@ -1,5 +1,4 @@
 import { NextResponse, type NextRequest } from "next/server"
-import { auth } from "@clerk/nextjs/server"
 import { z } from "zod"
 
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
@@ -13,6 +12,7 @@ import { pusherServer } from "@/app/lib/pusher"
 import { getPusherConversationChannel, getPusherUserChannel } from "@/app/lib/pusher-channels"
 import { apiLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 import { sanitizeMessage, sanitizeUrl } from "@/app/lib/sanitize"
+import getCurrentUser from "@/app/actions/getCurrentUser"
 
 // Validation schema for creating messages
 const createMessageSchema = z.object({
@@ -70,16 +70,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { userId } = await auth()
-
-    if (!userId) {
-      return new NextResponse("Unauthorized", { status: 401 })
-    }
-
-    const currentUser = await prisma.user.findUnique({
-      where: { clerkId: userId },
-      select: { id: true, email: true },
-    })
+    const currentUser = await getCurrentUser()
     if (!currentUser) {
       return new NextResponse("User not found", { status: 401 })
     }

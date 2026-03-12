@@ -1,18 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server"
-import { auth } from "@clerk/nextjs/server"
 
 import prisma from "@/app/lib/prismadb"
+import getCurrentUser from "@/app/actions/getCurrentUser"
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
-  const { userId } = await auth()
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
-  const currentUser = await prisma.user.findUnique({
-    where: { clerkId: userId },
-    select: { id: true },
-  })
+  const currentUser = await getCurrentUser()
   if (!currentUser) {
     return NextResponse.json({ error: "User not found" }, { status: 401 })
   }

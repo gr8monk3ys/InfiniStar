@@ -1,5 +1,4 @@
 import { NextResponse, type NextRequest } from "next/server"
-import { auth } from "@clerk/nextjs/server"
 import { z } from "zod"
 
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
@@ -14,6 +13,7 @@ import { apiLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 import { getRecommendationSignalsForUser, rankCharactersForUser } from "@/app/lib/recommendations"
 import { sanitizePlainText } from "@/app/lib/sanitize"
 import { slugify } from "@/app/lib/slug"
+import getCurrentUser from "@/app/actions/getCurrentUser"
 
 const createCharacterSchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters").max(60),
@@ -80,13 +80,7 @@ export async function GET(request: NextRequest) {
     where.category = params.category
   }
 
-  const { userId } = await auth()
-  const currentUser = userId
-    ? await prisma.user.findUnique({
-        where: { clerkId: userId },
-        select: { id: true, isAdult: true, nsfwEnabled: true, adultConfirmedAt: true },
-      })
-    : null
+  const currentUser = await getCurrentUser()
   const allowNsfw = canAccessNsfw(currentUser)
 
   if (!allowNsfw) {
@@ -165,12 +159,6 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const { userId } = await auth()
-
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
   // Rate limiting
   const identifier = getClientIdentifier(request)
   const allowed = await Promise.resolve(apiLimiter.check(identifier))
@@ -181,10 +169,7 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const currentUser = await prisma.user.findUnique({
-    where: { clerkId: userId },
-    select: { id: true, isAdult: true },
-  })
+  const currentUser = await getCurrentUser()
   if (!currentUser) {
     return NextResponse.json({ error: "User not found" }, { status: 401 })
   }

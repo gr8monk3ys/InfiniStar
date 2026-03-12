@@ -3,6 +3,11 @@ import { clerkClient } from "@clerk/nextjs/server"
 import { z } from "zod"
 
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
+import {
+  hashFallbackPassword,
+  isFallbackClerkId,
+  verifyFallbackPassword,
+} from "@/app/lib/fallback-auth"
 import prisma from "@/app/lib/prismadb"
 import getCurrentUser from "@/app/actions/getCurrentUser"
 
@@ -50,14 +55,29 @@ export async function PATCH(request: NextRequest) {
         return NextResponse.json({ error: validation.error.issues[0].message }, { status: 400 })
       }
 
-      if (!currentUser.clerkId) {
-        return NextResponse.json(
-          { error: "Password changes are unavailable for this account" },
-          { status: 400 }
-        )
+      const { currentPassword, newPassword } = validation.data
+      const nextHashedPassword = await hashFallbackPassword(newPassword)
+
+      if (!currentUser.clerkId || isFallbackClerkId(currentUser.clerkId)) {
+        if (!currentUser.hashedPassword) {
+          return NextResponse.json({ error: "Password changes are unavailable." }, { status: 400 })
+        }
+
+        const isValid = await verifyFallbackPassword(currentPassword, currentUser.hashedPassword)
+        if (!isValid) {
+          return NextResponse.json({ error: "Current password is incorrect" }, { status: 400 })
+        }
+
+        await prisma.user.update({
+          where: { id: currentUser.id },
+          data: {
+            hashedPassword: nextHashedPassword,
+          },
+        })
+
+        return NextResponse.json({ message: "Password changed successfully" })
       }
 
-      const { currentPassword, newPassword } = validation.data
       const clerk = await clerkClient()
       const clerkUser = await clerk.users.getUser(currentUser.clerkId)
 
@@ -80,6 +100,13 @@ export async function PATCH(request: NextRequest) {
       await clerk.users.updateUser(currentUser.clerkId, {
         password: newPassword,
         signOutOfOtherSessions: false,
+      })
+
+      await prisma.user.update({
+        where: { id: currentUser.id },
+        data: {
+          hashedPassword: nextHashedPassword,
+        },
       })
 
       return NextResponse.json({ message: "Password changed successfully" })
@@ -157,6 +184,7 @@ export async function GET(_request: NextRequest) {
         emailVerified: true,
         createdAt: true,
         updatedAt: true,
+        hashedPassword: true,
       },
     })
 
@@ -164,7 +192,11 @@ export async function GET(_request: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
 
-    const clerkUser = user.clerkId ? await (await clerkClient()).users.getUser(user.clerkId) : null
+    const shouldLoadClerkUser =
+      Boolean(process.env.CLERK_SECRET_KEY) && user.clerkId && !isFallbackClerkId(user.clerkId)
+    const clerkUser = shouldLoadClerkUser
+      ? await (await clerkClient()).users.getUser(user.clerkId!)
+      : null
 
     return NextResponse.json({
       user: {
@@ -179,7 +211,9 @@ export async function GET(_request: NextRequest) {
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       },
-      hasPassword: clerkUser?.passwordEnabled ?? false,
+      authMode: isFallbackClerkId(user.clerkId) ? "fallback" : "clerk",
+      hasBackupPassword: Boolean(user.hashedPassword),
+      hasPassword: clerkUser?.passwordEnabled ?? Boolean(user.hashedPassword),
       twoFactorEnabled: clerkUser?.twoFactorEnabled ?? false,
     })
   } catch (error: unknown) {

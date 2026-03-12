@@ -3,12 +3,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { useUser } from "@clerk/nextjs"
 import { formatDistanceToNow } from "date-fns"
 import toast from "react-hot-toast"
 import { HiChatBubbleBottomCenterText, HiTrash } from "react-icons/hi2"
 
 import { cn } from "@/app/lib/utils"
+import { useAppAuth } from "@/app/hooks/useAppAuth"
 import { useCsrfToken, withCsrfHeader } from "@/app/hooks/useCsrfToken"
 
 type CharacterComment = {
@@ -30,7 +30,7 @@ export default function CharacterCommentsSection({
   characterId: string
   initialCount: number
 }) {
-  const { isSignedIn } = useUser()
+  const { isSignedIn } = useAppAuth()
   const { token: csrfToken } = useCsrfToken()
 
   const [comments, setComments] = useState<CharacterComment[]>([])

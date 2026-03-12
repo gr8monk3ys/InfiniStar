@@ -1,6 +1,5 @@
 import Image from "next/image"
 import Link from "next/link"
-import { auth } from "@clerk/nextjs/server"
 import { HiArrowTrendingUp, HiChatBubbleLeftRight, HiSparkles, HiUserGroup } from "react-icons/hi2"
 
 import { canAccessNsfw } from "@/app/lib/nsfw"
@@ -8,6 +7,7 @@ import prisma from "@/app/lib/prismadb"
 import { getRecommendationSignalsForUser, rankCharactersForUser } from "@/app/lib/recommendations"
 import { cn } from "@/app/lib/utils"
 import { buttonVariants } from "@/app/components/ui/button"
+import getCurrentUser from "@/app/actions/getCurrentUser"
 import { PublicCharacterCard } from "@/app/components/characters/PublicCharacterCard"
 
 export const metadata = {
@@ -86,24 +86,7 @@ interface FeedCreatorRow {
 }
 
 export default async function FeedPage() {
-  const { userId } = await auth()
-  let currentUser: {
-    id: string
-    isAdult: boolean
-    nsfwEnabled: boolean
-    adultConfirmedAt: Date | null
-  } | null = null
-
-  if (userId) {
-    try {
-      currentUser = await prisma.user.findUnique({
-        where: { clerkId: userId },
-        select: { id: true, isAdult: true, nsfwEnabled: true, adultConfirmedAt: true },
-      })
-    } catch (error) {
-      console.error("Failed to load current user for feed page", error)
-    }
-  }
+  const currentUser = await getCurrentUser()
   const allowNsfw = canAccessNsfw(currentUser)
   const publicCharacterWhere = allowNsfw ? { isPublic: true } : { isPublic: true, isNsfw: false }
 

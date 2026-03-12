@@ -2,7 +2,6 @@ import { type Metadata } from "next"
 import Image from "next/image"
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { auth } from "@clerk/nextjs/server"
 import {
   HiChatBubbleBottomCenterText,
   HiChatBubbleLeftRight,
@@ -15,6 +14,7 @@ import { getCategoryById } from "@/app/lib/character-categories"
 import { canAccessNsfw } from "@/app/lib/nsfw"
 import prisma from "@/app/lib/prismadb"
 import { cn } from "@/app/lib/utils"
+import getCurrentUser from "@/app/actions/getCurrentUser"
 import { CharacterLikeButton } from "@/app/components/characters/CharacterLikeButton"
 import { CharacterRemixButton } from "@/app/components/characters/CharacterRemixButton"
 import { CharacterStartChatButton } from "@/app/components/characters/CharacterStartChatButton"
@@ -401,17 +401,11 @@ export default async function CharacterPage({ params }: CharacterPageProps) {
     notFound()
   }
 
-  const { userId } = await auth()
-  const currentUser = userId
-    ? await prisma.user.findUnique({
-        where: { clerkId: userId },
-        select: { id: true, isAdult: true, nsfwEnabled: true, adultConfirmedAt: true },
-      })
-    : null
+  const currentUser = await getCurrentUser()
   const allowNsfw = canAccessNsfw(currentUser)
 
   if (character.isNsfw && !allowNsfw) {
-    return <CharacterNsfwGate userId={userId} />
+    return <CharacterNsfwGate userId={currentUser?.id ?? null} />
   }
 
   // Increment view count

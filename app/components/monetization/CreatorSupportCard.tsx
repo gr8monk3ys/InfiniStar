@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { useAuth } from "@clerk/nextjs"
 import toast from "react-hot-toast"
 import { HiHeart, HiSparkles } from "react-icons/hi2"
 
@@ -12,6 +11,7 @@ import {
   formatCurrencyFromCents,
 } from "@/app/lib/creator-monetization"
 import { Button } from "@/app/components/ui/button"
+import { useAppAuth } from "@/app/hooks/useAppAuth"
 import { useCsrfToken, withCsrfHeader } from "@/app/hooks/useCsrfToken"
 
 interface SupportSummary {
@@ -43,7 +43,7 @@ export function CreatorSupportCard({
   initialSummary,
   initialViewerSubscription,
 }: CreatorSupportCardProps) {
-  const { isSignedIn } = useAuth()
+  const { isSignedIn } = useAppAuth()
   const pathname = usePathname()
   const router = useRouter()
   const searchParams = useSearchParams()

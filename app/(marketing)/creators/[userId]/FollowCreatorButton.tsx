@@ -2,10 +2,10 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { useAuth } from "@clerk/nextjs"
 import toast from "react-hot-toast"
 
 import { Button } from "@/app/components/ui/button"
+import { useAppAuth } from "@/app/hooks/useAppAuth"
 import { useCsrfToken } from "@/app/hooks/useCsrfToken"
 
 interface FollowCreatorButtonProps {
@@ -23,7 +23,7 @@ export default function FollowCreatorButton({
   initialFollowerCount,
   disabled = false,
 }: FollowCreatorButtonProps) {
-  const { userId } = useAuth()
+  const { userId } = useAppAuth()
   const { token: csrfToken } = useCsrfToken()
 
   const [isFollowing, setIsFollowing] = useState(initialIsFollowing)

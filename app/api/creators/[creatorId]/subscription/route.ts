@@ -1,5 +1,4 @@
 import { NextResponse, type NextRequest } from "next/server"
-import { auth } from "@clerk/nextjs/server"
 import { z } from "zod"
 
 import { isValidSubscriptionPlan } from "@/app/lib/creator-monetization"
@@ -8,6 +7,7 @@ import prisma from "@/app/lib/prismadb"
 import { creatorPaymentLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 import { sanitizePlainText } from "@/app/lib/sanitize"
 import { stripe } from "@/app/lib/stripe"
+import getCurrentUser from "@/app/actions/getCurrentUser"
 
 const subscriptionSchema = z.object({
   tierName: z.string().min(1).max(60),
@@ -21,13 +21,13 @@ async function getCurrentUserProfile(): Promise<{
   name: string | null
   stripeCustomerId: string | null
 } | null> {
-  const { userId } = await auth()
-  if (!userId) {
+  const currentUser = await getCurrentUser()
+  if (!currentUser) {
     return null
   }
 
   return prisma.user.findUnique({
-    where: { clerkId: userId },
+    where: { id: currentUser.id },
     select: { id: true, email: true, name: true, stripeCustomerId: true },
   })
 }
