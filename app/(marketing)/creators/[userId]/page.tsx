@@ -9,7 +9,7 @@ import { HiCalendar, HiChatBubbleLeftRight, HiGlobeAlt } from "react-icons/hi2"
 import { toMonthlyRecurringCents } from "@/app/lib/creator-monetization"
 import { canAccessNsfw } from "@/app/lib/nsfw"
 import prisma from "@/app/lib/prismadb"
-import { CharacterCard } from "@/app/components/characters/CharacterCard"
+import { PublicCharacterCard } from "@/app/components/characters/PublicCharacterCard"
 import { CreatorSupportCard } from "@/app/components/monetization/CreatorSupportCard"
 
 import FollowCreatorButton from "./FollowCreatorButton"
@@ -237,7 +237,7 @@ export default async function CreatorProfilePage({ params }: CreatorProfilePageP
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {user.characters.map((character: CreatorCharacter) => (
-              <CharacterCard key={character.id} character={character} />
+              <PublicCharacterCard key={character.id} character={character} />
             ))}
           </div>
         )}

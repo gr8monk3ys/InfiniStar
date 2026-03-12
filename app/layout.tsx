@@ -4,14 +4,10 @@ import { type Metadata, type Viewport } from "next"
 
 import { siteConfig } from "@/config/site"
 import { cn } from "@/app/lib/utils"
-import { CookieBanner } from "@/app/components/CookieBanner"
-import { AuthProvider } from "@/app/components/providers/AuthProvider"
-import { ThemeCustomProvider } from "@/app/components/providers/ThemeCustomProvider"
-import { ServiceWorkerRegister } from "@/app/components/pwa/ServiceWorkerRegister"
+import { ClientShell } from "@/app/components/providers/ClientShell"
 import { SiteHeader } from "@/app/components/site-header"
 import { TailwindIndicator } from "@/app/components/tailwind-indicator"
 import { ThemeProvider } from "@/app/components/theme-provider"
-import ToasterContext from "@/app/context/ToasterContext"
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteConfig.url),
@@ -21,6 +17,9 @@ export const metadata: Metadata = {
   },
   description: siteConfig.description,
   manifest: "/manifest.webmanifest",
+  alternates: {
+    canonical: "/",
+  },
   icons: {
     icon: "/favicon-32x32.png",
     shortcut: "/favicon-16x16.png",
@@ -60,20 +59,22 @@ export default function RootLayout({ children }: RootLayoutProps) {
     <html lang="en" suppressHydrationWarning>
       <head />
       <body className={cn("min-h-screen bg-background antialiased")}>
-        <AuthProvider>
-          <ToasterContext />
-          <ServiceWorkerRegister />
-          <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-            <ThemeCustomProvider>
-              <div className="theme-transition-bg relative flex min-h-screen flex-col">
-                <SiteHeader />
-                <div className="flex-1">{children}</div>
-              </div>
-              <TailwindIndicator />
-            </ThemeCustomProvider>
-          </ThemeProvider>
-          <CookieBanner />
-        </AuthProvider>
+        <a
+          href="#main-content"
+          className="sr-only fixed left-4 top-4 z-[100] rounded-md bg-background px-4 py-2 text-sm font-medium text-foreground shadow-lg focus:not-sr-only focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+        >
+          Skip to content
+        </a>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          <ClientShell />
+          <div className="theme-transition-bg relative flex min-h-screen flex-col">
+            <SiteHeader />
+            <main id="main-content" tabIndex={-1} className="flex-1 focus:outline-none">
+              {children}
+            </main>
+          </div>
+          <TailwindIndicator />
+        </ThemeProvider>
       </body>
     </html>
   )

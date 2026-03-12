@@ -1,26 +1,29 @@
-"use client"
-
 import Link from "next/link"
-import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs"
+import { auth } from "@clerk/nextjs/server"
 
 import { buttonVariants } from "@/app/components/ui/button"
-import { ThemeToggle } from "@/app/components/theme-toggle"
+import { ThemeToggleCompact } from "@/app/components/theme-toggle"
 
-export function HeaderActions() {
+export async function HeaderActions() {
+  const { userId } = await auth()
+
   return (
     <nav className="flex items-center space-x-2">
-      <ThemeToggle />
-      <SignedOut>
-        <Link href="/sign-in" className={buttonVariants({ size: "sm", variant: "ghost" })}>
-          Sign In
+      <ThemeToggleCompact />
+      {userId ? (
+        <Link href="/dashboard" className={buttonVariants({ size: "sm", variant: "gradient" })}>
+          Open App
         </Link>
-        <Link href="/sign-up" className={buttonVariants({ size: "sm", variant: "gradient" })}>
-          Create Account
-        </Link>
-      </SignedOut>
-      <SignedIn>
-        <UserButton afterSignOutUrl="/" />
-      </SignedIn>
+      ) : (
+        <>
+          <Link href="/sign-in" className={buttonVariants({ size: "sm", variant: "ghost" })}>
+            Sign In
+          </Link>
+          <Link href="/sign-up" className={buttonVariants({ size: "sm", variant: "gradient" })}>
+            Create Account
+          </Link>
+        </>
+      )}
     </nav>
   )
 }

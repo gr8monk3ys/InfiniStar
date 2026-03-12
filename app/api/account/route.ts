@@ -106,8 +106,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Log the deletion request for audit purposes
-    // eslint-disable-next-line no-console -- Audit logging for GDPR compliance
-    console.log(
+    console.warn(
       `[ACCOUNT_DELETION] User ${updatedUser.id} requested account deletion. ` +
         `Scheduled for: ${updatedUser.deletionScheduledFor?.toISOString()}`
     )

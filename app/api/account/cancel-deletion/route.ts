@@ -89,8 +89,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Log the cancellation for audit purposes
-    // eslint-disable-next-line no-console -- Audit logging for GDPR compliance
-    console.log(`[ACCOUNT_DELETION] User ${updatedUser.id} cancelled account deletion request.`)
+    console.warn(`[ACCOUNT_DELETION] User ${updatedUser.id} cancelled account deletion request.`)
 
     return NextResponse.json({
       success: true,

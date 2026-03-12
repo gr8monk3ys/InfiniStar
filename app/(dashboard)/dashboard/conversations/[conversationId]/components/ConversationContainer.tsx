@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useCallback, useEffect, useRef, useState } from "react"
+import React, { useCallback, useEffect, useEffectEvent, useReducer, useRef } from "react"
 import axios from "axios"
 import toast from "react-hot-toast"
 
@@ -22,6 +22,24 @@ interface ConversationContainerProps {
   characterName?: string | null
   characterAvatar?: string | null
   currentUserId: string | null
+}
+
+type MessageAction =
+  | { type: "append_if_missing"; message: FullMessageType }
+  | { type: "replace_message"; message: FullMessageType }
+
+function messagesReducer(state: FullMessageType[], action: MessageAction): FullMessageType[] {
+  switch (action.type) {
+    case "append_if_missing":
+      if (state.some((message) => message.id === action.message.id)) {
+        return state
+      }
+      return [...state, action.message]
+    case "replace_message":
+      return state.map((message) => (message.id === action.message.id ? action.message : message))
+    default:
+      return state
+  }
 }
 
 /**
@@ -54,7 +72,7 @@ const ConversationContainer: React.FC<ConversationContainerProps> = ({
   const seenDebounceRef = useRef<NodeJS.Timeout | null>(null)
 
   // Lift messages state to share with Form for suggestions
-  const [messages, setMessages] = useState<FullMessageType[]>(initialMessages)
+  const [messages, dispatchMessages] = useReducer(messagesReducer, initialMessages)
 
   // Subscribe to typing events for this conversation with AI typing state
   const { typingUsers, isAITyping, setAITyping } = useTypingIndicator({
@@ -93,15 +111,15 @@ const ConversationContainer: React.FC<ConversationContainerProps> = ({
     [regenerate, isRegenerating]
   )
 
-  // Mark messages as seen
-  useEffect(() => {
-    if (!csrfToken) return
+  const markConversationSeen = useEffectEvent(() => {
+    if (!csrfTokenRef.current) return
+
     axios.post(
       `/api/conversations/${conversationId}/seen`,
       {},
-      { headers: { "X-CSRF-Token": csrfToken } }
+      { headers: { "X-CSRF-Token": csrfTokenRef.current } }
     )
-  }, [conversationId, csrfToken])
+  })
 
   // Subscribe to Pusher events for real-time updates
   useEffect(() => {
@@ -114,47 +132,24 @@ const ConversationContainer: React.FC<ConversationContainerProps> = ({
       // Debounce the /seen call — avoids a network request per streaming token
       if (seenDebounceRef.current) clearTimeout(seenDebounceRef.current)
       seenDebounceRef.current = setTimeout(() => {
-        if (csrfTokenRef.current) {
-          axios.post(
-            `/api/conversations/${conversationId}/seen`,
-            {},
-            { headers: { "X-CSRF-Token": csrfTokenRef.current } }
-          )
-        }
+        markConversationSeen()
       }, 1000)
 
-      setMessages((current) => {
-        if (current.some((m) => m.id === message.id)) {
-          return current
-        }
-        return [...current, message]
-      })
+      dispatchMessages({ type: "append_if_missing", message })
 
       bottomRef?.current?.scrollIntoView()
     }
 
     const updateMessageHandler = (newMessage: FullMessageType) => {
-      setMessages((current) =>
-        current.map((currentMessage) =>
-          currentMessage.id === newMessage.id ? newMessage : currentMessage
-        )
-      )
+      dispatchMessages({ type: "replace_message", message: newMessage })
     }
 
     const deleteMessageHandler = (deletedMessage: FullMessageType) => {
-      setMessages((current) =>
-        current.map((currentMessage) =>
-          currentMessage.id === deletedMessage.id ? deletedMessage : currentMessage
-        )
-      )
+      dispatchMessages({ type: "replace_message", message: deletedMessage })
     }
 
     const reactionHandler = (reactedMessage: FullMessageType) => {
-      setMessages((current) =>
-        current.map((currentMessage) =>
-          currentMessage.id === reactedMessage.id ? reactedMessage : currentMessage
-        )
-      )
+      dispatchMessages({ type: "replace_message", message: reactedMessage })
     }
 
     pusherClient.bind("messages:new", messageHandler)
@@ -168,10 +163,13 @@ const ConversationContainer: React.FC<ConversationContainerProps> = ({
       pusherClient.unbind("message:update", updateMessageHandler)
       pusherClient.unbind("message:delete", deleteMessageHandler)
       pusherClient.unbind("message:reaction", reactionHandler)
+      if (seenDebounceRef.current) {
+        clearTimeout(seenDebounceRef.current)
+      }
     }
     // csrfToken is intentionally excluded — it is read via csrfTokenRef so handlers
     // never go stale and the subscription is not torn down when the token resolves.
-  }, [conversationId])
+  }, [conversationId, markConversationSeen])
 
   return (
     <>

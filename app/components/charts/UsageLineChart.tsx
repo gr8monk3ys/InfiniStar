@@ -2,18 +2,9 @@
 
 import { useMemo } from "react"
 import { format, parseISO } from "date-fns"
-import {
-  CartesianGrid,
-  Legend,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts"
 
 import { cn } from "@/app/lib/utils"
+import { ChartLoadingState, useRechartsModule } from "@/app/components/charts/useRechartsModule"
 
 interface DailyUsageData {
   date: string
@@ -28,6 +19,12 @@ interface UsageLineChartProps {
   metric?: "requests" | "tokens" | "cost"
 }
 
+interface UsageTooltipProps {
+  active?: boolean
+  payload?: Array<{ value: number; name: string; color: string }>
+  label?: string
+}
+
 const CHART_COLORS = {
   requests: "#8b5cf6", // purple
   tokens: "#06b6d4", // cyan
@@ -40,10 +37,40 @@ const METRIC_LABELS = {
   cost: "Cost ($)",
 }
 
+function formatUsageTooltipValue(value: number, name: string) {
+  if (name === "cost") {
+    return [`$${value.toFixed(4)}`, "Cost"]
+  }
+  if (name === "tokens") {
+    return [value.toLocaleString(), "Tokens"]
+  }
+  return [value.toString(), "Requests"]
+}
+
+function UsageTooltip({ active, payload, label }: UsageTooltipProps) {
+  if (!active || !payload || payload.length === 0) return null
+
+  return (
+    <div className="rounded-lg border border-border bg-background p-3 shadow-lg">
+      <p className="mb-2 text-sm font-medium text-foreground">{label}</p>
+      {payload.map((entry) => {
+        const [formattedValue, formattedName] = formatUsageTooltipValue(entry.value, entry.name)
+        return (
+          <p key={entry.name} className="text-sm" style={{ color: entry.color }}>
+            {formattedName}: {formattedValue}
+          </p>
+        )
+      })}
+    </div>
+  )
+}
+
 /**
  * Line chart showing daily AI usage trends over time
  */
 export function UsageLineChart({ data, className, metric = "requests" }: UsageLineChartProps) {
+  const recharts = useRechartsModule()
+
   // Process data for chart display
   const chartData = useMemo(() => {
     if (!data || data.length === 0) return []
@@ -56,44 +83,6 @@ export function UsageLineChart({ data, className, metric = "requests" }: UsageLi
       cost: item.cost / 100, // Convert cents to dollars
     }))
   }, [data])
-
-  // Custom tooltip formatter
-  const formatTooltipValue = (value: number, name: string) => {
-    if (name === "cost") {
-      return [`$${value.toFixed(4)}`, "Cost"]
-    }
-    if (name === "tokens") {
-      return [value.toLocaleString(), "Tokens"]
-    }
-    return [value.toString(), "Requests"]
-  }
-
-  // Custom tooltip component
-  const CustomTooltip = ({
-    active,
-    payload,
-    label,
-  }: {
-    active?: boolean
-    payload?: Array<{ value: number; name: string; color: string }>
-    label?: string
-  }) => {
-    if (!active || !payload || payload.length === 0) return null
-
-    return (
-      <div className="rounded-lg border border-border bg-background p-3 shadow-lg">
-        <p className="mb-2 text-sm font-medium text-foreground">{label}</p>
-        {payload.map((entry) => {
-          const [formattedValue, formattedName] = formatTooltipValue(entry.value, entry.name)
-          return (
-            <p key={entry.name} className="text-sm" style={{ color: entry.color }}>
-              {formattedName}: {formattedValue}
-            </p>
-          )
-        })}
-      </div>
-    )
-  }
 
   if (!chartData || chartData.length === 0) {
     return (
@@ -111,6 +100,18 @@ export function UsageLineChart({ data, className, metric = "requests" }: UsageLi
       </div>
     )
   }
+
+  if (!recharts) {
+    return (
+      <ChartLoadingState
+        className={cn("h-[300px] w-full", className)}
+        ariaLabel="Loading usage trend chart"
+      />
+    )
+  }
+
+  const { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } =
+    recharts
 
   return (
     <div
@@ -141,7 +142,7 @@ export function UsageLineChart({ data, className, metric = "requests" }: UsageLi
                   : value.toString()
             }
           />
-          <Tooltip content={<CustomTooltip />} />
+          <Tooltip content={<UsageTooltip />} />
           <Legend
             wrapperStyle={{ paddingTop: "10px" }}
             formatter={(value) => METRIC_LABELS[value as keyof typeof METRIC_LABELS] || value}

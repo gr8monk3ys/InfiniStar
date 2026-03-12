@@ -1,18 +1,9 @@
 "use client"
 
 import { useMemo } from "react"
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts"
 
 import { cn } from "@/app/lib/utils"
+import { ChartLoadingState, useRechartsModule } from "@/app/components/charts/useRechartsModule"
 
 interface PersonalityUsageData {
   personality: string
@@ -24,6 +15,21 @@ interface PersonalityBarChartProps {
   data: PersonalityUsageData[]
   className?: string
   metric?: "count" | "tokens"
+}
+
+interface PersonalityChartDatum {
+  name: string
+  shortName: string
+  value: number
+  color: string
+}
+
+interface PersonalityTooltipProps {
+  active?: boolean
+  payload?: Array<{
+    payload: { name: string; value: number }
+  }>
+  metric: NonNullable<PersonalityBarChartProps["metric"]>
 }
 
 // Colors for different personalities
@@ -40,6 +46,21 @@ const PERSONALITY_COLORS: Record<string, string> = {
 
 const DEFAULT_COLOR = "#8b5cf6"
 
+function PersonalityTooltip({ active, payload, metric }: PersonalityTooltipProps) {
+  if (!active || !payload || payload.length === 0) return null
+
+  const item = payload[0].payload
+  return (
+    <div className="rounded-lg border border-border bg-background p-3 shadow-lg">
+      <p className="mb-1 text-sm font-medium text-foreground">{item.name}</p>
+      <p className="text-sm text-muted-foreground">
+        {metric === "count" ? "Messages" : "Tokens"}:{" "}
+        <span className="font-medium text-foreground">{item.value.toLocaleString()}</span>
+      </p>
+    </div>
+  )
+}
+
 /**
  * Bar chart showing AI usage by personality type
  */
@@ -48,12 +69,14 @@ export function PersonalityBarChart({
   className,
   metric = "count",
 }: PersonalityBarChartProps) {
+  const recharts = useRechartsModule()
+
   // Process data for chart display
   const chartData = useMemo(() => {
     if (!data || data.length === 0) return []
 
     return data
-      .map((item) => ({
+      .map<PersonalityChartDatum>((item) => ({
         name: item.personality,
         shortName:
           item.personality.length > 15 ? item.personality.slice(0, 12) + "..." : item.personality,
@@ -62,30 +85,6 @@ export function PersonalityBarChart({
       }))
       .slice(0, 8) // Limit to top 8 personalities
   }, [data, metric])
-
-  // Custom tooltip component
-  const CustomTooltip = ({
-    active,
-    payload,
-  }: {
-    active?: boolean
-    payload?: Array<{
-      payload: { name: string; value: number }
-    }>
-  }) => {
-    if (!active || !payload || payload.length === 0) return null
-
-    const item = payload[0].payload
-    return (
-      <div className="rounded-lg border border-border bg-background p-3 shadow-lg">
-        <p className="mb-1 text-sm font-medium text-foreground">{item.name}</p>
-        <p className="text-sm text-muted-foreground">
-          {metric === "count" ? "Messages" : "Tokens"}:{" "}
-          <span className="font-medium text-foreground">{item.value.toLocaleString()}</span>
-        </p>
-      </div>
-    )
-  }
 
   if (!chartData || chartData.length === 0) {
     return (
@@ -101,6 +100,18 @@ export function PersonalityBarChart({
       </div>
     )
   }
+
+  if (!recharts) {
+    return (
+      <ChartLoadingState
+        className={cn("h-[300px] w-full", className)}
+        ariaLabel="Loading personality usage chart"
+      />
+    )
+  }
+
+  const { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } =
+    recharts
 
   return (
     <div
@@ -142,7 +153,7 @@ export function PersonalityBarChart({
             width={75}
           />
           <Tooltip
-            content={<CustomTooltip />}
+            content={<PersonalityTooltip metric={metric} />}
             cursor={{ fill: "hsl(var(--muted))", opacity: 0.5 }}
           />
           <Bar dataKey="value" radius={[0, 4, 4, 0]} maxBarSize={30}>

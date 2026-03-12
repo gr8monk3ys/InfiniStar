@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react"
+import { createContext, useCallback, useContext, useMemo, useReducer, type ReactNode } from "react"
 import dynamic from "next/dynamic"
 import { useRouter } from "next/navigation"
 import { useTheme } from "next-themes"
@@ -18,6 +18,14 @@ import { useGlobalSearchContext } from "./GlobalSearchProvider"
 // Lazy-load the shortcuts help modal -- only shown on user action (Cmd+/)
 const KeyboardShortcutsModal = dynamic(
   () => import("@/app/components/modals/KeyboardShortcutsModal"),
+  {
+    ssr: false,
+    loading: () => null,
+  }
+)
+
+const PersonalitySelectionModal = dynamic(
+  () => import("@/app/components/modals/PersonalitySelectionModal"),
   {
     ssr: false,
     loading: () => null,
@@ -53,8 +61,6 @@ interface KeyboardShortcutsContextType {
   setConversationCount: (count: number) => void
   /** Open a new AI conversation modal */
   openNewAIConversation: () => void
-  /** Set the callback for opening new AI conversation */
-  setOpenNewAIConversation: (callback: () => void) => void
   /** Whether shortcuts are globally enabled */
   shortcutsEnabled: boolean
   /** Toggle global shortcuts enabled state */
@@ -73,6 +79,8 @@ interface KeyboardShortcutsContextType {
   messageContainerRef: React.RefObject<HTMLDivElement> | null
   /** Set the message container ref */
   setMessageContainerRef: (ref: React.RefObject<HTMLDivElement>) => void
+  /** Set the href that should be opened for the currently keyboard-selected conversation */
+  setSelectedConversationHref: (href: string | null) => void
 }
 
 const KeyboardShortcutsContext = createContext<KeyboardShortcutsContextType | null>(null)
@@ -98,6 +106,104 @@ interface KeyboardShortcutsProviderProps {
   children: ReactNode
 }
 
+interface KeyboardShortcutsState {
+  isHelpOpen: boolean
+  selectedConversationIndex: number
+  conversationCount: number
+  isNewAIConversationOpen: boolean
+  messageInputRef: React.RefObject<HTMLTextAreaElement> | null
+  messageContainerRef: React.RefObject<HTMLDivElement> | null
+  selectedConversationHref: string | null
+}
+
+type KeyboardShortcutsAction =
+  | { type: "open_help" }
+  | { type: "close_help" }
+  | { type: "toggle_help" }
+  | { type: "open_new_ai_conversation" }
+  | { type: "close_new_ai_conversation" }
+  | { type: "set_selected_conversation_index"; index: number }
+  | { type: "set_conversation_count"; count: number }
+  | { type: "select_next_conversation" }
+  | { type: "select_prev_conversation" }
+  | { type: "set_message_input_ref"; ref: React.RefObject<HTMLTextAreaElement> }
+  | { type: "set_message_container_ref"; ref: React.RefObject<HTMLDivElement> }
+  | { type: "set_selected_conversation_href"; href: string | null }
+
+const initialKeyboardShortcutsState: KeyboardShortcutsState = {
+  isHelpOpen: false,
+  selectedConversationIndex: -1,
+  conversationCount: 0,
+  isNewAIConversationOpen: false,
+  messageInputRef: null,
+  messageContainerRef: null,
+  selectedConversationHref: null,
+}
+
+function clampConversationIndex(index: number, count: number) {
+  if (count <= 0) {
+    return -1
+  }
+
+  return Math.min(Math.max(index, 0), count - 1)
+}
+
+function keyboardShortcutsReducer(
+  state: KeyboardShortcutsState,
+  action: KeyboardShortcutsAction
+): KeyboardShortcutsState {
+  switch (action.type) {
+    case "open_help":
+      return { ...state, isHelpOpen: true }
+    case "close_help":
+      return { ...state, isHelpOpen: false }
+    case "toggle_help":
+      return { ...state, isHelpOpen: !state.isHelpOpen }
+    case "open_new_ai_conversation":
+      return { ...state, isNewAIConversationOpen: true }
+    case "close_new_ai_conversation":
+      return { ...state, isNewAIConversationOpen: false }
+    case "set_selected_conversation_index":
+      return {
+        ...state,
+        selectedConversationIndex: clampConversationIndex(action.index, state.conversationCount),
+      }
+    case "set_conversation_count":
+      return {
+        ...state,
+        conversationCount: action.count,
+        selectedConversationIndex: clampConversationIndex(
+          state.selectedConversationIndex,
+          action.count
+        ),
+      }
+    case "select_next_conversation":
+      return {
+        ...state,
+        selectedConversationIndex: clampConversationIndex(
+          state.selectedConversationIndex + 1,
+          state.conversationCount
+        ),
+      }
+    case "select_prev_conversation":
+      return {
+        ...state,
+        selectedConversationIndex: clampConversationIndex(
+          state.selectedConversationIndex - 1,
+          state.conversationCount
+        ),
+      }
+    case "set_message_input_ref":
+      return { ...state, messageInputRef: action.ref }
+    case "set_message_container_ref":
+      return { ...state, messageContainerRef: action.ref }
+    case "set_selected_conversation_href":
+      return { ...state, selectedConversationHref: action.href }
+    default:
+      return state
+  }
+}
+
 /**
  * KeyboardShortcutsProvider
  *
@@ -116,39 +222,38 @@ interface KeyboardShortcutsProviderProps {
 export function KeyboardShortcutsProvider({ children }: KeyboardShortcutsProviderProps) {
   const router = useRouter()
   const { setTheme, resolvedTheme } = useTheme()
-
-  // Modal state
-  const [isHelpOpen, setIsHelpOpen] = useState(false)
-
-  // Navigation state
-  const [selectedConversationIndex, setSelectedConversationIndex] = useState(-1)
-  const [conversationCount, setConversationCount] = useState(0)
-
-  // Callback refs
-  const [openNewAIConversationCallback, setOpenNewAIConversationCallback] = useState<() => void>(
-    () => () => {}
-  )
-  const [messageInputRef, setMessageInputRef] =
-    useState<React.RefObject<HTMLTextAreaElement> | null>(null)
-  const [messageContainerRef, setMessageContainerRef] =
-    useState<React.RefObject<HTMLDivElement> | null>(null)
+  const [state, dispatch] = useReducer(keyboardShortcutsReducer, initialKeyboardShortcutsState)
 
   // Get global search context
   const searchContext = useGlobalSearchContext()
 
   // Modal controls
-  const openHelp = useCallback(() => setIsHelpOpen(true), [])
-  const closeHelp = useCallback(() => setIsHelpOpen(false), [])
-  const toggleHelp = useCallback(() => setIsHelpOpen((prev) => !prev), [])
-
-  // Callback setters
-  const setOpenNewAIConversation = useCallback((callback: () => void) => {
-    setOpenNewAIConversationCallback(() => callback)
+  const openHelp = useCallback(() => dispatch({ type: "open_help" }), [])
+  const closeHelp = useCallback(() => dispatch({ type: "close_help" }), [])
+  const toggleHelp = useCallback(() => dispatch({ type: "toggle_help" }), [])
+  const openNewAIConversation = useCallback(
+    () => dispatch({ type: "open_new_ai_conversation" }),
+    []
+  )
+  const closeNewAIConversation = useCallback(
+    () => dispatch({ type: "close_new_ai_conversation" }),
+    []
+  )
+  const setSelectedConversationIndex = useCallback((index: number) => {
+    dispatch({ type: "set_selected_conversation_index", index })
   }, [])
-
-  const openNewAIConversation = useCallback(() => {
-    openNewAIConversationCallback()
-  }, [openNewAIConversationCallback])
+  const setConversationCount = useCallback((count: number) => {
+    dispatch({ type: "set_conversation_count", count })
+  }, [])
+  const setMessageInputRef = useCallback((ref: React.RefObject<HTMLTextAreaElement>) => {
+    dispatch({ type: "set_message_input_ref", ref })
+  }, [])
+  const setMessageContainerRef = useCallback((ref: React.RefObject<HTMLDivElement>) => {
+    dispatch({ type: "set_message_container_ref", ref })
+  }, [])
+  const setSelectedConversationHref = useCallback((href: string | null) => {
+    dispatch({ type: "set_selected_conversation_href", href })
+  }, [])
 
   // Define shortcut handlers
   const handlers = useMemo<ShortcutHandler[]>(
@@ -169,10 +274,12 @@ export function KeyboardShortcutsProvider({ children }: KeyboardShortcutsProvide
       {
         id: "closeModal",
         action: () => {
-          if (isHelpOpen) {
+          if (state.isHelpOpen) {
             closeHelp()
           } else if (searchContext.isOpen) {
             searchContext.close()
+          } else if (state.isNewAIConversationOpen) {
+            closeNewAIConversation()
           }
         },
       },
@@ -196,16 +303,18 @@ export function KeyboardShortcutsProvider({ children }: KeyboardShortcutsProvide
       },
       {
         id: "nextConversation",
-        action: () => {
-          if (conversationCount > 0) {
-            setSelectedConversationIndex((prev) => Math.min(conversationCount - 1, prev + 1))
-          }
-        },
+        action: () => dispatch({ type: "select_next_conversation" }),
       },
       {
         id: "prevConversation",
+        action: () => dispatch({ type: "select_prev_conversation" }),
+      },
+      {
+        id: "openConversation",
         action: () => {
-          setSelectedConversationIndex((prev) => Math.max(0, prev - 1))
+          if (state.selectedConversationHref) {
+            router.push(state.selectedConversationHref)
+          }
         },
       },
 
@@ -213,14 +322,14 @@ export function KeyboardShortcutsProvider({ children }: KeyboardShortcutsProvide
       {
         id: "focusInput",
         action: () => {
-          messageInputRef?.current?.focus()
+          state.messageInputRef?.current?.focus()
         },
       },
       {
         id: "scrollToBottom",
         action: () => {
-          messageContainerRef?.current?.scrollTo({
-            top: messageContainerRef.current.scrollHeight,
+          state.messageContainerRef?.current?.scrollTo({
+            top: state.messageContainerRef.current.scrollHeight,
             behavior: "smooth",
           })
         },
@@ -229,15 +338,17 @@ export function KeyboardShortcutsProvider({ children }: KeyboardShortcutsProvide
     [
       searchContext,
       toggleHelp,
-      isHelpOpen,
+      state.isHelpOpen,
       closeHelp,
+      state.isNewAIConversationOpen,
+      closeNewAIConversation,
       openNewAIConversation,
-      conversationCount,
+      state.selectedConversationHref,
       router,
       setTheme,
       resolvedTheme,
-      messageInputRef,
-      messageContainerRef,
+      state.messageInputRef,
+      state.messageContainerRef,
     ]
   )
 
@@ -252,59 +363,65 @@ export function KeyboardShortcutsProvider({ children }: KeyboardShortcutsProvide
     modifierKey,
   } = useKeyboardShortcuts({
     handlers,
-    enabled: !isHelpOpen,
+    enabled: !state.isHelpOpen,
   })
 
   // Context value
   const contextValue = useMemo<KeyboardShortcutsContextType>(
     () => ({
-      isHelpOpen,
+      isHelpOpen: state.isHelpOpen,
       openHelp,
       closeHelp,
       toggleHelp,
       shortcuts,
       byCategory,
-      selectedConversationIndex,
+      selectedConversationIndex: state.selectedConversationIndex,
       setSelectedConversationIndex,
-      conversationCount,
+      conversationCount: state.conversationCount,
       setConversationCount,
       openNewAIConversation,
-      setOpenNewAIConversation,
       shortcutsEnabled,
       setShortcutsEnabled,
       getBinding,
       formatBinding,
       modifierKey,
-      messageInputRef,
+      messageInputRef: state.messageInputRef,
       setMessageInputRef,
-      messageContainerRef,
+      messageContainerRef: state.messageContainerRef,
       setMessageContainerRef,
+      setSelectedConversationHref,
     }),
     [
-      isHelpOpen,
+      state.isHelpOpen,
       openHelp,
       closeHelp,
       toggleHelp,
       shortcuts,
       byCategory,
-      selectedConversationIndex,
-      conversationCount,
+      state.selectedConversationIndex,
+      state.conversationCount,
       openNewAIConversation,
-      setOpenNewAIConversation,
       shortcutsEnabled,
       setShortcutsEnabled,
       getBinding,
       formatBinding,
       modifierKey,
-      messageInputRef,
-      messageContainerRef,
+      state.messageInputRef,
+      state.messageContainerRef,
+      setSelectedConversationHref,
     ]
   )
 
   return (
     <KeyboardShortcutsContext.Provider value={contextValue}>
       {children}
-      {isHelpOpen && <KeyboardShortcutsModal isOpen={isHelpOpen} onClose={closeHelp} />}
+      {state.isHelpOpen && <KeyboardShortcutsModal isOpen={state.isHelpOpen} onClose={closeHelp} />}
+      {state.isNewAIConversationOpen && (
+        <PersonalitySelectionModal
+          isOpen={state.isNewAIConversationOpen}
+          onClose={closeNewAIConversation}
+        />
+      )}
     </KeyboardShortcutsContext.Provider>
   )
 }

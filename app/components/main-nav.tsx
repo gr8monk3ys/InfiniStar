@@ -14,13 +14,13 @@ export function MainNav({ items }: MainNavProps) {
   return (
     <div className="flex gap-6 md:gap-10">
       <Link href="/" className="flex items-center space-x-2">
-        <Icons.logo className="size-6" />
+        <Icons.logo className="size-6" aria-hidden="true" />
         <span className="font-heading gradient-text inline-block text-lg font-bold">
           {siteConfig.name}
         </span>
       </Link>
       {items?.length ? (
-        <nav className="flex gap-6">
+        <nav className="flex gap-6" aria-label="Primary">
           {items?.map(
             (item) =>
               item.href && (

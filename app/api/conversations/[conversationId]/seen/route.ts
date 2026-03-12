@@ -1,9 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server"
 
+import { markConversationSeenByUserId } from "@/app/lib/conversation-seen"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
-import prisma from "@/app/lib/prismadb"
-import { pusherServer } from "@/app/lib/pusher"
-import { getPusherConversationChannel, getPusherUserChannel } from "@/app/lib/pusher-channels"
 import { apiLimiter } from "@/app/lib/rate-limit"
 import getCurrentUser from "@/app/actions/getCurrentUser"
 
@@ -32,78 +30,19 @@ export async function POST(request: NextRequest, { params }: { params: Promise<I
       return NextResponse.json({ error: "Too many requests" }, { status: 429 })
     }
 
-    // Verify user is a participant in this conversation
-    const conversation = await prisma.conversation.findFirst({
-      where: {
-        id: conversationId,
-        users: {
-          some: {
-            id: currentUser.id,
-          },
-        },
-      },
-      select: { id: true },
+    const result = await markConversationSeenByUserId({
+      conversationId: conversationId ?? "",
+      currentUserId: currentUser.id,
     })
 
-    if (!conversation) {
+    if (!result.foundConversation) {
       return NextResponse.json(
         { error: "Conversation not found or not authorized" },
         { status: 404 }
       )
     }
 
-    // Fetch only the last message directly — avoids loading all messages and the
-    // non-deterministic array[length-1] pattern that exists without an orderBy.
-    const lastMessage = await prisma.message.findFirst({
-      where: { conversationId },
-      orderBy: { createdAt: "desc" },
-      select: {
-        id: true,
-        seen: { select: { id: true } },
-      },
-    })
-
-    if (!lastMessage) {
-      return NextResponse.json(conversation)
-    }
-
-    // Update seen of last message
-    const updatedMessage = await prisma.message.update({
-      where: {
-        id: lastMessage.id,
-      },
-      include: {
-        sender: true,
-        seen: true,
-      },
-      data: {
-        seen: {
-          connect: {
-            id: currentUser.id,
-          },
-        },
-      },
-    })
-
-    // Update all connections with new seen
-    await pusherServer.trigger(getPusherUserChannel(currentUser.id), "conversation:update", {
-      id: conversationId,
-      messages: [updatedMessage],
-    })
-
-    // If user has already seen the message, no need to go further
-    if (lastMessage.seen.some((user: { id: string }) => user.id === currentUser.id)) {
-      return NextResponse.json(conversation)
-    }
-
-    // Update last message seen
-    await pusherServer.trigger(
-      getPusherConversationChannel(conversationId!),
-      "message:update",
-      updatedMessage
-    )
-
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ success: true, updated: result.updated })
   } catch (error) {
     console.error("CONVERSATION_SEEN_ERROR:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })

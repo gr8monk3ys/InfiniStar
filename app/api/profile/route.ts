@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server"
+import { clerkClient } from "@clerk/nextjs/server"
 import { z } from "zod"
 
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
@@ -20,6 +21,11 @@ const updateProfileSchema = z.object({
     .or(z.literal("")),
 })
 
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, "Current password is required"),
+  newPassword: z.string().min(8, "Password must be at least 8 characters"),
+})
+
 // PATCH /api/profile - Update user profile
 export async function PATCH(request: NextRequest) {
   try {
@@ -35,6 +41,50 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json()
+    const shouldChangePassword = "currentPassword" in body || "newPassword" in body
+
+    if (shouldChangePassword) {
+      const validation = changePasswordSchema.safeParse(body)
+
+      if (!validation.success) {
+        return NextResponse.json({ error: validation.error.issues[0].message }, { status: 400 })
+      }
+
+      if (!currentUser.clerkId) {
+        return NextResponse.json(
+          { error: "Password changes are unavailable for this account" },
+          { status: 400 }
+        )
+      }
+
+      const { currentPassword, newPassword } = validation.data
+      const clerk = await clerkClient()
+      const clerkUser = await clerk.users.getUser(currentUser.clerkId)
+
+      if (!clerkUser.passwordEnabled) {
+        return NextResponse.json(
+          { error: "Set up a password on your account before changing it." },
+          { status: 400 }
+        )
+      }
+
+      try {
+        await clerk.users.verifyPassword({
+          userId: currentUser.clerkId,
+          password: currentPassword,
+        })
+      } catch {
+        return NextResponse.json({ error: "Current password is incorrect" }, { status: 400 })
+      }
+
+      await clerk.users.updateUser(currentUser.clerkId, {
+        password: newPassword,
+        signOutOfOtherSessions: false,
+      })
+
+      return NextResponse.json({ message: "Password changed successfully" })
+    }
+
     const validation = updateProfileSchema.safeParse(body)
 
     if (!validation.success) {
@@ -97,6 +147,7 @@ export async function GET(_request: NextRequest) {
       where: { id: currentUser.id },
       select: {
         id: true,
+        clerkId: true,
         name: true,
         email: true,
         image: true,
@@ -113,8 +164,23 @@ export async function GET(_request: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
 
+    const clerkUser = user.clerkId ? await (await clerkClient()).users.getUser(user.clerkId) : null
+
     return NextResponse.json({
-      user,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        image: user.image,
+        bio: user.bio,
+        location: user.location,
+        website: user.website,
+        emailVerified: user.emailVerified,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      },
+      hasPassword: clerkUser?.passwordEnabled ?? false,
+      twoFactorEnabled: clerkUser?.twoFactorEnabled ?? false,
     })
   } catch (error: unknown) {
     console.error("PROFILE_GET_ERROR", error)

@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useMemo, useReducer } from "react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import axios, { isAxiosError } from "axios"
@@ -8,35 +8,77 @@ import toast from "react-hot-toast"
 import { HiMagnifyingGlass, HiXMark } from "react-icons/hi2"
 
 import { Button } from "@/app/components/ui/button"
+import type { SceneCharacterOption } from "@/app/(dashboard)/dashboard/conversations/types"
 import { useCsrfToken, withCsrfHeader } from "@/app/hooks/useCsrfToken"
 
 import Modal from "./Modal"
 
-interface SceneCharacter {
-  id: string
-  name: string
-  tagline: string | null
-  avatarUrl: string | null
-}
-
 interface SceneChatModalProps {
   isOpen?: boolean
   onClose: () => void
+  characters: SceneCharacterOption[]
 }
 
 const MAX_SCENE_CHARACTERS = 6
 
-const SceneChatModal: React.FC<SceneChatModalProps> = ({ isOpen, onClose }) => {
+interface SceneChatState {
+  isSubmitting: boolean
+  searchQuery: string
+  sceneName: string
+  sceneScenario: string
+  selectedCharacterIds: string[]
+}
+
+type SceneChatAction =
+  | { type: "reset" }
+  | { type: "set_submitting"; value: boolean }
+  | { type: "set_search_query"; value: string }
+  | { type: "set_scene_name"; value: string }
+  | { type: "set_scene_scenario"; value: string }
+  | { type: "toggle_character"; characterId: string }
+
+const initialSceneChatState: SceneChatState = {
+  isSubmitting: false,
+  searchQuery: "",
+  sceneName: "",
+  sceneScenario: "",
+  selectedCharacterIds: [],
+}
+
+function sceneChatReducer(state: SceneChatState, action: SceneChatAction): SceneChatState {
+  switch (action.type) {
+    case "reset":
+      return initialSceneChatState
+    case "set_submitting":
+      return { ...state, isSubmitting: action.value }
+    case "set_search_query":
+      return { ...state, searchQuery: action.value }
+    case "set_scene_name":
+      return { ...state, sceneName: action.value }
+    case "set_scene_scenario":
+      return { ...state, sceneScenario: action.value }
+    case "toggle_character":
+      return state.selectedCharacterIds.includes(action.characterId)
+        ? {
+            ...state,
+            selectedCharacterIds: state.selectedCharacterIds.filter(
+              (characterId) => characterId !== action.characterId
+            ),
+          }
+        : {
+            ...state,
+            selectedCharacterIds: [...state.selectedCharacterIds, action.characterId],
+          }
+    default:
+      return state
+  }
+}
+
+const SceneChatModal: React.FC<SceneChatModalProps> = ({ isOpen, onClose, characters }) => {
   const router = useRouter()
   const { token } = useCsrfToken()
-
-  const [isLoading, setIsLoading] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [characters, setCharacters] = useState<SceneCharacter[]>([])
-  const [searchQuery, setSearchQuery] = useState("")
-  const [sceneName, setSceneName] = useState("")
-  const [sceneScenario, setSceneScenario] = useState("")
-  const [selectedCharacterIds, setSelectedCharacterIds] = useState<string[]>([])
+  const [state, dispatch] = useReducer(sceneChatReducer, initialSceneChatState)
+  const { isSubmitting, searchQuery, sceneName, sceneScenario, selectedCharacterIds } = state
 
   const selectedCharacters = useMemo(
     () => characters.filter((character) => selectedCharacterIds.includes(character.id)),
@@ -58,57 +100,22 @@ const SceneChatModal: React.FC<SceneChatModalProps> = ({ isOpen, onClose }) => {
   }, [characters, searchQuery])
 
   const resetForm = useCallback(() => {
-    setSearchQuery("")
-    setSceneName("")
-    setSceneScenario("")
-    setSelectedCharacterIds([])
+    dispatch({ type: "reset" })
   }, [])
 
-  useEffect(() => {
-    if (!isOpen) {
-      return
-    }
+  const toggleCharacter = useCallback(
+    (characterId: string) => {
+      const isSelected = selectedCharacterIds.includes(characterId)
 
-    let ignore = false
-    setIsLoading(true)
-
-    axios
-      .get("/api/characters?sort=popular&limit=50")
-      .then((response: { data: { characters: SceneCharacter[] } }) => {
-        if (!ignore) {
-          setCharacters(response.data.characters || [])
-        }
-      })
-      .catch(() => {
-        if (!ignore) {
-          toast.error("Failed to load characters")
-        }
-      })
-      .finally(() => {
-        if (!ignore) {
-          setIsLoading(false)
-        }
-      })
-
-    return () => {
-      ignore = true
-    }
-  }, [isOpen])
-
-  const toggleCharacter = useCallback((characterId: string) => {
-    setSelectedCharacterIds((current) => {
-      if (current.includes(characterId)) {
-        return current.filter((id) => id !== characterId)
-      }
-
-      if (current.length >= MAX_SCENE_CHARACTERS) {
+      if (!isSelected && selectedCharacterIds.length >= MAX_SCENE_CHARACTERS) {
         toast.error(`You can select up to ${MAX_SCENE_CHARACTERS} characters`)
-        return current
+        return
       }
 
-      return [...current, characterId]
-    })
-  }, [])
+      dispatch({ type: "toggle_character", characterId })
+    },
+    [selectedCharacterIds]
+  )
 
   const handleSubmit = useCallback(
     async (event: React.FormEvent<HTMLFormElement>) => {
@@ -124,7 +131,7 @@ const SceneChatModal: React.FC<SceneChatModalProps> = ({ isOpen, onClose }) => {
         return
       }
 
-      setIsSubmitting(true)
+      dispatch({ type: "set_submitting", value: true })
       try {
         const response = await axios.post(
           "/api/conversations",
@@ -153,7 +160,7 @@ const SceneChatModal: React.FC<SceneChatModalProps> = ({ isOpen, onClose }) => {
             : "Failed to create scene chat"
         toast.error(message)
       } finally {
-        setIsSubmitting(false)
+        dispatch({ type: "set_submitting", value: false })
       }
     },
     [token, selectedCharacterIds, sceneName, sceneScenario, resetForm, onClose, router]
@@ -185,7 +192,7 @@ const SceneChatModal: React.FC<SceneChatModalProps> = ({ isOpen, onClose }) => {
             <input
               id="sceneName"
               value={sceneName}
-              onChange={(event) => setSceneName(event.target.value)}
+              onChange={(event) => dispatch({ type: "set_scene_name", value: event.target.value })}
               maxLength={100}
               disabled={isSubmitting}
               placeholder="e.g. Space Mission Briefing"
@@ -201,7 +208,9 @@ const SceneChatModal: React.FC<SceneChatModalProps> = ({ isOpen, onClose }) => {
               id="sceneScenario"
               rows={3}
               value={sceneScenario}
-              onChange={(event) => setSceneScenario(event.target.value)}
+              onChange={(event) =>
+                dispatch({ type: "set_scene_scenario", value: event.target.value })
+              }
               maxLength={1000}
               disabled={isSubmitting}
               placeholder="e.g. The team is planning a rescue before sunrise."
@@ -214,7 +223,12 @@ const SceneChatModal: React.FC<SceneChatModalProps> = ({ isOpen, onClose }) => {
 
           <div>
             <div className="mb-2 flex items-center justify-between">
-              <label className="text-sm font-medium leading-6 text-gray-900">Characters</label>
+              <label
+                htmlFor="scene-character-search"
+                className="text-sm font-medium leading-6 text-gray-900"
+              >
+                Characters
+              </label>
               <span className="text-xs text-gray-500">
                 {selectedCharacterIds.length}/{MAX_SCENE_CHARACTERS} selected
               </span>
@@ -223,9 +237,12 @@ const SceneChatModal: React.FC<SceneChatModalProps> = ({ isOpen, onClose }) => {
             <div className="relative">
               <HiMagnifyingGlass className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
               <input
+                id="scene-character-search"
                 type="text"
                 value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
+                onChange={(event) =>
+                  dispatch({ type: "set_search_query", value: event.target.value })
+                }
                 placeholder="Search characters..."
                 className="block w-full rounded-md border border-gray-300 py-2 pl-9 pr-3 text-sm text-gray-900 shadow-sm focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
               />
@@ -248,9 +265,7 @@ const SceneChatModal: React.FC<SceneChatModalProps> = ({ isOpen, onClose }) => {
             )}
 
             <div className="mt-3 max-h-64 space-y-2 overflow-y-auto rounded-md border border-gray-200 p-2">
-              {isLoading ? (
-                <div className="py-8 text-center text-sm text-gray-500">Loading characters...</div>
-              ) : filteredCharacters.length === 0 ? (
+              {filteredCharacters.length === 0 ? (
                 <div className="py-8 text-center text-sm text-gray-500">No characters found</div>
               ) : (
                 filteredCharacters.map((character) => {
@@ -273,6 +288,7 @@ const SceneChatModal: React.FC<SceneChatModalProps> = ({ isOpen, onClose }) => {
                             src={character.avatarUrl}
                             alt={character.name}
                             fill
+                            sizes="36px"
                             className="object-cover"
                           />
                         </div>

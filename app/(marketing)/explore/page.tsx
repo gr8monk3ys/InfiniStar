@@ -10,10 +10,14 @@ export const metadata = {
   title: "Explore Characters | InfiniStar",
   description:
     "Discover community-created AI characters. Chat with anime heroes, fantasy companions, helpful assistants, and more.",
+  alternates: {
+    canonical: "/explore",
+  },
   openGraph: {
     title: "Explore Characters | InfiniStar",
     description:
       "Discover community-created AI characters. Chat with anime heroes, fantasy companions, helpful assistants, and more.",
+    url: "/explore",
   },
 }
 
@@ -63,18 +67,25 @@ interface ExploreCharacter {
   } | null
 }
 
-export default async function ExplorePage() {
+interface ExplorePageProps {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>
+}
+
+function getFirstSearchParam(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value
+}
+
+export default async function ExplorePage({ searchParams }: ExplorePageProps) {
+  const resolvedSearchParams = (await searchParams) ?? {}
   const { userId } = await auth()
 
   // Look up the Prisma user if logged in
-  let currentUser:
-    | {
-        id: string
-        isAdult: boolean
-        nsfwEnabled: boolean
-        adultConfirmedAt: Date | null
-      }
-    | null = null
+  let currentUser: {
+    id: string
+    isAdult: boolean
+    nsfwEnabled: boolean
+    adultConfirmedAt: Date | null
+  } | null = null
 
   if (userId) {
     try {
@@ -143,10 +154,19 @@ export default async function ExplorePage() {
     : allRaw.slice(0, 24)
 
   const likedIds = likedRecords.map((r: { characterId: string }) => r.characterId)
+  const initialCategory = getFirstSearchParam(resolvedSearchParams.category)
+  const initialSearchQuery = getFirstSearchParam(resolvedSearchParams.q)
 
   return (
     <section className="container py-8 md:py-12 lg:py-16">
-      <ExploreClient featured={featured} trending={trending} all={all} likedIds={likedIds} />
+      <ExploreClient
+        featured={featured}
+        trending={trending}
+        all={all}
+        likedIds={likedIds}
+        initialCategory={initialCategory}
+        initialSearchQuery={initialSearchQuery}
+      />
     </section>
   )
 }

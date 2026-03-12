@@ -65,14 +65,14 @@ export function AuthShell({ eyebrow, title, description, children }: AuthShellPr
   return (
     <section className="relative overflow-hidden">
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="via-sky-500/12 absolute left-1/2 top-0 h-[32rem] w-[32rem] -translate-x-1/2 rounded-full bg-gradient-to-br from-violet-600/15 to-cyan-400/10 blur-[140px]" />
-        <div className="absolute bottom-0 left-0 h-72 w-72 rounded-full bg-primary/10 blur-[120px]" />
+        <div className="via-sky-500/12 absolute left-1/2 top-0 h-[32rem] w-[32rem] -translate-x-1/2 rounded-full bg-gradient-to-br from-violet-600/15 to-cyan-400/10 blur-[96px]" />
+        <div className="absolute bottom-0 left-0 h-72 w-72 rounded-full bg-primary/10 blur-[80px]" />
       </div>
 
       <div className="container relative grid min-h-[calc(100vh-4rem)] max-w-6xl gap-10 py-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center lg:py-16">
         <div className="max-w-2xl space-y-8">
           <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-sm text-primary">
-            <HiOutlineSparkles className="size-4" />
+            <HiOutlineSparkles className="size-4" aria-hidden="true" />
             <span>Creator-built AI characters</span>
           </div>
 
@@ -80,10 +80,10 @@ export function AuthShell({ eyebrow, title, description, children }: AuthShellPr
             <p className="text-sm font-medium uppercase tracking-[0.24em] text-muted-foreground">
               {eyebrow}
             </p>
-            <h1 className="font-heading max-w-xl text-4xl font-bold tracking-tight sm:text-5xl">
+            <h1 className="font-heading max-w-xl text-4xl font-bold tracking-tight [text-wrap:balance] sm:text-5xl">
               {title}
             </h1>
-            <p className="max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg">
+            <p className="max-w-xl text-base leading-relaxed text-muted-foreground [text-wrap:pretty] sm:text-lg">
               {description}
             </p>
           </div>
@@ -94,7 +94,7 @@ export function AuthShell({ eyebrow, title, description, children }: AuthShellPr
                 key={item.title}
                 className="rounded-2xl border border-border/60 bg-background/80 p-4 shadow-sm backdrop-blur"
               >
-                <item.icon className="size-5 text-primary" />
+                <item.icon className="size-5 text-primary" aria-hidden="true" />
                 <h2 className="mt-4 text-sm font-semibold text-foreground">{item.title}</h2>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                   {item.description}
@@ -106,7 +106,7 @@ export function AuthShell({ eyebrow, title, description, children }: AuthShellPr
           <div className="flex flex-wrap gap-3">
             <Link href="/explore" className={cn(buttonVariants({ variant: "outline" }), "gap-2")}>
               Browse characters
-              <HiArrowRight className="size-4" />
+              <HiArrowRight className="size-4" aria-hidden="true" />
             </Link>
             <Link href="/pricing" className={cn(buttonVariants({ variant: "ghost" }), "gap-2")}>
               See plans

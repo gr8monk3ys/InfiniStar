@@ -1,18 +1,24 @@
 import { type NextRequest } from "next/server"
 
+import { getClerkFrontendApiOrigin } from "@/app/lib/clerk-proxy"
+
 const CLERK_PROXY_PATH = "/api/clerk-proxy"
-const CLERK_FRONTEND_API_ORIGIN = "https://frontend-api.clerk.dev"
 const NON_BODY_METHODS = new Set(["GET", "HEAD"])
 
 function getProxyBaseUrl(request: NextRequest) {
   return `${request.nextUrl.origin}${CLERK_PROXY_PATH}`
 }
 
+function getUpstreamBaseUrl() {
+  return new URL(`${getClerkFrontendApiOrigin()}/`)
+}
+
 function getUpstreamUrl(request: NextRequest, path?: string[]) {
-  const upstreamPath = path?.join("/") ?? ""
-  const url = new URL(
-    upstreamPath ? `${CLERK_FRONTEND_API_ORIGIN}/${upstreamPath}` : CLERK_FRONTEND_API_ORIGIN
-  )
+  const url = getUpstreamBaseUrl()
+
+  if (path && path.length > 0) {
+    url.pathname = `${url.pathname.replace(/\/$/, "")}/${path.join("/")}`
+  }
 
   url.search = request.nextUrl.search
 
@@ -36,12 +42,43 @@ function getProxyHeaders(request: NextRequest) {
   return headers
 }
 
-function getResponseHeaders(upstreamHeaders: Headers) {
+function rewriteRedirectLocation(location: string, request: NextRequest) {
+  try {
+    const upstreamBaseUrl = getUpstreamBaseUrl()
+    const upstreamBasePath = upstreamBaseUrl.pathname.replace(/\/$/, "")
+    const resolvedLocation = new URL(location, upstreamBaseUrl)
+
+    if (
+      resolvedLocation.origin !== upstreamBaseUrl.origin ||
+      !resolvedLocation.pathname.startsWith(upstreamBasePath)
+    ) {
+      return location
+    }
+
+    const proxyBaseUrl = new URL(`${getProxyBaseUrl(request)}/`)
+    const proxyBasePath = proxyBaseUrl.pathname.replace(/\/$/, "")
+    const proxyPathSuffix = resolvedLocation.pathname.slice(upstreamBasePath.length)
+    const rewrittenUrl = new URL(`${proxyBaseUrl.origin}${proxyBasePath}${proxyPathSuffix}`)
+    rewrittenUrl.search = resolvedLocation.search
+    rewrittenUrl.hash = resolvedLocation.hash
+
+    return rewrittenUrl.toString()
+  } catch {
+    return location
+  }
+}
+
+function getResponseHeaders(upstreamHeaders: Headers, request: NextRequest) {
   const headers = new Headers(upstreamHeaders)
+  const location = headers.get("location")
 
   headers.delete("content-encoding")
   headers.delete("content-length")
   headers.delete("transfer-encoding")
+
+  if (location) {
+    headers.set("location", rewriteRedirectLocation(location, request))
+  }
 
   return headers
 }
@@ -60,7 +97,7 @@ async function handleRequest(
 
   return new Response(upstreamResponse.body, {
     status: upstreamResponse.status,
-    headers: getResponseHeaders(upstreamResponse.headers),
+    headers: getResponseHeaders(upstreamResponse.headers, request),
   })
 }
 

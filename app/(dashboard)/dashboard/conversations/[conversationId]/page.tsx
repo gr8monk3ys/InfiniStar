@@ -1,5 +1,7 @@
 import type { Metadata } from "next"
+import { after } from "next/server"
 
+import { markConversationSeenByUserId } from "@/app/lib/conversation-seen"
 import getConversationById from "@/app/actions/getConversationById"
 import getCurrentUser from "@/app/actions/getCurrentUser"
 import getMessages from "@/app/actions/getMessages"
@@ -36,6 +38,15 @@ export default async function ChatPage({
     )
   }
 
+  if (currentUser?.id) {
+    after(async () => {
+      await markConversationSeenByUserId({
+        conversationId,
+        currentUserId: currentUser.id,
+      })
+    })
+  }
+
   return (
     <div className="h-full lg:pl-80">
       <div className="flex h-full flex-col">
@@ -45,6 +56,7 @@ export default async function ChatPage({
         />
         {conversation.isAI && <TokenUsageWrapper conversationId={conversationId} />}
         <ConversationContainer
+          key={conversationId}
           initialMessages={messages}
           isAI={conversation.isAI || false}
           characterName={conversation.character?.name}

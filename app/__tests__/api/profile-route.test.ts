@@ -18,6 +18,9 @@ const mockVerifyCsrfToken = jest.fn()
 const mockGetCsrfTokenFromRequest = jest.fn()
 const mockUserFindUnique = jest.fn()
 const mockUserUpdate = jest.fn()
+const mockClerkGetUser = jest.fn()
+const mockClerkVerifyPassword = jest.fn()
+const mockClerkUpdateUser = jest.fn()
 
 jest.mock("@/app/lib/csrf", () => ({
   verifyCsrfToken: (...args: unknown[]) => mockVerifyCsrfToken(...args),
@@ -64,12 +67,23 @@ jest.mock("@/app/actions/getCurrentUser", () => ({
   default: jest.fn(),
 }))
 
+jest.mock("@clerk/nextjs/server", () => ({
+  clerkClient: jest.fn(async () => ({
+    users: {
+      getUser: (...args: unknown[]) => mockClerkGetUser(...args),
+      verifyPassword: (...args: unknown[]) => mockClerkVerifyPassword(...args),
+      updateUser: (...args: unknown[]) => mockClerkUpdateUser(...args),
+    },
+  })),
+}))
+
 // ------------------------------------------------------------------
 // Fixtures
 // ------------------------------------------------------------------
 
 const CURRENT_USER = {
   id: "user-11111111-1111-4111-8111-111111111111",
+  clerkId: "user_clerk_123",
   email: "alice@example.com",
   name: "Alice",
 }
@@ -83,6 +97,7 @@ const DB_USER = {
   location: "San Francisco, CA",
   website: "https://alice.dev",
   emailVerified: new Date("2024-01-01"),
+  clerkId: CURRENT_USER.clerkId,
   createdAt: new Date("2024-01-01"),
   updatedAt: new Date("2024-06-01"),
 }
@@ -128,6 +143,7 @@ describe("GET /api/profile", () => {
     jest.clearAllMocks()
     getCurrentUser.mockResolvedValue(CURRENT_USER)
     mockUserFindUnique.mockResolvedValue(DB_USER)
+    mockClerkGetUser.mockResolvedValue({ passwordEnabled: true, twoFactorEnabled: true })
   })
 
   it("returns 401 when user is not authenticated", async () => {
@@ -150,6 +166,8 @@ describe("GET /api/profile", () => {
     expect(data.user.location).toBe("San Francisco, CA")
     expect(data.user.website).toBe("https://alice.dev")
     expect(data.user.image).toBe("https://example.com/avatar.png")
+    expect(data.hasPassword).toBe(true)
+    expect(data.twoFactorEnabled).toBe(true)
   })
 
   it("returns 404 when user record is not found in database", async () => {
@@ -191,6 +209,9 @@ describe("PATCH /api/profile", () => {
     mockGetCsrfTokenFromRequest.mockReturnValue("test-csrf")
     getCurrentUser.mockResolvedValue(CURRENT_USER)
     mockUserUpdate.mockResolvedValue(DB_USER)
+    mockClerkGetUser.mockResolvedValue({ passwordEnabled: true, twoFactorEnabled: true })
+    mockClerkVerifyPassword.mockResolvedValue({ verified: true })
+    mockClerkUpdateUser.mockResolvedValue({ id: CURRENT_USER.clerkId })
   })
 
   it("returns 403 when CSRF token is invalid", async () => {
@@ -244,6 +265,42 @@ describe("PATCH /api/profile", () => {
     const data = await res.json()
     expect(data.error).toMatch(/bio too long/i)
     expect(mockUserUpdate).not.toHaveBeenCalled()
+  })
+
+  it("changes password successfully when current password is valid", async () => {
+    const res = await PATCH(
+      makePatchRequest({
+        currentPassword: "old-password",
+        newPassword: "new-password-123",
+      })
+    )
+
+    expect(res.status).toBe(200)
+    const data = await res.json()
+    expect(data.message).toMatch(/password changed successfully/i)
+    expect(mockClerkVerifyPassword).toHaveBeenCalledWith({
+      userId: CURRENT_USER.clerkId,
+      password: "old-password",
+    })
+    expect(mockClerkUpdateUser).toHaveBeenCalledWith(CURRENT_USER.clerkId, {
+      password: "new-password-123",
+      signOutOfOtherSessions: false,
+    })
+  })
+
+  it("returns 400 when current password is incorrect", async () => {
+    mockClerkVerifyPassword.mockRejectedValue(new Error("invalid password"))
+
+    const res = await PATCH(
+      makePatchRequest({
+        currentPassword: "wrong-password",
+        newPassword: "new-password-123",
+      })
+    )
+
+    expect(res.status).toBe(400)
+    const data = await res.json()
+    expect(data.error).toMatch(/current password is incorrect/i)
   })
 
   it("updates location successfully (within 100 char limit)", async () => {

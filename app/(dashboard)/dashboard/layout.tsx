@@ -1,3 +1,6 @@
+import { AuthProvider } from "@/app/components/providers/AuthProvider"
+import { ThemeCustomProvider } from "@/app/components/providers/ThemeCustomProvider"
+
 export const dynamic = "force-dynamic"
 
 interface DashboardLayoutProps {
@@ -5,5 +8,9 @@ interface DashboardLayoutProps {
 }
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
-  return children
+  return (
+    <AuthProvider>
+      <ThemeCustomProvider>{children}</ThemeCustomProvider>
+    </AuthProvider>
+  )
 }

@@ -12,9 +12,13 @@ import { PricingCtaButton } from "@/app/(marketing)/pricing/PricingCtaButton"
 export const metadata = {
   title: "Pricing | InfiniStar",
   description: "Simple, transparent pricing for AI conversations.",
+  alternates: {
+    canonical: "/pricing",
+  },
   openGraph: {
     title: "Pricing | InfiniStar",
     description: "Simple, transparent pricing for AI conversations.",
+    url: "/pricing",
   },
 }
 
@@ -198,11 +202,17 @@ export default async function PricingPage() {
       <div className="mx-auto mt-8 text-center">
         <p className="text-muted-foreground">
           Questions? Check out our{" "}
-          <Link href="/privacy" className="text-primary underline underline-offset-4">
+          <Link
+            href="/privacy"
+            className="font-medium text-foreground underline decoration-violet-300 underline-offset-4 hover:text-violet-700 dark:decoration-violet-400/50 dark:hover:text-violet-200"
+          >
             privacy policy
           </Link>{" "}
           or{" "}
-          <Link href="/explore" className="text-primary underline underline-offset-4">
+          <Link
+            href="/explore"
+            className="font-medium text-foreground underline decoration-violet-300 underline-offset-4 hover:text-violet-700 dark:decoration-violet-400/50 dark:hover:text-violet-200"
+          >
             explore features
           </Link>
           .

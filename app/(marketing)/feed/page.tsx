@@ -8,7 +8,7 @@ import prisma from "@/app/lib/prismadb"
 import { getRecommendationSignalsForUser, rankCharactersForUser } from "@/app/lib/recommendations"
 import { cn } from "@/app/lib/utils"
 import { buttonVariants } from "@/app/components/ui/button"
-import { CharacterCard } from "@/app/components/characters/CharacterCard"
+import { PublicCharacterCard } from "@/app/components/characters/PublicCharacterCard"
 
 export const metadata = {
   title: "Community Feed | InfiniStar",
@@ -87,14 +87,12 @@ interface FeedCreatorRow {
 
 export default async function FeedPage() {
   const { userId } = await auth()
-  let currentUser:
-    | {
-        id: string
-        isAdult: boolean
-        nsfwEnabled: boolean
-        adultConfirmedAt: Date | null
-      }
-    | null = null
+  let currentUser: {
+    id: string
+    isAdult: boolean
+    nsfwEnabled: boolean
+    adultConfirmedAt: Date | null
+  } | null = null
 
   if (userId) {
     try {
@@ -270,6 +268,7 @@ export default async function FeedPage() {
                         src={creator.image}
                         alt={creator.name || "Creator"}
                         fill
+                        sizes="48px"
                         className="object-cover"
                       />
                     </div>
@@ -322,7 +321,7 @@ export default async function FeedPage() {
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
               {followingCharacters.map((character) => (
-                <CharacterCard key={character.id} character={character} />
+                <PublicCharacterCard key={character.id} character={character} />
               ))}
             </div>
           )}
@@ -336,7 +335,7 @@ export default async function FeedPage() {
         </div>
         <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
           {trendingCharacters.map((character) => (
-            <CharacterCard key={character.id} character={character} />
+            <PublicCharacterCard key={character.id} character={character} />
           ))}
         </div>
       </section>
@@ -348,7 +347,7 @@ export default async function FeedPage() {
         </div>
         <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
           {freshCharacters.map((character) => (
-            <CharacterCard key={character.id} character={character} />
+            <PublicCharacterCard key={character.id} character={character} />
           ))}
         </div>
       </section>
