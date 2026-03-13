@@ -5,6 +5,11 @@
  * with advanced filtering, sorting, and pagination.
  */
 
+import {
+  searchConversationIdsByName,
+  searchConversationIdsByText,
+  searchMessageIdsByText,
+} from "@/app/lib/full-text-search"
 import prisma from "@/app/lib/prismadb"
 import type {
   AdvancedSearchFilters,
@@ -164,24 +169,18 @@ export async function searchConversations(
   const { query, dateFrom, dateTo, isAI, personality, tagIds, archived, sortBy, page, limit } =
     filters
 
-  const escapedQuery = escapeRegex(query)
   const dateFilter = buildDateFilter(dateFrom, dateTo)
   const skip = (page - 1) * limit
 
-  // Build where clause
+  // Use full-text search (tsvector + GIN index) to find candidate conversation IDs
+  const matchingIds = await searchConversationIdsByText(query, userId)
+  if (matchingIds.length === 0) {
+    return { items: [], count: 0 }
+  }
+
+  // Build where clause using pre-filtered IDs from full-text search
   const whereClause: Record<string, unknown> = {
-    users: { some: { id: userId } },
-    OR: [
-      { name: { contains: escapedQuery, mode: "insensitive" as const } },
-      {
-        messages: {
-          some: {
-            body: { contains: escapedQuery, mode: "insensitive" as const },
-            isDeleted: false,
-          },
-        },
-      },
-    ],
+    id: { in: matchingIds },
   }
 
   // Date filter
@@ -318,12 +317,18 @@ export async function searchMessages(
     limit,
   } = filters
 
-  const escapedQuery = escapeRegex(query)
   const dateFilter = buildDateFilter(dateFrom, dateTo)
   const skip = (page - 1) * limit
 
-  // Build where clause for messages
+  // Use full-text search (tsvector + GIN index) to find candidate message IDs
+  const matchingIds = await searchMessageIdsByText(query)
+  if (matchingIds.length === 0) {
+    return { items: [], count: 0 }
+  }
+
+  // Build where clause using pre-filtered IDs from full-text search
   const whereClause: Record<string, unknown> = {
+    id: { in: matchingIds },
     conversation: {
       users: { some: { id: userId } },
       ...(isAI !== undefined && { isAI }),
@@ -331,8 +336,6 @@ export async function searchMessages(
       ...(tagIds && tagIds.length > 0 && { tags: { some: { id: { in: tagIds } } } }),
       ...(!archived && { archivedBy: { isEmpty: true } }),
     },
-    isDeleted: false,
-    body: { contains: escapedQuery, mode: "insensitive" as const },
   }
 
   // Date filter
@@ -431,21 +434,26 @@ export async function getSearchSuggestions(
   const escapedQuery = escapeRegex(query)
   const suggestions: SearchSuggestion[] = []
 
-  // Search conversation names
-  const conversations = await prisma.conversation.findMany({
-    where: {
-      users: { some: { id: userId } },
-      name: { contains: escapedQuery, mode: "insensitive" as const },
-      archivedBy: { isEmpty: true },
-    },
-    select: {
-      id: true,
-      name: true,
-      isAI: true,
-    },
-    take: limit,
-    orderBy: { lastMessageAt: "desc" },
-  })
+  // Use full-text search to find matching conversation names
+  const matchingConvIds = await searchConversationIdsByName(query, limit * 2)
+
+  const conversations =
+    matchingConvIds.length > 0
+      ? await prisma.conversation.findMany({
+          where: {
+            id: { in: matchingConvIds },
+            users: { some: { id: userId } },
+            archivedBy: { isEmpty: true },
+          },
+          select: {
+            id: true,
+            name: true,
+            isAI: true,
+          },
+          take: limit,
+          orderBy: { lastMessageAt: "desc" },
+        })
+      : []
 
   conversations.forEach((conv: { id: string; name: string | null; isAI: boolean }) => {
     if (conv.name) {
@@ -497,18 +505,28 @@ export async function getSearchFacets(userId: string, query?: string): Promise<S
   }
 
   if (query && query.length >= 2) {
-    const escapedQuery = escapeRegex(query)
-    baseWhere.OR = [
-      { name: { contains: escapedQuery, mode: "insensitive" as const } },
-      {
-        messages: {
-          some: {
-            body: { contains: escapedQuery, mode: "insensitive" as const },
-            isDeleted: false,
-          },
+    // Use full-text search to narrow down to matching conversations
+    const matchingIds = await searchConversationIdsByText(query, userId)
+    if (matchingIds.length > 0) {
+      baseWhere.id = { in: matchingIds }
+    } else {
+      // No matches — return zeroed facets
+      return {
+        conversationType: { ai: 0, human: 0 },
+        personality: {
+          helpful: 0,
+          concise: 0,
+          creative: 0,
+          analytical: 0,
+          empathetic: 0,
+          professional: 0,
+          custom: 0,
         },
-      },
-    ]
+        tags: [],
+        dateRanges: { today: 0, thisWeek: 0, thisMonth: 0, older: 0 },
+        hasAttachments: 0,
+      }
+    }
   }
 
   // Run all facet queries in parallel (was 3 sequential rounds, now 1)
