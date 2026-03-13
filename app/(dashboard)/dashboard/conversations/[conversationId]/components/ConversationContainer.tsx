@@ -4,8 +4,8 @@ import React, { useCallback, useEffect, useEffectEvent, useReducer, useRef } fro
 import axios from "axios"
 import toast from "react-hot-toast"
 
-import { pusherClient } from "@/app/lib/pusher"
 import { getPusherConversationChannel } from "@/app/lib/pusher-channels"
+import { pusherClient } from "@/app/lib/pusher-client"
 import useConversation from "@/app/(dashboard)/dashboard/hooks/useConversation"
 import { useAiRegenerate } from "@/app/hooks/useAiRegenerate"
 import { useCsrfToken } from "@/app/hooks/useCsrfToken"

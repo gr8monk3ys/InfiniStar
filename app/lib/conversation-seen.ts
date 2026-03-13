@@ -1,6 +1,6 @@
 import prisma from "@/app/lib/prismadb"
-import { pusherServer } from "@/app/lib/pusher"
 import { getPusherConversationChannel, getPusherUserChannel } from "@/app/lib/pusher-channels"
+import { pusherServer } from "@/app/lib/pusher-server"
 
 export async function markConversationSeenByUserId({
   conversationId,

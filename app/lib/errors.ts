@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server"
 
+import { apiLogger } from "@/app/lib/logger"
+
 // Standard error codes
 export enum ErrorCode {
   UNAUTHORIZED = "UNAUTHORIZED",
@@ -118,7 +120,7 @@ export const ApiError = {
 
 // Error logging helper
 export function logError(error: unknown, context?: string) {
-  console.error(`[${context || "ERROR"}]:`, error)
+  apiLogger.error({ err: error, context: context || "ERROR" }, "Unhandled error")
 
   // In production, send to error tracking service (e.g., Sentry)
   if (process.env.NODE_ENV === "production" && typeof window !== "undefined") {

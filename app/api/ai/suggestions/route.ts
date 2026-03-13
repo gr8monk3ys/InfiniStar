@@ -3,6 +3,7 @@ import { z } from "zod"
 
 import { getAiAccessDecision } from "@/app/lib/ai-access"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
+import { aiLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
 import { getClientIdentifier, suggestionsLimiter } from "@/app/lib/rate-limit"
 import {
@@ -178,7 +179,7 @@ export async function POST(request: NextRequest) {
       cached: false,
     })
   } catch (error) {
-    console.error("Suggestions API error:", error)
+    aiLogger.error({ err: error }, "Suggestions API error")
 
     // Handle specific errors
     if (error instanceof z.ZodError) {

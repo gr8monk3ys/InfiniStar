@@ -8,6 +8,7 @@ import {
   isFallbackClerkId,
   verifyFallbackPassword,
 } from "@/app/lib/fallback-auth"
+import { apiLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
 import getCurrentUser from "@/app/actions/getCurrentUser"
 
@@ -156,7 +157,7 @@ export async function PATCH(request: NextRequest) {
       user: updatedUser,
     })
   } catch (error: unknown) {
-    console.error("PROFILE_UPDATE_ERROR", error)
+    apiLogger.error({ err: error }, "Error updating profile")
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
@@ -217,7 +218,7 @@ export async function GET(_request: NextRequest) {
       twoFactorEnabled: clerkUser?.twoFactorEnabled ?? false,
     })
   } catch (error: unknown) {
-    console.error("PROFILE_GET_ERROR", error)
+    apiLogger.error({ err: error }, "Error fetching profile")
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

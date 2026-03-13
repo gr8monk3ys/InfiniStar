@@ -4,10 +4,11 @@ import { z } from "zod"
 import { getModelForUser } from "@/app/lib/ai-model-routing"
 import { SUPPORTED_MODEL_IDS } from "@/app/lib/ai-models"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
+import { apiLogger } from "@/app/lib/logger"
 import { canAccessNsfw } from "@/app/lib/nsfw"
 import prisma from "@/app/lib/prismadb"
-import { pusherServer } from "@/app/lib/pusher"
 import { getPusherConversationChannel, getPusherUserChannel } from "@/app/lib/pusher-channels"
+import { pusherServer } from "@/app/lib/pusher-server"
 import { sanitizePlainText } from "@/app/lib/sanitize"
 import getCurrentUser from "@/app/actions/getCurrentUser"
 
@@ -494,7 +495,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(newConversation)
   } catch (error) {
-    console.error("CONVERSATIONS_ERROR:", error)
+    apiLogger.error({ err: error }, "CONVERSATIONS_ERROR")
     return new NextResponse("Internal Error", { status: 500 })
   }
 }

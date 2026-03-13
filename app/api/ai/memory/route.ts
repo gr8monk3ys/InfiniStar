@@ -11,6 +11,7 @@ import {
   saveMemory,
 } from "@/app/lib/ai-memory"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
+import { aiLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
 import { getClientIdentifier, memoryLimiter } from "@/app/lib/rate-limit"
 import { sanitizePlainText } from "@/app/lib/sanitize"
@@ -86,7 +87,7 @@ export async function GET(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error("Error fetching memories:", error)
+    aiLogger.error({ err: error }, "Error fetching memories")
     return NextResponse.json({ error: "Failed to fetch memories" }, { status: 500 })
   }
 }
@@ -166,7 +167,7 @@ export async function POST(request: NextRequest) {
       message: isUpdate ? "Memory updated successfully" : "Memory created successfully",
     })
   } catch (error) {
-    console.error("Error saving memory:", error)
+    aiLogger.error({ err: error }, "Error saving memory")
     const message = error instanceof Error ? error.message : "Failed to save memory"
     return NextResponse.json({ error: message }, { status: 500 })
   }

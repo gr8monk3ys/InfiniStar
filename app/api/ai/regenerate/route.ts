@@ -12,9 +12,10 @@ import {
 import { trackAiUsage } from "@/app/lib/ai-usage"
 import anthropic from "@/app/lib/anthropic"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
+import { aiLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
-import { pusherServer } from "@/app/lib/pusher"
 import { getPusherConversationChannel } from "@/app/lib/pusher-channels"
+import { pusherServer } from "@/app/lib/pusher-server"
 import { aiChatLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 import getCurrentUser from "@/app/actions/getCurrentUser"
 
@@ -303,7 +304,7 @@ export async function POST(request: NextRequest) {
 
           controller.close()
         } catch (error) {
-          console.error("Regeneration streaming error:", error)
+          aiLogger.error({ err: error }, "Regeneration streaming error")
 
           // Send error to client
           const errorData = JSON.stringify({
@@ -327,7 +328,7 @@ export async function POST(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error("AI Regenerate error:", error)
+    aiLogger.error({ err: error }, "AI Regenerate error")
     return new Response(JSON.stringify({ error: "Internal server error" }), {
       status: 500,
       headers: { "Content-Type": "application/json" },

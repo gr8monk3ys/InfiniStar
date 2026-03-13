@@ -4,6 +4,7 @@ import { FREE_TIER_MONTHLY_MESSAGE_LIMIT, FREE_TIER_MONTHLY_TOKEN_QUOTA } from "
 import { AI_PRO_MONTHLY_COST_CAP_CENTS } from "@/app/lib/ai-limits"
 import { normalizeModelId } from "@/app/lib/ai-model-routing"
 import { getUsageByDateRange, getUserUsageStats } from "@/app/lib/ai-usage"
+import { aiLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
 import { getUserSubscriptionPlan } from "@/app/lib/subscription"
 import getCurrentUser from "@/app/actions/getCurrentUser"
@@ -246,7 +247,7 @@ export async function GET(request: NextRequest) {
       peakUsageHours,
     })
   } catch (error) {
-    console.error("AI usage retrieval error:", error)
+    aiLogger.error({ err: error }, "AI usage retrieval error")
     return new NextResponse("Internal Error", { status: 500 })
   }
 }

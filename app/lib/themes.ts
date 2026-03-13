@@ -654,7 +654,7 @@ export function saveThemePreference(preference: UserThemePreference): void {
   try {
     localStorage.setItem(THEME_STORAGE_KEY, JSON.stringify(preference))
   } catch (error) {
-    console.error("Failed to save theme preference:", error)
+    console.error("Failed to save theme preference", error)
   }
 }
 
@@ -667,7 +667,7 @@ export function loadThemePreference(): UserThemePreference | null {
       return JSON.parse(stored) as UserThemePreference
     }
   } catch (error) {
-    console.error("Failed to load theme preference:", error)
+    console.error("Failed to load theme preference", error)
   }
   return null
 }

@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server"
 import { z } from "zod"
 
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
+import { apiLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
 import { getClientIdentifier, templateLimiter } from "@/app/lib/rate-limit"
 import {
@@ -87,7 +88,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       rawContent: updatedTemplate.content,
     })
   } catch (error) {
-    console.error("Error using template:", error)
+    apiLogger.error({ err: error }, "Error using template")
 
     // Handle specific errors
     if (error instanceof Error && error.message.includes("not found")) {

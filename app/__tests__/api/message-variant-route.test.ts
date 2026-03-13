@@ -6,7 +6,7 @@ import { NextRequest } from "next/server"
 
 import { verifyCsrfToken } from "@/app/lib/csrf"
 import prisma from "@/app/lib/prismadb"
-import { pusherServer } from "@/app/lib/pusher"
+import { pusherServer } from "@/app/lib/pusher-server"
 import { apiLimiter } from "@/app/lib/rate-limit"
 import getCurrentUser from "@/app/actions/getCurrentUser"
 import { PATCH } from "@/app/api/messages/[messageId]/variant/route"
@@ -18,7 +18,7 @@ jest.mock("@/app/lib/prismadb", () => ({
   },
 }))
 
-jest.mock("@/app/lib/pusher", () => ({
+jest.mock("@/app/lib/pusher-server", () => ({
   pusherServer: { trigger: jest.fn(() => Promise.resolve()) },
 }))
 

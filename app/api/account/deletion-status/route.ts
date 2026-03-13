@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server"
 
+import { authLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
 import getCurrentUser from "@/app/actions/getCurrentUser"
 
@@ -56,7 +57,7 @@ export async function GET(_request: NextRequest) {
       daysRemaining,
     })
   } catch (error: unknown) {
-    console.error("DELETION_STATUS_ERROR", error)
+    authLogger.error({ err: error }, "Deletion status error")
     return NextResponse.json(
       { error: "Internal server error", code: "INTERNAL_ERROR" },
       { status: 500 }

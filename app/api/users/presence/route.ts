@@ -2,9 +2,10 @@ import { NextResponse, type NextRequest } from "next/server"
 import { z } from "zod"
 
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
+import { apiLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
-import { pusherServer } from "@/app/lib/pusher"
 import { PUSHER_PRESENCE_CHANNEL } from "@/app/lib/pusher-channels"
+import { pusherServer } from "@/app/lib/pusher-server"
 import getCurrentUser from "@/app/actions/getCurrentUser"
 
 // Validation schema
@@ -81,7 +82,7 @@ export async function PATCH(request: NextRequest) {
           customStatusEmoji: updatedUser.customStatusEmoji,
         })
       } catch (error) {
-        console.error("PRESENCE_BROADCAST_ERROR", error)
+        apiLogger.error({ err: error }, "Error broadcasting presence")
       }
     }
 
@@ -96,7 +97,7 @@ export async function PATCH(request: NextRequest) {
       },
     })
   } catch (error: unknown) {
-    console.error("PRESENCE_UPDATE_ERROR", error)
+    apiLogger.error({ err: error }, "Error updating presence")
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

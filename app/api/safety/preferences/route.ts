@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { z } from "zod"
 
 import { withCsrfProtection } from "@/app/lib/csrf"
+import { apiLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
 import { apiLimiter } from "@/app/lib/rate-limit"
 import getCurrentUser from "@/app/actions/getCurrentUser"
@@ -42,7 +43,7 @@ export async function GET() {
       },
     })
   } catch (error: unknown) {
-    console.error("SAFETY_PREFERENCES_GET_ERROR", error)
+    apiLogger.error({ err: error }, "Error fetching safety preferences")
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
@@ -153,7 +154,7 @@ export const PATCH = withCsrfProtection(async (request: Request) => {
       preferences: updated,
     })
   } catch (error: unknown) {
-    console.error("SAFETY_PREFERENCES_UPDATE_ERROR", error)
+    apiLogger.error({ err: error }, "Error updating safety preferences")
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 })

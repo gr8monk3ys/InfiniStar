@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 
 import { getClientCsrfToken } from "@/app/lib/csrf-client"
-import { pusherClient } from "@/app/lib/pusher"
 import { getPusherConversationChannel } from "@/app/lib/pusher-channels"
+import { pusherClient } from "@/app/lib/pusher-client"
 
 interface TypingUser {
   userId: string

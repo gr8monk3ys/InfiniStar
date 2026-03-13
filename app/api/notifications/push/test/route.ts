@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 
 import { withCsrfProtection } from "@/app/lib/csrf"
+import { apiLogger } from "@/app/lib/logger"
 import { sendWebPushToUser } from "@/app/lib/web-push"
 import getCurrentUser from "@/app/actions/getCurrentUser"
 
@@ -27,7 +28,7 @@ export const POST = withCsrfProtection(async (_request: Request) => {
 
     return NextResponse.json({ ok: true, sent: result.sent, failed: result.failed })
   } catch (error: unknown) {
-    console.error("PUSH_TEST_ERROR", error)
+    apiLogger.error({ err: error }, "Error sending test push notification")
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 })

@@ -2,6 +2,7 @@ import { headers } from "next/headers"
 import { Webhook } from "svix"
 
 import { sendWelcomeEmail } from "@/app/lib/email"
+import { authLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
 
 interface ClerkWebhookEvent {
@@ -112,7 +113,7 @@ export async function POST(req: Request): Promise<Response> {
       }
     }
   } catch (error) {
-    console.error(`Error processing Clerk webhook (${eventType}):`, error)
+    authLogger.error({ err: error, eventType }, "Error processing Clerk webhook")
     return new Response("Webhook processing error", { status: 500 })
   }
 

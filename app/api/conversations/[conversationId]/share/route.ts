@@ -9,6 +9,7 @@ import { NextResponse, type NextRequest } from "next/server"
 import { z } from "zod"
 
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
+import { apiLogger } from "@/app/lib/logger"
 import { getClientIdentifier, shareLimiter } from "@/app/lib/rate-limit"
 import { createShareLink, getSharesForConversation, getShareUrl } from "@/app/lib/sharing"
 import getCurrentUser from "@/app/actions/getCurrentUser"
@@ -112,7 +113,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<I
       shareUrl,
     })
   } catch (error) {
-    console.error("CREATE_SHARE_ERROR", error)
+    apiLogger.error({ err: error }, "CREATE_SHARE_ERROR")
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
@@ -146,7 +147,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<IP
 
     return NextResponse.json({ shares: sharesWithUrls })
   } catch (error) {
-    console.error("GET_SHARES_ERROR", error)
+    apiLogger.error({ err: error }, "GET_SHARES_ERROR")
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

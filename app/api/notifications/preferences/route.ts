@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server"
 import { z } from "zod"
 
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
+import { apiLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
 import { apiLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 import getCurrentUser from "@/app/actions/getCurrentUser"
@@ -57,7 +58,7 @@ export async function GET(_request: NextRequest) {
       },
     })
   } catch (error: unknown) {
-    console.error("NOTIFICATION_PREFERENCES_GET_ERROR", error)
+    apiLogger.error({ err: error }, "Error fetching notification preferences")
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
@@ -147,7 +148,7 @@ export async function PATCH(request: NextRequest) {
       },
     })
   } catch (error: unknown) {
-    console.error("NOTIFICATION_PREFERENCES_UPDATE_ERROR", error)
+    apiLogger.error({ err: error }, "Error updating notification preferences")
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

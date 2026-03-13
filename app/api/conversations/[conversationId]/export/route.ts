@@ -7,6 +7,7 @@ import {
   generateExportFilename,
   getContentTypeAndExtension,
 } from "@/app/lib/export"
+import { apiLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
 import { apiLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 import getCurrentUser from "@/app/actions/getCurrentUser"
@@ -202,7 +203,7 @@ export async function GET(
       },
     })
   } catch (error) {
-    console.error("Export conversation error:", error)
+    apiLogger.error({ err: error }, "Export conversation error")
     return NextResponse.json(
       { error: "Failed to export conversation", success: false },
       { status: 500 }

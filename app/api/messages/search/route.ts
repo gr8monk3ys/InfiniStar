@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { z } from "zod"
 
+import { apiLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
 import getCurrentUser from "@/app/actions/getCurrentUser"
 
@@ -131,7 +132,7 @@ export async function GET(request: NextRequest) {
       query: searchQuery,
     })
   } catch (error: unknown) {
-    console.error("MESSAGE_SEARCH_ERROR", error)
+    apiLogger.error({ err: error }, "MESSAGE_SEARCH_ERROR")
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

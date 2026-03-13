@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server"
 
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
+import { apiLogger } from "@/app/lib/logger"
 import { canAccessNsfw } from "@/app/lib/nsfw"
 import prisma from "@/app/lib/prismadb"
 import { apiLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
@@ -68,7 +69,7 @@ export async function POST(
 
     return NextResponse.json({ liked: true })
   } catch (error) {
-    console.error("[CHARACTER_LIKE]", error)
+    apiLogger.error({ err: error }, "Failed to like character")
     return NextResponse.json({ error: "Failed to like character" }, { status: 500 })
   }
 }
@@ -140,7 +141,7 @@ export async function DELETE(
 
     return NextResponse.json({ liked: false })
   } catch (error) {
-    console.error("[CHARACTER_UNLIKE]", error)
+    apiLogger.error({ err: error }, "Failed to unlike character")
     return NextResponse.json({ error: "Failed to unlike character" }, { status: 500 })
   }
 }

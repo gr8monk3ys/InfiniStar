@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server"
 
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
+import { apiLogger } from "@/app/lib/logger"
 import { apiLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 import { advancedSearch, getSearchFacets, getSearchSuggestions } from "@/app/lib/search"
 import getCurrentUser from "@/app/actions/getCurrentUser"
@@ -107,7 +108,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<AdvancedSe
       facets,
     })
   } catch (error) {
-    console.error("[SEARCH_ERROR]", error)
+    apiLogger.error({ err: error }, "SEARCH_ERROR")
     return NextResponse.json(
       {
         success: false,
@@ -296,7 +297,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<SearchSug
       suggestions,
     })
   } catch (error) {
-    console.error("[SEARCH_SUGGESTIONS_ERROR]", error)
+    apiLogger.error({ err: error }, "SEARCH_SUGGESTIONS_ERROR")
     return NextResponse.json(
       {
         success: false,

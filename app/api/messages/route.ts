@@ -2,14 +2,15 @@ import { NextResponse, type NextRequest } from "next/server"
 import { z } from "zod"
 
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
+import { apiLogger } from "@/app/lib/logger"
 import {
   buildModerationDetails,
   moderateTextModelAssisted,
   moderationReasonFromCategories,
 } from "@/app/lib/moderation"
 import prisma from "@/app/lib/prismadb"
-import { pusherServer } from "@/app/lib/pusher"
 import { getPusherConversationChannel, getPusherUserChannel } from "@/app/lib/pusher-channels"
+import { pusherServer } from "@/app/lib/pusher-server"
 import { apiLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 import { sanitizeMessage, sanitizeUrl } from "@/app/lib/sanitize"
 import getCurrentUser from "@/app/actions/getCurrentUser"
@@ -235,14 +236,14 @@ export async function POST(request: NextRequest) {
             messages: [newMessage],
           })
           .catch((err: unknown) =>
-            console.error(`[messages] Pusher trigger failed for user ${user.id}:`, err)
+            apiLogger.error({ err, userId: user.id }, "Pusher trigger failed for user")
           )
       )
     )
 
     return NextResponse.json(newMessage)
   } catch (error) {
-    console.error("MESSAGES_ERROR:", error)
+    apiLogger.error({ err: error }, "MESSAGES_ERROR")
     return new NextResponse("Error", { status: 500 })
   }
 }

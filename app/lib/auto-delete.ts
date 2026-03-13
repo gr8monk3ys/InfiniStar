@@ -15,9 +15,10 @@
  * Example cron expression for daily at midnight: 0 0 * * *
  */
 
+import { dbLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
-import { pusherServer } from "@/app/lib/pusher"
 import { getPusherUserChannel } from "@/app/lib/pusher-channels"
+import { pusherServer } from "@/app/lib/pusher-server"
 
 // Valid retention period options in days
 export const RETENTION_PERIODS = [7, 14, 30, 60, 90, 180, 365] as const
@@ -287,7 +288,12 @@ export async function deleteOldConversations(userId: string): Promise<AutoDelete
           conversationId: conv.id,
           reason: "auto-delete",
         })
-        .catch((err: unknown) => console.error(`Pusher trigger failed for user ${user.id}:`, err))
+        .catch((err: unknown) =>
+          dbLogger.error(
+            { err, userId: user.id },
+            "Pusher trigger failed for auto-delete notification"
+          )
+        )
     )
   )
   await Promise.all(pusherPromises)
@@ -339,7 +345,7 @@ export async function runAutoDeleteForAllUsers(): Promise<{
         errors.push(...result.value.errors)
       } else {
         const userId = batch[j].id
-        console.error(`Error running auto-delete for user ${userId}:`, result.reason)
+        dbLogger.error({ err: result.reason, userId }, "Error running auto-delete for user")
         errors.push(`Failed to process user ${userId}`)
       }
     }

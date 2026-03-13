@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { z } from "zod"
 
+import { apiLogger } from "@/app/lib/logger"
 import { getPopularTemplates, getRecentlyUsedTemplates } from "@/app/lib/templates"
 import getCurrentUser from "@/app/actions/getCurrentUser"
 
@@ -49,7 +50,7 @@ export async function GET(request: NextRequest) {
       type,
     })
   } catch (error) {
-    console.error("Error fetching popular templates:", error)
+    apiLogger.error({ err: error }, "Error fetching popular templates")
     return NextResponse.json({ error: "Failed to fetch templates" }, { status: 500 })
   }
 }

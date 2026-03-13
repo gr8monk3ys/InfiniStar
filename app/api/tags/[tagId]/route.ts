@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server"
 import { z } from "zod"
 
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
+import { apiLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
 import { getClientIdentifier, tagLimiter } from "@/app/lib/rate-limit"
 import { sanitizePlainText } from "@/app/lib/sanitize"
@@ -71,7 +72,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       },
     })
   } catch (error) {
-    console.error("Error fetching tag:", error)
+    apiLogger.error({ err: error }, "Error fetching tag")
     return NextResponse.json({ error: "Failed to fetch tag" }, { status: 500 })
   }
 }
@@ -188,7 +189,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       },
     })
   } catch (error) {
-    console.error("Error updating tag:", error)
+    apiLogger.error({ err: error }, "Error updating tag")
     return NextResponse.json({ error: "Failed to update tag" }, { status: 500 })
   }
 }
@@ -249,7 +250,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error("Error deleting tag:", error)
+    apiLogger.error({ err: error }, "Error deleting tag")
     return NextResponse.json({ error: "Failed to delete tag" }, { status: 500 })
   }
 }

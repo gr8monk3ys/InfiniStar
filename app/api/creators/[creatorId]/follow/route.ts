@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server"
 
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
+import { apiLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
 import { apiLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 import getCurrentUser from "@/app/actions/getCurrentUser"
@@ -47,7 +48,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       followerCount,
     })
   } catch (error) {
-    console.error("FOLLOW_STATUS_GET_ERROR", error)
+    apiLogger.error({ err: error }, "FOLLOW_STATUS_GET_ERROR")
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
@@ -101,7 +102,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       followerCount,
     })
   } catch (error) {
-    console.error("FOLLOW_CREATE_ERROR", error)
+    apiLogger.error({ err: error }, "FOLLOW_CREATE_ERROR")
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
@@ -148,7 +149,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       followerCount,
     })
   } catch (error) {
-    console.error("FOLLOW_DELETE_ERROR", error)
+    apiLogger.error({ err: error }, "FOLLOW_DELETE_ERROR")
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

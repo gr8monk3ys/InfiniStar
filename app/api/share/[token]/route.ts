@@ -9,6 +9,7 @@
 
 import { NextResponse, type NextRequest } from "next/server"
 
+import { apiLogger } from "@/app/lib/logger"
 import { getClientIdentifier, shareJoinLimiter } from "@/app/lib/rate-limit"
 import { getShareByToken } from "@/app/lib/sharing"
 
@@ -56,7 +57,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<IP
       },
     })
   } catch (error) {
-    console.error("GET_SHARE_INFO_ERROR", error)
+    apiLogger.error({ err: error }, "Error fetching share info")
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

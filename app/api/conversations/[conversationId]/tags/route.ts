@@ -2,9 +2,10 @@ import { NextResponse, type NextRequest } from "next/server"
 import { z } from "zod"
 
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
+import { apiLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
-import { pusherServer } from "@/app/lib/pusher"
 import { getPusherUserChannel } from "@/app/lib/pusher-channels"
+import { pusherServer } from "@/app/lib/pusher-server"
 import { getClientIdentifier, tagLimiter } from "@/app/lib/rate-limit"
 import getCurrentUser from "@/app/actions/getCurrentUser"
 
@@ -59,7 +60,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json({ tags: conversation.tags })
   } catch (error) {
-    console.error("Error fetching conversation tags:", error)
+    apiLogger.error({ err: error }, "Error fetching conversation tags")
     return NextResponse.json({ error: "Failed to fetch tags" }, { status: 500 })
   }
 }
@@ -206,7 +207,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       tag,
     })
   } catch (error) {
-    console.error("Error adding tag to conversation:", error)
+    apiLogger.error({ err: error }, "Error adding tag to conversation")
     return NextResponse.json({ error: "Failed to add tag" }, { status: 500 })
   }
 }

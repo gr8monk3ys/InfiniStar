@@ -1,8 +1,8 @@
 import { useEffect, useRef } from "react"
 import { type Channel, type Members } from "pusher-js"
 
-import { pusherClient } from "@/app/lib/pusher"
 import { PUSHER_PRESENCE_CHANNEL } from "@/app/lib/pusher-channels"
+import { pusherClient } from "@/app/lib/pusher-client"
 
 import useActiveList from "./useActiveList"
 

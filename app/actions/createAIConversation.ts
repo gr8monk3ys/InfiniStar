@@ -6,6 +6,7 @@ import {
   getPersonality,
   type PersonalityType,
 } from "@/app/lib/ai-personalities"
+import { aiLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
 
 import getCurrentUser from "./getCurrentUser"
@@ -55,7 +56,7 @@ export default async function createAIConversation(
 
     return newConversation
   } catch (error) {
-    console.error("Error creating AI conversation:", error instanceof Error ? error.message : error)
+    aiLogger.error({ err: error }, "Error creating AI conversation")
     return null
   }
 }

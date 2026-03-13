@@ -9,6 +9,7 @@ import {
   saveMemory,
 } from "@/app/lib/ai-memory"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
+import { aiLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
 import { getClientIdentifier, memoryLimiter } from "@/app/lib/rate-limit"
 import { sanitizePlainText } from "@/app/lib/sanitize"
@@ -59,7 +60,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json({ memory })
   } catch (error) {
-    console.error("Error fetching memory:", error)
+    aiLogger.error({ err: error }, "Error fetching memory")
     return NextResponse.json({ error: "Failed to fetch memory" }, { status: 500 })
   }
 }
@@ -117,7 +118,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       message: "Memory deleted successfully",
     })
   } catch (error) {
-    console.error("Error deleting memory:", error)
+    aiLogger.error({ err: error }, "Error deleting memory")
     return NextResponse.json({ error: "Failed to delete memory" }, { status: 500 })
   }
 }
@@ -197,7 +198,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       message: "Memory updated successfully",
     })
   } catch (error) {
-    console.error("Error updating memory:", error)
+    aiLogger.error({ err: error }, "Error updating memory")
     return NextResponse.json({ error: "Failed to update memory" }, { status: 500 })
   }
 }

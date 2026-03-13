@@ -9,9 +9,10 @@
 import { NextResponse, type NextRequest } from "next/server"
 
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
+import { apiLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
-import { pusherServer } from "@/app/lib/pusher"
 import { getPusherUserChannel } from "@/app/lib/pusher-channels"
+import { pusherServer } from "@/app/lib/pusher-server"
 import { getClientIdentifier, shareJoinLimiter } from "@/app/lib/rate-limit"
 import { joinViaShare } from "@/app/lib/sharing"
 import getCurrentUser from "@/app/actions/getCurrentUser"
@@ -94,7 +95,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<I
       conversation,
     })
   } catch (error) {
-    console.error("JOIN_VIA_TOKEN_ERROR", error)
+    apiLogger.error({ err: error }, "Error joining via share token")
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

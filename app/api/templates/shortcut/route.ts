@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { z } from "zod"
 
+import { apiLogger } from "@/app/lib/logger"
 import { findTemplateByShortcut, getUserTemplates } from "@/app/lib/templates"
 import getCurrentUser from "@/app/actions/getCurrentUser"
 
@@ -71,7 +72,7 @@ export async function GET(request: NextRequest) {
       })
     }
   } catch (error) {
-    console.error("Error finding template by shortcut:", error)
+    apiLogger.error({ err: error }, "Error finding template by shortcut")
     return NextResponse.json({ error: "Failed to find template" }, { status: 500 })
   }
 }

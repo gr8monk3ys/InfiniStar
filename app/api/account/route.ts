@@ -3,6 +3,7 @@ import { z } from "zod"
 
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import { sendAccountDeletionPendingEmail } from "@/app/lib/email"
+import { authLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
 import { accountDeletionLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 import getCurrentUser from "@/app/actions/getCurrentUser"
@@ -105,10 +106,12 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
-    // Log the deletion request for audit purposes
-    console.warn(
-      `[ACCOUNT_DELETION] User ${updatedUser.id} requested account deletion. ` +
-        `Scheduled for: ${updatedUser.deletionScheduledFor?.toISOString()}`
+    authLogger.warn(
+      {
+        userId: updatedUser.id,
+        deletionScheduledFor: updatedUser.deletionScheduledFor?.toISOString(),
+      },
+      "User requested account deletion"
     )
 
     return NextResponse.json({
@@ -118,7 +121,7 @@ export async function DELETE(request: NextRequest) {
       gracePeriodDays: DELETION_GRACE_PERIOD_DAYS,
     })
   } catch (error: unknown) {
-    console.error("ACCOUNT_DELETION_ERROR", error)
+    authLogger.error({ err: error }, "Account deletion error")
     return NextResponse.json(
       { error: "Internal server error", code: "INTERNAL_ERROR" },
       { status: 500 }

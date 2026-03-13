@@ -10,11 +10,12 @@ import {
 } from "@/app/lib/ai-limits"
 import { trackAiUsage } from "@/app/lib/ai-usage"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
+import { aiLogger } from "@/app/lib/logger"
 import { moderateTextModelAssisted } from "@/app/lib/moderation"
 import { canAccessNsfw } from "@/app/lib/nsfw"
 import prisma from "@/app/lib/prismadb"
-import { pusherServer } from "@/app/lib/pusher"
 import { getPusherConversationChannel, getPusherUserChannel } from "@/app/lib/pusher-channels"
+import { pusherServer } from "@/app/lib/pusher-server"
 import { aiChatLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 import { sanitizePlainText } from "@/app/lib/sanitize"
 import getCurrentUser from "@/app/actions/getCurrentUser"
@@ -253,7 +254,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ aiMessage })
   } catch (error) {
-    console.error("AI_IMAGE_GENERATE_ERROR", error)
+    aiLogger.error({ err: error }, "AI_IMAGE_GENERATE_ERROR")
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

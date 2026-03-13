@@ -9,6 +9,7 @@ import {
   saveExtractedMemories,
 } from "@/app/lib/ai-memory"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
+import { aiLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
 import { getClientIdentifier, memoryExtractLimiter } from "@/app/lib/rate-limit"
 import getCurrentUser from "@/app/actions/getCurrentUser"
@@ -175,7 +176,7 @@ export async function POST(request: NextRequest) {
         : `Found ${extractedMemories.length} memories. Review and save the ones you want to keep.`,
     })
   } catch (error) {
-    console.error("Error extracting memories:", error)
+    aiLogger.error({ err: error }, "Error extracting memories")
     return NextResponse.json(
       { error: "Failed to extract memories from conversation" },
       { status: 500 }

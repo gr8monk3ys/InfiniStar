@@ -7,6 +7,7 @@
  * is not configured.
  */
 
+import { authLogger } from "@/app/lib/logger"
 import { getRedisClient } from "@/app/lib/redis"
 
 const TWO_FACTOR_TOKEN_TTL_SECONDS = 5 * 60 // 5 minutes
@@ -37,9 +38,9 @@ function logBackend(usingRedis: boolean): void {
   if (backendLogged) return
   backendLogged = true
   if (usingRedis) {
-    console.warn("[2FA Tokens] Using Redis-backed token storage.")
+    authLogger.warn("2FA tokens using Redis-backed storage")
   } else {
-    console.warn("[2FA Tokens] Using in-memory token storage (Redis not available).")
+    authLogger.warn("2FA tokens using in-memory storage (Redis not available)")
   }
 }
 
@@ -58,9 +59,9 @@ export async function store2FAToken(email: string, token: string): Promise<void>
       await redis.set(key, JSON.stringify({ token }), "EX", TWO_FACTOR_TOKEN_TTL_SECONDS)
       return
     } catch (error) {
-      console.error(
-        "[2FA Tokens] Redis store failed, falling back to in-memory:",
-        error instanceof Error ? error.message : error
+      authLogger.error(
+        { err: error, email: normalizedEmail },
+        "Redis store failed for 2FA token, falling back to in-memory"
       )
     }
   }
@@ -87,9 +88,9 @@ export async function get2FAToken(email: string): Promise<string | null> {
       const parsed = JSON.parse(raw) as { token: string }
       return parsed.token
     } catch (error) {
-      console.error(
-        "[2FA Tokens] Redis get failed, falling back to in-memory:",
-        error instanceof Error ? error.message : error
+      authLogger.error(
+        { err: error, email: normalizedEmail },
+        "Redis get failed for 2FA token, falling back to in-memory"
       )
     }
   }
@@ -119,9 +120,9 @@ export async function clear2FAToken(email: string): Promise<void> {
       inMemoryStore.delete(normalizedEmail)
       return
     } catch (error) {
-      console.error(
-        "[2FA Tokens] Redis clear failed, falling back to in-memory:",
-        error instanceof Error ? error.message : error
+      authLogger.error(
+        { err: error, email: normalizedEmail },
+        "Redis clear failed for 2FA token, falling back to in-memory"
       )
     }
   }

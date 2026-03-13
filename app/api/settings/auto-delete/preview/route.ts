@@ -8,6 +8,7 @@ import { NextResponse, type NextRequest } from "next/server"
 
 import { getAutoDeletePreview } from "@/app/lib/auto-delete"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
+import { apiLogger } from "@/app/lib/logger"
 import { apiLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 import getCurrentUser from "@/app/actions/getCurrentUser"
 
@@ -50,7 +51,7 @@ export async function POST(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error("Error generating auto-delete preview:", error)
+    apiLogger.error({ err: error }, "Error generating auto-delete preview")
     return NextResponse.json({ error: "Failed to generate auto-delete preview" }, { status: 500 })
   }
 }

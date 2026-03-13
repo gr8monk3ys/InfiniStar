@@ -11,6 +11,7 @@ import { auth } from "@clerk/nextjs/server"
 
 import { deleteOldConversations, getAutoDeleteSettings } from "@/app/lib/auto-delete"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
+import { apiLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
 import { createRateLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 
@@ -97,7 +98,7 @@ export async function POST(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error("Error running auto-delete:", error)
+    apiLogger.error({ err: error }, "Error running auto-delete")
     return NextResponse.json({ error: "Failed to run auto-delete cleanup" }, { status: 500 })
   }
 }

@@ -14,6 +14,7 @@ import {
   updateAutoDeleteSettings,
 } from "@/app/lib/auto-delete"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
+import { apiLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
 import { apiLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 import getCurrentUser from "@/app/actions/getCurrentUser"
@@ -46,7 +47,7 @@ export async function GET() {
 
     return NextResponse.json({ settings })
   } catch (error) {
-    console.error("Error fetching auto-delete settings:", error)
+    apiLogger.error({ err: error }, "Error fetching auto-delete settings")
     return NextResponse.json({ error: "Failed to fetch auto-delete settings" }, { status: 500 })
   }
 }
@@ -95,7 +96,7 @@ export async function PATCH(request: NextRequest) {
       settings: updatedSettings,
     })
   } catch (error) {
-    console.error("Error updating auto-delete settings:", error)
+    apiLogger.error({ err: error }, "Error updating auto-delete settings")
     return NextResponse.json({ error: "Failed to update auto-delete settings" }, { status: 500 })
   }
 }

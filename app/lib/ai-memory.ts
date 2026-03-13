@@ -9,6 +9,7 @@ import { MemoryCategory, type AIMemory } from "@prisma/client"
 
 import { getFreeTierModel } from "@/app/lib/ai-model-routing"
 import { trackAiUsage } from "@/app/lib/ai-usage"
+import { aiLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
 import { getUserSubscriptionPlan } from "@/app/lib/subscription"
 
@@ -435,7 +436,7 @@ If there's nothing notable to remember, return an empty array.
         category: memory.category as MemoryCategory,
       }))
   } catch (error) {
-    console.error("Failed to extract memories:", error)
+    aiLogger.error({ err: error }, "Failed to extract memories")
     return []
   }
 }
@@ -460,7 +461,7 @@ export async function saveExtractedMemories(
       })
       saved++
     } catch (error) {
-      console.error(`Failed to save memory ${memory.key}:`, error)
+      aiLogger.error({ err: error, memoryKey: memory.key }, "Failed to save memory")
       failed++
     }
   }

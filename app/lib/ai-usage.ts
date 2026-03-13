@@ -5,6 +5,7 @@
  * calculating costs, and storing usage metrics.
  */
 
+import { aiLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
 
 /**
@@ -147,7 +148,7 @@ export async function trackAiUsage({
 
     return usage
   } catch (error) {
-    console.error("Failed to track AI usage:", error)
+    aiLogger.error({ err: error }, "Failed to track AI usage")
     // Don't throw - usage tracking failure shouldn't break the API
     return null
   }

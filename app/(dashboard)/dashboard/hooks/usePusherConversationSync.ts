@@ -3,8 +3,8 @@
 import { useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 
-import { pusherClient } from "@/app/lib/pusher"
 import { getPusherUserChannel } from "@/app/lib/pusher-channels"
+import { pusherClient } from "@/app/lib/pusher-client"
 import { type FullConversationType } from "@/app/types"
 
 interface NotificationPreferences {

@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server"
 
 import { markConversationSeenByUserId } from "@/app/lib/conversation-seen"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
+import { apiLogger } from "@/app/lib/logger"
 import { apiLimiter } from "@/app/lib/rate-limit"
 import getCurrentUser from "@/app/actions/getCurrentUser"
 
@@ -44,7 +45,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<I
 
     return NextResponse.json({ success: true, updated: result.updated })
   } catch (error) {
-    console.error("CONVERSATION_SEEN_ERROR:", error)
+    apiLogger.error({ err: error }, "CONVERSATION_SEEN_ERROR")
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

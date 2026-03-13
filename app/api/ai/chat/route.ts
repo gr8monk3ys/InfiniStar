@@ -12,6 +12,7 @@ import {
 import { trackAiUsage } from "@/app/lib/ai-usage"
 import anthropic from "@/app/lib/anthropic"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
+import { aiLogger } from "@/app/lib/logger"
 import {
   buildModerationDetails,
   moderateTextModelAssisted,
@@ -19,8 +20,8 @@ import {
 } from "@/app/lib/moderation"
 import { canAccessNsfw } from "@/app/lib/nsfw"
 import prisma from "@/app/lib/prismadb"
-import { pusherServer } from "@/app/lib/pusher"
 import { getPusherConversationChannel, getPusherUserChannel } from "@/app/lib/pusher-channels"
+import { pusherServer } from "@/app/lib/pusher-server"
 import { aiChatLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 import { sanitizeUrl } from "@/app/lib/sanitize"
 import { sendWebPushToUser } from "@/app/lib/web-push"
@@ -334,7 +335,7 @@ export async function POST(request: NextRequest) {
         })
       }
     } catch (error) {
-      console.error("WEB_PUSH_AI_COMPLETE_ERROR", error)
+      aiLogger.error({ err: error }, "WEB_PUSH_AI_COMPLETE_ERROR")
     }
 
     return NextResponse.json({
@@ -342,7 +343,7 @@ export async function POST(request: NextRequest) {
       aiMessage,
     })
   } catch (error) {
-    console.error("AI Chat error:", error)
+    aiLogger.error({ err: error }, "AI Chat error")
     return new NextResponse("Internal Error", { status: 500 })
   }
 }

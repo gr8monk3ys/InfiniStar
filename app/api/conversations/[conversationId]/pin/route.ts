@@ -1,9 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server"
 
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
+import { apiLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
-import { pusherServer } from "@/app/lib/pusher"
 import { getPusherUserChannel } from "@/app/lib/pusher-channels"
+import { pusherServer } from "@/app/lib/pusher-server"
 import { apiLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 import getCurrentUser from "@/app/actions/getCurrentUser"
 
@@ -117,7 +118,7 @@ export async function POST(
 
     return NextResponse.json(updatedConversation)
   } catch (error: unknown) {
-    console.error("CONVERSATION_PIN_ERROR", error)
+    apiLogger.error({ err: error }, "CONVERSATION_PIN_ERROR")
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
@@ -207,7 +208,7 @@ export async function DELETE(
 
     return NextResponse.json(updatedConversation)
   } catch (error: unknown) {
-    console.error("CONVERSATION_UNPIN_ERROR", error)
+    apiLogger.error({ err: error }, "CONVERSATION_UNPIN_ERROR")
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

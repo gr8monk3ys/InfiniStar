@@ -5,6 +5,7 @@ import { getAiAccessDecision } from "@/app/lib/ai-access"
 import { AI_TRANSCRIBE_COST_CENTS_PER_REQUEST } from "@/app/lib/ai-limits"
 import { trackAiUsage } from "@/app/lib/ai-usage"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
+import { aiLogger } from "@/app/lib/logger"
 import { moderateTextModelAssisted } from "@/app/lib/moderation"
 import { canAccessNsfw } from "@/app/lib/nsfw"
 import prisma from "@/app/lib/prismadb"
@@ -278,7 +279,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ transcript })
   } catch (error) {
-    console.error("AI_TRANSCRIBE_ERROR", error)
+    aiLogger.error({ err: error }, "AI_TRANSCRIBE_ERROR")
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

@@ -49,7 +49,7 @@ jest.mock("@/app/lib/prismadb", () => ({
   },
 }))
 
-jest.mock("@/app/lib/pusher", () => ({
+jest.mock("@/app/lib/pusher-server", () => ({
   pusherServer: { trigger: (...args: unknown[]) => mockPusherTrigger(...args) },
 }))
 

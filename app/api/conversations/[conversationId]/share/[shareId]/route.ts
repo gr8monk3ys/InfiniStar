@@ -9,6 +9,7 @@ import { NextResponse, type NextRequest } from "next/server"
 import { z } from "zod"
 
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
+import { apiLogger } from "@/app/lib/logger"
 import { getClientIdentifier, shareLimiter } from "@/app/lib/rate-limit"
 import { deleteShare, getShareUrl, updateShare } from "@/app/lib/sharing"
 import getCurrentUser from "@/app/actions/getCurrentUser"
@@ -99,7 +100,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       shareUrl,
     })
   } catch (error) {
-    console.error("UPDATE_SHARE_ERROR", error)
+    apiLogger.error({ err: error }, "UPDATE_SHARE_ERROR")
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
@@ -141,7 +142,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error("DELETE_SHARE_ERROR", error)
+    apiLogger.error({ err: error }, "DELETE_SHARE_ERROR")
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

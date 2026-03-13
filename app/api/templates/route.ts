@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server"
 import { z } from "zod"
 
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
+import { apiLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
 import { getClientIdentifier, templateLimiter } from "@/app/lib/rate-limit"
 import { sanitizePlainText } from "@/app/lib/sanitize"
@@ -104,7 +105,7 @@ export async function GET(request: NextRequest) {
       predefinedCategories: TEMPLATE_CATEGORIES,
     })
   } catch (error) {
-    console.error("Error fetching templates:", error)
+    apiLogger.error({ err: error }, "Error fetching templates")
     return NextResponse.json({ error: "Failed to fetch templates" }, { status: 500 })
   }
 }
@@ -185,7 +186,7 @@ export async function POST(request: NextRequest) {
       limitInfo,
     })
   } catch (error) {
-    console.error("Error creating template:", error)
+    apiLogger.error({ err: error }, "Error creating template")
 
     // Handle specific errors
     if (error instanceof Error) {

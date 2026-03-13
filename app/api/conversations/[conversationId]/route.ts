@@ -1,9 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server"
 
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
+import { apiLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
-import { pusherServer } from "@/app/lib/pusher"
 import { getPusherUserChannel } from "@/app/lib/pusher-channels"
+import { pusherServer } from "@/app/lib/pusher-server"
 import getCurrentUser from "@/app/actions/getCurrentUser"
 
 interface IParams {
@@ -61,7 +62,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
 
     return NextResponse.json(deletedConversation)
   } catch (error) {
-    console.error("CONVERSATION_DELETE_ERROR:", error)
+    apiLogger.error({ err: error }, "CONVERSATION_DELETE_ERROR")
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

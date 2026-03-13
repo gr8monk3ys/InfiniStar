@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server"
 
+import { apiLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
 import getCurrentUser from "@/app/actions/getCurrentUser"
 
@@ -43,7 +44,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       nextCursor: hasMore ? items[items.length - 1].id : null,
     })
   } catch (error) {
-    console.error("[FAVORITES]", error)
+    apiLogger.error({ err: error }, "Failed to fetch favorites")
     return NextResponse.json({ error: "Failed to fetch favorites" }, { status: 500 })
   }
 }

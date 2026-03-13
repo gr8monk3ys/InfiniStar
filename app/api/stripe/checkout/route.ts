@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server"
 import { env } from "@/env.mjs"
 
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
+import { stripeLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
 import { apiLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 import { stripe } from "@/app/lib/stripe"
@@ -137,7 +138,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     return NextResponse.json({ url: checkoutSession.url })
   } catch (error) {
-    console.error("[STRIPE_CHECKOUT_ERROR]", error)
+    stripeLogger.error({ err: error }, "Stripe checkout error")
     return new NextResponse("Internal Error", { status: 500 })
   }
 }

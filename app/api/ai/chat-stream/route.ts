@@ -13,6 +13,7 @@ import {
 import { trackAiUsage } from "@/app/lib/ai-usage"
 import anthropic from "@/app/lib/anthropic"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
+import { aiLogger } from "@/app/lib/logger"
 import {
   buildModerationDetails,
   moderateTextModelAssisted,
@@ -20,8 +21,8 @@ import {
 } from "@/app/lib/moderation"
 import { canAccessNsfw } from "@/app/lib/nsfw"
 import prisma from "@/app/lib/prismadb"
-import { pusherServer } from "@/app/lib/pusher"
 import { getPusherConversationChannel } from "@/app/lib/pusher-channels"
+import { pusherServer } from "@/app/lib/pusher-server"
 import { aiChatLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 import { sanitizeUrl } from "@/app/lib/sanitize"
 import { sendWebPushToUser } from "@/app/lib/web-push"
@@ -278,8 +279,7 @@ export async function POST(request: NextRequest) {
             systemPrompt = baseSystemPrompt + "\n" + memoryContext
           }
         } catch (memoryError) {
-          // Log but don't fail the request if memory fetch fails
-          console.warn("Failed to fetch memories:", memoryError)
+          aiLogger.warn({ err: memoryError }, "Failed to fetch memories")
         }
 
         try {
@@ -384,7 +384,7 @@ export async function POST(request: NextRequest) {
               })
             }
           })().catch((error) => {
-            console.error("WEB_PUSH_AI_COMPLETE_ERROR", error)
+            aiLogger.error({ err: error }, "WEB_PUSH_AI_COMPLETE_ERROR")
           })
 
           // Send completion signal with token usage data
@@ -404,7 +404,7 @@ export async function POST(request: NextRequest) {
           await pushPromise
         } catch (error) {
           clearTimeout(timeoutId)
-          console.error("Streaming error:", error)
+          aiLogger.error({ err: error }, "Streaming error")
 
           // Send error to client
           const errorData = JSON.stringify({
@@ -428,7 +428,7 @@ export async function POST(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error("AI Chat Stream error:", error)
+    aiLogger.error({ err: error }, "AI Chat Stream error")
     return new Response("Internal Error", { status: 500 })
   }
 }

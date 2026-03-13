@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server"
 
+import { dbLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
 
 /**
@@ -15,12 +16,12 @@ export async function GET(request: NextRequest) {
     const cronSecret = process.env.CRON_SECRET
 
     if (!cronSecret) {
-      console.error("[CRON] CRON_SECRET environment variable not set")
+      dbLogger.error("CRON_SECRET environment variable not set")
       return NextResponse.json({ error: "Server configuration error" }, { status: 500 })
     }
 
     if (authHeader !== `Bearer ${cronSecret}`) {
-      console.warn("[CRON] Unauthorized cron request attempt")
+      dbLogger.warn("Unauthorized cron request attempt")
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
@@ -35,7 +36,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ success: true, updatedRows })
   } catch (error: unknown) {
-    console.error("[CRON] Error reconciling character comment counts:", error)
+    dbLogger.error({ err: error }, "Error reconciling character comment counts")
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

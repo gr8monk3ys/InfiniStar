@@ -5,6 +5,7 @@ import { getFreeTierModel } from "@/app/lib/ai-model-routing"
 import { trackAiUsage } from "@/app/lib/ai-usage"
 import anthropic from "@/app/lib/anthropic"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
+import { apiLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
 import { aiChatLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 import getCurrentUser from "@/app/actions/getCurrentUser"
@@ -262,7 +263,7 @@ export async function POST(
       cached: false,
     })
   } catch (error: unknown) {
-    console.error("CONVERSATION_SUMMARIZE_ERROR", error)
+    apiLogger.error({ err: error }, "CONVERSATION_SUMMARIZE_ERROR")
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
@@ -332,7 +333,7 @@ export async function GET(
       canSummarize: currentMessageCount >= MIN_MESSAGES_FOR_SUMMARY,
     })
   } catch (error: unknown) {
-    console.error("CONVERSATION_GET_SUMMARY_ERROR", error)
+    apiLogger.error({ err: error }, "CONVERSATION_GET_SUMMARY_ERROR")
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

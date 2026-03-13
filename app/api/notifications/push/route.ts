@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server"
 import { z } from "zod"
 
 import { withCsrfProtection } from "@/app/lib/csrf"
+import { apiLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
 import { getVapidPublicKey } from "@/app/lib/web-push"
 import getCurrentUser from "@/app/actions/getCurrentUser"
@@ -45,7 +46,7 @@ export async function GET(_request: NextRequest) {
       subscriptionCount,
     })
   } catch (error: unknown) {
-    console.error("PUSH_STATUS_GET_ERROR", error)
+    apiLogger.error({ err: error }, "Error fetching push status")
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
@@ -84,7 +85,7 @@ export const POST = withCsrfProtection(async (request: Request) => {
 
     return NextResponse.json({ ok: true })
   } catch (error: unknown) {
-    console.error("PUSH_SUBSCRIBE_ERROR", error)
+    apiLogger.error({ err: error }, "Error subscribing to push")
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 })
@@ -121,7 +122,7 @@ export const DELETE = withCsrfProtection(async (request: Request) => {
 
     return NextResponse.json({ ok: true, deleted: result.count })
   } catch (error: unknown) {
-    console.error("PUSH_UNSUBSCRIBE_ERROR", error)
+    apiLogger.error({ err: error }, "Error unsubscribing from push")
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 })

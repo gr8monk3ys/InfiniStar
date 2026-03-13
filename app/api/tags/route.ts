@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server"
 import { z } from "zod"
 
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
+import { apiLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
 import { getClientIdentifier, tagLimiter } from "@/app/lib/rate-limit"
 import { sanitizePlainText } from "@/app/lib/sanitize"
@@ -58,7 +59,7 @@ export async function GET() {
 
     return NextResponse.json({ tags: tagsWithCount })
   } catch (error) {
-    console.error("Error fetching tags:", error)
+    apiLogger.error({ err: error }, "Error fetching tags")
     return NextResponse.json({ error: "Failed to fetch tags" }, { status: 500 })
   }
 }
@@ -153,7 +154,7 @@ export async function POST(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error("Error creating tag:", error)
+    apiLogger.error({ err: error }, "Error creating tag")
     return NextResponse.json({ error: "Failed to create tag" }, { status: 500 })
   }
 }

@@ -2,9 +2,10 @@ import { NextResponse, type NextRequest } from "next/server"
 import { z } from "zod"
 
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
+import { apiLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
-import { pusherServer } from "@/app/lib/pusher"
 import { getPusherConversationChannel } from "@/app/lib/pusher-channels"
+import { pusherServer } from "@/app/lib/pusher-server"
 import { apiLimiter } from "@/app/lib/rate-limit"
 import { sanitizeMessage } from "@/app/lib/sanitize"
 import getCurrentUser from "@/app/actions/getCurrentUser"
@@ -101,7 +102,7 @@ export async function PATCH(
 
     return NextResponse.json(updatedMessage)
   } catch (error: unknown) {
-    console.error("MESSAGE_EDIT_ERROR", error)
+    apiLogger.error({ err: error }, "MESSAGE_EDIT_ERROR")
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
@@ -172,7 +173,7 @@ export async function DELETE(
 
     return NextResponse.json(deletedMessage)
   } catch (error: unknown) {
-    console.error("MESSAGE_DELETE_ERROR", error)
+    apiLogger.error({ err: error }, "MESSAGE_DELETE_ERROR")
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

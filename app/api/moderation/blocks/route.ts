@@ -3,6 +3,7 @@ import { auth } from "@clerk/nextjs/server"
 import { z } from "zod"
 
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
+import { apiLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
 import { apiLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 
@@ -40,7 +41,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ blocks })
   } catch (error) {
-    console.error("GET /api/moderation/blocks error:", error)
+    apiLogger.error({ err: error }, "Error listing blocks")
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
@@ -100,7 +101,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ block }, { status: 201 })
   } catch (error) {
-    console.error("POST /api/moderation/blocks error:", error)
+    apiLogger.error({ err: error }, "Error creating block")
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
@@ -146,7 +147,7 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error("DELETE /api/moderation/blocks error:", error)
+    apiLogger.error({ err: error }, "Error deleting block")
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

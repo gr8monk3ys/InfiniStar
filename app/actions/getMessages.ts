@@ -1,3 +1,4 @@
+import { dbLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
 import { type FullMessageType } from "@/app/types"
 
@@ -41,7 +42,7 @@ const getMessages = async (
     // Reverse to return in ascending order (oldest first)
     return messages.reverse()
   } catch (error) {
-    console.error("GET_MESSAGES_ERROR:", error)
+    dbLogger.error({ err: error }, "GET_MESSAGES_ERROR")
     return []
   }
 }

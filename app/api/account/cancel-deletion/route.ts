@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server"
 
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import { sendAccountDeletionCancelledEmail } from "@/app/lib/email"
+import { authLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
 import { accountDeletionLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 import getCurrentUser from "@/app/actions/getCurrentUser"
@@ -88,15 +89,14 @@ export async function POST(request: NextRequest) {
       await sendAccountDeletionCancelledEmail(updatedUser.email, updatedUser.name || "User")
     }
 
-    // Log the cancellation for audit purposes
-    console.warn(`[ACCOUNT_DELETION] User ${updatedUser.id} cancelled account deletion request.`)
+    authLogger.warn({ userId: updatedUser.id }, "User cancelled account deletion request")
 
     return NextResponse.json({
       success: true,
       message: "Account deletion cancelled successfully",
     })
   } catch (error: unknown) {
-    console.error("CANCEL_DELETION_ERROR", error)
+    authLogger.error({ err: error }, "Cancel deletion error")
     return NextResponse.json(
       { error: "Internal server error", code: "INTERNAL_ERROR" },
       { status: 500 }

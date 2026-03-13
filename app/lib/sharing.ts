@@ -8,6 +8,7 @@
 import crypto from "crypto"
 import { SharePermission, ShareType } from "@prisma/client"
 
+import { apiLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
 
 /**
@@ -110,7 +111,7 @@ export async function createShareLink(
 
     return { success: true, share }
   } catch (error) {
-    console.error("CREATE_SHARE_ERROR", error)
+    apiLogger.error({ err: error }, "CREATE_SHARE_ERROR")
     return { success: false, error: "Failed to create share link" }
   }
 }
@@ -180,7 +181,7 @@ export async function getShareByToken(
 
     return { success: true, shareInfo }
   } catch (error) {
-    console.error("GET_SHARE_BY_TOKEN_ERROR", error)
+    apiLogger.error({ err: error }, "GET_SHARE_BY_TOKEN_ERROR")
     return { success: false, error: "Failed to get share information" }
   }
 }
@@ -315,7 +316,7 @@ export async function joinViaShare(
       permission: share.permission,
     }
   } catch (error) {
-    console.error("JOIN_VIA_SHARE_ERROR", error)
+    apiLogger.error({ err: error }, "JOIN_VIA_SHARE_ERROR")
     return { success: false, error: "Failed to join conversation" }
   }
 }
@@ -368,7 +369,7 @@ export async function revokeShare(
 
     return { success: true }
   } catch (error) {
-    console.error("REVOKE_SHARE_ERROR", error)
+    apiLogger.error({ err: error }, "REVOKE_SHARE_ERROR")
     return { success: false, error: "Failed to revoke share" }
   }
 }
@@ -424,7 +425,7 @@ export async function updateShare(
 
     return { success: true, share: updatedShare }
   } catch (error) {
-    console.error("UPDATE_SHARE_ERROR", error)
+    apiLogger.error({ err: error }, "UPDATE_SHARE_ERROR")
     return { success: false, error: "Failed to update share" }
   }
 }
@@ -469,7 +470,7 @@ export async function getSharesForConversation(
 
     return { success: true, shares }
   } catch (error) {
-    console.error("GET_SHARES_ERROR", error)
+    apiLogger.error({ err: error }, "GET_SHARES_ERROR")
     return { success: false, error: "Failed to get shares" }
   }
 }
@@ -513,7 +514,7 @@ export async function deleteShare(
 
     return { success: true }
   } catch (error) {
-    console.error("DELETE_SHARE_ERROR", error)
+    apiLogger.error({ err: error }, "DELETE_SHARE_ERROR")
     return { success: false, error: "Failed to delete share" }
   }
 }
@@ -549,7 +550,7 @@ export async function cleanupExpiredShares(): Promise<{
 
     return { success: true, deletedCount: result.count }
   } catch (error) {
-    console.error("CLEANUP_SHARES_ERROR", error)
+    apiLogger.error({ err: error }, "CLEANUP_SHARES_ERROR")
     return { success: false, error: "Failed to cleanup expired shares" }
   }
 }
