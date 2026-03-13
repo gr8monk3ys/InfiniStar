@@ -5,10 +5,9 @@
  * It uses Claude Haiku for fast, cost-effective suggestion generation.
  */
 
-import Anthropic from "@anthropic-ai/sdk"
-
 import { getFreeTierModel } from "@/app/lib/ai-model-routing"
 import { trackAiUsage } from "@/app/lib/ai-usage"
+import anthropic from "@/app/lib/anthropic"
 import { type FullMessageType } from "@/app/types"
 
 /**
@@ -252,12 +251,10 @@ export function parseSuggestions(response: string, type: SuggestionType): Sugges
 }
 
 /**
- * Initialize Anthropic client
+ * Get shared Anthropic client
  */
-function getAnthropicClient(): Anthropic {
-  return new Anthropic({
-    apiKey: process.env.ANTHROPIC_API_KEY || "",
-  })
+function getAnthropicClient(): typeof anthropic {
+  return anthropic
 }
 
 /**

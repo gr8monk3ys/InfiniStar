@@ -14,10 +14,18 @@ const getUsers = async () => {
       orderBy: {
         createdAt: "desc",
       },
+      take: 200,
       where: {
         NOT: {
           email: session.user.email,
         },
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        image: true,
+        createdAt: true,
       },
     })
 

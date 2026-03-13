@@ -12,6 +12,14 @@ import {
 
 import { type Icons } from "@/app/components/icons"
 
+export interface UserSummary {
+  id: string
+  name: string | null
+  email: string | null
+  image: string | null
+  createdAt: Date
+}
+
 export type FullMessageType = Message & {
   sender: User
   seen: User[]

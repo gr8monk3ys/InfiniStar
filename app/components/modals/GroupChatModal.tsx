@@ -2,7 +2,6 @@
 
 import React, { useState } from "react"
 import { useRouter } from "next/navigation"
-import { type User } from "@prisma/client"
 import axios from "axios"
 import { useForm, type FieldValues, type SubmitHandler } from "react-hook-form"
 import { toast } from "react-hot-toast"
@@ -10,13 +9,14 @@ import { toast } from "react-hot-toast"
 import { Button } from "@/app/components/ui/button"
 import Input from "@/app/components/ui/input"
 import Select from "@/app/(dashboard)/dashboard/components/inputs/Select"
+import { type UserSummary } from "@/app/types"
 
 import Modal from "./Modal"
 
 interface GroupChatModalProps {
   isOpen?: boolean
   onClose: () => void
-  user: User[]
+  user: UserSummary[]
 }
 
 const GroupChatModal: React.FC<GroupChatModalProps> = ({ isOpen, onClose, user = [] }) => {

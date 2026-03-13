@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useReducer } from "react"
 import dynamic from "next/dynamic"
-import { type User } from "@prisma/client"
 import clsx from "clsx"
 import { BsPinAngleFill } from "react-icons/bs"
 import {
@@ -34,7 +33,7 @@ import useConversation from "@/app/(dashboard)/dashboard/hooks/useConversation"
 import { usePusherConversationSync } from "@/app/(dashboard)/dashboard/hooks/usePusherConversationSync"
 import { TagBadge } from "@/app/components/tags"
 import { useTags } from "@/app/hooks/useTags"
-import { TAG_COLORS, type FullConversationType, type TagColor } from "@/app/types"
+import { TAG_COLORS, type FullConversationType, type TagColor, type UserSummary } from "@/app/types"
 
 import ConversationBox from "./ConversationBox"
 
@@ -51,7 +50,7 @@ const SceneChatModal = dynamic(() => import("@/app/components/modals/SceneChatMo
 
 interface ConversationListProps {
   initialItems: FullConversationType[]
-  user: User[]
+  user: UserSummary[]
   currentUserId: string | null
   title?: string
   initialNotificationPrefs: NotificationPreferences | null

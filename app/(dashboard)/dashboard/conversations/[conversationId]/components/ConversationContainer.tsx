@@ -125,7 +125,7 @@ const ConversationContainer: React.FC<ConversationContainerProps> = ({
   useEffect(() => {
     const channelName = getPusherConversationChannel(conversationId)
 
-    pusherClient.subscribe(channelName)
+    const channel = pusherClient.subscribe(channelName)
     bottomRef?.current?.scrollIntoView()
 
     const messageHandler = (message: FullMessageType) => {
@@ -152,17 +152,17 @@ const ConversationContainer: React.FC<ConversationContainerProps> = ({
       dispatchMessages({ type: "replace_message", message: reactedMessage })
     }
 
-    pusherClient.bind("messages:new", messageHandler)
-    pusherClient.bind("message:update", updateMessageHandler)
-    pusherClient.bind("message:delete", deleteMessageHandler)
-    pusherClient.bind("message:reaction", reactionHandler)
+    channel.bind("messages:new", messageHandler)
+    channel.bind("message:update", updateMessageHandler)
+    channel.bind("message:delete", deleteMessageHandler)
+    channel.bind("message:reaction", reactionHandler)
 
     return () => {
+      channel.unbind("messages:new", messageHandler)
+      channel.unbind("message:update", updateMessageHandler)
+      channel.unbind("message:delete", deleteMessageHandler)
+      channel.unbind("message:reaction", reactionHandler)
       pusherClient.unsubscribe(channelName)
-      pusherClient.unbind("messages:new", messageHandler)
-      pusherClient.unbind("message:update", updateMessageHandler)
-      pusherClient.unbind("message:delete", deleteMessageHandler)
-      pusherClient.unbind("message:reaction", reactionHandler)
       if (seenDebounceRef.current) {
         clearTimeout(seenDebounceRef.current)
       }

@@ -113,17 +113,17 @@ export function useTypingIndicator(options: UseTypingIndicatorOptions): UseTypin
     }
 
     // Subscribe to the conversation channel
-    pusherClient.subscribe(getPusherConversationChannel(conversationId))
-    pusherClient.bind("user:typing", handleTyping)
+    const channel = pusherClient.subscribe(getPusherConversationChannel(conversationId))
+    channel.bind("user:typing", handleTyping)
 
     return () => {
-      // Cleanup: clear all timeouts and unsubscribe
+      // Cleanup: clear all timeouts and unbind
       // Using setTypingUsersMap to access current state in cleanup
       setTypingUsersMap((current) => {
         current.forEach((user) => clearTimeout(user.timeoutId))
         return new Map()
       })
-      pusherClient.unbind("user:typing", handleTyping)
+      channel.unbind("user:typing", handleTyping)
       // Note: We don't unsubscribe from the channel here because
       // other components (Body.tsx) may also be subscribed to it
     }

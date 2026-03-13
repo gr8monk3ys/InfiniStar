@@ -1,17 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server"
-import Anthropic from "@anthropic-ai/sdk"
 
 import { getAiAccessDecision } from "@/app/lib/ai-access"
 import { getFreeTierModel } from "@/app/lib/ai-model-routing"
 import { trackAiUsage } from "@/app/lib/ai-usage"
+import anthropic from "@/app/lib/anthropic"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import prisma from "@/app/lib/prismadb"
 import { aiChatLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 import getCurrentUser from "@/app/actions/getCurrentUser"
-
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY || "",
-})
 
 // Minimum number of messages required for summarization
 const MIN_MESSAGES_FOR_SUMMARY = 5

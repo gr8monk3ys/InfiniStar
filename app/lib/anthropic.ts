@@ -8,9 +8,25 @@ import Anthropic from "@anthropic-ai/sdk"
 const dangerouslyAllowBrowser =
   typeof window !== "undefined" && typeof process !== "undefined" && process.versions != null
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY || "",
-  dangerouslyAllowBrowser,
+let _anthropic: Anthropic | undefined
+
+function getAnthropicClient(): Anthropic {
+  if (!_anthropic) {
+    const apiKey = process.env.ANTHROPIC_API_KEY
+    if (!apiKey) {
+      throw new Error("Missing ANTHROPIC_API_KEY environment variable")
+    }
+    _anthropic = new Anthropic({ apiKey, dangerouslyAllowBrowser })
+  }
+  return _anthropic
+}
+
+const anthropic = new Proxy({} as Anthropic, {
+  get(_target, prop, receiver) {
+    const client = getAnthropicClient()
+    const value = Reflect.get(client, prop, receiver)
+    return typeof value === "function" ? value.bind(client) : value
+  },
 })
 
 export default anthropic

@@ -326,14 +326,22 @@ export async function runAutoDeleteForAllUsers(): Promise<{
   let totalDeleted = 0
   const errors: string[] = []
 
-  for (const user of users) {
-    try {
-      const result = await deleteOldConversations(user.id)
-      totalDeleted += result.deletedCount
-      errors.push(...result.errors)
-    } catch (error) {
-      console.error(`Error running auto-delete for user ${user.id}:`, error)
-      errors.push(`Failed to process user ${user.id}`)
+  // Process users in batches of 10 for concurrency without overwhelming the DB
+  const BATCH_SIZE = 10
+  for (let i = 0; i < users.length; i += BATCH_SIZE) {
+    const batch = users.slice(i, i + BATCH_SIZE)
+    const results = await Promise.allSettled(batch.map((user) => deleteOldConversations(user.id)))
+
+    for (let j = 0; j < results.length; j++) {
+      const result = results[j]
+      if (result.status === "fulfilled") {
+        totalDeleted += result.value.deletedCount
+        errors.push(...result.value.errors)
+      } else {
+        const userId = batch[j].id
+        console.error(`Error running auto-delete for user ${userId}:`, result.reason)
+        errors.push(`Failed to process user ${userId}`)
+      }
     }
   }
 

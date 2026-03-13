@@ -10,6 +10,7 @@ import {
   isFallbackAuthEnabled,
   verifyFallbackPassword,
 } from "@/app/lib/fallback-auth"
+import { authLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 
 const signInSchema = z.object({
   email: z.string().email("Enter a valid email address."),
@@ -20,6 +21,11 @@ const signInSchema = z.object({
 export async function POST(request: NextRequest) {
   if (!isFallbackAuthEnabled()) {
     return NextResponse.json({ error: "Backup auth is not enabled." }, { status: 404 })
+  }
+
+  const identifier = getClientIdentifier(request)
+  if (!authLimiter.check(identifier)) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 })
   }
 
   if (!verifyCsrfToken(request.headers.get("X-CSRF-Token"), getCsrfTokenFromRequest(request))) {

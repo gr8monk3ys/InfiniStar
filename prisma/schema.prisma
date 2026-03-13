@@ -259,6 +259,8 @@ model Message {
   // Performance indexes for search and pagination
   @@index([conversationId, createdAt])
   @@index([isDeleted])
+  @@index([senderId, createdAt])
+  @@index([conversationId, isDeleted, createdAt])
   @@map("messages")
 }
 

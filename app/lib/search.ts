@@ -209,6 +209,12 @@ export async function searchConversations(
     whereClause.archivedBy = { isEmpty: true }
   }
 
+  // For relevance sort, fetch a larger candidate window so in-memory ranking
+  // produces correct pagination. For other sorts, use DB-level pagination.
+  const useRelevanceSort = sortBy === "relevance"
+  const fetchLimit = useRelevanceSort ? Math.min(skip + limit * 5, 500) : limit
+  const fetchSkip = useRelevanceSort ? 0 : skip
+
   const [conversations, count] = await Promise.all([
     prisma.conversation.findMany({
       where: whereClause,
@@ -234,13 +240,13 @@ export async function searchConversations(
         },
       },
       orderBy: getSortOrder(sortBy),
-      skip,
-      take: limit,
+      skip: fetchSkip,
+      take: fetchLimit,
     }),
     prisma.conversation.count({ where: whereClause }),
   ])
 
-  const items: ConversationSearchResult[] = conversations.map(
+  let items: ConversationSearchResult[] = conversations.map(
     (conv: {
       id: string
       name: string | null
@@ -271,21 +277,21 @@ export async function searchConversations(
         messageCount: conv._count.messages,
         tags: conv.tags,
         isArchived: conv.archivedBy.includes(userId),
-        relevanceScore:
-          sortBy === "relevance"
-            ? calculateRelevanceScore(conv.name || "", query, {
-                isTitle: true,
-                recency: daysSinceActive,
-                messageCount: conv._count.messages,
-              })
-            : undefined,
+        relevanceScore: useRelevanceSort
+          ? calculateRelevanceScore(conv.name || "", query, {
+              isTitle: true,
+              recency: daysSinceActive,
+              messageCount: conv._count.messages,
+            })
+          : undefined,
       }
     }
   )
 
-  // Sort by relevance if needed
-  if (sortBy === "relevance") {
+  // Sort by relevance then apply pagination window
+  if (useRelevanceSort) {
     items.sort((a, b) => (b.relevanceScore || 0) - (a.relevanceScore || 0))
+    items = items.slice(skip, skip + limit)
   }
 
   return { items, count }
@@ -339,6 +345,10 @@ export async function searchMessages(
     whereClause.image = { not: null }
   }
 
+  const useMsgRelevanceSort = sortBy === "relevance"
+  const msgFetchLimit = useMsgRelevanceSort ? Math.min(skip + limit * 5, 500) : limit
+  const msgFetchSkip = useMsgRelevanceSort ? 0 : skip
+
   const [messages, count] = await Promise.all([
     prisma.message.findMany({
       where: whereClause,
@@ -360,14 +370,14 @@ export async function searchMessages(
           },
         },
       },
-      orderBy: sortBy === "date" ? { createdAt: "desc" } : { createdAt: "desc" },
-      skip,
-      take: limit,
+      orderBy: { createdAt: "desc" },
+      skip: msgFetchSkip,
+      take: msgFetchLimit,
     }),
     prisma.message.count({ where: whereClause }),
   ])
 
-  const items: MessageSearchResult[] = messages.map(
+  let items: MessageSearchResult[] = messages.map(
     (msg: {
       id: string
       body: string | null
@@ -390,19 +400,19 @@ export async function searchMessages(
         hasImage: !!msg.image,
         sender: msg.sender,
         conversation: msg.conversation,
-        relevanceScore:
-          sortBy === "relevance"
-            ? calculateRelevanceScore(msg.body || "", query, {
-                recency: daysSinceCreated,
-              })
-            : undefined,
+        relevanceScore: useMsgRelevanceSort
+          ? calculateRelevanceScore(msg.body || "", query, {
+              recency: daysSinceCreated,
+            })
+          : undefined,
       }
     }
   )
 
-  // Sort by relevance if needed
-  if (sortBy === "relevance") {
+  // Sort by relevance then apply pagination window
+  if (useMsgRelevanceSort) {
     items.sort((a, b) => (b.relevanceScore || 0) - (a.relevanceScore || 0))
+    items = items.slice(skip, skip + limit)
   }
 
   return { items, count }
@@ -501,66 +511,39 @@ export async function getSearchFacets(userId: string, query?: string): Promise<S
     ]
   }
 
-  // Get conversation type counts
-  const [aiCount, humanCount] = await Promise.all([
-    prisma.conversation.count({
-      where: { ...baseWhere, isAI: true },
-    }),
-    prisma.conversation.count({
-      where: { ...baseWhere, isAI: false },
-    }),
-  ])
-
-  // Get personality counts
-  const personalityCounts: Record<AIPersonality, number> = {
-    helpful: 0,
-    concise: 0,
-    creative: 0,
-    analytical: 0,
-    empathetic: 0,
-    professional: 0,
-    custom: 0,
-  }
-
-  const personalityResults = await prisma.conversation.groupBy({
-    by: ["aiPersonality"],
-    where: { ...baseWhere, isAI: true, aiPersonality: { not: null } },
-    _count: true,
-  })
-
-  personalityResults.forEach((result: { aiPersonality: string | null; _count: number }) => {
-    if (result.aiPersonality && result.aiPersonality in personalityCounts) {
-      personalityCounts[result.aiPersonality as AIPersonality] = result._count
-    }
-  })
-
-  // Get tag counts
-  const tags = await prisma.tag.findMany({
-    where: { userId },
-    select: {
-      id: true,
-      name: true,
-      color: true,
-      _count: { select: { conversations: true } },
-    },
-  })
-
-  const tagCounts = tags.map(
-    (tag: { id: string; name: string; color: string; _count: { conversations: number } }) => ({
-      id: tag.id,
-      name: tag.name,
-      color: tag.color,
-      count: tag._count.conversations,
-    })
-  )
-
-  // Get date range counts
+  // Run all facet queries in parallel (was 3 sequential rounds, now 1)
   const now = new Date()
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
   const weekStart = new Date(todayStart.getTime() - 7 * 24 * 60 * 60 * 1000)
   const monthStart = new Date(todayStart.getTime() - 30 * 24 * 60 * 60 * 1000)
 
-  const [todayCount, weekCount, monthCount, totalCount] = await Promise.all([
+  const [
+    aiCount,
+    humanCount,
+    personalityResults,
+    tags,
+    todayCount,
+    weekCount,
+    monthCount,
+    totalCount,
+    attachmentCount,
+  ] = await Promise.all([
+    prisma.conversation.count({ where: { ...baseWhere, isAI: true } }),
+    prisma.conversation.count({ where: { ...baseWhere, isAI: false } }),
+    prisma.conversation.groupBy({
+      by: ["aiPersonality"],
+      where: { ...baseWhere, isAI: true, aiPersonality: { not: null } },
+      _count: true,
+    }),
+    prisma.tag.findMany({
+      where: { userId },
+      select: {
+        id: true,
+        name: true,
+        color: true,
+        _count: { select: { conversations: true } },
+      },
+    }),
     prisma.conversation.count({
       where: { ...baseWhere, lastMessageAt: { gte: todayStart } },
     }),
@@ -571,16 +554,35 @@ export async function getSearchFacets(userId: string, query?: string): Promise<S
       where: { ...baseWhere, lastMessageAt: { gte: monthStart, lt: weekStart } },
     }),
     prisma.conversation.count({ where: baseWhere }),
+    prisma.message.count({
+      where: { conversation: baseWhere, isDeleted: false, image: { not: null } },
+    }),
   ])
 
-  // Get attachment count
-  const attachmentCount = await prisma.message.count({
-    where: {
-      conversation: baseWhere,
-      isDeleted: false,
-      image: { not: null },
-    },
+  const personalityCounts: Record<AIPersonality, number> = {
+    helpful: 0,
+    concise: 0,
+    creative: 0,
+    analytical: 0,
+    empathetic: 0,
+    professional: 0,
+    custom: 0,
+  }
+
+  personalityResults.forEach((result: { aiPersonality: string | null; _count: number }) => {
+    if (result.aiPersonality && result.aiPersonality in personalityCounts) {
+      personalityCounts[result.aiPersonality as AIPersonality] = result._count
+    }
   })
+
+  const tagCounts = tags.map(
+    (tag: { id: string; name: string; color: string; _count: { conversations: number } }) => ({
+      id: tag.id,
+      name: tag.name,
+      color: tag.color,
+      count: tag._count.conversations,
+    })
+  )
 
   return {
     conversationType: {

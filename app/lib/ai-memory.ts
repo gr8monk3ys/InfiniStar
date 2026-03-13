@@ -5,7 +5,6 @@
  * Allows the AI to remember important information across conversations.
  */
 
-import Anthropic from "@anthropic-ai/sdk"
 import { MemoryCategory, type AIMemory } from "@prisma/client"
 
 import { getFreeTierModel } from "@/app/lib/ai-model-routing"
@@ -345,9 +344,7 @@ export async function extractMemoriesFromMessages(
   messages: Array<{ role: "user" | "assistant"; content: string }>,
   existingMemories: AIMemory[]
 ): Promise<ExtractedMemory[]> {
-  const anthropic = new Anthropic({
-    apiKey: process.env.ANTHROPIC_API_KEY || "",
-  })
+  const { default: anthropic } = await import("@/app/lib/anthropic")
 
   // Build context of existing memories
   const existingMemoryContext =
