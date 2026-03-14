@@ -76,6 +76,7 @@ model User {
   aiMemories       AIMemory[]
   messageTemplates MessageTemplate[]
   characters       Character[]
+  personas         UserPersona[]
   blocksInitiated  UserBlock[]       @relation("BlocksInitiated")
   blocksReceived   UserBlock[]       @relation("BlocksReceived")
   reportsFiled     ContentReport[]
@@ -139,8 +140,10 @@ model Conversation {
   aiModel        String? // e.g., "claude-3-5-sonnet-20241022"
   aiSystemPrompt String? // Custom system prompt for AI personality
   aiPersonality  String? // Preset personality: "assistant", "creative", "technical", "friendly", "professional", "custom"
-  characterId    String?    @db.Uuid
-  character      Character? @relation(fields: [characterId], references: [id], onDelete: SetNull)
+  characterId    String?      @db.Uuid
+  character      Character?   @relation(fields: [characterId], references: [id], onDelete: SetNull)
+  personaId      String?      @db.Uuid
+  persona        UserPersona? @relation(fields: [personaId], references: [id], onDelete: SetNull)
 
   // Archiving functionality
   archivedBy String[] // Array of user IDs who archived this conversation
@@ -184,15 +187,17 @@ model Character {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  name          String
-  slug          String   @unique
-  tagline       String?
-  description   String?
-  greeting      String?
-  systemPrompt  String
-  avatarUrl     String?
-  coverImageUrl String?
-  tags          String[] @default([])
+  name             String
+  slug             String   @unique
+  tagline          String?
+  description      String?
+  greeting         String?
+  scenario         String?
+  exampleDialogues String?
+  systemPrompt     String
+  avatarUrl        String?
+  coverImageUrl    String?
+  tags             String[] @default([])
 
   isPublic   Boolean   @default(false)
   featured   Boolean   @default(false)
@@ -638,4 +643,25 @@ enum CreatorSubscriptionStatus {
   ACTIVE
   CANCELED
   PAUSED
+}
+
+model UserPersona {
+  id        String   @id @default(uuid()) @db.Uuid
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  name              String
+  description       String?
+  appearance        String?
+  personalityTraits String?
+
+  isDefault Boolean @default(false)
+
+  userId String @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  conversations Conversation[]
+
+  @@index([userId])
+  @@map("user_personas")
 }

@@ -438,7 +438,12 @@ describe("POST /api/ai/chat", () => {
 
     expect(mockAnthropicCreate).toHaveBeenCalledWith(
       expect.objectContaining({
-        system: expect.any(String),
+        system: expect.arrayContaining([
+          expect.objectContaining({
+            type: "text",
+            cache_control: { type: "ephemeral" },
+          }),
+        ]),
         messages: expect.any(Array),
         max_tokens: 1024,
       })

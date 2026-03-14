@@ -208,10 +208,17 @@ export async function POST(request: NextRequest) {
 
         try {
           // Call Anthropic API with streaming and system prompt
+          // Use cache_control to cache the system prompt for cost savings.
           const aiStream = await anthropic.messages.stream({
             model: modelToUse,
             max_tokens: 1024,
-            system: systemPrompt,
+            system: [
+              {
+                type: "text" as const,
+                text: systemPrompt,
+                cache_control: { type: "ephemeral" as const },
+              },
+            ],
             messages: conversationHistory,
           })
 

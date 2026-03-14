@@ -20,6 +20,8 @@ const createCharacterSchema = z.object({
   tagline: z.string().max(120).optional(),
   description: z.string().max(2000).optional(),
   greeting: z.string().max(500).optional(),
+  scenario: z.string().max(2000).optional(),
+  exampleDialogues: z.string().max(4000).optional(),
   systemPrompt: z.string().min(10, "System prompt is required").max(4000),
   avatarUrl: z.string().url().optional(),
   coverImageUrl: z.string().url().optional(),
@@ -200,6 +202,8 @@ export async function POST(request: NextRequest) {
     data.tagline ? sanitizePlainText(data.tagline) : "",
     data.description ? sanitizePlainText(data.description) : "",
     data.greeting ? sanitizePlainText(data.greeting) : "",
+    data.scenario ? sanitizePlainText(data.scenario) : "",
+    data.exampleDialogues ? sanitizePlainText(data.exampleDialogues) : "",
     data.systemPrompt,
   ]
     .filter(Boolean)
@@ -240,6 +244,8 @@ export async function POST(request: NextRequest) {
       tagline: data.tagline ? sanitizePlainText(data.tagline) : null,
       description: data.description ? sanitizePlainText(data.description) : null,
       greeting: data.greeting ? sanitizePlainText(data.greeting) : null,
+      scenario: data.scenario ? sanitizePlainText(data.scenario) : null,
+      exampleDialogues: data.exampleDialogues ? sanitizePlainText(data.exampleDialogues) : null,
       systemPrompt: data.systemPrompt,
       avatarUrl: data.avatarUrl,
       coverImageUrl: data.coverImageUrl,

@@ -16,6 +16,8 @@ type CharacterFormState = {
   tagline: string
   description: string
   greeting: string
+  scenario: string
+  exampleDialogues: string
   systemPrompt: string
   avatarUrl: string
   coverImageUrl: string
@@ -39,6 +41,8 @@ export function CharacterForm({ initial, mode }: CharacterFormProps) {
     tagline: initial?.tagline || "",
     description: initial?.description || "",
     greeting: initial?.greeting || "",
+    scenario: initial?.scenario || "",
+    exampleDialogues: initial?.exampleDialogues || "",
     systemPrompt: initial?.systemPrompt || "",
     avatarUrl: initial?.avatarUrl || "",
     coverImageUrl: initial?.coverImageUrl || "",
@@ -68,6 +72,8 @@ export function CharacterForm({ initial, mode }: CharacterFormProps) {
             tagline: form.tagline || undefined,
             description: form.description || undefined,
             greeting: form.greeting || undefined,
+            scenario: form.scenario || undefined,
+            exampleDialogues: form.exampleDialogues || undefined,
             systemPrompt: form.systemPrompt,
             avatarUrl: form.avatarUrl || undefined,
             coverImageUrl: form.coverImageUrl || undefined,
@@ -172,6 +178,36 @@ export function CharacterForm({ initial, mode }: CharacterFormProps) {
               onChange={(event) => handleChange("greeting", event.target.value)}
               placeholder="First message the character sends."
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="scenario">Scenario</Label>
+            <Textarea
+              id="scenario"
+              value={form.scenario}
+              onChange={(event) => handleChange("scenario", event.target.value)}
+              placeholder="Set the scene: where are you, what just happened, what's at stake?"
+            />
+            <p className="text-xs text-muted-foreground">
+              Starting situation for the roleplay (max 2000 chars)
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="exampleDialogues">Example Dialogues</Label>
+            <Textarea
+              id="exampleDialogues"
+              value={form.exampleDialogues}
+              onChange={(event) => handleChange("exampleDialogues", event.target.value)}
+              placeholder={
+                "{{user}}: How are you today?\n{{char}}: *adjusts glasses* Oh, splendid! I was just cataloging some rare specimens."
+              }
+              rows={6}
+            />
+            <p className="text-xs text-muted-foreground">
+              Show how the character talks. Use {"{{char}}"} and {"{{user}}"} as placeholders (max
+              4000 chars)
+            </p>
           </div>
 
           <div className="space-y-2">

@@ -12,6 +12,7 @@ import {
 } from "@/app/lib/ai-personalities"
 import { trackAiUsage } from "@/app/lib/ai-usage"
 import anthropic from "@/app/lib/anthropic"
+import { maybeAutoExtractMemories } from "@/app/lib/auto-memory"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import { aiLogger } from "@/app/lib/logger"
 import {
@@ -148,6 +149,14 @@ export async function POST(request: NextRequest) {
             isNsfw: true,
           },
         },
+        persona: {
+          select: {
+            name: true,
+            description: true,
+            appearance: true,
+            personalityTraits: true,
+          },
+        },
         messages: {
           orderBy: { createdAt: "desc" },
           take: 20, // Get last 20 messages for context
@@ -270,13 +279,27 @@ export async function POST(request: NextRequest) {
           conversation.aiSystemPrompt || undefined
         )
 
+        // Build persona context if a persona is set on this conversation
+        let personaContext = ""
+        if (conversation.persona) {
+          const p = conversation.persona
+          const parts = [`\n\n[User Persona]\nThe user is roleplaying as: ${p.name}`]
+          if (p.description) parts.push(`Description: ${p.description}`)
+          if (p.appearance) parts.push(`Appearance: ${p.appearance}`)
+          if (p.personalityTraits) parts.push(`Personality: ${p.personalityTraits}`)
+          parts.push(
+            "Address the user as this persona and react to their described traits naturally."
+          )
+          personaContext = parts.join("\n")
+        }
+
         // Fetch and include user memories in system prompt
-        let systemPrompt = baseSystemPrompt
+        let systemPrompt = baseSystemPrompt + personaContext
         try {
           const memories = await getRelevantMemories(currentUser.id)
           if (memories.length > 0) {
             const memoryContext = buildMemoryContext(memories)
-            systemPrompt = baseSystemPrompt + "\n" + memoryContext
+            systemPrompt = systemPrompt + "\n" + memoryContext
           }
         } catch (memoryError) {
           aiLogger.warn({ err: memoryError }, "Failed to fetch memories")
@@ -284,11 +307,19 @@ export async function POST(request: NextRequest) {
 
         try {
           // Call Anthropic API with streaming and system prompt (including memories)
+          // Use cache_control to cache the system prompt — in roleplay the character
+          // prompt repeats every turn, so caching saves ~90% on input token costs.
           const stream = await anthropic.messages.stream(
             {
               model: modelToUse,
               max_tokens: 1024,
-              system: systemPrompt, // Add system prompt for personality + memories
+              system: [
+                {
+                  type: "text" as const,
+                  text: systemPrompt,
+                  cache_control: { type: "ephemeral" as const },
+                },
+              ],
               messages: conversationHistory,
             },
             { signal: abortController.signal }
@@ -361,6 +392,11 @@ export async function POST(request: NextRequest) {
             "messages:new",
             aiMessage
           )
+
+          // Best-effort background memory extraction
+          maybeAutoExtractMemories(currentUser.id, conversationId).catch((err) => {
+            aiLogger.warn({ err }, "Auto memory extraction failed")
+          })
 
           // Best-effort background push (web push) for AI completion.
           const pushPromise = (async () => {

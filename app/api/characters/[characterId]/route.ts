@@ -19,6 +19,8 @@ const updateCharacterSchema = z.object({
   tagline: z.string().max(120).optional().nullable(),
   description: z.string().max(2000).optional().nullable(),
   greeting: z.string().max(500).optional().nullable(),
+  scenario: z.string().max(2000).optional().nullable(),
+  exampleDialogues: z.string().max(4000).optional().nullable(),
   systemPrompt: z.string().min(10).max(4000).optional(),
   avatarUrl: z.string().url().optional().nullable(),
   coverImageUrl: z.string().url().optional().nullable(),
@@ -117,6 +119,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     data.tagline ? sanitizePlainText(data.tagline) : null,
     data.description ? sanitizePlainText(data.description) : null,
     data.greeting ? sanitizePlainText(data.greeting) : null,
+    data.scenario ? sanitizePlainText(data.scenario) : null,
+    data.exampleDialogues ? sanitizePlainText(data.exampleDialogues) : null,
     data.systemPrompt ?? null,
   ]
     .filter(Boolean)
@@ -167,6 +171,10 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       tagline: data.tagline ? sanitizePlainText(data.tagline) : data.tagline,
       description: data.description ? sanitizePlainText(data.description) : data.description,
       greeting: data.greeting ? sanitizePlainText(data.greeting) : data.greeting,
+      scenario: data.scenario ? sanitizePlainText(data.scenario) : data.scenario,
+      exampleDialogues: data.exampleDialogues
+        ? sanitizePlainText(data.exampleDialogues)
+        : data.exampleDialogues,
       systemPrompt: data.systemPrompt,
       avatarUrl: data.avatarUrl ?? undefined,
       coverImageUrl: data.coverImageUrl ?? undefined,

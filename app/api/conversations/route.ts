@@ -3,6 +3,7 @@ import { z } from "zod"
 
 import { getModelForUser } from "@/app/lib/ai-model-routing"
 import { SUPPORTED_MODEL_IDS } from "@/app/lib/ai-models"
+import { buildCharacterSystemPrompt } from "@/app/lib/character-prompt"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import { apiLogger } from "@/app/lib/logger"
 import { canAccessNsfw } from "@/app/lib/nsfw"
@@ -18,6 +19,8 @@ interface SceneCharacterPromptInput {
   tagline: string | null
   description: string | null
   greeting: string | null
+  scenario: string | null
+  exampleDialogues: string | null
   systemPrompt: string
 }
 
@@ -59,6 +62,10 @@ function buildSceneSystemPrompt(
         character.tagline ? `Tagline: ${character.tagline}` : null,
         character.description ? `Description: ${character.description}` : null,
         character.greeting ? `Typical greeting: ${character.greeting}` : null,
+        character.scenario ? `Scenario: ${truncateScenePrompt(character.scenario)}` : null,
+        character.exampleDialogues
+          ? `Example dialogue:\n${truncateScenePrompt(character.exampleDialogues)}`
+          : null,
         `Behavior and style rules: ${truncateScenePrompt(character.systemPrompt)}`,
       ]
         .filter(Boolean)
@@ -113,6 +120,7 @@ const createConversationSchema = z
       .string()
       .max(1000, "Scene scenario is too long (max 1000 characters)")
       .optional(),
+    personaId: z.string().uuid().optional(),
   })
   .refine(
     (data) => {
@@ -172,6 +180,7 @@ export async function POST(request: NextRequest) {
       characterId,
       sceneCharacterIds,
       sceneScenario,
+      personaId,
     } = validation.data
 
     // Sanitize conversation name if provided
@@ -210,6 +219,8 @@ export async function POST(request: NextRequest) {
             tagline: true,
             description: true,
             greeting: true,
+            scenario: true,
+            exampleDialogues: true,
             systemPrompt: true,
             isNsfw: true,
           },
@@ -242,6 +253,7 @@ export async function POST(request: NextRequest) {
             aiModel: routedModel,
             aiSystemPrompt: scenePrompt,
             aiPersonality: "custom",
+            personaId: personaId || undefined,
             users: {
               connect: {
                 id: currentUser.id,
@@ -334,9 +346,10 @@ export async function POST(request: NextRequest) {
           name: sanitizedName || character?.name || "AI Assistant",
           isAI: true,
           aiModel: routedModel,
-          aiSystemPrompt: character?.systemPrompt,
+          aiSystemPrompt: character ? buildCharacterSystemPrompt(character) : undefined,
           aiPersonality: character ? "custom" : undefined,
           characterId: character?.id,
+          personaId: personaId || undefined,
           users: {
             connect: {
               id: currentUser.id,

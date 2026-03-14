@@ -11,6 +11,7 @@ import {
 } from "@/app/lib/ai-personalities"
 import { trackAiUsage } from "@/app/lib/ai-usage"
 import anthropic from "@/app/lib/anthropic"
+import { maybeAutoExtractMemories } from "@/app/lib/auto-memory"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import { aiLogger } from "@/app/lib/logger"
 import {
@@ -138,6 +139,14 @@ export async function POST(request: NextRequest) {
             isNsfw: true,
           },
         },
+        persona: {
+          select: {
+            name: true,
+            description: true,
+            appearance: true,
+            personalityTraits: true,
+          },
+        },
         messages: {
           orderBy: { createdAt: "desc" },
           take: 20, // Get last 20 messages for context
@@ -246,13 +255,33 @@ export async function POST(request: NextRequest) {
       conversation.aiPersonality && isValidPersonality(conversation.aiPersonality)
         ? conversation.aiPersonality
         : getDefaultPersonality()
-    const systemPrompt = getSystemPrompt(personalityType, conversation.aiSystemPrompt || undefined)
+    let personaContext = ""
+    if (conversation.persona) {
+      const p = conversation.persona
+      const parts = [`\n\n[User Persona]\nThe user is roleplaying as: ${p.name}`]
+      if (p.description) parts.push(`Description: ${p.description}`)
+      if (p.appearance) parts.push(`Appearance: ${p.appearance}`)
+      if (p.personalityTraits) parts.push(`Personality: ${p.personalityTraits}`)
+      parts.push("Address the user as this persona and react to their described traits naturally.")
+      personaContext = parts.join("\n")
+    }
+
+    const systemPrompt =
+      getSystemPrompt(personalityType, conversation.aiSystemPrompt || undefined) + personaContext
 
     // Call Anthropic API with system prompt
+    // Use cache_control to cache the system prompt — in roleplay the character
+    // prompt repeats every turn, so caching saves ~90% on input token costs.
     const response = await anthropic.messages.create({
       model: modelToUse,
       max_tokens: 1024,
-      system: systemPrompt, // Add system prompt for personality
+      system: [
+        {
+          type: "text" as const,
+          text: systemPrompt,
+          cache_control: { type: "ephemeral" as const },
+        },
+      ],
       messages: conversationHistory,
     })
 
@@ -311,6 +340,11 @@ export async function POST(request: NextRequest) {
     await pusherServer.trigger(getPusherUserChannel(currentUser.id), "conversation:update", {
       id: conversationId,
       messages: [aiMessage],
+    })
+
+    // Best-effort background memory extraction
+    maybeAutoExtractMemories(currentUser.id, conversationId).catch((err) => {
+      aiLogger.warn({ err }, "Auto memory extraction failed")
     })
 
     // Best-effort background push (web push) for AI completion.
