@@ -2,11 +2,13 @@ import prisma from "@/app/lib/prismadb"
 
 import getSession from "./getSession"
 
-const getUsers = async () => {
+const PAGE_SIZE = 50
+
+const getUsers = async (cursor?: string) => {
   const session = await getSession()
 
   if (!session?.user?.email) {
-    return []
+    return { users: [], nextCursor: undefined }
   }
 
   try {
@@ -14,7 +16,11 @@ const getUsers = async () => {
       orderBy: {
         createdAt: "desc",
       },
-      take: 200,
+      take: PAGE_SIZE + 1,
+      ...(cursor && {
+        cursor: { id: cursor },
+        skip: 1,
+      }),
       where: {
         NOT: {
           email: session.user.email,
@@ -29,9 +35,15 @@ const getUsers = async () => {
       },
     })
 
-    return users
+    const hasMore = users.length > PAGE_SIZE
+    const nextCursor = hasMore ? users[PAGE_SIZE - 1].id : undefined
+
+    return {
+      users: hasMore ? users.slice(0, PAGE_SIZE) : users,
+      nextCursor,
+    }
   } catch {
-    return []
+    return { users: [], nextCursor: undefined }
   }
 }
 

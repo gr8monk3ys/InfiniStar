@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic"
 export default async function ConversationsLayout({ children }: { children: React.ReactNode }) {
   const [conversations, user, currentUser] = await Promise.all([
     getConversations(),
-    getUsers(),
+    getUsers().then((r) => r.users),
     getCurrentUser(),
   ])
   const sceneCharacters = await getPopularSceneCharacters(currentUser)
