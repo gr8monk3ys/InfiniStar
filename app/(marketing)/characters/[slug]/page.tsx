@@ -15,6 +15,7 @@ import { canAccessNsfw } from "@/app/lib/nsfw"
 import prisma from "@/app/lib/prismadb"
 import { cn } from "@/app/lib/utils"
 import getCurrentUser from "@/app/actions/getCurrentUser"
+import { CharacterExportButton } from "@/app/components/characters/CharacterExportButton"
 import { CharacterLikeButton } from "@/app/components/characters/CharacterLikeButton"
 import { CharacterRemixButton } from "@/app/components/characters/CharacterRemixButton"
 import { CharacterStartChatButton } from "@/app/components/characters/CharacterStartChatButton"
@@ -207,6 +208,7 @@ function CharacterHero({
               initialCount={character.likeCount}
             />
             <CharacterRemixButton characterId={character.id} />
+            <CharacterExportButton characterId={character.id} />
           </div>
         </div>
       </div>

@@ -28,9 +28,17 @@ export default async function CharactersPage() {
           <h1 className="text-2xl font-semibold">Characters</h1>
           <p className="text-sm text-muted-foreground">Create and manage your AI characters.</p>
         </div>
-        <Link href="/dashboard/characters/new" className={cn(buttonVariants())}>
-          New Character
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/dashboard/characters/import"
+            className={cn(buttonVariants({ variant: "outline" }))}
+          >
+            Import
+          </Link>
+          <Link href="/dashboard/characters/new" className={cn(buttonVariants())}>
+            New Character
+          </Link>
+        </div>
       </div>
 
       {characters.length === 0 ? (

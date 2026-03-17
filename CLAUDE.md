@@ -143,6 +143,8 @@ The project uses Next.js 16 App Router with route groups:
 - `characters/` - List (GET) or create (POST) characters
 - `characters/[characterId]/` - Get, update, or delete specific character
 - `characters/[characterId]/like/` - Like/unlike a character
+- `characters/[characterId]/export/` - Export character as V2 character card JSON
+- `characters/import/` - Import character from V2/V1 JSON or PNG with embedded data
 - `characters/favorites/` - Get user's favorite characters
 - `tags/` - List (GET) or create (POST) tags
 - `tags/[tagId]/` - Update or delete specific tag
@@ -571,6 +573,14 @@ try {
   - Like/unlike via `/api/characters/[characterId]/like/`
   - Favorites list via `/api/characters/favorites/`
   - Usage tracking: `viewCount`, `usageCount`, `lastUsedAt`
+- **Character Card Import/Export** (V2/SillyTavern format):
+  - Export: `GET /api/characters/[characterId]/export` — downloads V2 JSON card file
+  - Import: `POST /api/characters/import` — accepts JSON body, or multipart with `.json`/`.png` file
+  - PNG import extracts character data from `tEXt` chunk (keyword: "chara", base64-encoded JSON)
+  - V1 legacy format auto-detected and converted
+  - Core library: `app/lib/character-card-v2.ts` (types, field mapping, PNG parser)
+  - Import page: `/dashboard/characters/import` with drag-and-drop UI
+  - Imported characters are always created as private
 
 ### Authentication & Security
 
