@@ -1,0 +1,16 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/process-deletions",
+      "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/cron/auto-delete",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/reconcile-character-comment-counts",
+      "schedule": "0 4 * * *"
+    }
+  ]
+}
