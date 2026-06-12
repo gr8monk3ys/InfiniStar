@@ -212,6 +212,22 @@ function setupUserMocksForSub(
 }
 
 // ------------------------------------------------------------------
+// Environment — creator payments are disabled by default (kill switch),
+// so enable the flag for these tests, which exercise the full flows.
+// Restore the original env afterwards so other test files are unaffected.
+// ------------------------------------------------------------------
+
+const ORIGINAL_ENV = process.env
+
+beforeEach(() => {
+  process.env = { ...ORIGINAL_ENV, NEXT_PUBLIC_ENABLE_CREATOR_PAYMENTS: "true" }
+})
+
+afterAll(() => {
+  process.env = ORIGINAL_ENV
+})
+
+// ------------------------------------------------------------------
 // Tests — Tips
 // ------------------------------------------------------------------
 

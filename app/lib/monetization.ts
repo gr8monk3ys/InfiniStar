@@ -22,6 +22,16 @@ export const monetizationConfig = {
   get enableAffiliateLinks() {
     return isEnabled(process.env.NEXT_PUBLIC_ENABLE_AFFILIATE_LINKS)
   },
+  /**
+   * Kill switch for creator payments (tips and creator memberships).
+   *
+   * Defaults to OFF: money can currently be collected via Stripe Checkout but
+   * there is no payout path to creators (Stripe Connect is not implemented).
+   * Do not enable until a payout mechanism exists.
+   */
+  get enableCreatorPayments() {
+    return isEnabled(process.env.NEXT_PUBLIC_ENABLE_CREATOR_PAYMENTS)
+  },
 }
 
 export function buildAffiliatePartnersFromEnv(): AffiliatePartner[] {

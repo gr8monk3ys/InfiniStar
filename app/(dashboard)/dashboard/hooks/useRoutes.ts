@@ -8,6 +8,7 @@ import {
   HiUser,
 } from "react-icons/hi2"
 
+import { monetizationConfig } from "@/app/lib/monetization"
 import { useAppAuth } from "@/app/hooks/useAppAuth"
 
 import useConversation from "./useConversation"
@@ -37,12 +38,17 @@ const useRoutes = () => {
         icon: HiUser,
         active: pathname?.startsWith("/dashboard/profile"),
       },
-      {
-        label: "Earnings",
-        href: "/dashboard/creator-earnings",
-        icon: HiCurrencyDollar,
-        active: pathname?.startsWith("/dashboard/creator-earnings"),
-      },
+      // Earnings is hidden until creator payments (and a payout path) exist.
+      ...(monetizationConfig.enableCreatorPayments
+        ? [
+            {
+              label: "Earnings",
+              href: "/dashboard/creator-earnings",
+              icon: HiCurrencyDollar,
+              active: pathname?.startsWith("/dashboard/creator-earnings"),
+            },
+          ]
+        : []),
       {
         label: "Logout",
         onClick: () => {

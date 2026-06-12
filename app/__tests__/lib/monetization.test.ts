@@ -62,6 +62,25 @@ describe("monetization helpers", () => {
     expect(isEnabled("")).toBe(false)
   })
 
+  it("disables creator payments by default and enables them only via env flag", async () => {
+    const { monetizationConfig } = await import("@/app/lib/monetization")
+
+    delete process.env.NEXT_PUBLIC_ENABLE_CREATOR_PAYMENTS
+    expect(monetizationConfig.enableCreatorPayments).toBe(false)
+
+    process.env.NEXT_PUBLIC_ENABLE_CREATOR_PAYMENTS = ""
+    expect(monetizationConfig.enableCreatorPayments).toBe(false)
+
+    process.env.NEXT_PUBLIC_ENABLE_CREATOR_PAYMENTS = "false"
+    expect(monetizationConfig.enableCreatorPayments).toBe(false)
+
+    process.env.NEXT_PUBLIC_ENABLE_CREATOR_PAYMENTS = "true"
+    expect(monetizationConfig.enableCreatorPayments).toBe(true)
+
+    process.env.NEXT_PUBLIC_ENABLE_CREATOR_PAYMENTS = "1"
+    expect(monetizationConfig.enableCreatorPayments).toBe(true)
+  })
+
   it("filters affiliate partners with empty URLs", async () => {
     process.env.NEXT_PUBLIC_AFFILIATE_ANTHROPIC_URL = "https://example.com/claude"
     process.env.NEXT_PUBLIC_AFFILIATE_NOTION_URL = ""

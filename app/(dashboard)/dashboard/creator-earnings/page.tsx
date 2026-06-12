@@ -2,6 +2,7 @@ import { redirect } from "next/navigation"
 import { HiArrowTrendingUp, HiCurrencyDollar, HiHeart, HiSparkles } from "react-icons/hi2"
 
 import { formatCurrencyFromCents, toMonthlyRecurringCents } from "@/app/lib/creator-monetization"
+import { monetizationConfig } from "@/app/lib/monetization"
 import prisma from "@/app/lib/prismadb"
 import getCurrentUser from "@/app/actions/getCurrentUser"
 
@@ -12,10 +13,45 @@ export const metadata = {
 
 export const dynamic = "force-dynamic"
 
+function CreatorEarningsComingSoon() {
+  return (
+    <div className="h-full lg:pl-80">
+      <div className="flex h-full flex-col overflow-auto">
+        <main className="flex-1 space-y-6 p-4 sm:p-6 lg:p-8">
+          <header>
+            <h1 className="text-2xl font-bold">Creator Earnings</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Track support from tips and recurring memberships.
+            </p>
+          </header>
+
+          <section className="mx-auto w-full max-w-xl rounded-xl border bg-card p-8 text-center shadow-sm">
+            <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-muted">
+              <HiCurrencyDollar className="size-6 text-muted-foreground" aria-hidden="true" />
+            </div>
+            <h2 className="mt-4 text-lg font-semibold">Creator earnings are coming soon</h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              We&apos;re building a secure way for supporters to tip and subscribe to creators —
+              including payouts. Tips, memberships, and earnings analytics will appear here once
+              creator payments launch.
+            </p>
+          </section>
+        </main>
+      </div>
+    </div>
+  )
+}
+
 export default async function CreatorEarningsPage() {
   const currentUser = await getCurrentUser()
   if (!currentUser?.id) {
     redirect("/sign-in")
+  }
+
+  // Kill switch: creator payments are disabled until a payout mechanism
+  // exists, so show a "coming soon" card instead of the earnings dashboard.
+  if (!monetizationConfig.enableCreatorPayments) {
+    return <CreatorEarningsComingSoon />
   }
 
   const [tips, subscriptions, topSupporters] = await Promise.all([

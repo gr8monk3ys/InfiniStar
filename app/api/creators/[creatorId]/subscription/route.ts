@@ -3,6 +3,7 @@ import { z } from "zod"
 
 import { isValidSubscriptionPlan } from "@/app/lib/creator-monetization"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
+import { monetizationConfig } from "@/app/lib/monetization"
 import prisma from "@/app/lib/prismadb"
 import { creatorPaymentLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 import { sanitizePlainText } from "@/app/lib/sanitize"
@@ -55,6 +56,13 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ creatorId: string }> }
 ) {
+  // Kill switch: memberships can be collected but there is no payout path to
+  // creators yet, so new subscriptions are disabled until one exists.
+  // GET and DELETE stay available so existing supporters can view/cancel.
+  if (!monetizationConfig.enableCreatorPayments) {
+    return NextResponse.json({ error: "Creator payments are not enabled" }, { status: 503 })
+  }
+
   const supporter = await getCurrentUserProfile()
   if (!supporter?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
