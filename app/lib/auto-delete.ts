@@ -273,10 +273,13 @@ export async function deleteOldConversations(userId: string): Promise<AutoDelete
     select: { id: true, users: { select: { id: true } } },
   })
 
-  // Bulk delete all messages then all conversations in two queries instead of
-  // N individual transactions.
-  await prisma.message.deleteMany({ where: { conversationId: { in: conversationIds } } })
-  await prisma.conversation.deleteMany({ where: { id: { in: conversationIds } } })
+  // Bulk delete all messages then all conversations atomically — a single
+  // transaction guarantees we never end up with orphaned messages or
+  // half-deleted state if the second delete fails.
+  await prisma.$transaction([
+    prisma.message.deleteMany({ where: { conversationId: { in: conversationIds } } }),
+    prisma.conversation.deleteMany({ where: { id: { in: conversationIds } } }),
+  ])
 
   const deletedIds = conversationIds
 

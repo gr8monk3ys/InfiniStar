@@ -89,8 +89,8 @@ export default function useVoiceRecording({
 
       try {
         const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
-        const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET ?? "pgc9ehd5"
-        if (!cloudName) {
+        const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET
+        if (!cloudName || !uploadPreset) {
           throw new Error("Cloudinary not configured")
         }
 

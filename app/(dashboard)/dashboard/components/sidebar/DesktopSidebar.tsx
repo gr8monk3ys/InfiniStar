@@ -12,7 +12,8 @@ import DesktopItem from "./DesktopItem"
 import SettingsModal from "./SettingsModal"
 
 interface DesktopSidebarProps {
-  currentUser: User
+  // getCurrentUser() omits hashedPassword — UI never needs it
+  currentUser: Omit<User, "hashedPassword">
 }
 
 const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ currentUser }) => {

@@ -563,18 +563,16 @@ Sample test for AI chat endpoint:
 npm test -- ai/chat
 ```
 
-## Future Enhancements
+## Shipped Capabilities
 
-Planned improvements (see [TODO.md](TODO.md)):
+All of the following are implemented:
 
-- [ ] Streaming responses for better UX
-- [ ] Model selection UI
-- [ ] System prompts and personality customization
-- [ ] Usage tracking and billing integration
-- [ ] Token counting and cost estimation
-- [ ] AI conversation templates
-- [ ] Export AI conversations
-- [ ] Share AI conversations
+- Streaming responses via SSE (`/api/ai/chat-stream`)
+- Model selection UI (Claude Sonnet 4.6 and Claude Haiku 4.5)
+- System prompts and personality customization (`app/lib/ai-personalities.ts`, custom characters)
+- Usage tracking and billing integration (`AiUsage` model, `/api/ai/usage`)
+- Token counting and cost estimation (real token counts from the Anthropic API)
+- Message templates, conversation export, and conversation sharing
 
 ## Troubleshooting
 
@@ -870,6 +868,5 @@ Anthropic charges based on tokens used:
 
 For more information, see:
 
-- [TODO.md](TODO.md) - Planned enhancements
 - [SETUP.md](SETUP.md) - Full setup guide
 - [README.md](README.md) - Project overview

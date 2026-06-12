@@ -27,7 +27,8 @@ jest.mock("@/app/actions/getCurrentUser", () => ({
 jest.mock("@/app/lib/prismadb", () => ({
   __esModule: true,
   default: {
-    user: { findUnique: jest.fn() },
+    user: { findUnique: jest.fn(), findMany: jest.fn() },
+    userBlock: { findFirst: jest.fn() },
     conversation: { create: jest.fn(), findFirst: jest.fn(), update: jest.fn() },
     character: {
       findUnique: jest.fn(),
@@ -84,6 +85,8 @@ beforeEach(() => {
   ;(getCurrentUser as jest.Mock).mockResolvedValue(testUser)
   ;(verifyCsrfToken as jest.Mock).mockReturnValue(true)
   ;(prisma.character.findMany as jest.Mock).mockResolvedValue([])
+  ;(prisma.user.findMany as jest.Mock).mockResolvedValue([])
+  ;(prisma.userBlock.findFirst as jest.Mock).mockResolvedValue(null)
 })
 
 describe("POST /api/conversations", () => {
@@ -122,6 +125,11 @@ describe("POST /api/conversations", () => {
         { id: "user-3", email: "b@test.com" },
       ],
     }
+    ;(prisma.user.findMany as jest.Mock).mockResolvedValue([
+      { id: "user-1" },
+      { id: "user-2" },
+      { id: "user-3" },
+    ])
     ;(prisma.conversation.create as jest.Mock).mockResolvedValue(groupConversation)
 
     const request = createRequest({
@@ -136,6 +144,78 @@ describe("POST /api/conversations", () => {
     const data = await response.json()
     expect(data.isGroup).toBe(true)
     expect(data.name).toBe("Test Group")
+  })
+
+  it("always includes the current user in a group conversation", async () => {
+    ;(prisma.user.findMany as jest.Mock).mockResolvedValue([
+      { id: "user-2" },
+      { id: "user-3" },
+      { id: "user-1" },
+    ])
+    ;(prisma.conversation.create as jest.Mock).mockResolvedValue({
+      ...testConversation,
+      isGroup: true,
+    })
+
+    const request = createRequest({
+      isGroup: true,
+      members: ["user-2", "user-3"],
+      name: "No Creator Group",
+    })
+
+    const response = await POST(request)
+    expect(response.status).toBe(200)
+    expect(prisma.conversation.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          users: {
+            connect: expect.arrayContaining([{ id: "user-1" }, { id: "user-2" }, { id: "user-3" }]),
+          },
+        }),
+      })
+    )
+  })
+
+  it("returns 400 when a group member does not exist", async () => {
+    // Only two of the three requested members exist
+    ;(prisma.user.findMany as jest.Mock).mockResolvedValue([{ id: "user-1" }, { id: "user-2" }])
+
+    const request = createRequest({
+      isGroup: true,
+      members: ["user-1", "user-2", "user-ghost"],
+      name: "Test Group",
+    })
+
+    const response = await POST(request)
+    expect(response.status).toBe(400)
+    expect(prisma.conversation.create).not.toHaveBeenCalled()
+
+    const data = await response.json()
+    expect(data.error).toMatch(/could not be found/i)
+    // The error must not enumerate which IDs failed
+    expect(data.error).not.toContain("user-ghost")
+  })
+
+  it("returns 400 when a block exists between the creator and a member", async () => {
+    ;(prisma.user.findMany as jest.Mock).mockResolvedValue([
+      { id: "user-1" },
+      { id: "user-2" },
+      { id: "user-3" },
+    ])
+    ;(prisma.userBlock.findFirst as jest.Mock).mockResolvedValue({ id: "block-1" })
+
+    const request = createRequest({
+      isGroup: true,
+      members: ["user-1", "user-2", "user-3"],
+      name: "Test Group",
+    })
+
+    const response = await POST(request)
+    expect(response.status).toBe(400)
+    expect(prisma.conversation.create).not.toHaveBeenCalled()
+
+    const data = await response.json()
+    expect(data.error).toMatch(/unavailable/i)
   })
 
   it("creates an AI conversation", async () => {

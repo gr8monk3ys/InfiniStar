@@ -2,8 +2,6 @@
 
 InfiniStar is a Next.js 16 application for AI chat, creator discovery, subscriptions, and real-time messaging. The stack is centered on Clerk for authentication, Prisma + Postgres for data, Pusher for live updates, Stripe for billing, and Bun for local development and CI.
 
-Production launch status is tracked in [PRODUCTION_PARITY_CHECKLIST.md](PRODUCTION_PARITY_CHECKLIST.md).
-
 ## Preview
 
 ![InfiniStar home page preview](docs/screenshots/home.png)
@@ -66,7 +64,6 @@ bun run ci:release:gate
 - [SETUP.md](SETUP.md): local setup and environment configuration
 - [DEPLOYMENT.md](DEPLOYMENT.md): production deployment checklist and service setup
 - [SECURITY.md](SECURITY.md): current security model and operational requirements
-- [PRODUCTION_PARITY_CHECKLIST.md](PRODUCTION_PARITY_CHECKLIST.md): launch gate and remaining blockers
 - [runbooks/](runbooks/): operational runbooks for incidents, rollback, secrets, Stripe, Sentry, and DB drills
 - [CLAUDE.md](CLAUDE.md): internal architecture notes and agent-facing project context
 

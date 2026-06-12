@@ -5,7 +5,8 @@ import type { User } from "@prisma/client"
 import useActiveList from "@/app/(dashboard)/dashboard/hooks/useActiveList"
 
 interface AvatarProps {
-  user?: User | null
+  // Accepts users fetched with or without sensitive fields (e.g. hashedPassword)
+  user?: Omit<User, "hashedPassword"> | null
   className?: string
   showPresence?: boolean
 }

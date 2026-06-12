@@ -48,6 +48,13 @@ jest.mock("@/app/lib/prismadb", () => ({
   },
 }))
 
+const mockRateLimitCheck = jest.fn()
+
+jest.mock("@/app/lib/rate-limit", () => ({
+  authLimiter: { check: (...args: unknown[]) => mockRateLimitCheck(...args) },
+  getClientIdentifier: () => "127.0.0.1",
+}))
+
 function makeRequest(url: string, body: unknown) {
   return new NextRequest(`http://localhost:3000${url}`, {
     method: "POST",
@@ -76,6 +83,7 @@ describe("fallback auth routes", () => {
     mockVerifyCsrfToken.mockReturnValue(true)
     mockGetCsrfTokenFromRequest.mockReturnValue("csrf-token")
     mockIsFallbackAuthEnabled.mockReturnValue(true)
+    mockRateLimitCheck.mockReturnValue(true)
     mockCreateFallbackClerkId.mockReturnValue("fallback_test_123")
     mockHashFallbackPassword.mockResolvedValue("hashed-password")
     mockCreateFallbackSession.mockResolvedValue({
@@ -158,11 +166,42 @@ describe("fallback auth routes", () => {
         data: expect.objectContaining({
           clerkId: "fallback_test_123",
           email: "new@example.com",
+          // Fallback signups never verify their email, so the route must not claim they did
+          emailVerified: null,
           hashedPassword: "hashed-password",
         }),
       })
     )
     expect(mockCreateFallbackSession).toHaveBeenCalledWith("user-2")
+  })
+
+  it("rate limits sign up attempts", async () => {
+    mockRateLimitCheck.mockReturnValue(false)
+
+    const response = await signUpPost(
+      makeRequest("/api/auth/fallback/sign-up", {
+        email: "new@example.com",
+        name: "New User",
+        password: "Password!123",
+      })
+    )
+
+    expect(response.status).toBe(429)
+    expect(mockUserCreate).not.toHaveBeenCalled()
+  })
+
+  it("rate limits sign in attempts", async () => {
+    mockRateLimitCheck.mockReturnValue(false)
+
+    const response = await signInPost(
+      makeRequest("/api/auth/fallback/sign-in", {
+        email: "alice@example.com",
+        password: "Password!123",
+      })
+    )
+
+    expect(response.status).toBe(429)
+    expect(mockCreateFallbackSession).not.toHaveBeenCalled()
   })
 
   it("blocks duplicate emails on sign up", async () => {

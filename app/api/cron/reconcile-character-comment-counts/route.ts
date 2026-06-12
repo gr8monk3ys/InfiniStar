@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server"
 
+import { isAuthorizedCronRequest } from "@/app/lib/cron-auth"
 import { dbLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
 
@@ -20,7 +21,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Server configuration error" }, { status: 500 })
     }
 
-    if (authHeader !== `Bearer ${cronSecret}`) {
+    if (!isAuthorizedCronRequest(authHeader, cronSecret)) {
       dbLogger.warn("Unauthorized cron request attempt")
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }

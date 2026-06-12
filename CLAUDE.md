@@ -49,19 +49,16 @@ bun run format:write     # Format code with Prettier
 bun run format:check     # Check code formatting
 
 # Testing
-# IMPORTANT: Use `bun test` directly — `npx jest` hangs on Node v25 + @sentry/node ESM conflict
-bun test                          # Run all unit tests (Bun's Jest-compatible runner)
-bun test app/__tests__/lib/sanitize.test.ts  # Run a single test file
-bun test --test-name-pattern "sanitizeMessage"  # Run tests matching a pattern
+# IMPORTANT: Use `bun run test` (Jest — what CI runs). Do NOT use `bun test`: Bun's own
+# test runner lacks jest.resetModules()/jest.requireMock()/jsdom and reports dozens of
+# FALSE failures in suites that pass under Jest.
+# Load CI env first so env validation passes: set -a; source .env.ci.example; set +a
+bun run test --runInBand                         # Run all unit tests (Jest, CI parity)
+bun run test app/__tests__/lib/sanitize.test.ts  # Run a single test file
+bun run test -t "sanitizeMessage"                # Run tests matching a pattern
 bun run test:e2e             # Run Playwright E2E tests
 bun run test:e2e:ui          # Run E2E tests with Playwright UI
 bun run test:e2e:headed      # Run E2E tests in headed browser
-
-# Known test runner limitations (Bun's Jest-compatible runner is incomplete):
-# - jest.resetModules() is NOT implemented → 62 pre-existing failures
-# - jest.requireMock() is NOT implemented → 6 pre-existing failures
-# - Component tests needing jsdom fail (no window/document) → 25 pre-existing failures
-# Total: ~111 pre-existing failures in the test suite; new tests must avoid these APIs
 
 # Database
 npx prisma generate      # Generate Prisma Client
@@ -229,9 +226,9 @@ The project uses Next.js 16 App Router with route groups:
   - `concise` - Brief, to-the-point advisor
   - `custom` - User-defined system prompts
 - Model selection support (configured in `app/lib/ai-models.ts`):
-  - Claude 3.5 Sonnet (default, recommended)
-  - Claude 3 Haiku (faster, cheaper)
-  - Claude 3 Opus (most capable)
+  - Claude Sonnet 4.6 (`claude-sonnet-4-6`, default, recommended)
+  - Claude Haiku 4.5 (`claude-haiku-4-5`, faster, cheaper)
+  - Legacy/dated model IDs stored on existing conversations are normalized by `app/lib/ai-model-routing.ts`
 - AI usage tracking per user stored in `AiUsage` model with token counts and cost estimation
 - Token usage tracked per message (`inputTokens`, `outputTokens` fields on Message)
 - Streaming responses via Server-Sent Events (SSE) at `/api/ai/chat-stream`
@@ -459,7 +456,7 @@ try {
   - GET `/api/conversations/[conversationId]/summarize` - Get existing summary
   - Summary includes: overview, key topics, decisions/action items, participants
   - Requires minimum 5 messages in conversation
-  - Uses Claude 3.5 Sonnet for intelligent summarization
+  - Uses the current default Claude model (see `app/lib/ai-models.ts`) for summarization
   - Summary caching: stores `summary`, `summaryGeneratedAt`, `summaryMessageCount` in Conversation model
   - Cache invalidation: regenerates only when message count changes or `forceRegenerate: true`
   - Context limit: last 50 messages to stay within token limits
@@ -547,7 +544,7 @@ try {
 
 ### Working with AI Features
 
-- Free tier: 10 messages per month, PRO: unlimited
+- Free tier: 50 messages per month (default of `AI_FREE_MONTHLY_MESSAGE_LIMIT` in `app/lib/ai-limits.ts`), PRO: unlimited
 - AI personalities configured in `app/lib/ai-personalities.ts`
 - AI models configured in `app/lib/ai-models.ts`
 - Stream AI responses using SSE endpoint `/api/ai/chat-stream`
@@ -608,7 +605,7 @@ try {
 - Stripe webhooks automatically update user subscription data
 - Subscription plans (free/PRO) are defined in `config/subscriptions.ts`
 - Use `getUserSubscriptionPlan()` from `app/lib/subscription.ts` to get current plan
-- Free plan: 10 AI messages/month, 50 AI memories, basic features
+- Free plan: 50 AI messages/month, 50 AI memories, basic features
 - PRO plan ($20/month): Unlimited AI messages, 200 AI memories, all models, export, sharing, auto-delete
 
 ## Important Notes
@@ -621,12 +618,12 @@ try {
 - **Real-time**: Pusher channel naming follows pattern: `conversation-${conversationId}` and `user-${userId}`
 - **Type Safety**: The project uses TypeScript strictly - always run `bun run typecheck` before committing
 - **API Client**: Always use the centralized API client (`app/lib/api-client.ts`) for frontend API requests instead of raw axios
-- **Authentication**: Clerk handles all auth flows (sign-in, sign-up, email verification, password reset, OAuth, MFA). No custom auth endpoints exist.
+- **Authentication**: Clerk handles the primary auth flows (sign-in, sign-up, email verification, password reset, OAuth, MFA). A supplementary fallback auth system (`app/lib/fallback-auth.ts`, `app/api/auth/fallback/*`, `app/api/auth/session/`) exists behind the `ENABLE_FALLBACK_AUTH` env flag for when Clerk is unavailable — bcrypt-hashed backup passwords and cookie sessions. Clerk's Frontend API is proxied through `app/api/clerk-proxy/` (Clerk proxy mode).
 - **Development Emails**: In development mode, emails are logged to console instead of being sent via Postmark
 - **Rate Limiting**: Uses in-memory rate limiters. For production with multiple instances, implement `IRateLimiter` interface with Redis (see `app/lib/rate-limit.ts` for Redis example).
 - **2FA Tokens**: `app/lib/two-factor-tokens.ts` uses in-memory storage. Not suitable for multi-instance production deployments without replacing with a distributed cache.
 - **CSRF Protection**: All POST/PUT/PATCH/DELETE endpoints should validate CSRF tokens via `app/lib/csrf.ts`
-- **AI Usage Tracking**: Free users limited to 10 AI messages per month. Detailed per-request tracking in `AiUsage` model with token counts and cost estimation.
+- **AI Usage Tracking**: Free users limited to 50 AI messages per month (configurable via `AI_FREE_MONTHLY_MESSAGE_LIMIT`). Detailed per-request tracking in `AiUsage` model with token counts and cost estimation.
 - **Server Actions**: Next.js 15 server actions require `'use server'` directive at the top of the file
 - **Environment Setup**: See `.env.local.example` for complete setup guide; use `SETUP.md` for service configuration
 - **Sentry**: Optional error monitoring via `@sentry/nextjs`. Configure with `SENTRY_*` environment variables.

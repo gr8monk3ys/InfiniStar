@@ -29,6 +29,7 @@ const mockGetCsrfTokenFromRequest = jest.fn()
 const mockMessageFindUnique = jest.fn()
 const mockMessageUpdate = jest.fn()
 const mockUserFindUnique = jest.fn()
+const mockConversationFindFirst = jest.fn()
 const mockPusherTrigger = jest.fn()
 
 jest.mock("@clerk/nextjs/server", () => ({
@@ -49,6 +50,9 @@ jest.mock("@/app/lib/prismadb", () => ({
     message: {
       findUnique: (...args: unknown[]) => mockMessageFindUnique(...args),
       update: (...args: unknown[]) => mockMessageUpdate(...args),
+    },
+    conversation: {
+      findFirst: (...args: unknown[]) => mockConversationFindFirst(...args),
     },
   },
 }))
@@ -127,6 +131,7 @@ describe("POST /api/messages/[messageId]/react", () => {
     mockGetCsrfTokenFromRequest.mockReturnValue("test-csrf-token")
     getCurrentUser.mockResolvedValue(TEST_USER)
     mockMessageFindUnique.mockResolvedValue({ ...TEST_MESSAGE })
+    mockConversationFindFirst.mockResolvedValue({ id: "conv-1" })
     mockMessageUpdate.mockImplementation(({ data }: { data: { reactions: unknown } }) =>
       Promise.resolve({ ...TEST_MESSAGE, reactions: data.reactions })
     )
@@ -184,6 +189,28 @@ describe("POST /api/messages/[messageId]/react", () => {
       expect(res.status).toBe(400)
       const data = await res.json()
       expect(data.error).toMatch(/deleted/i)
+    })
+
+    it("returns 403 when the user is not a participant in the message's conversation", async () => {
+      mockConversationFindFirst.mockResolvedValue(null)
+      const res = await callReact("msg-1", { emoji: "👍" })
+      expect(res.status).toBe(403)
+      const data = await res.json()
+      expect(data.error).toMatch(/own conversations/i)
+      expect(mockMessageUpdate).not.toHaveBeenCalled()
+      expect(mockPusherTrigger).not.toHaveBeenCalled()
+    })
+
+    it("scopes the participant check to the message's conversation and current user", async () => {
+      await callReact("msg-1", { emoji: "👍" })
+      expect(mockConversationFindFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            id: "conv-1",
+            users: { some: { id: "user-1" } },
+          }),
+        })
+      )
     })
   })
 

@@ -1,9 +1,9 @@
 "use client"
 
-import React, { useCallback, useEffect, useEffectEvent, useReducer, useRef } from "react"
-import axios from "axios"
+import React, { useCallback, useEffect, useEffectEvent, useReducer, useRef, useState } from "react"
 import toast from "react-hot-toast"
 
+import { api } from "@/app/lib/api-client"
 import { getPusherConversationChannel } from "@/app/lib/pusher-channels"
 import { pusherClient } from "@/app/lib/pusher-client"
 import useConversation from "@/app/(dashboard)/dashboard/hooks/useConversation"
@@ -61,15 +61,11 @@ const ConversationContainer: React.FC<ConversationContainerProps> = ({
   const { token: csrfToken } = useCsrfToken()
   const bottomRef = useRef<HTMLDivElement | null>(null)
 
-  // Keep a ref to the current CSRF token so Pusher handlers always read the latest
-  // value without needing to be re-registered when the token resolves from null.
-  const csrfTokenRef = useRef(csrfToken)
-  useEffect(() => {
-    csrfTokenRef.current = csrfToken
-  }, [csrfToken])
-
   // Debounce ref to avoid calling /seen on every streaming token
   const seenDebounceRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Screen-reader announcement for incoming messages (aria-live region below)
+  const [announcement, setAnnouncement] = useState("")
 
   // Lift messages state to share with Form for suggestions
   const [messages, dispatchMessages] = useReducer(messagesReducer, initialMessages)
@@ -112,13 +108,11 @@ const ConversationContainer: React.FC<ConversationContainerProps> = ({
   )
 
   const markConversationSeen = useEffectEvent(() => {
-    if (!csrfTokenRef.current) return
-
-    axios.post(
-      `/api/conversations/${conversationId}/seen`,
-      {},
-      { headers: { "X-CSRF-Token": csrfTokenRef.current } }
-    )
+    // The api client attaches the CSRF token automatically; seen-marking is
+    // best-effort, so failures are swallowed rather than surfaced as toasts.
+    api
+      .post(`/api/conversations/${conversationId}/seen`, {}, { showErrorToast: false })
+      .catch(() => {})
   })
 
   // Subscribe to Pusher events for real-time updates
@@ -136,6 +130,14 @@ const ConversationContainer: React.FC<ConversationContainerProps> = ({
       }, 1000)
 
       dispatchMessages({ type: "append_if_missing", message })
+
+      // Announce incoming messages from others to screen readers
+      if (message.sender?.id !== currentUserId) {
+        const senderName = message.isAI
+          ? (characterName ?? "AI")
+          : (message.sender?.name ?? "Someone")
+        setAnnouncement(`New message from ${senderName}`)
+      }
 
       bottomRef?.current?.scrollIntoView()
     }
@@ -173,6 +175,16 @@ const ConversationContainer: React.FC<ConversationContainerProps> = ({
 
   return (
     <>
+      {/* Screen-reader live region: announces incoming messages and typing state */}
+      <div aria-live="polite" aria-atomic="true" className="sr-only">
+        {announcement}
+        {typingUsers.length > 0
+          ? ` ${typingUsers.join(", ")} is typing`
+          : isAI && isAITyping
+            ? ` ${characterName ?? "AI"} is typing`
+            : ""}
+      </div>
+
       <Body
         initialMessages={messages}
         isAI={isAI}

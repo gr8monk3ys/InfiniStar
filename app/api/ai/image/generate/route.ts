@@ -129,12 +129,12 @@ export async function POST(request: NextRequest) {
 
     const openAiKey = process.env.OPENAI_API_KEY
     const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
-    const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || "pgc9ehd5"
+    const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET
 
     if (!openAiKey) {
       return NextResponse.json({ error: "Image generation is not configured." }, { status: 501 })
     }
-    if (!cloudName) {
+    if (!cloudName || !uploadPreset) {
       return NextResponse.json({ error: "Cloudinary is not configured." }, { status: 501 })
     }
 

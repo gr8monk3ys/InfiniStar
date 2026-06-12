@@ -87,6 +87,12 @@ async function handleRequest(
   request: NextRequest,
   context: { params: Promise<{ path?: string[] }> }
 ) {
+  // Clerk proxy mode requires the secret key to authenticate this proxy to Clerk.
+  // Without it, refuse to forward instead of proxying with an empty credential.
+  if (!process.env.CLERK_SECRET_KEY) {
+    return Response.json({ error: "Clerk proxy is not configured" }, { status: 503 })
+  }
+
   const { path } = await context.params
   const upstreamResponse = await fetch(getUpstreamUrl(request, path), {
     method: request.method,

@@ -509,6 +509,7 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
                 <textarea
                   value={editedBody}
                   onChange={(e) => setEditedBody(e.target.value)}
+                  aria-label="Edit message"
                   className="w-full rounded-lg border border-border bg-background p-2 text-sm text-foreground focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
                   rows={3}
                   autoFocus

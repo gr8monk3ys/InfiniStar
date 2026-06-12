@@ -262,13 +262,23 @@ describe("POST /api/conversations/[conversationId]/pin", () => {
     expect(data.error).toMatch(/5 conversations/i)
   })
 
-  it("triggers Pusher conversation:pin event on the user channel", async () => {
+  it("triggers Pusher conversation:pin event with a slim payload on the user channel", async () => {
     await callPost()
     expect(mockPusherTrigger).toHaveBeenCalledWith(
       `private-user-${CURRENT_USER.id}`,
       "conversation:pin",
-      expect.anything()
+      {
+        conversationId: CONV_ID,
+        pinnedBy: [CURRENT_USER.id],
+        pinnedAt: expect.any(Date),
+      }
     )
+  })
+
+  it("still returns 200 when the Pusher trigger fails", async () => {
+    mockPusherTrigger.mockRejectedValue(new Error("Pusher unavailable"))
+    const res = await callPost()
+    expect(res.status).toBe(200)
   })
 
   it("sets pinnedAt when first user pins the conversation", async () => {
@@ -425,13 +435,23 @@ describe("DELETE /api/conversations/[conversationId]/pin", () => {
     expect(callData.pinnedAt).toEqual(existingDate)
   })
 
-  it("triggers Pusher conversation:unpin event on the user channel", async () => {
+  it("triggers Pusher conversation:unpin event with a slim payload on the user channel", async () => {
     await callDelete()
     expect(mockPusherTrigger).toHaveBeenCalledWith(
       `private-user-${CURRENT_USER.id}`,
       "conversation:unpin",
-      expect.anything()
+      {
+        conversationId: CONV_ID,
+        pinnedBy: [],
+        pinnedAt: null,
+      }
     )
+  })
+
+  it("still returns 200 when the Pusher trigger fails", async () => {
+    mockPusherTrigger.mockRejectedValue(new Error("Pusher unavailable"))
+    const res = await callDelete()
+    expect(res.status).toBe(200)
   })
 })
 

@@ -100,4 +100,4 @@ For a production-ready deployment, all of the following should be true:
 - Sentry alerts configured
 - Secrets rotation and rollback runbooks reviewed
 
-Launch gating is tracked in [PRODUCTION_PARITY_CHECKLIST.md](PRODUCTION_PARITY_CHECKLIST.md).
+Launch gating is enforced by CI (`.github/workflows/ci.yml`) and the release gate script (`scripts/release_gate.sh`).

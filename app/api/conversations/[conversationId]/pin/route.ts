@@ -109,12 +109,18 @@ export async function POST(
       throw txError
     }
 
-    // Trigger Pusher event for real-time update (only to the user who pinned)
-    await pusherServer.trigger(
-      getPusherUserChannel(currentUser.id),
-      "conversation:pin",
-      updatedConversation
-    )
+    // Trigger Pusher event for real-time update (only to the user who pinned).
+    // Slim payload stays under Pusher's 10KB event limit; failures are logged
+    // but never fail the API response.
+    try {
+      await pusherServer.trigger(getPusherUserChannel(currentUser.id), "conversation:pin", {
+        conversationId: updatedConversation.id,
+        pinnedBy: updatedConversation.pinnedBy,
+        pinnedAt: updatedConversation.pinnedAt,
+      })
+    } catch (pusherError) {
+      apiLogger.error({ err: pusherError }, "CONVERSATION_PIN_PUSHER_ERROR")
+    }
 
     return NextResponse.json(updatedConversation)
   } catch (error: unknown) {
@@ -199,12 +205,18 @@ export async function DELETE(
       },
     })
 
-    // Trigger Pusher event for real-time update (only to the user who unpinned)
-    await pusherServer.trigger(
-      getPusherUserChannel(currentUser.id),
-      "conversation:unpin",
-      updatedConversation
-    )
+    // Trigger Pusher event for real-time update (only to the user who unpinned).
+    // Slim payload stays under Pusher's 10KB event limit; failures are logged
+    // but never fail the API response.
+    try {
+      await pusherServer.trigger(getPusherUserChannel(currentUser.id), "conversation:unpin", {
+        conversationId: updatedConversation.id,
+        pinnedBy: updatedConversation.pinnedBy,
+        pinnedAt: updatedConversation.pinnedAt,
+      })
+    } catch (pusherError) {
+      apiLogger.error({ err: pusherError }, "CONVERSATION_UNPIN_PUSHER_ERROR")
+    }
 
     return NextResponse.json(updatedConversation)
   } catch (error: unknown) {

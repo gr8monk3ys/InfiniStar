@@ -91,11 +91,11 @@ jest.mock("@clerk/nextjs/server", () => ({
 // Fixtures
 // ------------------------------------------------------------------
 
+// getCurrentUser() omits hashedPassword at the query level, so the fixture must not include it
 const CURRENT_USER = {
   id: "user-11111111-1111-4111-8111-111111111111",
   clerkId: "user_clerk_123",
   email: "alice@example.com",
-  hashedPassword: "existing-local-hash",
   name: "Alice",
 }
 
@@ -321,9 +321,10 @@ describe("PATCH /api/profile", () => {
     getCurrentUser.mockResolvedValue({
       ...CURRENT_USER,
       clerkId: "fallback_user_123",
-      hashedPassword: "stored-fallback-hash",
     })
     mockIsFallbackClerkId.mockReturnValue(true)
+    // getCurrentUser no longer exposes hashedPassword; the route fetches it directly
+    mockUserFindUnique.mockResolvedValue({ hashedPassword: "stored-fallback-hash" })
     mockUserUpdate.mockResolvedValue(DB_USER)
 
     const res = await PATCH(
@@ -334,6 +335,12 @@ describe("PATCH /api/profile", () => {
     )
 
     expect(res.status).toBe(200)
+    expect(mockUserFindUnique).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: CURRENT_USER.id },
+        select: { hashedPassword: true },
+      })
+    )
     expect(mockVerifyFallbackPassword).toHaveBeenCalledWith("old-password", "stored-fallback-hash")
     expect(mockClerkVerifyPassword).not.toHaveBeenCalled()
     expect(mockClerkUpdateUser).not.toHaveBeenCalled()

@@ -146,6 +146,20 @@ const createConversationSchema = z
     message: "Scene chats can only be created as AI conversations",
   })
 
+// Awaits a Pusher trigger but never lets a realtime failure fail the request —
+// the conversation is already persisted at that point, so just log and continue.
+async function triggerPusherSafely(
+  channel: string,
+  event: string,
+  payload: unknown
+): Promise<void> {
+  try {
+    await pusherServer.trigger(channel, event, payload)
+  } catch (error) {
+    apiLogger.error({ err: error, channel, event }, "CONVERSATIONS_PUSHER_ERROR")
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     // CSRF Protection
@@ -305,14 +319,14 @@ export async function POST(request: NextRequest) {
             data: { lastMessageAt: new Date() },
           })
 
-          await pusherServer.trigger(
+          await triggerPusherSafely(
             getPusherConversationChannel(newConversation.id),
             "messages:new",
             greetingMessage
           )
         }
 
-        await pusherServer.trigger(
+        await triggerPusherSafely(
           getPusherUserChannel(currentUser.id),
           "conversation:new",
           newConversation
@@ -397,7 +411,7 @@ export async function POST(request: NextRequest) {
         })
 
         // Trigger Pusher event for greeting
-        await pusherServer.trigger(
+        await triggerPusherSafely(
           getPusherConversationChannel(newConversation.id),
           "messages:new",
           greetingMessage
@@ -405,7 +419,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Trigger Pusher event for user
-      pusherServer.trigger(
+      await triggerPusherSafely(
         getPusherUserChannel(currentUser.id),
         "conversation:new",
         newConversation
@@ -416,12 +430,47 @@ export async function POST(request: NextRequest) {
 
     // Group conversation validation is handled by Zod schema
     if (isGroup && members) {
+      // Always include the creator and de-duplicate client-supplied member IDs
+      const memberIds = [...new Set([...members, currentUser.id])]
+
+      // Only connect IDs that belong to real users — never trust client-supplied IDs
+      const existingUsers = await prisma.user.findMany({
+        where: { id: { in: memberIds } },
+        select: { id: true },
+      })
+
+      if (existingUsers.length !== memberIds.length) {
+        return NextResponse.json(
+          { error: "One or more selected members could not be found" },
+          { status: 400 }
+        )
+      }
+
+      // Respect blocks in either direction between the creator and any member
+      const otherMemberIds = memberIds.filter((id) => id !== currentUser.id)
+      const block = await prisma.userBlock.findFirst({
+        where: {
+          OR: [
+            { blockerId: currentUser.id, blockedId: { in: otherMemberIds } },
+            { blockerId: { in: otherMemberIds }, blockedId: currentUser.id },
+          ],
+        },
+        select: { id: true },
+      })
+
+      if (block) {
+        return NextResponse.json(
+          { error: "One or more selected members are unavailable" },
+          { status: 400 }
+        )
+      }
+
       const newConversation = await prisma.conversation.create({
         data: {
           name: sanitizedName,
           isGroup: true,
           users: {
-            connect: members.map((id: string) => ({
+            connect: memberIds.map((id: string) => ({
               id,
             })),
           },
@@ -438,9 +487,11 @@ export async function POST(request: NextRequest) {
       })
 
       // Trigger Pusher event for all users in the conversation
-      newConversation.users.forEach((user: { id: string }) => {
-        pusherServer.trigger(getPusherUserChannel(user.id), "conversation:new", newConversation)
-      })
+      await Promise.all(
+        newConversation.users.map((user: { id: string }) =>
+          triggerPusherSafely(getPusherUserChannel(user.id), "conversation:new", newConversation)
+        )
+      )
 
       return NextResponse.json(newConversation)
     }
@@ -502,9 +553,11 @@ export async function POST(request: NextRequest) {
     })
 
     // Trigger Pusher event for all users in the conversation
-    newConversation.users.forEach((user: { id: string }) => {
-      pusherServer.trigger(getPusherUserChannel(user.id), "conversation:new", newConversation)
-    })
+    await Promise.all(
+      newConversation.users.map((user: { id: string }) =>
+        triggerPusherSafely(getPusherUserChannel(user.id), "conversation:new", newConversation)
+      )
+    )
 
     return NextResponse.json(newConversation)
   } catch (error) {

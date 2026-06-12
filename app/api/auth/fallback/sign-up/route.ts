@@ -11,6 +11,7 @@ import {
   isFallbackAuthEnabled,
 } from "@/app/lib/fallback-auth"
 import prisma from "@/app/lib/prismadb"
+import { authLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 
 const signUpSchema = z.object({
   email: z.string().email("Enter a valid email address."),
@@ -22,6 +23,11 @@ const signUpSchema = z.object({
 export async function POST(request: NextRequest) {
   if (!isFallbackAuthEnabled()) {
     return NextResponse.json({ error: "Backup auth is not enabled." }, { status: 404 })
+  }
+
+  const identifier = getClientIdentifier(request)
+  if (!authLimiter.check(identifier)) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 })
   }
 
   if (!verifyCsrfToken(request.headers.get("X-CSRF-Token"), getCsrfTokenFromRequest(request))) {
@@ -64,7 +70,8 @@ export async function POST(request: NextRequest) {
     data: {
       clerkId: createFallbackClerkId(),
       email: normalizedEmail,
-      emailVerified: new Date(),
+      // Fallback signups never go through email verification, so do not claim they did.
+      emailVerified: null,
       hashedPassword,
       name,
     },

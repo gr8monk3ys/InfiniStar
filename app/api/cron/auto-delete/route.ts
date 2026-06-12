@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server"
 
 import { runAutoDeleteForAllUsers } from "@/app/lib/auto-delete"
+import { isAuthorizedCronRequest } from "@/app/lib/cron-auth"
 import { apiLogger } from "@/app/lib/logger"
 
 const CRON_TIMEOUT_MS = 55_000
@@ -28,7 +29,7 @@ export async function GET(request: NextRequest) {
     const cronSecret = process.env.CRON_SECRET
 
     // CRON_SECRET must always be set. Unauthenticated access is never permitted.
-    if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+    if (!isAuthorizedCronRequest(authHeader, cronSecret)) {
       apiLogger.warn("Unauthorized cron request attempt on /api/cron/auto-delete")
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }

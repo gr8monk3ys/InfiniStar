@@ -17,6 +17,15 @@ import prisma from "@/app/lib/prismadb"
  * - `calculateTokenCost` returns costs in cents.
  */
 export const MODEL_PRICING = {
+  "claude-sonnet-4-6": {
+    input: 3.0, // $3 per million input tokens
+    output: 15.0, // $15 per million output tokens
+  },
+  "claude-haiku-4-5": {
+    input: 1.0, // $1 per million input tokens
+    output: 5.0, // $5 per million output tokens
+  },
+  // Legacy ids (kept for backwards compatibility / analytics)
   "claude-sonnet-4-5-20250929": {
     input: 3.0, // $3 per million input tokens
     output: 15.0, // $15 per million output tokens
@@ -74,8 +83,7 @@ export function calculateTokenCost(
 
   // Get pricing for model, default to Sonnet if unknown
   const pricing =
-    MODEL_PRICING[model as keyof typeof MODEL_PRICING] ||
-    MODEL_PRICING["claude-sonnet-4-5-20250929"]
+    MODEL_PRICING[model as keyof typeof MODEL_PRICING] || MODEL_PRICING["claude-sonnet-4-6"]
 
   // Calculate costs in cents (divide by million for per-token rate, multiply by 100 for cents)
   const inputCost = (safeInputTokens / 1_000_000) * pricing.input * 100

@@ -22,18 +22,6 @@ export const monetizationConfig = {
   get enableAffiliateLinks() {
     return isEnabled(process.env.NEXT_PUBLIC_ENABLE_AFFILIATE_LINKS)
   },
-  get enableAdSense() {
-    return isEnabled(process.env.NEXT_PUBLIC_ENABLE_ADSENSE)
-  },
-  get adSenseClientId() {
-    return process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID ?? ""
-  },
-  get adSenseSlots() {
-    return {
-      homeInline: process.env.NEXT_PUBLIC_ADSENSE_SLOT_HOME_INLINE ?? "",
-      pricingInline: process.env.NEXT_PUBLIC_ADSENSE_SLOT_PRICING_INLINE ?? "",
-    }
-  },
 }
 
 export function buildAffiliatePartnersFromEnv(): AffiliatePartner[] {
@@ -68,9 +56,6 @@ export function buildAffiliatePartnersFromEnv(): AffiliatePartner[] {
       url: partner.url!.trim(),
     }))
 }
-
-// Static array for client components (evaluated once at module load)
-export const affiliatePartners: AffiliatePartner[] = buildAffiliatePartnersFromEnv()
 
 export function normalizeAffiliateSource(sourcePage: string | null | undefined): string {
   if (!sourcePage) {

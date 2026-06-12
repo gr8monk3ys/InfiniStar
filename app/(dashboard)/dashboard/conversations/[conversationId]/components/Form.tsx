@@ -87,6 +87,15 @@ const Form: React.FC<FormProps> = ({
   useEffect(() => {
     onAIStreamingChange?.(isStreaming)
   }, [isStreaming, onAIStreamingChange])
+  // Clear any pending typing-indicator timeout on unmount so it can't fire
+  // after the component is gone.
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current)
+      }
+    }
+  }, [])
   const {
     isRecordingVoiceMessage,
     isSendingVoiceMessage,
