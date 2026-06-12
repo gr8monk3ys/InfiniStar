@@ -93,6 +93,16 @@ bun run seed
 bunx prisma studio
 ```
 
+### Production starter content
+
+A fresh database has no public characters, so `/explore` is empty for new users. Seed the official starter characters (house creator account + 8 public characters):
+
+```bash
+bun run seed:characters
+```
+
+This script is idempotent — the creator is upserted by email and each character by slug — so it is safe to run on production and to re-run after content updates (engagement counters are preserved). Note that `bun run seed` remains dev-only test data (test users/conversations); never run it in production.
+
 ## 4. Run Locally
 
 ```bash
