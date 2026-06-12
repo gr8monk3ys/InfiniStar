@@ -1,6 +1,14 @@
+import { PrismaPg } from "@prisma/adapter-pg"
 import { PrismaClient } from "@prisma/client"
 
-const prisma = new PrismaClient()
+// Prisma 7 with driver adapters requires an explicit adapter — a bare
+// `new PrismaClient()` throws at construction time.
+const connectionString = process.env.DATABASE_URL
+if (!connectionString) {
+  throw new Error("DATABASE_URL must be set to run the seed script")
+}
+
+const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString }) })
 
 async function main() {
   console.warn("🌱 Starting database seed...")
