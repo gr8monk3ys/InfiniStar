@@ -16,12 +16,36 @@ interface StreamChunk {
   usage?: TokenUsage
 }
 
+/**
+ * Structured details for AI stream errors, populated when the API returns
+ * a JSON error body (e.g. 402 limit responses from /api/ai/chat-stream).
+ */
+interface AiStreamErrorDetails {
+  /** Machine-readable error code, e.g. "FREE_TIER_MESSAGE_LIMIT_REACHED" */
+  code?: string
+  /** Usage limits payload returned alongside limit errors (AiAccessDecision["limits"]) */
+  limits?: unknown
+  /** HTTP status code of the failed response */
+  status?: number
+}
+
+/** Error thrown for non-OK HTTP responses, carrying structured API details. */
+class AiStreamRequestError extends Error {
+  details: AiStreamErrorDetails
+
+  constructor(message: string, details: AiStreamErrorDetails) {
+    super(message)
+    this.name = "AiStreamRequestError"
+    this.details = details
+  }
+}
+
 interface UseAiChatStreamOptions {
   conversationId: string
   csrfToken: string | null
   onChunk?: (chunk: string) => void
   onComplete?: (messageId: string, usage?: TokenUsage) => void
-  onError?: (error: string) => void
+  onError?: (error: string, details?: AiStreamErrorDetails) => void
 }
 
 interface SendAiMessageInput {
@@ -91,8 +115,21 @@ export function useAiChatStream(options: UseAiChatStreamOptions) {
         })
 
         if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}))
-          throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+          const errorBody: unknown = await response.json().catch(() => null)
+          const errorData =
+            errorBody && typeof errorBody === "object"
+              ? (errorBody as { error?: unknown; code?: unknown; limits?: unknown })
+              : {}
+          throw new AiStreamRequestError(
+            typeof errorData.error === "string" && errorData.error
+              ? errorData.error
+              : `HTTP error! status: ${response.status}`,
+            {
+              code: typeof errorData.code === "string" ? errorData.code : undefined,
+              limits: errorData.limits,
+              status: response.status,
+            }
+          )
         }
 
         if (!response.body) {
@@ -152,7 +189,11 @@ export function useAiChatStream(options: UseAiChatStreamOptions) {
           if (err.name !== "AbortError") {
             // Only report non-abort errors to the UI
             setError(err.message)
-            onError?.(err.message)
+            if (err instanceof AiStreamRequestError) {
+              onError?.(err.message, err.details)
+            } else {
+              onError?.(err.message)
+            }
           }
           // Abort errors are expected when user cancels - silently ignore
         }
@@ -189,5 +230,5 @@ export function useAiChatStream(options: UseAiChatStreamOptions) {
   }
 }
 
-// Export type for use in other components
-export type { TokenUsage }
+// Export types for use in other components
+export type { AiStreamErrorDetails, TokenUsage }
