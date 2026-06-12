@@ -30,5 +30,14 @@ const customJestConfig = {
   ],
 }
 
-// createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async
-module.exports = createJestConfig(customJestConfig)
+// createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async.
+// next/jest prepends its own "/node_modules/" transformIgnorePatterns entry which would override our
+// ESM allowlist above, so re-apply it after the async config resolves.
+module.exports = async () => {
+  const config = await createJestConfig(customJestConfig)()
+  config.transformIgnorePatterns = [
+    "/node_modules/(?!(react-icons|@radix-ui|class-variance-authority|tailwind-merge|nanoid|@t3-oss)/)",
+    "^.+\\.module\\.(css|sass|scss)$",
+  ]
+  return config
+}
