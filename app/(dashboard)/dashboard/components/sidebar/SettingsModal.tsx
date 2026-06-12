@@ -10,7 +10,7 @@ import type { CloudinaryUploadWidgetResults } from "next-cloudinary"
 import { useForm, type FieldValues, type SubmitHandler } from "react-hook-form"
 import { toast } from "react-hot-toast"
 
-import Button from "@/app/components/Button"
+import { Button } from "@/app/components/ui/button"
 
 import Input from "../inputs/Input"
 import Modal from "../modals/Modal"
@@ -26,12 +26,16 @@ const CldUploadButton = dynamic(
   () => import("next-cloudinary").then((mod) => mod.CldUploadButton),
   { ssr: false }
 )
-const hasCloudinaryConfig = Boolean(process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME)
+const cloudinaryUploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET
+const hasCloudinaryConfig = Boolean(
+  process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME && cloudinaryUploadPreset
+)
 
 interface SettingsModalProps {
   isOpen?: boolean
   onClose: () => void
-  currentUser: User
+  // getCurrentUser() omits hashedPassword — UI never needs it
+  currentUser: Omit<User, "hashedPassword">
 }
 
 const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, currentUser }) => {
@@ -126,16 +130,16 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, currentU
                     <CldUploadButton
                       options={{ maxFiles: 1 }}
                       onUpload={handleUpload}
-                      uploadPreset="pgc9ehd5"
+                      uploadPreset={cloudinaryUploadPreset}
                     >
-                      <Button disabled={isLoading} secondary type="button">
+                      <Button disabled={isLoading} variant="ghost" type="button">
                         Change
                       </Button>
                     </CldUploadButton>
                   ) : (
                     <Button
                       disabled
-                      secondary
+                      variant="ghost"
                       type="button"
                       title="Avatar upload is unavailable until Cloudinary is configured."
                     >
@@ -172,7 +176,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, currentU
                   </div>
                   <Button
                     disabled={isLoading}
-                    secondary
+                    variant="ghost"
                     type="button"
                     onClick={() => setIsStatusModalOpen(true)}
                   >
@@ -193,7 +197,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, currentU
             gap-x-6
           "
         >
-          <Button disabled={isLoading} secondary onClick={onClose}>
+          <Button disabled={isLoading} variant="ghost" type="button" onClick={onClose}>
             Cancel
           </Button>
           <Button disabled={isLoading} type="submit">

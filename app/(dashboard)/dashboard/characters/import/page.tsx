@@ -120,8 +120,8 @@ export default function ImportCharacterPage() {
                 <p className="font-medium text-green-900 dark:text-green-100">{result.message}</p>
                 {result.warnings.length > 0 && (
                   <ul className="mt-2 list-disc pl-5 text-sm text-green-800 dark:text-green-200">
-                    {result.warnings.map((w, i) => (
-                      <li key={i}>{w}</li>
+                    {result.warnings.map((w) => (
+                      <li key={w}>{w}</li>
                     ))}
                   </ul>
                 )}

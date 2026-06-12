@@ -2,11 +2,11 @@
 
 import { useCallback, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
-import axios from "axios"
 import { toast } from "react-hot-toast"
 
+import { api } from "@/app/lib/api-client"
+import { Button } from "@/app/components/ui/button"
 import { Dialog, DialogContent } from "@/app/components/ui/dialog"
-import Button from "@/app/components/Button"
 
 interface ConfirmModalProps {
   isOpen?: boolean
@@ -22,8 +22,8 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({ isOpen, onClose }) => {
   const onDelete = useCallback(() => {
     setIsLoading(true)
 
-    axios
-      .delete(`/api/conversations/${conversationId}`)
+    api
+      .delete(`/api/conversations/${conversationId}`, { showErrorToast: false })
       .then(() => {
         onClose()
         router.push("/dashboard/conversations")
@@ -46,11 +46,11 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({ isOpen, onClose }) => {
             </div>
           </div>
         </div>
-        <div className="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
-          <Button disabled={isLoading} danger onClick={onDelete}>
+        <div className="mt-5 flex flex-col gap-2 sm:mt-4 sm:flex-row-reverse">
+          <Button type="button" variant="destructive" disabled={isLoading} onClick={onDelete}>
             Delete
           </Button>
-          <Button disabled={isLoading} secondary onClick={onClose}>
+          <Button type="button" variant="ghost" disabled={isLoading} onClick={onClose}>
             Cancel
           </Button>
         </div>

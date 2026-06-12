@@ -7,7 +7,7 @@ import axios from "axios"
 import { useForm, type FieldValues, type SubmitHandler } from "react-hook-form"
 import { toast } from "react-hot-toast"
 
-import Button from "@/app/components/Button"
+import { Button } from "@/app/components/ui/button"
 
 import Input from "../inputs/Input"
 import Select from "../inputs/Select"
@@ -99,7 +99,7 @@ const GroupChatModal: React.FC<GroupChatModalProps> = ({ isOpen, onClose, user =
           </div>
         </div>
         <div className="mt-6 flex items-center justify-end gap-x-6">
-          <Button disabled={isLoading} onClick={onClose} type="button" secondary>
+          <Button disabled={isLoading} onClick={onClose} type="button" variant="ghost">
             Cancel
           </Button>
           <Button disabled={isLoading} type="submit">

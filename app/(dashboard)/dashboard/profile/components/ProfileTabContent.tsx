@@ -20,7 +20,10 @@ const StatusModal = dynamic(() => import("@/app/components/modals/StatusModal"),
   loading: () => null,
 })
 
-const hasCloudinaryConfig = Boolean(process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME)
+const cloudinaryUploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET
+const hasCloudinaryConfig = Boolean(
+  process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME && cloudinaryUploadPreset
+)
 
 export function ProfileTabContent() {
   const { user, isLoaded, refresh } = useAppAuth()
@@ -146,7 +149,7 @@ export function ProfileTabContent() {
                 <CldUploadButton
                   options={{ maxFiles: 1, cropping: true, croppingAspectRatio: 1 }}
                   onUpload={handleAvatarUpload}
-                  uploadPreset="pgc9ehd5"
+                  uploadPreset={cloudinaryUploadPreset}
                   className="flex items-center gap-2 rounded-md bg-muted px-3 py-2 text-sm font-medium text-foreground transition hover:bg-muted/80"
                 >
                   <HiCamera size={16} />

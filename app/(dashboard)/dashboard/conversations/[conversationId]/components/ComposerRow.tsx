@@ -15,7 +15,10 @@ const CldUploadButton = dynamic(
   () => import("next-cloudinary").then((mod) => mod.CldUploadButton),
   { ssr: false }
 )
-const hasCloudinaryConfig = Boolean(process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME)
+const cloudinaryUploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET
+const hasCloudinaryConfig = Boolean(
+  process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME && cloudinaryUploadPreset
+)
 
 export interface ComposerRowProps {
   isAI: boolean
@@ -74,7 +77,7 @@ export function ComposerRow({
         <CldUploadButton
           options={{ maxFiles: 1 }}
           onUpload={onUpload}
-          uploadPreset="pgc9ehd5"
+          uploadPreset={cloudinaryUploadPreset}
           aria-label="Attach image"
         >
           <HiPhoto size={30} className="text-sky-500" aria-hidden="true" />
