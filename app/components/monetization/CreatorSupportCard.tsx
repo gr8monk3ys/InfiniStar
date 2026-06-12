@@ -10,6 +10,7 @@ import {
   CREATOR_TIP_AMOUNTS_CENTS,
   formatCurrencyFromCents,
 } from "@/app/lib/creator-monetization"
+import { monetizationConfig } from "@/app/lib/monetization"
 import { Button } from "@/app/components/ui/button"
 import { useAppAuth } from "@/app/hooks/useAppAuth"
 import { useCsrfToken, withCsrfHeader } from "@/app/hooks/useCsrfToken"
@@ -37,7 +38,24 @@ interface CreatorSupportCardProps {
   initialViewerSubscription: ViewerSubscription | null
 }
 
-export function CreatorSupportCard({
+/**
+ * Public entry point for the creator support card.
+ *
+ * Renders nothing while creator payments are disabled
+ * (NEXT_PUBLIC_ENABLE_CREATOR_PAYMENTS, off by default — there is no payout
+ * path to creators yet). The flag check lives in this hook-free wrapper so
+ * the inner component's hooks (including useSearchParams) never run when the
+ * feature is off.
+ */
+export function CreatorSupportCard(props: CreatorSupportCardProps) {
+  if (!monetizationConfig.enableCreatorPayments) {
+    return null
+  }
+
+  return <CreatorSupportCardInner {...props} />
+}
+
+function CreatorSupportCardInner({
   creatorId,
   creatorName,
   initialSummary,

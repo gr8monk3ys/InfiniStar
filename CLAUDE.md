@@ -606,7 +606,7 @@ try {
 - Subscription plans (free/PRO) are defined in `config/subscriptions.ts`
 - Use `getUserSubscriptionPlan()` from `app/lib/subscription.ts` to get current plan
 - Free plan: 50 AI messages/month, 50 AI memories, basic features
-- PRO plan ($20/month): Unlimited AI messages, 200 AI memories, all models, export, sharing, auto-delete
+- PRO plan ($9.99/month): High AI message limits (fair-use cap), 200 AI memories, all models, export, sharing, auto-delete
 
 ## Important Notes
 

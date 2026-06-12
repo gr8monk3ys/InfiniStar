@@ -3,174 +3,288 @@ export const metadata = {
   description: "InfiniStar privacy policy — how we collect and use your data.",
 }
 
-export default function IndexPage() {
+export default function PrivacyPage() {
   return (
     <section className="container grid items-center gap-6 pb-8 pt-6 md:py-10">
       <div className="flex max-w-[80%] flex-col items-start gap-2">
         <h1 className="text-3xl font-extrabold leading-tight tracking-tighter md:text-4xl">
-          Terms of Service <br className="hidden sm:inline" />
+          Privacy Policy
         </h1>
+        <p className="text-sm text-muted-foreground">Last updated: June 12, 2026</p>
         <p className="text-lg text-muted-foreground">
-          This Privacy Policy covers the services (including all services, and websites to which
-          this Privacy Policy is posted, the “Services”) operated by Generatively Inc. and its
-          affiliates (collectively, “Infinistar”,“we”, “us” and/or “our”). This Privacy Policy
-          explains what Personal Information (defined below) we collect, how we use and share that
-          information, and your choices concerning our data practices. This Privacy Policy is
-          incorporated into and is part of our Terms of Service. Before using the Services or
-          submitting any Personal Information to Infinistar, please review this Privacy Policy
-          carefully. By using the Services, you agree to the practices described in this Privacy
-          Policy. If you do not agree to this Privacy Policy, you may not access any of our Websites
-          or otherwise use the Service. 1. Personal Information We Collect We collect information
-          that alone or in combination with other information in our possession could be used to
-          identify you (“Personal Information”) as follows: Personal Information You Provide. We may
-          collect Personal Information if you create an account or communicate with us as follows.
-          Communication Information. If you otherwise communicate with us, we may collect your name,
-          contact information, and the contents of any messages you send (“Communication
-          Information”). Personal Information We Collect Through Our Social Media Pages. We have
-          pages on social media sites including but not limited to: Instagram, Facebook, Medium,
-          Twitter, and YouTube (“Social Media Pages”). When you interact with our Social Media
-          Pages, we will collect Personal Information that you elect to provide to us, such as your
-          contact details (“Social Information”). In addition, the companies that host our Social
-          Media Pages may provide us with aggregate information and analytics regarding the use of
-          our Social Media Pages, which may include information about your engagement with our
-          social media sites. We receive personal Information automatically from your use of the
-          Service. When you visit, use, and interact with the Service, we may receive certain
-          information about your visit, use, or interactions (“Technical Information”). For example,
-          we may monitor the number of people that visit the Services, peak hours of visits, which
-          page(s) are visited, the domains our visitors come from, and which browsers people use to
-          access the Service. In particular, technical information includes the following, which is
-          created and automatically logged into our systems: Log data: Information that your browser
-          automatically sends whenever you visit the Site (“log data”). Log data includes your
-          Internet Protocol address, browser type and settings, the date and time of your request,
-          and how you interacted with the Site. Cookies: Please see the “Cookies” section below to
-          learn more about how we use cookies. Device information: Includes the name of the device,
-          operating system, and browser you are using. Information collected may depend on the type
-          of device you use and its settings. Usage Information: We collect information about how
-          you use our Service, such as the types of content that you view or engage with, the
-          features you use, the actions you take, and the time, frequency, and duration of your
-          activities. Cookies: We use cookies to operate and administer our Site, gather usage data
-          on our Site, and improve your experience on it. A “cookie” is a piece of information sent
-          to your browser by a website you visit. Cookies can be stored on your computer for
-          different periods of time. Some cookies expire after a certain amount of time, or upon
-          logging out (session cookies), others survive after your browser is closed until a defined
-          expiration date set in the cookie (as determined by the third party placing it), and help
-          recognize your computer when you open your browser and browse the Internet again
-          (persistent cookies). For more details on cookies, please visit All About Cookies.
-          Analytics: We may use a variety of online analytics products that use cookies to help us
-          analyze how user use the Site and enhance your experience when you use the Site. Your
-          Choices: On most web browsers, you will find a “help” section on the toolbar. Please refer
-          to this section for information on how to receive a notification when you are receiving a
-          new cookie and how to turn cookies off. Please note that if you limit the ability of
-          websites to set cookies, you may be unable to access certain aspects of the Services and
-          you may not be able to benefit from the Services’ full functionality. Advertising networks
-          may use cookies to collect Personal Information. Most advertising networks offer you a way
-          to opt out of targeted advertising. When you enter content into the Services we may
-          monitor what you write to check that it does not contain inappropriate content or Personal
-          Information. 2. How We Use Personal Information We may use Personal Information for the
-          following purposes: To provide and administer access to the Services; To maintain, improve
-          or repair any aspect of the Services, which may remain internal or may be shared with
-          third parties if necessary; To inform you about features or aspects of the Services we
-          believe might be of interest to you; To respond to your inquiries, comments, feedback, or
-          questions; To send administrative information to you, for example, information regarding
-          the Services or changes to our terms, conditions, and policies; To analyze how you
-          interact with our Service; To develop new programs and services; To prevent fraud,
-          criminal activity, or misuses of our Service, and to ensure the security of our IT
-          systems, architecture, and networks; and To comply with legal obligations and legal
-          process and to protect our rights, privacy, safety, or property, and/or that of our
-          affiliates, you, or other third parties. Aggregated Information: We may aggregate Personal
-          Information and use the aggregated information to analyze the effectiveness of our
-          Services, to improve and add features to our Services, to conduct research (which may
-          remain internal or may be shared with third parties as necessary) and for other similar
-          purposes. We may collect aggregated information through the Service, through cookies, and
-          through other means described in this Privacy Policy. 3. Sharing and Disclosure of
-          Personal Information In certain circumstances, we may share your Personal Information with
-          third parties without further notice to you, unless required by law, as set forth below:
-          Vendors and Service Providers: To assist us in meeting business operations needs and to
-          perform certain services and functions, we may share personal information with vendors and
-          service providers, including providers of hosting services, cloud services, and other
-          information technology services providers, email communication software and email
-          newsletter services, advertising and marketing services, and web analytics services.
-          Pursuant to our instructions, these parties will access, process, or store Personal
-          Information in the course of performing their duties to us. Business Transfers: If we are
-          involved in strategic transactions, reorganization, bankruptcy, receivership, or
-          transition of service to another provider (collectively a “Transaction”), your Personal
-          Information and other information may be shared in the diligence process with
-          counterparties and others assisting with the Transaction and transferred to a successor or
-          affiliate as part of that Transaction along with other assets. Legal Requirements: If
-          required to do so by law or in the good faith belief that such action is necessary to (i)
-          comply with a legal obligation, including to meet national security or law enforcement
-          requirements, (ii) protect and defend our rights or property, (iii) prevent fraud, (iv)
-          act in urgent circumstances to protect the personal safety of a person or group, or (v)
-          protect against legal liability. Affiliates: We may share Personal Information with our
-          affiliates, meaning an entity that controls, is controlled by, or is under common control
-          with Infinistar. Our affiliates may use the Personal Information we share in a manner
-          consistent with this Privacy Policy. Other user. Certain actions you take may be visible
-          to other user of the Services or result in content that is made available to other user of
-          the Services. 4. Update Your Information Please contact us at support@joyland.ai if you
-          need to change or correct your Personal Information. 5. Age Requirement If you are under
-          13 years old OR if you are an EU citizen or resident under 16 years old, you are not
-          authorized to register to use the Services. Our Services are not directed to children who
-          are under the age of 13, regardless of location, or children under 16 who are located in a
-          European Union Member State. Infinistar does not knowingly collect Personal Information
-          from children under the age of 13. If you have reason to believe that a child under the
-          age of 13, or a child under the age of 16 who is located in a European Union Member State,
-          has provided Personal Information to us through the Services, please email us at
-          support@joyland.ai and we will take appropriate steps to investigate. 6. Links to Third
-          Party Websites and Services The Service may contain links to other websites not operated
-          or controlled by us, including social media services (“Third Party Sites”). The
-          information that you share with Third Party Sites will be governed by the specific privacy
-          policies and terms of service of the Third Party Sites and not by this Privacy Policy. By
-          providing links in the course of providing the Services, we do not imply that we endorse
-          or have reviewed these sites. Please contact the applicable Third Party Site directly for
-          information on their privacy practices and policies. 7. Security You use the Services at
-          your own risk. We implement commercially reasonable technical, administrative, and
-          organizational measures to protect Personal Information both online and offline from loss,
-          misuse, and unauthorized access, disclosure, alteration, or destruction. However, no
-          Internet or e-mail transmission is ever fully secure or error-free. In particular, e-mails
-          sent to or from us may not be secure. Therefore, you should take special care in deciding
-          what information you provide to us via the Services or e-mail. Please keep this in mind
-          when disclosing any Personal Information to Infinistar. In addition, we are not
-          responsible for the circumvention of any privacy settings or security measures contained
-          on the Services, or Third Party Sites. 8. International user By using our Service, you
-          understand and acknowledge that your Personal Information may be transferred from your
-          location to our facilities and servers in the United States. 9. Information Provided by
-          Choice In certain circumstances providing Personal Information is optional. However, if
-          you choose not to provide Personal Information that is needed to use some features of our
-          Services, you may be unable to use those features. You can contact us at
-          support@joyland.ai to ask us to update or correct your Personal Information. 10. Delaware
-          Privacy Rights The following disclosures are intended to provide additional information
-          about (1) the categories of Personal Information we collect (as defined above), (2) the
-          source of the Personal Information, (3) how we use each category of Personal Information,
-          and (4) how we disclose Personal Information. These disclosures do not limit our ability
-          to use or disclose information as described in Sections 2 and 3. To the extent provided
-          for by law and subject to applicable exceptions, user have the following privacy rights in
-          relation to the Personal Information we collect: The right to know what Personal
-          Information we have collected and how we have used and disclosed that Personal
-          Information; The right to request deletion of your Personal Information; and The right to
-          be free from discrimination relating to the exercise of any of your privacy rights. We do
-          not and will not sell your Personal Information. Exercising Your Rights. user can exercise
-          the above privacy rights by emailing us at: support@joyland.ai. If user want to learn more
-          detailed privacy policies, they can refer to the following link
-          (https://delcode.delaware.gov/title6/c012c/index.html) Verification: In order to protect
-          your Personal Information from unauthorized access or deletion, we may require you to
-          verify your credentials before you can submit a request to know or delete Personal
-          Information. If you do not have an account with us, or if we suspect fraudulent or
-          malicious activity, we may ask you to provide additional Personal Information and proof of
-          residency for verification. If we can not verify your identity, we will not provide or
-          delete your Personal Information as applicable. Authorized Agent. You may submit a request
-          to know or a request to delete your Personal Information through an authorized agent. If
-          you do so, the agent must present signed written permission to act on your behalf and you
-          may also be required to independently verify your identity and submit proof of your
-          residency. 11. Changes to This Privacy Policy The Services, and/or our activities and
-          businesses may change from time to time. As a result, we may change this Privacy Policy at
-          any time. When we do we will post an updated version on this page, unless another type of
-          notice is required by applicable law. By continuing to use our Services or providing us
-          with Personal. Information after we have posted an updated Privacy Policy, or notified you
-          by other means if applicable, you consent to the revised Privacy Policy and practices
-          described in it. Please review this policy periodically. 12. Contact Us If you have any
-          questions about our Privacy Policy or information practices, please feel free to contact
-          us at support@joyland.ai.
+          InfiniStar (&quot;InfiniStar&quot;, &quot;we&quot;, &quot;us&quot;, or &quot;our&quot;)
+          operates an AI character-chat service available through our website (the
+          &quot;Service&quot;). This Privacy Policy explains what information we collect when you
+          use the Service, how we use and share it, and the choices and rights you have. By using
+          the Service, you agree to the practices described here. If you do not agree, please do not
+          use the Service.
         </p>
+      </div>
+
+      <div className="flex max-w-[80%] flex-col items-start gap-8">
+        <section className="flex flex-col gap-2">
+          <h2 className="text-2xl font-bold">1. Information We Collect</h2>
+          <p className="text-muted-foreground">
+            We collect the following categories of information when you use the Service:
+          </p>
+          <ul className="list-disc space-y-2 pl-6 text-muted-foreground">
+            <li>
+              <strong>Account information.</strong> When you sign up through our authentication
+              provider (Clerk), we receive and store your name, email address, and avatar image,
+              along with an account identifier. If you sign in with a third-party provider (for
+              example, Google), we receive the profile information that provider shares. If you set
+              up an optional backup password for our fallback sign-in system, we store it only as a
+              secure cryptographic hash, never in plain text.
+            </li>
+            <li>
+              <strong>Profile information.</strong> Optional details you add to your profile, such
+              as a bio, location, website link, custom status, and your presence status (online,
+              away, offline).
+            </li>
+            <li>
+              <strong>Content you create.</strong> Your conversations and messages (including text,
+              images you attach, voice recordings you submit for transcription and their
+              transcripts), AI memories saved for you, characters you create (names, descriptions,
+              greetings, system prompts, avatars), tags, message templates, and personas.
+            </li>
+            <li>
+              <strong>Usage and analytics data.</strong> Records of how you use AI features,
+              including per-request token counts and estimated costs, the models and personalities
+              you use, and feature activity such as character views, likes, and usage counts.
+            </li>
+            <li>
+              <strong>Payment information.</strong> Payments are processed by Stripe. We store your
+              Stripe customer and subscription identifiers, your plan, and your billing period
+              status. We never receive or store your full card number.
+            </li>
+            <li>
+              <strong>Device and log data.</strong> Information your browser sends automatically,
+              such as IP address, browser type, operating system, and the date and time of requests,
+              used for security, rate limiting, and troubleshooting.
+            </li>
+          </ul>
+        </section>
+
+        <section className="flex flex-col gap-2">
+          <h2 className="text-2xl font-bold">2. How We Use Information</h2>
+          <p className="text-muted-foreground">We use the information we collect to:</p>
+          <ul className="list-disc space-y-2 pl-6 text-muted-foreground">
+            <li>
+              Provide and operate the Service, including delivering AI responses, syncing your
+              account, and powering real-time messaging and presence features.
+            </li>
+            <li>Process subscription payments, creator tips, and creator subscriptions.</li>
+            <li>
+              Enforce usage limits (such as monthly AI message limits on the free plan) and track
+              token usage for billing transparency.
+            </li>
+            <li>
+              Keep the Service safe, including automated content moderation, rate limiting, user
+              blocking, and handling content reports.
+            </li>
+            <li>
+              Send transactional emails, such as welcome messages and account-deletion notices.
+            </li>
+            <li>Monitor errors and performance so we can fix problems.</li>
+            <li>Comply with legal obligations and protect our rights, users, and the public.</li>
+          </ul>
+          <p className="text-muted-foreground">We do not sell your personal information.</p>
+        </section>
+
+        <section className="flex flex-col gap-2">
+          <h2 className="text-2xl font-bold">3. AI Processing</h2>
+          <p className="text-muted-foreground">
+            AI conversations are central to the Service. When you chat with an AI character, your
+            messages, relevant conversation history, character prompts, and saved AI memories are
+            sent to Anthropic (Claude models) to generate responses. Depending on the features you
+            use, content may also be sent to OpenAI: voice recordings for transcription, image
+            generation prompts, and message text for automated content moderation. These providers
+            process your content to provide the requested functionality. Please avoid including
+            sensitive personal information in conversations that you do not want processed by AI
+            systems.
+          </p>
+        </section>
+
+        <section className="flex flex-col gap-2">
+          <h2 className="text-2xl font-bold">4. Service Providers</h2>
+          <p className="text-muted-foreground">
+            We share information with the service providers below only as needed to operate the
+            Service:
+          </p>
+          <ul className="list-disc space-y-2 pl-6 text-muted-foreground">
+            <li>
+              <strong>Clerk</strong> — authentication and account management
+            </li>
+            <li>
+              <strong>Stripe</strong> — payment processing, subscriptions, tips
+            </li>
+            <li>
+              <strong>Anthropic</strong> — AI conversation responses (Claude)
+            </li>
+            <li>
+              <strong>OpenAI</strong> — voice transcription, image generation, and content
+              moderation
+            </li>
+            <li>
+              <strong>Postmark</strong> — transactional email delivery
+            </li>
+            <li>
+              <strong>Cloudinary</strong> — image hosting and processing
+            </li>
+            <li>
+              <strong>Pusher</strong> — real-time messaging, typing indicators, and presence
+            </li>
+            <li>
+              <strong>Sentry</strong> — error monitoring
+            </li>
+            <li>
+              <strong>Vercel</strong> — application hosting
+            </li>
+            <li>
+              <strong>Neon</strong> — Postgres database hosting
+            </li>
+          </ul>
+        </section>
+
+        <section className="flex flex-col gap-2">
+          <h2 className="text-2xl font-bold">5. Other Sharing</h2>
+          <p className="text-muted-foreground">
+            Beyond the providers above, we may share information in these situations:
+          </p>
+          <ul className="list-disc space-y-2 pl-6 text-muted-foreground">
+            <li>
+              <strong>Content you choose to share.</strong> Characters you mark as public are
+              visible to other users. Conversations you share via a share link or invite are visible
+              to anyone with access under the permissions you set.
+            </li>
+            <li>
+              <strong>Legal requirements.</strong> If required by law, or where we believe in good
+              faith that disclosure is necessary to comply with legal process, enforce our terms,
+              prevent fraud or abuse, or protect the safety of any person.
+            </li>
+            <li>
+              <strong>Business transfers.</strong> If we are involved in a merger, acquisition,
+              financing, or sale of assets, information may be transferred as part of that
+              transaction, subject to this policy.
+            </li>
+          </ul>
+        </section>
+
+        <section className="flex flex-col gap-2">
+          <h2 className="text-2xl font-bold">6. Data Retention and Deletion</h2>
+          <p className="text-muted-foreground">
+            We keep your information for as long as your account is active. You can manage retention
+            yourself in several ways:
+          </p>
+          <ul className="list-disc space-y-2 pl-6 text-muted-foreground">
+            <li>Delete individual messages or entire conversations at any time.</li>
+            <li>
+              Enable auto-delete in settings to automatically remove conversations older than a
+              retention period you choose (from 7 to 365 days), with options to include archived
+              conversations or exclude tagged ones.
+            </li>
+            <li>
+              Request account deletion from your account settings. Deletion takes effect after a
+              30-day grace period, during which you can cancel the request and keep your account.
+              After the grace period, your account data is deleted or anonymized.
+            </li>
+          </ul>
+        </section>
+
+        <section className="flex flex-col gap-2">
+          <h2 className="text-2xl font-bold">7. Your Rights</h2>
+          <p className="text-muted-foreground">
+            Depending on where you live, you may have legal rights regarding your personal
+            information, including under the GDPR. Regardless of location, we offer everyone the
+            ability to:
+          </p>
+          <ul className="list-disc space-y-2 pl-6 text-muted-foreground">
+            <li>
+              <strong>Access and correct</strong> your information through your profile and account
+              settings.
+            </li>
+            <li>
+              <strong>Export</strong> your conversations in JSON, Markdown, or plain-text format,
+              and export characters you created as portable character card files.
+            </li>
+            <li>
+              <strong>Delete</strong> your account as described in Section 6, including the right to
+              cancel a pending deletion during the 30-day grace period.
+            </li>
+            <li>
+              <strong>Control communications</strong> through notification preferences in your
+              settings.
+            </li>
+          </ul>
+          <p className="text-muted-foreground">
+            To exercise any other rights, or if you need help, contact us at support@infinistar.app.
+            We may need to verify your identity before acting on a request.
+          </p>
+        </section>
+
+        <section className="flex flex-col gap-2">
+          <h2 className="text-2xl font-bold">8. Cookies</h2>
+          <p className="text-muted-foreground">
+            We use cookies and similar technologies that are necessary to operate the Service, such
+            as keeping you signed in, securing requests against cross-site request forgery, and
+            remembering preferences like your theme. We do not use third-party advertising cookies.
+            You can control cookies through your browser settings, but blocking essential cookies
+            may prevent you from signing in or using parts of the Service.
+          </p>
+        </section>
+
+        <section className="flex flex-col gap-2">
+          <h2 className="text-2xl font-bold">9. Security</h2>
+          <p className="text-muted-foreground">
+            We use commercially reasonable technical and organizational measures to protect your
+            information, including encryption in transit, hashed credentials, request validation,
+            rate limiting, and access controls. No method of transmission or storage is completely
+            secure, so we cannot guarantee absolute security. Please use a strong, unique password
+            and keep your sign-in credentials confidential.
+          </p>
+        </section>
+
+        <section className="flex flex-col gap-2">
+          <h2 className="text-2xl font-bold">10. Children and Age Requirements</h2>
+          <p className="text-muted-foreground">
+            The Service is not directed to children under 13, and you must be at least 13 years old
+            (or older where required by local law) to use it. Content marked as mature (NSFW) is
+            restricted to users who are at least 18 years old and who have explicitly confirmed
+            their age and enabled mature content in their safety settings. We do not knowingly
+            collect personal information from children under 13. If you believe a child under 13 has
+            provided us personal information, please contact us at support@infinistar.app and we
+            will investigate and delete it as appropriate.
+          </p>
+        </section>
+
+        <section className="flex flex-col gap-2">
+          <h2 className="text-2xl font-bold">11. International Data Transfers</h2>
+          <p className="text-muted-foreground">
+            We and our service providers process data in the United States and other countries that
+            may have different data-protection laws than your country. By using the Service, you
+            understand that your information may be transferred to and processed in those countries.
+            Where required, we rely on appropriate safeguards for such transfers.
+          </p>
+        </section>
+
+        <section className="flex flex-col gap-2">
+          <h2 className="text-2xl font-bold">12. Changes to This Policy</h2>
+          <p className="text-muted-foreground">
+            We may update this Privacy Policy from time to time. When we do, we will post the
+            updated version on this page and revise the &quot;Last updated&quot; date above. If the
+            changes are material, we will provide additional notice, such as by email or an in-app
+            notice. Your continued use of the Service after changes take effect means you accept the
+            updated policy.
+          </p>
+        </section>
+
+        <section className="flex flex-col gap-2">
+          <h2 className="text-2xl font-bold">13. Contact Us</h2>
+          <p className="text-muted-foreground">
+            If you have questions about this Privacy Policy or our data practices, contact us at
+            support@infinistar.app.
+          </p>
+        </section>
       </div>
     </section>
   )

@@ -3,6 +3,7 @@ import { z } from "zod"
 
 import { isValidTipAmount } from "@/app/lib/creator-monetization"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
+import { monetizationConfig } from "@/app/lib/monetization"
 import prisma from "@/app/lib/prismadb"
 import { creatorPaymentLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 import { sanitizePlainText } from "@/app/lib/sanitize"
@@ -18,6 +19,12 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ creatorId: string }> }
 ) {
+  // Kill switch: tips can be collected but there is no payout path to
+  // creators yet, so the feature is disabled until one exists.
+  if (!monetizationConfig.enableCreatorPayments) {
+    return NextResponse.json({ error: "Creator payments are not enabled" }, { status: 503 })
+  }
+
   // Rate limiting
   const identifier = getClientIdentifier(request)
   const allowed = await Promise.resolve(creatorPaymentLimiter.check(identifier))

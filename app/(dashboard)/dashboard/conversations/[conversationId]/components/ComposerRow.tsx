@@ -7,6 +7,7 @@ import { useForm, type FieldValues } from "react-hook-form"
 import { HiMicrophone, HiPaperAirplane, HiPhoto, HiSparkles, HiStopCircle } from "react-icons/hi2"
 
 import { VoiceInput, type VoiceInputMode } from "@/app/components/voice"
+import { useAiCapabilities } from "@/app/hooks/useAiCapabilities"
 
 import MessageInput from "./MessageInput"
 
@@ -71,6 +72,11 @@ export function ComposerRow({
   onVoiceError,
   canSubmit,
 }: ComposerRowProps) {
+  // Server-reported AI media capabilities. Optimistically true while loading,
+  // then buttons for unconfigured features (image generation, voice
+  // transcription) are hidden so users never hit "not configured" errors.
+  const { capabilities } = useAiCapabilities()
+
   return (
     <div className="flex w-full items-center gap-2 p-4">
       {hasCloudinaryConfig ? (
@@ -93,7 +99,7 @@ export function ComposerRow({
           <HiPhoto size={30} className="text-sky-500" aria-hidden="true" />
         </button>
       )}
-      {isAI && (
+      {isAI && capabilities.imageGeneration && (
         <button
           type="button"
           onClick={onOpenImageGenerator}
@@ -105,7 +111,7 @@ export function ComposerRow({
           <HiSparkles size={26} />
         </button>
       )}
-      {voiceMessageSupported && (
+      {voiceMessageSupported && capabilities.voiceTranscription && (
         <button
           type="button"
           onClick={onVoiceMessageToggle}

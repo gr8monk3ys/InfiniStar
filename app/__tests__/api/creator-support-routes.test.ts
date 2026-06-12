@@ -73,8 +73,18 @@ function createRequest(url: string, method: "POST" | "DELETE", body?: Record<str
 }
 
 describe("creator support routes", () => {
+  const ORIGINAL_ENV = process.env
+
+  afterAll(() => {
+    process.env = ORIGINAL_ENV
+  })
+
   beforeEach(() => {
     jest.clearAllMocks()
+    // Creator payments are disabled by default (kill switch — no payout path
+    // exists yet). Enable them for the happy-path tests below; the kill
+    // switch itself is covered in its own describe block.
+    process.env = { ...ORIGINAL_ENV, NEXT_PUBLIC_ENABLE_CREATOR_PAYMENTS: "true" }
     mockGetCurrentUser.mockResolvedValue({
       id: "supporter-1",
       email: "supporter@example.com",
@@ -212,5 +222,98 @@ describe("creator support routes", () => {
         }),
       })
     )
+  })
+
+  describe("kill switch: creator payments disabled", () => {
+    beforeEach(() => {
+      // Default deployment state — NEXT_PUBLIC_ENABLE_CREATOR_PAYMENTS unset/false.
+      delete process.env.NEXT_PUBLIC_ENABLE_CREATOR_PAYMENTS
+    })
+
+    it("returns 503 for tips and never touches Stripe or the database", async () => {
+      const { POST } = await import("@/app/api/creators/[creatorId]/tips/route")
+
+      const request = createRequest("http://localhost:3000/api/creators/creator-1/tips", "POST", {
+        amountCents: 500,
+      })
+
+      const response = await POST(request, { params: Promise.resolve({ creatorId: "creator-1" }) })
+      expect(response.status).toBe(503)
+      const payload = await response.json()
+      expect(payload).toEqual({ error: "Creator payments are not enabled" })
+      expect(mockStripeCustomersCreate).not.toHaveBeenCalled()
+      expect(mockStripeCheckoutSessionsCreate).not.toHaveBeenCalled()
+      expect(mockCreatorTipCreate).not.toHaveBeenCalled()
+    })
+
+    it("returns 503 for new subscriptions and never touches Stripe or the database", async () => {
+      const { POST } = await import("@/app/api/creators/[creatorId]/subscription/route")
+
+      const request = createRequest(
+        "http://localhost:3000/api/creators/creator-1/subscription",
+        "POST",
+        {
+          tierName: "Supporter",
+          amountCents: 900,
+          interval: "MONTHLY",
+        }
+      )
+
+      const response = await POST(request, { params: Promise.resolve({ creatorId: "creator-1" }) })
+      expect(response.status).toBe(503)
+      const payload = await response.json()
+      expect(payload).toEqual({ error: "Creator payments are not enabled" })
+      expect(mockStripeCheckoutSessionsCreate).not.toHaveBeenCalled()
+      expect(mockCreatorSubscriptionUpsert).not.toHaveBeenCalled()
+    })
+
+    it("treats an explicit false value the same as unset", async () => {
+      process.env.NEXT_PUBLIC_ENABLE_CREATOR_PAYMENTS = "false"
+      const { POST } = await import("@/app/api/creators/[creatorId]/tips/route")
+
+      const request = createRequest("http://localhost:3000/api/creators/creator-1/tips", "POST", {
+        amountCents: 500,
+      })
+
+      const response = await POST(request, { params: Promise.resolve({ creatorId: "creator-1" }) })
+      expect(response.status).toBe(503)
+    })
+
+    it("still allows canceling an existing subscription", async () => {
+      const { DELETE } = await import("@/app/api/creators/[creatorId]/subscription/route")
+
+      mockUserFindUnique.mockResolvedValueOnce({
+        id: "supporter-1",
+        email: "supporter@example.com",
+        name: "Supporter",
+        stripeCustomerId: "cus_existing",
+      })
+      mockCreatorSubscriptionFindUnique.mockResolvedValueOnce({
+        id: "sub-1",
+        supporterId: "supporter-1",
+        creatorId: "creator-1",
+        status: "ACTIVE",
+        stripeSubscriptionId: "sub_stripe_1",
+      })
+      mockCreatorSubscriptionUpdate.mockResolvedValue({
+        id: "sub-1",
+        status: "CANCELED",
+      })
+
+      const request = createRequest(
+        "http://localhost:3000/api/creators/creator-1/subscription",
+        "DELETE"
+      )
+
+      const response = await DELETE(request, {
+        params: Promise.resolve({ creatorId: "creator-1" }),
+      })
+      expect(response.status).toBe(200)
+      expect(mockCreatorSubscriptionUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ status: "CANCELED" }),
+        })
+      )
+    })
   })
 })

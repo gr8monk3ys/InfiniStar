@@ -64,6 +64,21 @@ VAPID_PUBLIC_KEY=
 VAPID_PRIVATE_KEY=
 ```
 
+## Launch Checklist (what breaks if you skip it)
+
+Ordered by risk. Items marked [config] are environment/dashboard work; [content] is data.
+
+1. **[config] `CRON_SECRET`** — without it, Vercel's scheduled calls to `/api/cron/process-deletions` and `/api/cron/auto-delete` are rejected with 401 forever. GDPR account deletions and the auto-delete feature silently never run.
+2. **[config] `ANTHROPIC_API_KEY`** — without it, every AI chat request fails. This is the product; it is listed as optional only so non-AI development works.
+3. **[config] `REDIS_URL`** — without it, rate limiting falls back to per-invocation memory on serverless (effectively no rate limiting) and `/api/health` reports degraded in production.
+4. **[config] `STRIPE_WEBHOOK_SECRET`** — without it, subscription lifecycle events are not verified/processed; users can pay without receiving PRO, or keep PRO after cancelling.
+5. **[content] Starter characters** — a fresh database has an empty marketplace. Run `bun run seed:characters` (idempotent, production-safe) so the landing page, /explore, and /feed have real content before the first user arrives.
+6. **[config] Sentry (`SENTRY_DSN`, `SENTRY_ORG`, `SENTRY_PROJECT`, `SENTRY_AUTH_TOKEN`)** — without all four, production errors are minified and effectively invisible.
+7. **[config] `OPENAI_API_KEY` + Cloudinary vars** — voice transcription and image generation are hidden in the composer when unconfigured (via `/api/ai/capabilities`); set these only when you want those features live.
+8. **[config] `NEXT_PUBLIC_ENABLE_CREATOR_PAYMENTS`** — keep **off** (default) until a payout mechanism (e.g. Stripe Connect) exists; the app can collect tips/subscriptions for creators but has no way to pay them out.
+
+**Edge runtime constraint:** `middleware.ts` runs on the Edge runtime. Never import modules that pull in Prisma, `pg`, `bcryptjs`, or `node:crypto` into the middleware graph — Vercel deployments fail silently in the "Deploying outputs" phase when the Edge bundle contains Node-only modules (this broke all deployments from March–June 2026). Edge-safe flags live in `app/lib/auth-constants.ts`.
+
 ## Vercel Configuration
 
 Recommended settings:

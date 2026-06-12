@@ -7,6 +7,7 @@ import toast from "react-hot-toast"
 import useConversation from "@/app/(dashboard)/dashboard/hooks/useConversation"
 import useImageGeneration from "@/app/(dashboard)/dashboard/hooks/useImageGeneration"
 import useVoiceRecording from "@/app/(dashboard)/dashboard/hooks/useVoiceRecording"
+import UpgradeModal, { type UpgradeModalReason } from "@/app/components/modals/UpgradeModal"
 import { isVoiceInputSupported, type VoiceInputMode } from "@/app/components/voice"
 import { useAiChatStream, type TokenUsage } from "@/app/hooks/useAiChatStream"
 import { useCsrfToken } from "@/app/hooks/useCsrfToken"
@@ -48,6 +49,10 @@ const Form: React.FC<FormProps> = ({
   const { conversationId } = useConversation()
   const [isLoading, setIsLoading] = useState(false)
   const [pendingImage, setPendingImage] = useState<string | null>(null)
+  const [upgradeModal, setUpgradeModal] = useState<{
+    reason: UpgradeModalReason
+    limits?: unknown
+  } | null>(null)
   const { token: csrfToken } = useCsrfToken()
   const viewerId = currentUserId ?? undefined
   const voiceSupported = isVoiceInputSupported()
@@ -80,7 +85,15 @@ const Form: React.FC<FormProps> = ({
         setLatestUsage(usage, conversationId)
       }
     },
-    onError: (error) => {
+    onError: (error, details) => {
+      // Limit errors get a focused upgrade dialog instead of a dead-end toast
+      if (
+        details?.code === "FREE_TIER_MESSAGE_LIMIT_REACHED" ||
+        details?.code === "PRO_TIER_COST_CAP_REACHED"
+      ) {
+        setUpgradeModal({ reason: details.code, limits: details.limits })
+        return
+      }
       toast.error(`AI error: ${error}`)
     },
   })
@@ -242,52 +255,60 @@ const Form: React.FC<FormProps> = ({
   const handleFormSubmit = handleSubmit(onSubmit)
 
   return (
-    <FormPanel
-      isAI={isAI}
-      shouldShowSuggestions={shouldShowSuggestions}
-      suggestions={suggestions}
-      suggestionsLoading={suggestionsLoading}
-      onSuggestionSelect={handleSuggestionSelect}
-      onSuggestionsRefresh={refreshSuggestions}
-      onSuggestionsDismiss={handleSuggestionsDismiss}
-      isLoading={isLoading}
-      isStreaming={isStreaming}
-      pendingImage={pendingImage}
-      onRemovePendingImage={() => setPendingImage(null)}
-      onUpload={handleUpload}
-      onOpenImageGenerator={() => setImageGenOpen(true)}
-      voiceMessageSupported={voiceMessageSupported}
-      isGeneratingImage={isGeneratingImage}
-      isSendingVoiceMessage={isSendingVoiceMessage}
-      isRecordingVoiceMessage={isRecordingVoiceMessage}
-      onVoiceMessageToggle={handleVoiceMessageToggle}
-      formRef={formRef}
-      onSubmit={handleFormSubmit}
-      register={register}
-      errors={errors}
-      onInputChange={handleInputChange}
-      onModifierEnterSubmit={handleModifierEnterSubmit}
-      enableVoiceInput={enableVoiceInput}
-      voiceSupported={voiceSupported}
-      onTranscriptApply={handleVoiceTranscript}
-      currentMessage={currentMessage}
-      onStateChange={handleVoiceStateChange}
-      onVoiceError={handleVoiceError}
-      canSubmit={canSubmit}
-      imageGenOpen={imageGenOpen}
-      onImageGenOpenChange={(open) => {
-        setImageGenOpen(open)
-        if (!open) {
-          setImageGenPrompt("")
-          setImageGenSize("1024x1024")
-        }
-      }}
-      imageGenPrompt={imageGenPrompt}
-      imageGenSize={imageGenSize as ImageSize}
-      onImagePromptChange={setImageGenPrompt}
-      onImageSizeChange={setImageGenSize}
-      onImageGenerate={handleGenerateImage}
-    />
+    <>
+      <UpgradeModal
+        isOpen={upgradeModal !== null}
+        onClose={() => setUpgradeModal(null)}
+        reason={upgradeModal?.reason}
+        limits={upgradeModal?.limits}
+      />
+      <FormPanel
+        isAI={isAI}
+        shouldShowSuggestions={shouldShowSuggestions}
+        suggestions={suggestions}
+        suggestionsLoading={suggestionsLoading}
+        onSuggestionSelect={handleSuggestionSelect}
+        onSuggestionsRefresh={refreshSuggestions}
+        onSuggestionsDismiss={handleSuggestionsDismiss}
+        isLoading={isLoading}
+        isStreaming={isStreaming}
+        pendingImage={pendingImage}
+        onRemovePendingImage={() => setPendingImage(null)}
+        onUpload={handleUpload}
+        onOpenImageGenerator={() => setImageGenOpen(true)}
+        voiceMessageSupported={voiceMessageSupported}
+        isGeneratingImage={isGeneratingImage}
+        isSendingVoiceMessage={isSendingVoiceMessage}
+        isRecordingVoiceMessage={isRecordingVoiceMessage}
+        onVoiceMessageToggle={handleVoiceMessageToggle}
+        formRef={formRef}
+        onSubmit={handleFormSubmit}
+        register={register}
+        errors={errors}
+        onInputChange={handleInputChange}
+        onModifierEnterSubmit={handleModifierEnterSubmit}
+        enableVoiceInput={enableVoiceInput}
+        voiceSupported={voiceSupported}
+        onTranscriptApply={handleVoiceTranscript}
+        currentMessage={currentMessage}
+        onStateChange={handleVoiceStateChange}
+        onVoiceError={handleVoiceError}
+        canSubmit={canSubmit}
+        imageGenOpen={imageGenOpen}
+        onImageGenOpenChange={(open) => {
+          setImageGenOpen(open)
+          if (!open) {
+            setImageGenPrompt("")
+            setImageGenSize("1024x1024")
+          }
+        }}
+        imageGenPrompt={imageGenPrompt}
+        imageGenSize={imageGenSize as ImageSize}
+        onImagePromptChange={setImageGenPrompt}
+        onImageSizeChange={setImageGenSize}
+        onImageGenerate={handleGenerateImage}
+      />
+    </>
   )
 }
 
