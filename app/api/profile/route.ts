@@ -60,11 +60,20 @@ export async function PATCH(request: NextRequest) {
       const nextHashedPassword = await hashFallbackPassword(newPassword)
 
       if (!currentUser.clerkId || isFallbackClerkId(currentUser.clerkId)) {
-        if (!currentUser.hashedPassword) {
+        // getCurrentUser() intentionally omits hashedPassword; fetch it directly here.
+        const userWithPassword = await prisma.user.findUnique({
+          where: { id: currentUser.id },
+          select: { hashedPassword: true },
+        })
+
+        if (!userWithPassword?.hashedPassword) {
           return NextResponse.json({ error: "Password changes are unavailable." }, { status: 400 })
         }
 
-        const isValid = await verifyFallbackPassword(currentPassword, currentUser.hashedPassword)
+        const isValid = await verifyFallbackPassword(
+          currentPassword,
+          userWithPassword.hashedPassword
+        )
         if (!isValid) {
           return NextResponse.json({ error: "Current password is incorrect" }, { status: 400 })
         }

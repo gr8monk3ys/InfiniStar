@@ -50,6 +50,16 @@ describe("getClientIdentifier", () => {
     expect(getClientIdentifier(req)).toBe("5.5.5.5")
   })
 
+  it("prefers the proxy-set x-real-ip over the client-appendable x-forwarded-for", () => {
+    const req = new NextRequest("http://localhost/api/test", {
+      headers: {
+        "x-real-ip": "5.5.5.5",
+        "x-forwarded-for": "1.1.1.1, 2.2.2.2",
+      },
+    })
+    expect(getClientIdentifier(req)).toBe("5.5.5.5")
+  })
+
   it('returns "unknown" when no IP headers are present', () => {
     const req = new NextRequest("http://localhost/api/test")
     expect(getClientIdentifier(req)).toBe("unknown")

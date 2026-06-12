@@ -43,6 +43,11 @@ const getCurrentUser = async () => {
       where: {
         id: session.user.id,
       },
+      // Never hand the password hash to API routes — callers that legitimately
+      // need it (fallback sign-in, backup-password changes) query it directly.
+      omit: {
+        hashedPassword: true,
+      },
     })
   } catch {
     return null

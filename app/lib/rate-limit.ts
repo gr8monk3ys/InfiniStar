@@ -146,16 +146,20 @@ export function getClientIdentifier(request: NextRequest): string {
   const vercelIp = request.headers.get("x-vercel-forwarded-for")
   if (vercelIp) return vercelIp.split(",")[0].trim()
 
-  // When behind a single trusted proxy, the rightmost x-forwarded-for value is set by the
-  // proxy itself (not the client), making it more trustworthy than the leftmost value.
+  // x-real-ip is overwritten by a single trusted reverse proxy (e.g. nginx) with the
+  // actual client address, so prefer it over the client-appendable x-forwarded-for chain.
+  const realIp = request.headers.get("x-real-ip")
+  if (realIp) return realIp.trim()
+
+  // Fallback: rightmost x-forwarded-for entry. This is only trustworthy when the app sits
+  // behind a single trusted proxy that appends the real client IP — anything the client
+  // sends itself ends up further left in the list and is ignored. Without such a proxy
+  // this header is fully client-controlled and must not be relied on.
   const forwarded = request.headers.get("x-forwarded-for")
   if (forwarded) {
     const ips = forwarded.split(",").map((ip) => ip.trim())
     return ips[ips.length - 1]
   }
-
-  const realIp = request.headers.get("x-real-ip")
-  if (realIp) return realIp.trim()
 
   return "unknown"
 }

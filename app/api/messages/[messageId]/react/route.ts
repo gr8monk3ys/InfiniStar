@@ -62,6 +62,22 @@ export async function POST(
       return NextResponse.json({ error: "Message not found" }, { status: 404 })
     }
 
+    // Check if user is a participant in the message's conversation
+    const conversation = await prisma.conversation.findFirst({
+      where: {
+        id: message.conversationId,
+        users: { some: { id: currentUser.id } },
+      },
+      select: { id: true },
+    })
+
+    if (!conversation) {
+      return NextResponse.json(
+        { error: "You can only react to messages in your own conversations" },
+        { status: 403 }
+      )
+    }
+
     // Check if message is deleted
     if (message.isDeleted) {
       return NextResponse.json({ error: "Cannot react to deleted message" }, { status: 400 })
