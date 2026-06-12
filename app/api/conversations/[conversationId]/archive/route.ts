@@ -52,44 +52,75 @@ export async function POST(
       return NextResponse.json({ error: "You are not part of this conversation" }, { status: 403 })
     }
 
-    // Check if already archived by this user
+    // Fast-path check; the authoritative re-check happens inside the transaction
     const archivedBy = conversation.archivedBy || []
     if (archivedBy.includes(currentUser.id)) {
       return NextResponse.json({ error: "Conversation already archived" }, { status: 400 })
     }
 
-    // Add user to archivedBy array
-    const updatedArchivedBy = [...archivedBy, currentUser.id]
+    // Atomically re-read the archive state and perform the update to prevent
+    // TOCTOU races where concurrent requests lose each other's writes
+    let updatedConversation
+    try {
+      updatedConversation = await prisma.$transaction(async (tx) => {
+        const current = await tx.conversation.findUnique({
+          where: { id: conversationId },
+          select: { archivedBy: true, archivedAt: true },
+        })
 
-    // Update conversation
-    const updatedConversation = await prisma.conversation.update({
-      where: { id: conversationId },
-      data: {
-        archivedBy: updatedArchivedBy,
-        // Set archivedAt timestamp only if this is the first archive
-        archivedAt: archivedBy.length === 0 ? new Date() : conversation.archivedAt,
-      },
-      include: {
-        users: true,
-        messages: {
+        if (!current) {
+          throw new Error("NOT_FOUND")
+        }
+
+        const currentArchivedBy = current.archivedBy || []
+        if (currentArchivedBy.includes(currentUser.id)) {
+          throw new Error("ALREADY_ARCHIVED")
+        }
+
+        return tx.conversation.update({
+          where: { id: conversationId },
+          data: {
+            archivedBy: [...currentArchivedBy, currentUser.id],
+            // Set archivedAt timestamp only if this is the first archive
+            archivedAt: currentArchivedBy.length === 0 ? new Date() : current.archivedAt,
+          },
           include: {
-            sender: true,
-            seen: true,
+            users: true,
+            messages: {
+              include: {
+                sender: true,
+                seen: true,
+              },
+              orderBy: {
+                createdAt: "desc",
+              },
+              take: 1,
+            },
           },
-          orderBy: {
-            createdAt: "desc",
-          },
-          take: 1,
-        },
-      },
-    })
+        })
+      })
+    } catch (txError) {
+      if (txError instanceof Error && txError.message === "NOT_FOUND") {
+        return NextResponse.json({ error: "Conversation not found" }, { status: 404 })
+      }
+      if (txError instanceof Error && txError.message === "ALREADY_ARCHIVED") {
+        return NextResponse.json({ error: "Conversation already archived" }, { status: 400 })
+      }
+      throw txError
+    }
 
-    // Trigger Pusher event for real-time update (only to the user who archived)
-    await pusherServer.trigger(
-      getPusherUserChannel(currentUser.id),
-      "conversation:archive",
-      updatedConversation
-    )
+    // Trigger Pusher event for real-time update (only to the user who archived).
+    // Slim payload stays under Pusher's 10KB event limit; failures are logged
+    // but never fail the API response.
+    try {
+      await pusherServer.trigger(getPusherUserChannel(currentUser.id), "conversation:archive", {
+        conversationId: updatedConversation.id,
+        archivedBy: updatedConversation.archivedBy,
+        archivedAt: updatedConversation.archivedAt,
+      })
+    } catch (pusherError) {
+      apiLogger.error({ err: pusherError }, "CONVERSATION_ARCHIVE_PUSHER_ERROR")
+    }
 
     return NextResponse.json(updatedConversation)
   } catch (error: unknown) {
@@ -142,44 +173,78 @@ export async function DELETE(
       return NextResponse.json({ error: "You are not part of this conversation" }, { status: 403 })
     }
 
-    // Check if archived by this user
+    // Fast-path check; the authoritative re-check happens inside the transaction
     const archivedBy = conversation.archivedBy || []
     if (!archivedBy.includes(currentUser.id)) {
       return NextResponse.json({ error: "Conversation is not archived" }, { status: 400 })
     }
 
-    // Remove user from archivedBy array
-    const updatedArchivedBy = archivedBy.filter((id: string) => id !== currentUser.id)
+    // Atomically re-read the archive state and perform the update to prevent
+    // TOCTOU races where concurrent requests lose each other's writes
+    let updatedConversation
+    try {
+      updatedConversation = await prisma.$transaction(async (tx) => {
+        const current = await tx.conversation.findUnique({
+          where: { id: conversationId },
+          select: { archivedBy: true, archivedAt: true },
+        })
 
-    // Update conversation
-    const updatedConversation = await prisma.conversation.update({
-      where: { id: conversationId },
-      data: {
-        archivedBy: updatedArchivedBy,
-        // Clear archivedAt if no users have it archived anymore
-        archivedAt: updatedArchivedBy.length === 0 ? null : conversation.archivedAt,
-      },
-      include: {
-        users: true,
-        messages: {
+        if (!current) {
+          throw new Error("NOT_FOUND")
+        }
+
+        const currentArchivedBy = current.archivedBy || []
+        if (!currentArchivedBy.includes(currentUser.id)) {
+          throw new Error("NOT_ARCHIVED")
+        }
+
+        // Remove user from archivedBy array
+        const updatedArchivedBy = currentArchivedBy.filter((id: string) => id !== currentUser.id)
+
+        return tx.conversation.update({
+          where: { id: conversationId },
+          data: {
+            archivedBy: updatedArchivedBy,
+            // Clear archivedAt if no users have it archived anymore
+            archivedAt: updatedArchivedBy.length === 0 ? null : current.archivedAt,
+          },
           include: {
-            sender: true,
-            seen: true,
+            users: true,
+            messages: {
+              include: {
+                sender: true,
+                seen: true,
+              },
+              orderBy: {
+                createdAt: "desc",
+              },
+              take: 1,
+            },
           },
-          orderBy: {
-            createdAt: "desc",
-          },
-          take: 1,
-        },
-      },
-    })
+        })
+      })
+    } catch (txError) {
+      if (txError instanceof Error && txError.message === "NOT_FOUND") {
+        return NextResponse.json({ error: "Conversation not found" }, { status: 404 })
+      }
+      if (txError instanceof Error && txError.message === "NOT_ARCHIVED") {
+        return NextResponse.json({ error: "Conversation is not archived" }, { status: 400 })
+      }
+      throw txError
+    }
 
-    // Trigger Pusher event for real-time update (only to the user who unarchived)
-    await pusherServer.trigger(
-      getPusherUserChannel(currentUser.id),
-      "conversation:unarchive",
-      updatedConversation
-    )
+    // Trigger Pusher event for real-time update (only to the user who unarchived).
+    // Slim payload stays under Pusher's 10KB event limit; failures are logged
+    // but never fail the API response.
+    try {
+      await pusherServer.trigger(getPusherUserChannel(currentUser.id), "conversation:unarchive", {
+        conversationId: updatedConversation.id,
+        archivedBy: updatedConversation.archivedBy,
+        archivedAt: updatedConversation.archivedAt,
+      })
+    } catch (pusherError) {
+      apiLogger.error({ err: pusherError }, "CONVERSATION_UNARCHIVE_PUSHER_ERROR")
+    }
 
     return NextResponse.json(updatedConversation)
   } catch (error: unknown) {

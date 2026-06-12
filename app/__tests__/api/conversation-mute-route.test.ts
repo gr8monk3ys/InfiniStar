@@ -26,6 +26,8 @@ jest.mock("@/app/lib/csrf", () => ({
   getCsrfTokenFromRequest: (...args: unknown[]) => mockGetCsrfTokenFromRequest(...args),
 }))
 
+// The mute route re-reads and updates inside prisma.$transaction. We invoke
+// the callback with a tx proxy that delegates to the same mocks.
 jest.mock("@/app/lib/prismadb", () => ({
   __esModule: true,
   default: {
@@ -33,6 +35,13 @@ jest.mock("@/app/lib/prismadb", () => ({
       findUnique: (...args: unknown[]) => mockConversationFindUnique(...args),
       update: (...args: unknown[]) => mockConversationUpdate(...args),
     },
+    $transaction: (fn: (tx: unknown) => Promise<unknown>) =>
+      fn({
+        conversation: {
+          findUnique: (...args: unknown[]) => mockConversationFindUnique(...args),
+          update: (...args: unknown[]) => mockConversationUpdate(...args),
+        },
+      }),
   },
 }))
 
@@ -217,13 +226,23 @@ describe("POST /api/conversations/[conversationId]/mute", () => {
     expect(mockConversationUpdate).not.toHaveBeenCalled()
   })
 
-  it("triggers Pusher conversation:mute event on the user channel", async () => {
+  it("triggers Pusher conversation:mute event with a slim payload on the user channel", async () => {
     await callPost()
     expect(mockPusherTrigger).toHaveBeenCalledWith(
       `private-user-${CURRENT_USER.id}`,
       "conversation:mute",
-      expect.anything()
+      {
+        conversationId: CONV_ID,
+        mutedBy: [CURRENT_USER.id],
+        mutedAt: expect.any(Date),
+      }
     )
+  })
+
+  it("still returns 200 when the Pusher trigger fails", async () => {
+    mockPusherTrigger.mockRejectedValue(new Error("Pusher unavailable"))
+    const res = await callPost()
+    expect(res.status).toBe(200)
   })
 
   it("sets mutedAt when first user mutes the conversation", async () => {
@@ -398,13 +417,23 @@ describe("DELETE /api/conversations/[conversationId]/mute", () => {
     expect(callData.mutedAt).toEqual(existingDate)
   })
 
-  it("triggers Pusher conversation:unmute event on the user channel", async () => {
+  it("triggers Pusher conversation:unmute event with a slim payload on the user channel", async () => {
     await callDelete()
     expect(mockPusherTrigger).toHaveBeenCalledWith(
       `private-user-${CURRENT_USER.id}`,
       "conversation:unmute",
-      expect.anything()
+      {
+        conversationId: CONV_ID,
+        mutedBy: [],
+        mutedAt: null,
+      }
     )
+  })
+
+  it("still returns 200 when the Pusher trigger fails", async () => {
+    mockPusherTrigger.mockRejectedValue(new Error("Pusher unavailable"))
+    const res = await callDelete()
+    expect(res.status).toBe(200)
   })
 
   it("returns 500 when a database error occurs", async () => {

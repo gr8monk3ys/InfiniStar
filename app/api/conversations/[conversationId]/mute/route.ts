@@ -55,44 +55,75 @@ export async function POST(
       return NextResponse.json({ error: "You are not part of this conversation" }, { status: 403 })
     }
 
-    // Check if already muted by this user
+    // Fast-path check; the authoritative re-check happens inside the transaction
     const mutedBy = conversation.mutedBy || []
     if (mutedBy.includes(currentUser.id)) {
       return NextResponse.json({ error: "Conversation already muted" }, { status: 400 })
     }
 
-    // Add user to mutedBy array
-    const updatedMutedBy = [...mutedBy, currentUser.id]
+    // Atomically re-read the mute state and perform the update to prevent
+    // TOCTOU races where concurrent requests lose each other's writes
+    let updatedConversation
+    try {
+      updatedConversation = await prisma.$transaction(async (tx) => {
+        const current = await tx.conversation.findUnique({
+          where: { id: conversationId },
+          select: { mutedBy: true, mutedAt: true },
+        })
 
-    // Update conversation
-    const updatedConversation = await prisma.conversation.update({
-      where: { id: conversationId },
-      data: {
-        mutedBy: updatedMutedBy,
-        // Set mutedAt timestamp only if this is the first mute
-        mutedAt: mutedBy.length === 0 ? new Date() : conversation.mutedAt,
-      },
-      include: {
-        users: true,
-        messages: {
+        if (!current) {
+          throw new Error("NOT_FOUND")
+        }
+
+        const currentMutedBy = current.mutedBy || []
+        if (currentMutedBy.includes(currentUser.id)) {
+          throw new Error("ALREADY_MUTED")
+        }
+
+        return tx.conversation.update({
+          where: { id: conversationId },
+          data: {
+            mutedBy: [...currentMutedBy, currentUser.id],
+            // Set mutedAt timestamp only if this is the first mute
+            mutedAt: currentMutedBy.length === 0 ? new Date() : current.mutedAt,
+          },
           include: {
-            sender: true,
-            seen: true,
+            users: true,
+            messages: {
+              include: {
+                sender: true,
+                seen: true,
+              },
+              orderBy: {
+                createdAt: "desc",
+              },
+              take: 1,
+            },
           },
-          orderBy: {
-            createdAt: "desc",
-          },
-          take: 1,
-        },
-      },
-    })
+        })
+      })
+    } catch (txError) {
+      if (txError instanceof Error && txError.message === "NOT_FOUND") {
+        return NextResponse.json({ error: "Conversation not found" }, { status: 404 })
+      }
+      if (txError instanceof Error && txError.message === "ALREADY_MUTED") {
+        return NextResponse.json({ error: "Conversation already muted" }, { status: 400 })
+      }
+      throw txError
+    }
 
-    // Trigger Pusher event for real-time update (only to the user who muted)
-    await pusherServer.trigger(
-      getPusherUserChannel(currentUser.id),
-      "conversation:mute",
-      updatedConversation
-    )
+    // Trigger Pusher event for real-time update (only to the user who muted).
+    // Slim payload stays under Pusher's 10KB event limit; failures are logged
+    // but never fail the API response.
+    try {
+      await pusherServer.trigger(getPusherUserChannel(currentUser.id), "conversation:mute", {
+        conversationId: updatedConversation.id,
+        mutedBy: updatedConversation.mutedBy,
+        mutedAt: updatedConversation.mutedAt,
+      })
+    } catch (pusherError) {
+      apiLogger.error({ err: pusherError }, "CONVERSATION_MUTE_PUSHER_ERROR")
+    }
 
     return NextResponse.json(updatedConversation)
   } catch (error: unknown) {
@@ -148,44 +179,78 @@ export async function DELETE(
       return NextResponse.json({ error: "You are not part of this conversation" }, { status: 403 })
     }
 
-    // Check if muted by this user
+    // Fast-path check; the authoritative re-check happens inside the transaction
     const mutedBy = conversation.mutedBy || []
     if (!mutedBy.includes(currentUser.id)) {
       return NextResponse.json({ error: "Conversation is not muted" }, { status: 400 })
     }
 
-    // Remove user from mutedBy array
-    const updatedMutedBy = mutedBy.filter((id: string) => id !== currentUser.id)
+    // Atomically re-read the mute state and perform the update to prevent
+    // TOCTOU races where concurrent requests lose each other's writes
+    let updatedConversation
+    try {
+      updatedConversation = await prisma.$transaction(async (tx) => {
+        const current = await tx.conversation.findUnique({
+          where: { id: conversationId },
+          select: { mutedBy: true, mutedAt: true },
+        })
 
-    // Update conversation
-    const updatedConversation = await prisma.conversation.update({
-      where: { id: conversationId },
-      data: {
-        mutedBy: updatedMutedBy,
-        // Clear mutedAt if no users have it muted anymore
-        mutedAt: updatedMutedBy.length === 0 ? null : conversation.mutedAt,
-      },
-      include: {
-        users: true,
-        messages: {
+        if (!current) {
+          throw new Error("NOT_FOUND")
+        }
+
+        const currentMutedBy = current.mutedBy || []
+        if (!currentMutedBy.includes(currentUser.id)) {
+          throw new Error("NOT_MUTED")
+        }
+
+        // Remove user from mutedBy array
+        const updatedMutedBy = currentMutedBy.filter((id: string) => id !== currentUser.id)
+
+        return tx.conversation.update({
+          where: { id: conversationId },
+          data: {
+            mutedBy: updatedMutedBy,
+            // Clear mutedAt if no users have it muted anymore
+            mutedAt: updatedMutedBy.length === 0 ? null : current.mutedAt,
+          },
           include: {
-            sender: true,
-            seen: true,
+            users: true,
+            messages: {
+              include: {
+                sender: true,
+                seen: true,
+              },
+              orderBy: {
+                createdAt: "desc",
+              },
+              take: 1,
+            },
           },
-          orderBy: {
-            createdAt: "desc",
-          },
-          take: 1,
-        },
-      },
-    })
+        })
+      })
+    } catch (txError) {
+      if (txError instanceof Error && txError.message === "NOT_FOUND") {
+        return NextResponse.json({ error: "Conversation not found" }, { status: 404 })
+      }
+      if (txError instanceof Error && txError.message === "NOT_MUTED") {
+        return NextResponse.json({ error: "Conversation is not muted" }, { status: 400 })
+      }
+      throw txError
+    }
 
-    // Trigger Pusher event for real-time update (only to the user who unmuted)
-    await pusherServer.trigger(
-      getPusherUserChannel(currentUser.id),
-      "conversation:unmute",
-      updatedConversation
-    )
+    // Trigger Pusher event for real-time update (only to the user who unmuted).
+    // Slim payload stays under Pusher's 10KB event limit; failures are logged
+    // but never fail the API response.
+    try {
+      await pusherServer.trigger(getPusherUserChannel(currentUser.id), "conversation:unmute", {
+        conversationId: updatedConversation.id,
+        mutedBy: updatedConversation.mutedBy,
+        mutedAt: updatedConversation.mutedAt,
+      })
+    } catch (pusherError) {
+      apiLogger.error({ err: pusherError }, "CONVERSATION_UNMUTE_PUSHER_ERROR")
+    }
 
     return NextResponse.json(updatedConversation)
   } catch (error: unknown) {

@@ -26,6 +26,8 @@ jest.mock("@/app/lib/csrf", () => ({
   getCsrfTokenFromRequest: (...args: unknown[]) => mockGetCsrfTokenFromRequest(...args),
 }))
 
+// The archive route re-reads and updates inside prisma.$transaction. We invoke
+// the callback with a tx proxy that delegates to the same mocks.
 jest.mock("@/app/lib/prismadb", () => ({
   __esModule: true,
   default: {
@@ -33,6 +35,13 @@ jest.mock("@/app/lib/prismadb", () => ({
       findUnique: (...args: unknown[]) => mockConversationFindUnique(...args),
       update: (...args: unknown[]) => mockConversationUpdate(...args),
     },
+    $transaction: (fn: (tx: unknown) => Promise<unknown>) =>
+      fn({
+        conversation: {
+          findUnique: (...args: unknown[]) => mockConversationFindUnique(...args),
+          update: (...args: unknown[]) => mockConversationUpdate(...args),
+        },
+      }),
   },
 }))
 
@@ -219,13 +228,23 @@ describe("POST /api/conversations/[conversationId]/archive", () => {
     expect(mockConversationUpdate).not.toHaveBeenCalled()
   })
 
-  it("triggers Pusher conversation:archive event on the user channel", async () => {
+  it("triggers Pusher conversation:archive event with a slim payload on the user channel", async () => {
     await callPost()
     expect(mockPusherTrigger).toHaveBeenCalledWith(
       `private-user-${CURRENT_USER.id}`,
       "conversation:archive",
-      expect.anything()
+      {
+        conversationId: CONV_ID,
+        archivedBy: [CURRENT_USER.id],
+        archivedAt: expect.any(Date),
+      }
     )
+  })
+
+  it("still returns 200 when the Pusher trigger fails", async () => {
+    mockPusherTrigger.mockRejectedValue(new Error("Pusher unavailable"))
+    const res = await callPost()
+    expect(res.status).toBe(200)
   })
 
   it("sets archivedAt when first user archives the conversation", async () => {
@@ -373,13 +392,23 @@ describe("DELETE /api/conversations/[conversationId]/archive", () => {
     expect(callData.archivedAt).toEqual(existingDate)
   })
 
-  it("triggers Pusher conversation:unarchive event on the user channel", async () => {
+  it("triggers Pusher conversation:unarchive event with a slim payload on the user channel", async () => {
     await callDelete()
     expect(mockPusherTrigger).toHaveBeenCalledWith(
       `private-user-${CURRENT_USER.id}`,
       "conversation:unarchive",
-      expect.anything()
+      {
+        conversationId: CONV_ID,
+        archivedBy: [],
+        archivedAt: null,
+      }
     )
+  })
+
+  it("still returns 200 when the Pusher trigger fails", async () => {
+    mockPusherTrigger.mockRejectedValue(new Error("Pusher unavailable"))
+    const res = await callDelete()
+    expect(res.status).toBe(200)
   })
 })
 

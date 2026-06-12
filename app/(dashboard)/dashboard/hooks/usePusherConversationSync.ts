@@ -14,6 +14,27 @@ interface NotificationPreferences {
   mutedConversations: string[]
 }
 
+// Slim payloads sent by the archive/pin/mute routes (kept small to stay under
+// Pusher's 10KB event limit). Timestamps arrive as ISO strings after JSON
+// serialization over the wire.
+interface ConversationArchivePayload {
+  conversationId: string
+  archivedBy: string[]
+  archivedAt: string | null
+}
+
+interface ConversationPinPayload {
+  conversationId: string
+  pinnedBy: string[]
+  pinnedAt: string | null
+}
+
+interface ConversationMutePayload {
+  conversationId: string
+  mutedBy: string[]
+  mutedAt: string | null
+}
+
 interface UsePusherConversationSyncParams {
   currentUserId: string | null
   items: FullConversationType[]
@@ -165,45 +186,48 @@ export function usePusherConversationSync({
       })
     }
 
-    // archive and unarchive carry the same payload shape — one handler covers both events
-    const archiveHandler = (conversation: FullConversationType) => {
+    // archive and unarchive carry the same slim payload shape — one handler
+    // covers both events and patches only the affected fields by id
+    const archiveHandler = (payload: ConversationArchivePayload) => {
       setItems((current) =>
         current.map((currentConversation) =>
-          currentConversation.id === conversation.id
+          currentConversation.id === payload.conversationId
             ? {
                 ...currentConversation,
-                archivedBy: conversation.archivedBy,
-                archivedAt: conversation.archivedAt,
+                archivedBy: payload.archivedBy,
+                archivedAt: payload.archivedAt ? new Date(payload.archivedAt) : null,
               }
             : currentConversation
         )
       )
     }
 
-    // pin and unpin carry the same payload shape — one handler covers both events
-    const pinHandler = (conversation: FullConversationType) => {
+    // pin and unpin carry the same slim payload shape — one handler covers
+    // both events and patches only the affected fields by id
+    const pinHandler = (payload: ConversationPinPayload) => {
       setItems((current) =>
         current.map((currentConversation) =>
-          currentConversation.id === conversation.id
+          currentConversation.id === payload.conversationId
             ? {
                 ...currentConversation,
-                pinnedBy: conversation.pinnedBy,
-                pinnedAt: conversation.pinnedAt,
+                pinnedBy: payload.pinnedBy,
+                pinnedAt: payload.pinnedAt ? new Date(payload.pinnedAt) : null,
               }
             : currentConversation
         )
       )
     }
 
-    // mute and unmute carry the same payload shape — one handler covers both events
-    const muteHandler = (conversation: FullConversationType) => {
+    // mute and unmute carry the same slim payload shape — one handler covers
+    // both events and patches only the affected fields by id
+    const muteHandler = (payload: ConversationMutePayload) => {
       setItems((current) =>
         current.map((currentConversation) =>
-          currentConversation.id === conversation.id
+          currentConversation.id === payload.conversationId
             ? {
                 ...currentConversation,
-                mutedBy: conversation.mutedBy,
-                mutedAt: conversation.mutedAt,
+                mutedBy: payload.mutedBy,
+                mutedAt: payload.mutedAt ? new Date(payload.mutedAt) : null,
               }
             : currentConversation
         )
