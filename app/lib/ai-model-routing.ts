@@ -2,7 +2,7 @@ import {
   getDefaultModel,
   isValidModel,
   MODEL_HAIKU_4_5,
-  MODEL_SONNET_4_5,
+  MODEL_SONNET_4_6,
   type ModelType,
 } from "@/app/lib/ai-models"
 
@@ -13,10 +13,16 @@ import {
  * without requiring a data migration.
  */
 const LEGACY_MODEL_ID_MAP: Record<string, ModelType> = {
+  // Previous app defaults (dated IDs stored on existing conversations)
+  "claude-sonnet-4-5-20250929": MODEL_SONNET_4_6,
+  "claude-sonnet-4-5": MODEL_SONNET_4_6,
+  "claude-haiku-4-5-20251001": MODEL_HAIKU_4_5,
+  // Deprecated (retires Aug 2026)
+  "claude-opus-4-1-20250805": MODEL_SONNET_4_6,
   // Retired (Oct 2025)
-  "claude-3-5-sonnet-20241022": MODEL_SONNET_4_5,
+  "claude-3-5-sonnet-20241022": MODEL_SONNET_4_6,
   // Retired (Jan 2026)
-  "claude-3-opus-20240229": MODEL_SONNET_4_5,
+  "claude-3-opus-20240229": MODEL_SONNET_4_6,
   // Older / legacy haiku variants
   "claude-3-5-haiku-20241022": MODEL_HAIKU_4_5,
   "claude-3-haiku-20240307": MODEL_HAIKU_4_5,
@@ -40,7 +46,7 @@ export function getFreeTierModel(): ModelType {
 }
 
 export function getProDefaultModel(): ModelType {
-  return MODEL_SONNET_4_5
+  return MODEL_SONNET_4_6
 }
 
 /**

@@ -11,10 +11,12 @@ import getCurrentUser from "@/app/actions/getCurrentUser"
 
 // Context window sizes for different Claude models
 const MODEL_CONTEXT_WINDOWS: Record<string, number> = {
+  "claude-sonnet-4-6": 1_000_000,
+  "claude-haiku-4-5": 200_000,
+  // Legacy ids
   "claude-sonnet-4-5-20250929": 200_000,
   "claude-haiku-4-5-20251001": 200_000,
   "claude-opus-4-1-20250805": 200_000,
-  // Legacy ids
   "claude-3-5-sonnet-20241022": 200_000,
   "claude-3-opus-20240229": 200_000,
   "claude-3-5-haiku-20241022": 200_000,
@@ -507,10 +509,12 @@ async function getPeakUsageHours(
  */
 function formatModelName(model: string): string {
   const modelNames: Record<string, string> = {
+    "claude-sonnet-4-6": "Claude Sonnet 4.6",
+    "claude-haiku-4-5": "Claude Haiku 4.5",
+    // Legacy ids
     "claude-sonnet-4-5-20250929": "Claude Sonnet 4.5",
     "claude-haiku-4-5-20251001": "Claude Haiku 4.5",
     "claude-opus-4-1-20250805": "Claude Opus 4.1",
-    // Legacy ids
     "claude-3-5-sonnet-20241022": "Claude 3.5 Sonnet",
     "claude-3-opus-20240229": "Claude 3 Opus",
     "claude-3-5-haiku-20241022": "Claude 3.5 Haiku",
