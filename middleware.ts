@@ -1,10 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server"
 
-import { FALLBACK_AUTH_COOKIE_NAME } from "@/app/lib/auth-constants"
+// Import the flag check from auth-constants (edge-safe), NOT fallback-auth —
+// fallback-auth pulls Prisma/pg/bcrypt, which crash the Edge middleware runtime.
+import { FALLBACK_AUTH_COOKIE_NAME, isFallbackAuthEnabled } from "@/app/lib/auth-constants"
 import { getClerkSignInUrl, getClerkSignUpUrl, isClerkSatellite } from "@/app/lib/clerk-auth"
 import { getCorsHeaders, handleCorsPreflightRequest } from "@/app/lib/cors"
-import { isFallbackAuthEnabled } from "@/app/lib/fallback-auth"
 
 const isProtectedRoute = createRouteMatcher(["/dashboard(.*)"])
 const isClerkProxyRoute = createRouteMatcher(["/api/clerk-proxy(.*)"])

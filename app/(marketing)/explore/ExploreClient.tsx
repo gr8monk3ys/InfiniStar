@@ -219,7 +219,7 @@ function CharacterSection({
 function EmptyResultsState({ searchQuery, onClearFilters }: EmptyResultsStateProps) {
   return (
     <div className="rounded-2xl border border-dashed px-6 py-12 text-center">
-      <h3 className="text-lg font-semibold">Nothing matched this cut</h3>
+      <h3 className="text-lg font-semibold">No matches found</h3>
       <p className="mx-auto mt-3 max-w-lg text-sm text-muted-foreground">
         No characters found
         {searchQuery ? ` matching "${searchQuery}"` : " in this category"}. Try widening the search,
@@ -277,8 +277,8 @@ function EmptyMarketplaceState() {
             The public catalog is opening up now
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-base text-muted-foreground [text-wrap:pretty] md:text-lg">
-            There are no public characters live yet, so the best UX move is to make that feel
-            intentional: publish early, shape the front page, and set the tone for the community.
+            No public characters are live yet. Publish early to shape the front page and set the
+            tone for the community — the first characters here get seen the most.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             <Link href="/dashboard/characters/new" className={cn(buttonVariants({ size: "lg" }))}>
@@ -299,7 +299,7 @@ function EmptyMarketplaceState() {
       <section>
         <div className="mb-6 flex items-center gap-2">
           <HiOutlineSparkles className="size-5 text-primary" aria-hidden="true" />
-          <h2 className="text-xl font-bold">Good first lanes to build</h2>
+          <h2 className="text-xl font-bold">Character ideas to start with</h2>
         </div>
         <div className="grid gap-4 md:grid-cols-3">
           {STARTER_ARCHETYPES.map((archetype) => (

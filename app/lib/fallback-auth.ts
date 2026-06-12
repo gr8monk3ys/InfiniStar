@@ -6,6 +6,7 @@ import {
   FALLBACK_AUTH_CLERK_ID_PREFIX,
   FALLBACK_AUTH_COOKIE_NAME,
   FALLBACK_AUTH_SESSION_DAYS,
+  isFallbackAuthEnabled,
 } from "@/app/lib/auth-constants"
 import prisma from "@/app/lib/prismadb"
 import {
@@ -17,10 +18,7 @@ import {
 
 const FALLBACK_AUTH_LAST_ACTIVE_UPDATE_MS = 5 * 60 * 1000
 
-export function isFallbackAuthEnabled() {
-  const value = process.env.ENABLE_FALLBACK_AUTH?.trim().toLowerCase()
-  return value === "1" || value === "true" || value === "yes" || value === "on"
-}
+export { isFallbackAuthEnabled }
 
 export function isFallbackClerkId(clerkId?: string | null) {
   return Boolean(clerkId?.startsWith(FALLBACK_AUTH_CLERK_ID_PREFIX))
