@@ -157,7 +157,7 @@ export default async function PricingPage() {
           <div className="rounded-lg border bg-background p-6">
             <h3 className="font-semibold">What AI models can I use?</h3>
             <p className="mt-2 text-sm text-muted-foreground">
-              Free users use Claude Haiku 4.5. PRO users can choose between Claude Sonnet 4.5
+              Free users use Claude Haiku 4.5. PRO users can choose between Claude Sonnet 4.6
               (recommended) and Claude Haiku 4.5 (fastest). PRO usage is subject to a fair-use cap.
             </p>
           </div>

@@ -25,7 +25,7 @@ export const proPlan: SubscriptionPlan = {
   features: [
     "High monthly limits (fair use cap applies)",
     "All 7 AI personalities",
-    "Claude Sonnet 4.5 + Haiku 4.5",
+    "Claude Sonnet 4.6 + Haiku 4.5",
     "Faster response tier",
     "Advanced search & analytics",
     "200 AI memories",
