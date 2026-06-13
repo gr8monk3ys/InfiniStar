@@ -92,6 +92,10 @@ export async function getAiAccessDecision(
         where: {
           userId,
           createdAt: { gte: monthStart },
+          // Background, system-initiated generation (e.g. automatic conversation
+          // summaries) must never count against a user's quota or cost cap — they
+          // did not request it. It is still tracked as an AiUsage row for analytics.
+          requestType: { notIn: ["summary-auto"] },
         },
         _sum: {
           totalTokens: true,

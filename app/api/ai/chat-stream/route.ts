@@ -13,7 +13,9 @@ import {
 import { trackAiUsage } from "@/app/lib/ai-usage"
 import anthropic from "@/app/lib/anthropic"
 import { maybeAutoExtractMemories } from "@/app/lib/auto-memory"
+import { maybeAutoSummarize } from "@/app/lib/auto-summary"
 import { buildCharacterSystemPrompt } from "@/app/lib/character-prompt"
+import { renderSummaryForPrompt } from "@/app/lib/conversation-summary"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import { aiLogger } from "@/app/lib/logger"
 import {
@@ -299,12 +301,10 @@ export async function POST(request: NextRequest) {
           personaContext = parts.join("\n")
         }
 
-        // Bridge long conversations: when a cached AI summary exists, inject it so
-        // the model retains continuity beyond the 20-message history window.
-        let summaryContext = ""
-        if (conversation.summary && (conversation.summaryMessageCount ?? 0) > 20) {
-          summaryContext = `\n\n[Earlier Conversation Summary]\n${conversation.summary}\n(The messages below are the most recent part of this conversation.)`
-        }
+        // Bridge long conversations: when a stored AI summary exists, inject a
+        // compact rendering of it so the model retains continuity beyond the
+        // recent-history window.
+        const summaryContext = renderSummaryForPrompt(conversation.summary)
 
         // Fetch and include user memories in system prompt
         let systemPrompt = baseSystemPrompt + personaContext + summaryContext
@@ -409,6 +409,11 @@ export async function POST(request: NextRequest) {
           // Best-effort background memory extraction
           maybeAutoExtractMemories(currentUser.id, conversationId).catch((err) => {
             aiLogger.warn({ err }, "Auto memory extraction failed")
+          })
+
+          // Best-effort background summary refresh (continuity bridge for long chats)
+          maybeAutoSummarize(conversationId, currentUser.id).catch((err) => {
+            aiLogger.warn({ err }, "Auto summary failed")
           })
 
           // Best-effort background push (web push) for AI completion.
