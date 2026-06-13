@@ -2,46 +2,20 @@ import { NextResponse, type NextRequest } from "next/server"
 
 import { getAiAccessDecision } from "@/app/lib/ai-access"
 import { getFreeTierModel } from "@/app/lib/ai-model-routing"
-import { trackAiUsage } from "@/app/lib/ai-usage"
-import anthropic from "@/app/lib/anthropic"
+import {
+  generateConversationSummary,
+  MIN_MESSAGES_FOR_SUMMARY,
+  type ConversationSummary,
+} from "@/app/lib/conversation-summary"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import { apiLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
 import { aiChatLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 import getCurrentUser from "@/app/actions/getCurrentUser"
 
-// Minimum number of messages required for summarization
-const MIN_MESSAGES_FOR_SUMMARY = 5
-// Maximum messages to include in context (to stay within token limits)
-const MAX_MESSAGES_FOR_CONTEXT = 50
-
 interface SummarizeRequestBody {
   forceRegenerate?: boolean
 }
-
-interface ConversationSummary {
-  overview: string
-  keyTopics: string[]
-  decisions: string[]
-  participants: string[]
-}
-
-// System prompt for generating summaries
-const SUMMARY_SYSTEM_PROMPT = `You are a helpful assistant that creates concise conversation summaries. 
-When given a conversation, produce a JSON response with the following structure:
-{
-  "overview": "A brief 1-2 sentence overview of the conversation",
-  "keyTopics": ["Array of key topics discussed as bullet points"],
-  "decisions": ["Array of any decisions made or action items identified. Use empty array if none."],
-  "participants": ["Array of participant names or identifiers involved"]
-}
-
-Guidelines:
-- Keep the overview concise and focused on the main purpose of the conversation
-- Extract 3-5 key topics discussed
-- Identify concrete decisions or action items if any exist
-- List all participants who contributed to the conversation
-- Respond ONLY with valid JSON, no additional text or markdown`
 
 // POST /api/conversations/[conversationId]/summarize - Generate AI summary
 export async function POST(
@@ -87,21 +61,12 @@ export async function POST(
       // Body is optional, proceed with defaults
     }
 
-    // Find the conversation with messages
+    // Look up the conversation for authorization and the cached-summary check.
+    // The message content for generation is fetched inside generateConversationSummary.
     const conversation = await prisma.conversation.findUnique({
       where: { id: conversationId },
       include: {
-        users: true,
-        messages: {
-          where: {
-            isDeleted: false,
-          },
-          orderBy: { createdAt: "desc" },
-          take: MAX_MESSAGES_FOR_CONTEXT,
-          include: {
-            sender: true,
-          },
-        },
+        users: { select: { id: true } },
         _count: {
           select: {
             messages: {
@@ -126,7 +91,7 @@ export async function POST(
     }
 
     // Use the real total count from _count so the cache invalidates correctly
-    // even when the conversation has more than MAX_MESSAGES_FOR_CONTEXT messages
+    // even when the conversation has more messages than fit in the generation window
     const totalMessageCount = conversation._count.messages
 
     // Check minimum message count
@@ -156,30 +121,6 @@ export async function POST(
       })
     }
 
-    // Reverse messages to get chronological order for context
-    const messagesInOrder = [...conversation.messages].reverse()
-
-    // Build conversation context for Claude
-    const conversationContext = messagesInOrder
-      .map((msg: { isAI: boolean; body?: string | null; sender: { name?: string | null } }) => {
-        const senderName = msg.isAI ? "AI Assistant" : msg.sender.name || "Unknown User"
-        const content = msg.body || "[Image/Media]"
-        return `${senderName}: ${content}`
-      })
-      .join("\n\n")
-
-    // Get participant names
-    const participantNames = conversation.users
-      .map(
-        (user: { name?: string | null; email?: string | null }) =>
-          user.name || user.email || "Unknown"
-      )
-      .filter((name: string, index: number, self: string[]) => self.indexOf(name) === index) // Remove duplicates
-
-    // Track request start time for latency measurement
-    const startTime = Date.now()
-    const modelToUse = getFreeTierModel()
-
     const accessDecision = await getAiAccessDecision(currentUser.id)
     if (!accessDecision.allowed) {
       return NextResponse.json(
@@ -194,72 +135,21 @@ export async function POST(
       )
     }
 
-    // Call Anthropic API to generate summary
-    const response = await anthropic.messages.create({
-      model: modelToUse,
-      max_tokens: 1024,
-      system: SUMMARY_SYSTEM_PROMPT,
-      messages: [
-        {
-          role: "user",
-          content: `Please summarize the following conversation. The participants are: ${participantNames.join(
-            ", "
-          )}\n\n--- CONVERSATION START ---\n${conversationContext}\n--- CONVERSATION END ---`,
-        },
-      ],
-    })
-
-    // Calculate latency
-    const latencyMs = Date.now() - startTime
-
-    // Extract response text
-    const responseText = response.content[0].type === "text" ? response.content[0].text : ""
-
-    // Parse the JSON response
-    let summary: ConversationSummary
-    try {
-      summary = JSON.parse(responseText) as ConversationSummary
-    } catch {
-      // If parsing fails, create a basic summary structure
-      summary = {
-        overview: responseText,
-        keyTopics: [],
-        decisions: [],
-        participants: participantNames,
-      }
-    }
-
-    // Ensure participants are populated
-    if (!summary.participants || summary.participants.length === 0) {
-      summary.participants = participantNames
-    }
-
-    // Track AI usage
-    await trackAiUsage({
-      userId: currentUser.id,
+    const result = await generateConversationSummary({
       conversationId,
-      model: modelToUse,
-      inputTokens: response.usage.input_tokens,
-      outputTokens: response.usage.output_tokens,
+      userId: currentUser.id,
+      model: getFreeTierModel(),
       requestType: "summary",
-      latencyMs,
     })
 
-    // Save summary to conversation
-    const now = new Date()
-    await prisma.conversation.update({
-      where: { id: conversationId },
-      data: {
-        summary: JSON.stringify(summary),
-        summaryGeneratedAt: now,
-        summaryMessageCount: totalMessageCount,
-      },
-    })
+    if (!result) {
+      return NextResponse.json({ error: "Unable to generate a summary." }, { status: 400 })
+    }
 
     return NextResponse.json({
-      summary,
-      generatedAt: now,
-      messageCount: totalMessageCount,
+      summary: result.summary,
+      generatedAt: result.generatedAt,
+      messageCount: result.messageCount,
       cached: false,
     })
   } catch (error: unknown) {

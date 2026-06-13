@@ -15,6 +15,7 @@ import {
 } from "react-icons/hi2"
 import { MdOutlineGroupAdd } from "react-icons/md"
 
+import { isGroupChatEnabled } from "@/app/lib/features"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -127,6 +128,7 @@ interface ConversationListHeaderProps {
   onOpenNewConversation: () => void
   onOpenSceneChat: () => void
   onOpenGroupChat: () => void
+  showGroupChat: boolean
 }
 
 function ConversationListHeader({
@@ -135,6 +137,7 @@ function ConversationListHeader({
   onOpenNewConversation,
   onOpenSceneChat,
   onOpenGroupChat,
+  showGroupChat,
 }: ConversationListHeaderProps) {
   return (
     <div className="mb-4 flex justify-between pt-4">
@@ -164,14 +167,16 @@ function ConversationListHeader({
         >
           <HiChatBubbleLeftRight size={20} />
         </button>
-        <button
-          onClick={onOpenGroupChat}
-          className="cursor-pointer rounded-full bg-secondary p-2 text-secondary-foreground transition hover:opacity-75"
-          title="New Group Chat"
-          aria-label="Create new Group Chat"
-        >
-          <MdOutlineGroupAdd size={20} />
-        </button>
+        {showGroupChat && (
+          <button
+            onClick={onOpenGroupChat}
+            className="cursor-pointer rounded-full bg-secondary p-2 text-secondary-foreground transition hover:opacity-75"
+            title="New Group Chat"
+            aria-label="Create new Group Chat"
+          >
+            <MdOutlineGroupAdd size={20} />
+          </button>
+        )}
       </div>
     </div>
   )
@@ -353,6 +358,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
   initialNotificationPrefs,
   sceneCharacters,
 }) => {
+  const groupChatEnabled = isGroupChatEnabled()
   const [state, dispatch] = useReducer(
     conversationListReducer,
     initialItems,
@@ -476,7 +482,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
 
   return (
     <>
-      {state.isGroupModalOpen && (
+      {groupChatEnabled && state.isGroupModalOpen && (
         <GroupChatModal
           user={user}
           isOpen={state.isGroupModalOpen}
@@ -503,6 +509,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
             onOpenNewConversation={openNewAIConversation}
             onOpenSceneChat={() => dispatch({ type: "open_scene_modal" })}
             onOpenGroupChat={() => dispatch({ type: "open_group_modal" })}
+            showGroupChat={groupChatEnabled}
           />
 
           <ArchiveToggleButton

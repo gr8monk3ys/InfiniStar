@@ -63,6 +63,7 @@ export type AiRequestType =
   | "suggestions"
   | "memory-extract"
   | "summary"
+  | "summary-auto"
   | "image-generate"
   | "transcribe"
 

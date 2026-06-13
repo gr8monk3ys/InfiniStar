@@ -12,7 +12,9 @@ import {
 import { trackAiUsage } from "@/app/lib/ai-usage"
 import anthropic from "@/app/lib/anthropic"
 import { maybeAutoExtractMemories } from "@/app/lib/auto-memory"
+import { maybeAutoSummarize } from "@/app/lib/auto-summary"
 import { buildCharacterSystemPrompt } from "@/app/lib/character-prompt"
+import { renderSummaryForPrompt } from "@/app/lib/conversation-summary"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import { aiLogger } from "@/app/lib/logger"
 import {
@@ -275,7 +277,8 @@ export async function POST(request: NextRequest) {
     const basePrompt = conversation.character?.systemPrompt
       ? buildCharacterSystemPrompt(conversation.character)
       : getSystemPrompt(personalityType, conversation.aiSystemPrompt || undefined)
-    const systemPrompt = basePrompt + personaContext
+    const summaryContext = renderSummaryForPrompt(conversation.summary)
+    const systemPrompt = basePrompt + personaContext + summaryContext
 
     // Call Anthropic API with system prompt
     // Use cache_control to cache the system prompt — in roleplay the character
@@ -353,6 +356,11 @@ export async function POST(request: NextRequest) {
     // Best-effort background memory extraction
     maybeAutoExtractMemories(currentUser.id, conversationId).catch((err) => {
       aiLogger.warn({ err }, "Auto memory extraction failed")
+    })
+
+    // Best-effort background summary refresh (continuity bridge for long chats)
+    maybeAutoSummarize(conversationId, currentUser.id).catch((err) => {
+      aiLogger.warn({ err }, "Auto summary failed")
     })
 
     // Best-effort background push (web push) for AI completion.
