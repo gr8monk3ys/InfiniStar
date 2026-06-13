@@ -12,6 +12,7 @@ import {
 import { trackAiUsage } from "@/app/lib/ai-usage"
 import anthropic from "@/app/lib/anthropic"
 import { maybeAutoExtractMemories } from "@/app/lib/auto-memory"
+import { buildCharacterSystemPrompt } from "@/app/lib/character-prompt"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import { aiLogger } from "@/app/lib/logger"
 import {
@@ -137,6 +138,9 @@ export async function POST(request: NextRequest) {
           select: {
             name: true,
             isNsfw: true,
+            systemPrompt: true,
+            scenario: true,
+            exampleDialogues: true,
           },
         },
         persona: {
@@ -266,15 +270,19 @@ export async function POST(request: NextRequest) {
       personaContext = parts.join("\n")
     }
 
-    const systemPrompt =
-      getSystemPrompt(personalityType, conversation.aiSystemPrompt || undefined) + personaContext
+    // Character conversations rebuild the prompt fresh from the character row so
+    // edits to a character (and roleplay guardrails) apply to existing chats.
+    const basePrompt = conversation.character?.systemPrompt
+      ? buildCharacterSystemPrompt(conversation.character)
+      : getSystemPrompt(personalityType, conversation.aiSystemPrompt || undefined)
+    const systemPrompt = basePrompt + personaContext
 
     // Call Anthropic API with system prompt
     // Use cache_control to cache the system prompt — in roleplay the character
     // prompt repeats every turn, so caching saves ~90% on input token costs.
     const response = await anthropic.messages.create({
       model: modelToUse,
-      max_tokens: 1024,
+      max_tokens: 2048,
       system: [
         {
           type: "text" as const,

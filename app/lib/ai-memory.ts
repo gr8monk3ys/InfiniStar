@@ -309,7 +309,10 @@ export async function getRelevantMemories(userId: string, _context?: string): Pr
   // For now, just return top memories by importance
   // Future enhancement: Use embeddings for semantic similarity
 
-  return memories
+  // Re-sort the selected set deterministically (by key) so the rendered prompt
+  // text is byte-stable between turns — selection order churn (updatedAt) would
+  // otherwise invalidate the Anthropic prompt cache on every memory touch.
+  return memories.sort((a, b) => a.key.localeCompare(b.key))
 }
 
 /**
@@ -320,19 +323,24 @@ export function buildMemoryContext(memories: AIMemory[]): string {
     return ""
   }
 
-  const memoryLines = memories.map((memory) => {
-    const categoryLabel =
-      MEMORY_CATEGORIES[memory.category as MemoryCategory]?.label || memory.category
-    return `- [${categoryLabel}] ${memory.content}`
+  // Group by category so the model can prioritize, instead of a flat dump
+  const byCategory = new Map<string, AIMemory[]>()
+  for (const memory of memories) {
+    const list = byCategory.get(memory.category) ?? []
+    list.push(memory)
+    byCategory.set(memory.category, list)
+  }
+
+  const sections = [...byCategory.entries()].map(([category, items]) => {
+    const categoryLabel = MEMORY_CATEGORIES[category as MemoryCategory]?.label || category
+    return `${categoryLabel}:\n${items.map((m) => `- ${m.content}`).join("\n")}`
   })
 
   return `
-## User Context (Remembered Information)
-The following information has been saved about this user. Use it to personalize responses:
+## About This User (Remembered From Past Conversations)
+${sections.join("\n\n")}
 
-${memoryLines.join("\n")}
-
-Remember to consider this context when responding, but don't explicitly mention that you're using stored memories unless relevant.
+Weave this context in naturally — in roleplay, your character simply remembers these things about them. Do not recite this list or mention "stored memories".
 `
 }
 

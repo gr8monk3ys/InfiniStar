@@ -44,7 +44,8 @@ interface PieLabelRenderProps {
 
 // Colors for different models
 const MODEL_COLORS: Record<string, string> = {
-  "Claude Sonnet 4.5": "#8b5cf6", // purple
+  "Claude Sonnet 4.6": "#8b5cf6", // purple
+  "Claude Sonnet 4.5": "#8b5cf6", // purple (legacy usage rows)
   "Claude Haiku 4.5": "#06b6d4", // cyan
   // Legacy labels (for older rows in analytics)
   "Claude 3.5 Sonnet": "#8b5cf6",

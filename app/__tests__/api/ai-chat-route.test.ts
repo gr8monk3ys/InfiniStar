@@ -445,7 +445,7 @@ describe("POST /api/ai/chat", () => {
           }),
         ]),
         messages: expect.any(Array),
-        max_tokens: 1024,
+        max_tokens: 2048,
       })
     )
   })

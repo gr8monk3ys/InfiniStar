@@ -13,6 +13,7 @@ import {
 import { trackAiUsage } from "@/app/lib/ai-usage"
 import anthropic from "@/app/lib/anthropic"
 import { maybeAutoExtractMemories } from "@/app/lib/auto-memory"
+import { buildCharacterSystemPrompt } from "@/app/lib/character-prompt"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import { aiLogger } from "@/app/lib/logger"
 import {
@@ -147,6 +148,9 @@ export async function POST(request: NextRequest) {
           select: {
             name: true,
             isNsfw: true,
+            systemPrompt: true,
+            scenario: true,
+            exampleDialogues: true,
           },
         },
         persona: {
@@ -269,15 +273,17 @@ export async function POST(request: NextRequest) {
           requestedModelId: conversation.aiModel,
         })
 
-        // Get system prompt based on personality with proper type validation
+        // Get system prompt based on personality with proper type validation.
+        // Character conversations rebuild the prompt fresh from the character row so
+        // edits to a character (and roleplay guardrails) apply to existing chats
+        // instead of being frozen at conversation-creation time.
         const personalityType =
           conversation.aiPersonality && isValidPersonality(conversation.aiPersonality)
             ? conversation.aiPersonality
             : getDefaultPersonality()
-        const baseSystemPrompt = getSystemPrompt(
-          personalityType,
-          conversation.aiSystemPrompt || undefined
-        )
+        const baseSystemPrompt = conversation.character?.systemPrompt
+          ? buildCharacterSystemPrompt(conversation.character)
+          : getSystemPrompt(personalityType, conversation.aiSystemPrompt || undefined)
 
         // Build persona context if a persona is set on this conversation
         let personaContext = ""
@@ -293,8 +299,15 @@ export async function POST(request: NextRequest) {
           personaContext = parts.join("\n")
         }
 
+        // Bridge long conversations: when a cached AI summary exists, inject it so
+        // the model retains continuity beyond the 20-message history window.
+        let summaryContext = ""
+        if (conversation.summary && (conversation.summaryMessageCount ?? 0) > 20) {
+          summaryContext = `\n\n[Earlier Conversation Summary]\n${conversation.summary}\n(The messages below are the most recent part of this conversation.)`
+        }
+
         // Fetch and include user memories in system prompt
-        let systemPrompt = baseSystemPrompt + personaContext
+        let systemPrompt = baseSystemPrompt + personaContext + summaryContext
         try {
           const memories = await getRelevantMemories(currentUser.id)
           if (memories.length > 0) {
@@ -312,7 +325,7 @@ export async function POST(request: NextRequest) {
           const stream = await anthropic.messages.stream(
             {
               model: modelToUse,
-              max_tokens: 1024,
+              max_tokens: 2048,
               system: [
                 {
                   type: "text" as const,

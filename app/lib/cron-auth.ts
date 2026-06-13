@@ -19,6 +19,11 @@ export function isAuthorizedCronRequest(
     return false
   }
 
+  // Reject oversized headers before allocating Buffers for them.
+  if (authHeader.length > 1024) {
+    return false
+  }
+
   const expected = Buffer.from(`Bearer ${cronSecret}`)
   const provided = Buffer.from(authHeader)
 

@@ -191,7 +191,7 @@ export function getWelcomeEmailTemplate(params: WelcomeEmailParams) {
 
   <ul style="${STYLES.list}">
     <li><strong>Chat with 7 AI personalities</strong> - Helpful, Creative, Analytical, and more</li>
-    <li><strong>Choose your AI model</strong> - Claude Sonnet 4.5 or Haiku 4.5</li>
+    <li><strong>Choose your AI model</strong> - Claude Sonnet 4.6 or Haiku 4.5</li>
     <li><strong>Organize conversations</strong> - Pin, archive, and tag your chats</li>
     <li><strong>AI memory</strong> - Let the AI remember important details</li>
     <li><strong>Export & share</strong> - Download or share your conversations</li>
@@ -211,7 +211,7 @@ Your email has been verified and your account is now active. You're ready to sta
 
 Here's what you can do:
 - Chat with 7 AI personalities - Helpful, Creative, Analytical, and more
-- Choose your AI model - Claude Sonnet 4.5 or Haiku 4.5
+- Choose your AI model - Claude Sonnet 4.6 or Haiku 4.5
 - Organize conversations - Pin, archive, and tag your chats
 - AI memory - Let the AI remember important details
 - Export & share - Download or share your conversations

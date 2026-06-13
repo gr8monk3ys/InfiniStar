@@ -99,7 +99,7 @@ const featureCards = [
 
 const modelCards = [
   {
-    name: "Claude Sonnet 4.5",
+    name: "Claude Sonnet 4.6",
     desc: "Balanced performance and speed",
     badge: "Recommended",
     badgeClass: "bg-violet-100 text-violet-800 dark:bg-violet-500/20 dark:text-violet-200",
@@ -425,7 +425,7 @@ function ModelsSection() {
                 <div className="gradient-bg size-10 rounded-full" />
                 <div>
                   <div className="font-semibold">Creative AI</div>
-                  <div className="text-xs text-muted-foreground">Claude Sonnet 4.5</div>
+                  <div className="text-xs text-muted-foreground">Claude Sonnet 4.6</div>
                 </div>
               </div>
               <div className="space-y-3">

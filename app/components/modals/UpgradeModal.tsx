@@ -23,10 +23,10 @@ export type UpgradeModalReason = "FREE_TIER_MESSAGE_LIMIT_REACHED" | "PRO_TIER_C
 // Copy mirrors `proPlan` in config/subscriptions.ts. We cannot import that
 // module here: it reads server-only env (STRIPE_PRO_MONTHLY_PLAN_ID) at module
 // init, which throws in client bundles. Keep these in sync with the config.
-const PRO_PRICE_PER_MONTH = "$9.99/month"
-const PRO_HIGHLIGHTS = [
+export const PRO_PRICE_PER_MONTH = "$9.99/month"
+export const PRO_HIGHLIGHTS = [
   "High monthly limits (fair use cap applies)",
-  "Claude Sonnet 4.5 + Haiku 4.5",
+  "Claude Sonnet 4.6 + Haiku 4.5",
   "Priority support",
 ]
 

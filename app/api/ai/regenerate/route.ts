@@ -211,7 +211,7 @@ export async function POST(request: NextRequest) {
           // Use cache_control to cache the system prompt for cost savings.
           const aiStream = await anthropic.messages.stream({
             model: modelToUse,
-            max_tokens: 1024,
+            max_tokens: 2048,
             system: [
               {
                 type: "text" as const,
