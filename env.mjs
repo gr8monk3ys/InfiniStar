@@ -46,6 +46,7 @@ export const env = createEnv({
     NEXT_PUBLIC_SENTRY_DSN: z.string().url().optional(),
     // Creator payments kill switch — requires a payout mechanism before enabling
     NEXT_PUBLIC_ENABLE_CREATOR_PAYMENTS: z.string().optional(),
+    NEXT_PUBLIC_ENABLE_GROUP_CHAT: z.string().optional(),
   },
   runtimeEnv: {
     CLERK_SECRET_KEY: process.env.CLERK_SECRET_KEY,
@@ -85,5 +86,6 @@ export const env = createEnv({
     NEXT_PUBLIC_PUSHER_CLUSTER: process.env.NEXT_PUBLIC_PUSHER_CLUSTER,
     NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN,
     NEXT_PUBLIC_ENABLE_CREATOR_PAYMENTS: process.env.NEXT_PUBLIC_ENABLE_CREATOR_PAYMENTS,
+    NEXT_PUBLIC_ENABLE_GROUP_CHAT: process.env.NEXT_PUBLIC_ENABLE_GROUP_CHAT,
   },
 })

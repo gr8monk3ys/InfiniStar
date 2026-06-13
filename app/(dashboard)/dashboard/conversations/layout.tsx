@@ -1,3 +1,4 @@
+import { isGroupChatEnabled } from "@/app/lib/features"
 import getConversations from "@/app/actions/getConversations"
 import getCurrentUser from "@/app/actions/getCurrentUser"
 import getPopularSceneCharacters from "@/app/actions/getPopularSceneCharacters"
@@ -13,9 +14,12 @@ import type { NotificationPreferences } from "./types"
 export const dynamic = "force-dynamic"
 
 export default async function ConversationsLayout({ children }: { children: React.ReactNode }) {
+  // Only fetch the user directory when group chat is enabled — otherwise we'd be
+  // shipping every account's name/email/avatar to the client to populate a picker
+  // that is never shown.
   const [conversations, user, currentUser] = await Promise.all([
     getConversations(),
-    getUsers().then((r) => r.users),
+    isGroupChatEnabled() ? getUsers().then((r) => r.users) : Promise.resolve([]),
     getCurrentUser(),
   ])
   const sceneCharacters = await getPopularSceneCharacters(currentUser)

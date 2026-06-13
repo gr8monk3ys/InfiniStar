@@ -5,6 +5,7 @@ import { getModelForUser } from "@/app/lib/ai-model-routing"
 import { SUPPORTED_MODEL_IDS } from "@/app/lib/ai-models"
 import { buildCharacterSystemPrompt } from "@/app/lib/character-prompt"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
+import { isGroupChatEnabled } from "@/app/lib/features"
 import { apiLogger } from "@/app/lib/logger"
 import { canAccessNsfw } from "@/app/lib/nsfw"
 import prisma from "@/app/lib/prismadb"
@@ -430,6 +431,12 @@ export async function POST(request: NextRequest) {
 
     // Group conversation validation is handled by Zod schema
     if (isGroup && members) {
+      // Human group chat is gated behind a feature flag (default off). It exposes
+      // the user directory and is off-brand for a character-first product.
+      if (!isGroupChatEnabled()) {
+        return NextResponse.json({ error: "Group chat is not enabled" }, { status: 403 })
+      }
+
       // Always include the creator and de-duplicate client-supplied member IDs
       const memberIds = [...new Set([...members, currentUser.id])]
 

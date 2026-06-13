@@ -87,6 +87,12 @@ beforeEach(() => {
   ;(prisma.character.findMany as jest.Mock).mockResolvedValue([])
   ;(prisma.user.findMany as jest.Mock).mockResolvedValue([])
   ;(prisma.userBlock.findFirst as jest.Mock).mockResolvedValue(null)
+  // Group chat is gated behind a flag (default off); enable it for the group tests.
+  process.env.NEXT_PUBLIC_ENABLE_GROUP_CHAT = "true"
+})
+
+afterEach(() => {
+  delete process.env.NEXT_PUBLIC_ENABLE_GROUP_CHAT
 })
 
 describe("POST /api/conversations", () => {
@@ -111,6 +117,20 @@ describe("POST /api/conversations", () => {
 
     const data = await response.json()
     expect(data.id).toBe("conv-1")
+    expect(prisma.conversation.create).not.toHaveBeenCalled()
+  })
+
+  it("rejects group creation when group chat is disabled", async () => {
+    process.env.NEXT_PUBLIC_ENABLE_GROUP_CHAT = "false"
+
+    const request = createRequest({
+      isGroup: true,
+      members: ["user-1", "user-2"],
+      name: "Disabled Group",
+    })
+
+    const response = await POST(request)
+    expect(response.status).toBe(403)
     expect(prisma.conversation.create).not.toHaveBeenCalled()
   })
 
