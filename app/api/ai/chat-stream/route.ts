@@ -10,6 +10,7 @@ import {
   getSystemPrompt,
   isValidPersonality,
 } from "@/app/lib/ai-personalities"
+import { buildChatSystemBlocks } from "@/app/lib/ai-system-prompt"
 import { trackAiUsage } from "@/app/lib/ai-usage"
 import anthropic from "@/app/lib/anthropic"
 import { maybeAutoExtractMemories } from "@/app/lib/auto-memory"
@@ -306,33 +307,31 @@ export async function POST(request: NextRequest) {
         // recent-history window.
         const summaryContext = renderSummaryForPrompt(conversation.summary)
 
-        // Fetch and include user memories in system prompt
-        let systemPrompt = baseSystemPrompt + personaContext + summaryContext
+        // The character + persona prefix is stable across turns and is the cached
+        // block; volatile context (summary + memories) goes in a separate trailing
+        // block so regenerating the summary or adding a memory never invalidates
+        // the cached character prompt.
+        const stablePrompt = baseSystemPrompt + personaContext
+        let volatileContext = summaryContext
         try {
           const memories = await getRelevantMemories(currentUser.id)
           if (memories.length > 0) {
-            const memoryContext = buildMemoryContext(memories)
-            systemPrompt = systemPrompt + "\n" + memoryContext
+            volatileContext = volatileContext + "\n" + buildMemoryContext(memories)
           }
         } catch (memoryError) {
           aiLogger.warn({ err: memoryError }, "Failed to fetch memories")
         }
 
         try {
-          // Call Anthropic API with streaming and system prompt (including memories)
-          // Use cache_control to cache the system prompt — in roleplay the character
-          // prompt repeats every turn, so caching saves ~90% on input token costs.
+          // Call Anthropic API with streaming. The stable character prompt carries
+          // the cache breakpoint (~90% input-token savings in roleplay); volatile
+          // summary/memory text is a separate block so it never busts the cached
+          // prefix. See buildChatSystemBlocks.
           const stream = await anthropic.messages.stream(
             {
               model: modelToUse,
               max_tokens: 2048,
-              system: [
-                {
-                  type: "text" as const,
-                  text: systemPrompt,
-                  cache_control: { type: "ephemeral" as const },
-                },
-              ],
+              system: buildChatSystemBlocks(stablePrompt, volatileContext),
               messages: conversationHistory,
             },
             { signal: abortController.signal }

@@ -9,6 +9,7 @@ import {
   getSystemPrompt,
   isValidPersonality,
 } from "@/app/lib/ai-personalities"
+import { buildChatSystemBlocks } from "@/app/lib/ai-system-prompt"
 import { trackAiUsage } from "@/app/lib/ai-usage"
 import anthropic from "@/app/lib/anthropic"
 import { maybeAutoExtractMemories } from "@/app/lib/auto-memory"
@@ -278,21 +279,15 @@ export async function POST(request: NextRequest) {
       ? buildCharacterSystemPrompt(conversation.character)
       : getSystemPrompt(personalityType, conversation.aiSystemPrompt || undefined)
     const summaryContext = renderSummaryForPrompt(conversation.summary)
-    const systemPrompt = basePrompt + personaContext + summaryContext
 
-    // Call Anthropic API with system prompt
-    // Use cache_control to cache the system prompt — in roleplay the character
-    // prompt repeats every turn, so caching saves ~90% on input token costs.
+    // The character + persona prefix is stable across turns and carries the cache
+    // breakpoint (~90% input-token savings in roleplay); the volatile summary is a
+    // separate trailing block so regenerating it never busts the cached prefix.
+    const stablePrompt = basePrompt + personaContext
     const response = await anthropic.messages.create({
       model: modelToUse,
       max_tokens: 2048,
-      system: [
-        {
-          type: "text" as const,
-          text: systemPrompt,
-          cache_control: { type: "ephemeral" as const },
-        },
-      ],
+      system: buildChatSystemBlocks(stablePrompt, summaryContext),
       messages: conversationHistory,
     })
 

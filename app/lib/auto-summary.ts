@@ -34,11 +34,35 @@ export async function maybeAutoSummarize(conversationId: string, userId: string)
     return
   }
 
-  const messageCount = await prisma.message.count({
-    where: { conversationId, isDeleted: false },
+  // Fetch the live (non-deleted) message count and the count at the last stored
+  // summary in a single round-trip.
+  const conversation = await prisma.conversation.findUnique({
+    where: { id: conversationId },
+    select: {
+      summaryMessageCount: true,
+      _count: { select: { messages: { where: { isDeleted: false } } } },
+    },
   })
 
-  if (messageCount < AUTO_SUMMARY_MIN_MESSAGES || messageCount % AUTO_SUMMARY_INTERVAL !== 0) {
+  if (!conversation) {
+    return
+  }
+
+  const messageCount = conversation._count.messages
+  const lastSummaryCount = conversation.summaryMessageCount ?? 0
+
+  // Debt-based cadence: summarize once at least AUTO_SUMMARY_INTERVAL new
+  // (non-deleted) messages have accrued since the last stored summary. A running
+  // debt (rather than an exact `count % INTERVAL === 0` boundary) keeps the
+  // trigger robust to the two ways the live count drifts off a multiple of the
+  // interval: character chats seed a greeting (count starts at 1) and add two
+  // messages per turn, so the count is permanently odd; and a single soft-delete
+  // flips parity. Either would otherwise skip every future multiple and silently
+  // disable summarization for the rest of the conversation's life.
+  if (
+    messageCount < AUTO_SUMMARY_MIN_MESSAGES ||
+    messageCount - lastSummaryCount < AUTO_SUMMARY_INTERVAL
+  ) {
     return
   }
 

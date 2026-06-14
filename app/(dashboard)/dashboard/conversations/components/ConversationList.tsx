@@ -53,6 +53,7 @@ interface ConversationListProps {
   initialItems: FullConversationType[]
   user: UserSummary[]
   currentUserId: string | null
+  currentUserEmail: string | null
   title?: string
   initialNotificationPrefs: NotificationPreferences | null
   sceneCharacters: SceneCharacterOption[]
@@ -354,6 +355,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
   initialItems,
   user,
   currentUserId,
+  currentUserEmail,
   title = "Messages",
   initialNotificationPrefs,
   sceneCharacters,
@@ -395,11 +397,6 @@ const ConversationList: React.FC<ConversationListProps> = ({
     setItems,
     notificationPrefs,
   })
-
-  const currentUserEmail = useMemo(() => {
-    if (!currentUserId) return null
-    return user.find((currentUser) => currentUser.id === currentUserId)?.email ?? null
-  }, [currentUserId, user])
 
   const filteredItems = useMemo(() => {
     if (!currentUserId) return state.items
