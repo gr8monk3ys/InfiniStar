@@ -91,8 +91,8 @@ module.exports = {
           "100%": { opacity: "1", transform: "translateX(0)" },
         },
         "glow-pulse": {
-          "0%, 100%": { boxShadow: "0 0 15px hsl(263 70% 58% / 0.2)" },
-          "50%": { boxShadow: "0 0 30px hsl(263 70% 58% / 0.4)" },
+          "0%, 100%": { boxShadow: "0 0 15px hsl(342 72% 48% / 0.2)" },
+          "50%": { boxShadow: "0 0 30px hsl(342 72% 48% / 0.4)" },
         },
         shimmer: {
           "0%": { backgroundPosition: "-200% 0" },

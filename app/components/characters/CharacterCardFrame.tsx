@@ -23,6 +23,28 @@ export interface CharacterCardData {
   } | null
 }
 
+// Deterministic, varied fallback gradients for avatar-less characters. A fixed
+// per-character color (seeded by id) keeps discovery grids from becoming a wall
+// of one identical gradient, so empty cards still read as distinct and authored.
+const AVATAR_GRADIENTS = [
+  "from-rose-500 to-orange-400",
+  "from-fuchsia-500 to-pink-500",
+  "from-amber-500 to-rose-500",
+  "from-orange-500 to-rose-600",
+  "from-emerald-500 to-teal-500",
+  "from-pink-500 to-rose-600",
+  "from-red-500 to-amber-500",
+  "from-orange-500 to-amber-400",
+] as const
+
+function avatarGradient(seed: string): string {
+  let hash = 0
+  for (let i = 0; i < seed.length; i++) {
+    hash = (hash * 31 + seed.charCodeAt(i)) | 0
+  }
+  return AVATAR_GRADIENTS[Math.abs(hash) % AVATAR_GRADIENTS.length]
+}
+
 interface CharacterCardFrameProps {
   character: CharacterCardData
   action?: React.ReactNode
@@ -58,7 +80,12 @@ export function CharacterCardFrame({
             sizes={sizes}
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-violet-600 to-blue-500">
+          <div
+            className={cn(
+              "flex h-full w-full items-center justify-center bg-gradient-to-br",
+              avatarGradient(character.id || character.name)
+            )}
+          >
             <span className="text-5xl font-bold text-white/90">
               {character.name.slice(0, 1).toUpperCase()}
             </span>

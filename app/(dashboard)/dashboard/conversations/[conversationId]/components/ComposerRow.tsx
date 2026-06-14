@@ -86,7 +86,7 @@ export function ComposerRow({
           uploadPreset={cloudinaryUploadPreset}
           aria-label="Attach image"
         >
-          <HiPhoto size={30} className="text-sky-500" aria-hidden="true" />
+          <HiPhoto size={30} className="text-primary" aria-hidden="true" />
         </CldUploadButton>
       ) : (
         <button
@@ -96,7 +96,7 @@ export function ComposerRow({
           title="Image upload is unavailable until Cloudinary is configured."
           className="cursor-not-allowed rounded-md p-1 opacity-60"
         >
-          <HiPhoto size={30} className="text-sky-500" aria-hidden="true" />
+          <HiPhoto size={30} className="text-primary" aria-hidden="true" />
         </button>
       )}
       {isAI && capabilities.imageGeneration && (
@@ -104,7 +104,7 @@ export function ComposerRow({
           type="button"
           onClick={onOpenImageGenerator}
           disabled={isLoading || isStreaming}
-          className="rounded-md p-1 text-violet-600 transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-md p-1 text-primary transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
           aria-label="Generate image"
           title="Generate image"
         >
@@ -117,7 +117,7 @@ export function ComposerRow({
           onClick={onVoiceMessageToggle}
           disabled={isLoading || isStreaming || isGeneratingImage || isSendingVoiceMessage}
           className={`rounded-md p-1 transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50 ${
-            isRecordingVoiceMessage ? "text-red-600" : "text-sky-600"
+            isRecordingVoiceMessage ? "text-red-600" : "text-primary"
           }`}
           aria-label={
             isRecordingVoiceMessage ? "Stop voice message recording" : "Record voice message"
@@ -170,10 +170,10 @@ export function ComposerRow({
           className={`
               cursor-pointer
               rounded-full
-              ${isAI ? "bg-gradient-to-r from-purple-500 to-pink-500" : "bg-sky-500"}
+              ${isAI ? "gradient-bg" : "bg-primary"}
               p-2
               transition
-              ${isAI ? "hover:opacity-75" : "hover:bg-sky-600"}
+              ${isAI ? "hover:opacity-95" : "hover:bg-primary/90"}
               ${!canSubmit ? "cursor-not-allowed opacity-50" : ""}
             `}
         >

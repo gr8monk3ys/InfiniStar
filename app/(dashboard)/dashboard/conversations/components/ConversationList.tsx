@@ -153,7 +153,7 @@ function ConversationListHeader({
         </button>
         <button
           onClick={onOpenNewConversation}
-          className="cursor-pointer rounded-full bg-gradient-to-r from-purple-500 to-pink-500 p-2 text-white transition hover:opacity-75"
+          className="gradient-bg cursor-pointer rounded-full p-2 text-white transition hover:opacity-95"
           title="New AI Chat"
           aria-label="Start new AI Chat"
         >

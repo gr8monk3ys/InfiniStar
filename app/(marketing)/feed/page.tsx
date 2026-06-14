@@ -199,13 +199,11 @@ export default async function FeedPage() {
 
   return (
     <section className="container flex flex-col gap-10 py-8 md:py-12 lg:py-16">
-      <div className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-primary/5 via-background to-blue-500/5 p-8 md:p-12">
-        <div className="pointer-events-none absolute right-0 top-0 h-48 w-48 rounded-full bg-primary/10 blur-3xl" />
+      <div className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-primary/5 via-background to-amber-500/5 p-8 md:p-12">
         <div className="relative max-w-3xl">
-          <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-            <HiSparkles className="size-4" />
+          <p className="text-xs font-medium uppercase tracking-[0.28em] text-primary">
             Community Highlights
-          </div>
+          </p>
           <h1 className="mt-4 text-3xl font-bold tracking-tight md:text-5xl">Creator Feed</h1>
           <p className="mt-3 text-sm text-muted-foreground md:text-base">
             Follow trending characters, discover breakout creators, and jump straight into the

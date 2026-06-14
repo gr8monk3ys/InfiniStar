@@ -266,13 +266,11 @@ function ExploreCtaSection() {
 function EmptyMarketplaceState() {
   return (
     <div className="flex flex-col gap-10">
-      <section className="relative overflow-hidden rounded-3xl border border-border/50 bg-gradient-to-br from-primary/5 via-background to-sky-500/5 px-6 py-16 md:px-12 md:py-24">
-        <div className="pointer-events-none absolute right-0 top-0 h-56 w-56 rounded-full bg-primary/10 blur-2xl" />
+      <section className="relative overflow-hidden rounded-3xl border border-border/50 bg-gradient-to-br from-primary/5 via-background to-amber-500/5 px-6 py-16 md:px-12 md:py-24">
         <div className="relative mx-auto max-w-3xl text-center">
-          <div className="inline-flex items-center gap-2 rounded-full border border-violet-200 bg-violet-50 px-4 py-1.5 text-sm text-violet-800 dark:border-violet-400/30 dark:bg-violet-500/15 dark:text-violet-200">
-            <HiOutlineSparkles className="size-4" aria-hidden="true" />
+          <p className="text-xs font-medium uppercase tracking-[0.28em] text-primary">
             Launch edition marketplace
-          </div>
+          </p>
           <h1 className="font-heading mt-6 text-3xl font-bold leading-tight tracking-tighter [text-wrap:balance] md:text-5xl lg:text-6xl">
             The public catalog is opening up now
           </h1>
@@ -307,7 +305,7 @@ function EmptyMarketplaceState() {
               key={archetype.title}
               className="rounded-3xl border border-border/50 bg-card/70 p-6 shadow-sm"
             >
-              <p className="text-xs font-medium uppercase tracking-[0.2em] text-violet-800 dark:text-violet-200">
+              <p className="text-xs font-medium uppercase tracking-[0.2em] text-primary">
                 {archetype.label}
               </p>
               <h3 className="mt-4 text-xl font-semibold">{archetype.title}</h3>

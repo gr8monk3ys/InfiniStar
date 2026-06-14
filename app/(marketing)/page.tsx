@@ -4,10 +4,11 @@ import {
   HiArrowTrendingUp,
   HiOutlineBolt,
   HiOutlineChatBubbleLeftRight,
-  HiOutlineRocketLaunch,
   HiOutlineShieldCheck,
-  HiOutlineSparkles,
+  HiOutlineSquares2X2,
+  HiOutlineUserCircle,
   HiOutlineUsers,
+  HiOutlineWrenchScrewdriver,
 } from "react-icons/hi2"
 
 import prisma from "@/app/lib/prismadb"
@@ -72,28 +73,28 @@ const starterArchetypes = [
 
 const featureCards = [
   {
-    icon: HiOutlineSparkles,
+    icon: HiOutlineUserCircle,
     title: "Characters with a point of view",
     description:
       "Profiles, greetings, tags, and creator-defined tone give each character a stronger identity before the first reply.",
-    gradient: "from-violet-500/10 to-purple-500/10",
-    iconColor: "text-violet-500",
+    gradient: "from-rose-500/10 to-pink-500/10",
+    iconColor: "text-rose-500",
   },
   {
     icon: HiOutlineBolt,
     title: "Memory that keeps the thread",
     description:
       "Longer chats do not need to restart from zero. Save context, revisit favorites, and keep continuity over time.",
-    gradient: "from-blue-500/10 to-cyan-500/10",
-    iconColor: "text-blue-500",
+    gradient: "from-amber-500/10 to-orange-500/10",
+    iconColor: "text-amber-500",
   },
   {
-    icon: HiOutlineRocketLaunch,
+    icon: HiOutlineWrenchScrewdriver,
     title: "Creator tools built into the platform",
     description:
       "Publish characters, earn support, and build an audience without stitching together a separate storefront.",
-    gradient: "from-amber-500/10 to-orange-500/10",
-    iconColor: "text-amber-500",
+    gradient: "from-fuchsia-500/10 to-rose-500/10",
+    iconColor: "text-fuchsia-500",
   },
 ] as const
 
@@ -102,13 +103,13 @@ const modelCards = [
     name: "Claude Sonnet 4.6",
     desc: "Balanced performance and speed",
     badge: "Recommended",
-    badgeClass: "bg-violet-100 text-violet-800 dark:bg-violet-500/20 dark:text-violet-200",
+    badgeClass: "bg-primary/10 text-primary dark:bg-primary/20",
   },
   {
     name: "Claude Haiku 4.5",
     desc: "Fastest responses, cost-efficient",
     badge: "Fast",
-    badgeClass: "bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-200",
+    badgeClass: "bg-secondary text-secondary-foreground",
   },
 ] as const
 
@@ -156,17 +157,10 @@ interface MarketplaceSectionProps {
 function HeroSection() {
   return (
     <section className="relative overflow-hidden pb-16 pt-12 md:pb-24 md:pt-20 lg:pb-32 lg:pt-28">
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2">
-          <div className="h-[600px] w-[600px] rounded-full bg-gradient-to-br from-violet-600/20 to-blue-500/20 blur-[72px]" />
-        </div>
-      </div>
-
       <div className="container relative flex max-w-5xl flex-col items-center gap-8 text-center">
-        <div className="inline-flex items-center gap-2 rounded-full border border-violet-200 bg-violet-50 px-4 py-1.5 text-sm text-violet-800 dark:border-violet-400/30 dark:bg-violet-500/15 dark:text-violet-200">
-          <HiOutlineSparkles className="size-4" aria-hidden="true" />
-          <span>Creator-built character platform</span>
-        </div>
+        <p className="text-xs font-medium uppercase tracking-[0.28em] text-muted-foreground">
+          Creator-built character platform
+        </p>
 
         <h1 className="font-heading text-4xl font-bold tracking-tight [text-wrap:balance] sm:text-5xl md:text-6xl lg:text-7xl">
           Find <span className="gradient-text">AI Characters</span>
@@ -182,19 +176,15 @@ function HeroSection() {
         <div className="flex flex-col gap-4 sm:flex-row">
           <Link
             href="/sign-up"
-            className={cn(
-              buttonVariants({ variant: "default", size: "lg" }),
-              "gradient-bg gap-2 border-0 text-white shadow-lg shadow-violet-500/25 hover:shadow-violet-500/40"
-            )}
+            className={cn(buttonVariants({ variant: "gradient", size: "lg" }), "gap-2")}
           >
-            <HiOutlineRocketLaunch className="size-5" aria-hidden="true" />
             Create Free Account
           </Link>
           <Link
             href="/explore"
             className={cn(buttonVariants({ variant: "outline", size: "lg" }), "gap-2")}
           >
-            <HiOutlineSparkles className="size-5" aria-hidden="true" />
+            <HiOutlineSquares2X2 className="size-5" aria-hidden="true" />
             Explore Characters
           </Link>
         </div>
@@ -236,7 +226,7 @@ function CreatorSpotlightCard({ creator }: { creator: CreatorSpotlight }) {
             />
           </div>
         ) : (
-          <div className="flex size-12 items-center justify-center rounded-2xl bg-violet-100 text-base font-semibold text-violet-800 dark:bg-violet-500/20 dark:text-violet-200">
+          <div className="flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-base font-semibold text-primary dark:bg-primary/20">
             {(creator.name || "?").slice(0, 1).toUpperCase()}
           </div>
         )}
@@ -269,7 +259,7 @@ function MarketplaceSection({ featuredCharacters, creatorSpotlights }: Marketpla
       <div className="container max-w-6xl">
         <div className="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div className="max-w-2xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-xs font-medium uppercase tracking-[0.2em] text-violet-800 dark:border-violet-400/30 dark:bg-violet-500/15 dark:text-violet-200">
+            <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-medium uppercase tracking-[0.2em] text-primary dark:border-primary/30 dark:bg-primary/10">
               <HiArrowTrendingUp className="size-4" aria-hidden="true" />
               What the product actually feels like
             </div>
@@ -301,7 +291,7 @@ function MarketplaceSection({ featuredCharacters, creatorSpotlights }: Marketpla
             </div>
 
             <div className="rounded-3xl border border-border/50 bg-card/70 p-6 shadow-sm">
-              <div className="flex items-center gap-2 text-sm font-medium text-violet-800 dark:text-violet-200">
+              <div className="flex items-center gap-2 text-sm font-medium text-primary">
                 <HiOutlineUsers className="size-4" aria-hidden="true" />
                 Creator spotlights
               </div>
@@ -319,7 +309,7 @@ function MarketplaceSection({ featuredCharacters, creatorSpotlights }: Marketpla
                 key={archetype.name}
                 className="rounded-3xl border border-border/50 bg-card/70 p-6 shadow-sm"
               >
-                <p className="text-xs font-medium uppercase tracking-[0.2em] text-violet-800 dark:text-violet-200">
+                <p className="text-xs font-medium uppercase tracking-[0.2em] text-primary">
                   {archetype.category}
                 </p>
                 <h3 className="mt-4 text-xl font-semibold">{archetype.name}</h3>
@@ -330,7 +320,7 @@ function MarketplaceSection({ featuredCharacters, creatorSpotlights }: Marketpla
                   href="/sign-up"
                   className={cn(
                     buttonVariants({ variant: "ghost" }),
-                    "mt-6 px-0 font-semibold text-foreground underline decoration-violet-300 underline-offset-4 hover:text-violet-700 dark:decoration-violet-400/50 dark:hover:text-violet-200"
+                    "mt-6 px-0 font-semibold text-foreground underline decoration-primary/40 underline-offset-4 hover:text-primary"
                   )}
                 >
                   Start building this vibe
@@ -419,8 +409,7 @@ function ModelsSection() {
           </div>
 
           <div className="relative">
-            <div className="absolute -inset-4 rounded-3xl bg-gradient-to-br from-violet-600/10 to-blue-500/10 blur-2xl" />
-            <div className="relative rounded-2xl border border-border/50 bg-card p-6 shadow-2xl">
+            <div className="relative rounded-2xl border border-border/50 bg-card p-6 shadow-xl">
               <div className="mb-4 flex items-center gap-3">
                 <div className="gradient-bg size-10 rounded-full" />
                 <div>
@@ -429,7 +418,7 @@ function ModelsSection() {
                 </div>
               </div>
               <div className="space-y-3">
-                <div className="ml-auto w-fit rounded-2xl bg-primary px-4 py-2.5 text-sm text-white">
+                <div className="ml-auto w-fit rounded-2xl bg-primary px-4 py-2.5 text-sm text-primary-foreground">
                   Tell me about quantum computing
                 </div>
                 <div className="surface-2 w-fit rounded-2xl px-4 py-2.5 text-sm">
@@ -448,11 +437,6 @@ function ModelsSection() {
 function FinalCtaSection() {
   return (
     <section className="relative overflow-hidden border-t border-border/50 py-16 md:py-24">
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2">
-          <div className="h-[400px] w-[400px] rounded-full bg-gradient-to-br from-violet-600/10 to-blue-500/10 blur-[72px]" />
-        </div>
-      </div>
       <div className="container relative flex max-w-3xl flex-col items-center gap-6 text-center">
         <h2 className="font-heading text-3xl font-bold [text-wrap:balance] md:text-4xl">
           Ready to build a character people remember?
@@ -464,10 +448,7 @@ function FinalCtaSection() {
         <div className="flex flex-col gap-4 sm:flex-row">
           <Link
             href="/sign-up"
-            className={cn(
-              buttonVariants({ size: "lg" }),
-              "gradient-bg gap-2 border-0 text-white shadow-lg shadow-violet-500/25"
-            )}
+            className={cn(buttonVariants({ variant: "gradient", size: "lg" }), "gap-2")}
           >
             Create Free Account
           </Link>

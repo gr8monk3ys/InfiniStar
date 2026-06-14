@@ -178,15 +178,15 @@ const SceneChatModal: React.FC<SceneChatModalProps> = ({ isOpen, onClose, charac
     <Modal isOpen={isOpen} onClose={handleClose}>
       <form onSubmit={handleSubmit}>
         <div className="space-y-6">
-          <div className="border-b border-gray-900/10 pb-4">
-            <h2 className="text-base font-semibold leading-7 text-gray-900">Create scene chat</h2>
-            <p className="mt-1 text-sm leading-6 text-gray-600">
+          <div className="border-b border-border pb-4">
+            <h2 className="text-base font-semibold leading-7 text-foreground">Create scene chat</h2>
+            <p className="mt-1 text-sm leading-6 text-muted-foreground">
               Pick multiple AI characters and set an optional scenario.
             </p>
           </div>
 
           <div>
-            <label htmlFor="sceneName" className="text-sm font-medium leading-6 text-gray-900">
+            <label htmlFor="sceneName" className="text-sm font-medium leading-6 text-foreground">
               Scene name (optional)
             </label>
             <input
@@ -196,12 +196,15 @@ const SceneChatModal: React.FC<SceneChatModalProps> = ({ isOpen, onClose, charac
               maxLength={100}
               disabled={isSubmitting}
               placeholder="e.g. Space Mission Briefing"
-              className="mt-2 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+              className="mt-2 block w-full rounded-md border border-input px-3 py-2 text-sm text-foreground shadow-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
             />
           </div>
 
           <div>
-            <label htmlFor="sceneScenario" className="text-sm font-medium leading-6 text-gray-900">
+            <label
+              htmlFor="sceneScenario"
+              className="text-sm font-medium leading-6 text-foreground"
+            >
               Scenario setup (optional)
             </label>
             <textarea
@@ -214,9 +217,9 @@ const SceneChatModal: React.FC<SceneChatModalProps> = ({ isOpen, onClose, charac
               maxLength={1000}
               disabled={isSubmitting}
               placeholder="e.g. The team is planning a rescue before sunrise."
-              className="mt-2 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+              className="mt-2 block w-full rounded-md border border-input px-3 py-2 text-sm text-foreground shadow-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
             />
-            <p className="mt-1 text-xs text-gray-500">
+            <p className="mt-1 text-xs text-muted-foreground">
               The AI will use this as shared context for all scene characters.
             </p>
           </div>
@@ -225,17 +228,17 @@ const SceneChatModal: React.FC<SceneChatModalProps> = ({ isOpen, onClose, charac
             <div className="mb-2 flex items-center justify-between">
               <label
                 htmlFor="scene-character-search"
-                className="text-sm font-medium leading-6 text-gray-900"
+                className="text-sm font-medium leading-6 text-foreground"
               >
                 Characters
               </label>
-              <span className="text-xs text-gray-500">
+              <span className="text-xs text-muted-foreground">
                 {selectedCharacterIds.length}/{MAX_SCENE_CHARACTERS} selected
               </span>
             </div>
 
             <div className="relative">
-              <HiMagnifyingGlass className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
+              <HiMagnifyingGlass className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <input
                 id="scene-character-search"
                 type="text"
@@ -244,7 +247,7 @@ const SceneChatModal: React.FC<SceneChatModalProps> = ({ isOpen, onClose, charac
                   dispatch({ type: "set_search_query", value: event.target.value })
                 }
                 placeholder="Search characters..."
-                className="block w-full rounded-md border border-gray-300 py-2 pl-9 pr-3 text-sm text-gray-900 shadow-sm focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                className="block w-full rounded-md border border-input py-2 pl-9 pr-3 text-sm text-foreground shadow-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
               />
             </div>
 
@@ -255,7 +258,7 @@ const SceneChatModal: React.FC<SceneChatModalProps> = ({ isOpen, onClose, charac
                     key={character.id}
                     type="button"
                     onClick={() => toggleCharacter(character.id)}
-                    className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2.5 py-1 text-xs font-medium text-purple-700 transition hover:bg-purple-200"
+                    className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary transition hover:bg-primary/20"
                   >
                     {character.name}
                     <HiXMark className="size-3.5" />
@@ -264,9 +267,11 @@ const SceneChatModal: React.FC<SceneChatModalProps> = ({ isOpen, onClose, charac
               </div>
             )}
 
-            <div className="mt-3 max-h-64 space-y-2 overflow-y-auto rounded-md border border-gray-200 p-2">
+            <div className="mt-3 max-h-64 space-y-2 overflow-y-auto rounded-md border border-border p-2">
               {filteredCharacters.length === 0 ? (
-                <div className="py-8 text-center text-sm text-gray-500">No characters found</div>
+                <div className="py-8 text-center text-sm text-muted-foreground">
+                  No characters found
+                </div>
               ) : (
                 filteredCharacters.map((character) => {
                   const selected = selectedCharacterIds.includes(character.id)
@@ -277,13 +282,13 @@ const SceneChatModal: React.FC<SceneChatModalProps> = ({ isOpen, onClose, charac
                       onClick={() => toggleCharacter(character.id)}
                       className={`flex w-full items-center gap-3 rounded-md border px-3 py-2 text-left transition ${
                         selected
-                          ? "border-purple-400 bg-purple-50"
-                          : "border-gray-200 bg-white hover:border-gray-300"
+                          ? "border-primary bg-primary/10"
+                          : "border-border bg-card hover:border-primary/50"
                       }`}
                       aria-pressed={selected}
                     >
                       {character.avatarUrl ? (
-                        <div className="relative size-9 shrink-0 overflow-hidden rounded-full border border-gray-200">
+                        <div className="relative size-9 shrink-0 overflow-hidden rounded-full border border-border">
                           <Image
                             src={character.avatarUrl}
                             alt={character.name}
@@ -293,20 +298,22 @@ const SceneChatModal: React.FC<SceneChatModalProps> = ({ isOpen, onClose, charac
                           />
                         </div>
                       ) : (
-                        <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-purple-100 text-sm font-semibold text-purple-700">
+                        <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
                           {character.name.slice(0, 1).toUpperCase()}
                         </div>
                       )}
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium text-gray-900">
+                        <p className="truncate text-sm font-medium text-foreground">
                           {character.name}
                         </p>
                         {character.tagline && (
-                          <p className="truncate text-xs text-gray-500">{character.tagline}</p>
+                          <p className="truncate text-xs text-muted-foreground">
+                            {character.tagline}
+                          </p>
                         )}
                       </div>
                       {selected && (
-                        <span className="text-xs font-medium text-purple-700">Selected</span>
+                        <span className="text-xs font-medium text-primary">Selected</span>
                       )}
                     </button>
                   )

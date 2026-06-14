@@ -7,13 +7,6 @@ import { buttonVariants } from "@/app/components/ui/button"
 export default function NotFound() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4 text-center">
-      {/* Background glow */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-          <div className="h-[400px] w-[400px] rounded-full bg-gradient-to-br from-violet-600/10 to-blue-500/10 blur-[100px]" />
-        </div>
-      </div>
-
       <div className="relative flex flex-col items-center gap-6">
         {/* 404 number */}
         <p className="text-8xl font-bold tracking-tighter text-primary/20 sm:text-9xl">404</p>
@@ -32,10 +25,7 @@ export default function NotFound() {
         <div className="flex flex-col gap-3 sm:flex-row">
           <Link
             href="/dashboard/conversations"
-            className={cn(
-              buttonVariants({ variant: "default", size: "lg" }),
-              "gradient-bg gap-2 border-0 text-white shadow-lg shadow-violet-500/25 hover:shadow-violet-500/40"
-            )}
+            className={cn(buttonVariants({ variant: "gradient", size: "lg" }), "gap-2")}
           >
             <HiOutlineChatBubbleLeftRight className="size-5" />
             Go to Dashboard

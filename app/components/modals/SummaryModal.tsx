@@ -135,8 +135,8 @@ _Generated: ${
     if (isLoading) {
       return (
         <div className="flex flex-col items-center justify-center py-8">
-          <div className="size-8 animate-spin rounded-full border-2 border-sky-600 border-t-transparent" />
-          <p className="mt-4 text-sm text-gray-500">Loading summary...</p>
+          <div className="size-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          <p className="mt-4 text-sm text-muted-foreground">Loading summary...</p>
         </div>
       )
     }
@@ -145,8 +145,8 @@ _Generated: ${
     if (error && !summaryData) {
       return (
         <div className="flex flex-col items-center justify-center py-8">
-          <HiOutlineExclamationCircle className="size-12 text-red-500" />
-          <p className="mt-4 text-sm text-red-600">{error}</p>
+          <HiOutlineExclamationCircle className="size-12 text-destructive" />
+          <p className="mt-4 text-sm text-destructive">{error}</p>
           <Button onClick={() => fetchSummary()} variant="outline" size="sm" className="mt-4">
             Try Again
           </Button>
@@ -161,13 +161,13 @@ _Generated: ${
 
       return (
         <div className="flex flex-col items-center justify-center py-8">
-          <div className="rounded-full bg-gray-100 p-4">
-            <HiOutlineClipboard className="size-8 text-gray-400" />
+          <div className="rounded-full bg-muted p-4">
+            <HiOutlineClipboard className="size-8 text-muted-foreground" />
           </div>
-          <h4 className="mt-4 text-lg font-medium text-gray-900">No Summary Yet</h4>
+          <h4 className="mt-4 text-lg font-medium text-foreground">No Summary Yet</h4>
           {canSummarize ? (
             <>
-              <p className="mt-2 text-center text-sm text-gray-500">
+              <p className="mt-2 text-center text-sm text-muted-foreground">
                 Generate an AI-powered summary of this conversation to quickly understand the key
                 points and decisions.
               </p>
@@ -187,10 +187,10 @@ _Generated: ${
               </Button>
             </>
           ) : (
-            <p className="mt-2 text-center text-sm text-gray-500">
+            <p className="mt-2 text-center text-sm text-muted-foreground">
               This conversation needs at least 5 messages to generate a summary.
               <br />
-              <span className="text-gray-400">Current message count: {messageCount}</span>
+              <span className="text-muted-foreground">Current message count: {messageCount}</span>
             </p>
           )}
         </div>
@@ -204,7 +204,7 @@ _Generated: ${
       <div className="space-y-4">
         {/* New messages indicator */}
         {summaryData.hasNewMessages && (
-          <div className="flex items-center gap-2 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-700">
+          <div className="flex items-center gap-2 rounded-md border border-amber-500/20 bg-amber-50 px-3 py-2 text-sm text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300">
             <HiOutlineExclamationCircle className="size-5" />
             <span>
               New messages since last summary. Consider regenerating for an updated overview.
@@ -214,20 +214,22 @@ _Generated: ${
 
         {/* Overview */}
         <div>
-          <h4 className="text-sm font-semibold uppercase tracking-wide text-gray-500">Overview</h4>
-          <p className="mt-2 text-gray-900">{summary.overview}</p>
+          <h4 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            Overview
+          </h4>
+          <p className="mt-2 text-foreground">{summary.overview}</p>
         </div>
 
         {/* Key Topics */}
         {summary.keyTopics.length > 0 && (
           <div>
-            <h4 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+            <h4 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
               Key Topics
             </h4>
             <ul className="mt-2 space-y-1">
               {summary.keyTopics.map((topic) => (
-                <li key={topic} className="flex items-start gap-2 text-gray-900">
-                  <span className="mt-1 block size-1.5 shrink-0 rounded-full bg-sky-500" />
+                <li key={topic} className="flex items-start gap-2 text-foreground">
+                  <span className="mt-1 block size-1.5 shrink-0 rounded-full bg-primary" />
                   {topic}
                 </li>
               ))}
@@ -237,20 +239,20 @@ _Generated: ${
 
         {/* Decisions & Action Items */}
         <div>
-          <h4 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+          <h4 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
             Decisions & Action Items
           </h4>
           {summary.decisions.length > 0 ? (
             <ul className="mt-2 space-y-1">
               {summary.decisions.map((decision) => (
-                <li key={decision} className="flex items-start gap-2 text-gray-900">
+                <li key={decision} className="flex items-start gap-2 text-foreground">
                   <HiOutlineCheckCircle className="mt-0.5 size-4 shrink-0 text-green-500" />
                   {decision}
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="mt-2 text-sm italic text-gray-500">
+            <p className="mt-2 text-sm italic text-muted-foreground">
               No specific decisions or action items identified.
             </p>
           )}
@@ -259,16 +261,16 @@ _Generated: ${
         {/* Participants */}
         {summary.participants.length > 0 && (
           <div>
-            <h4 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+            <h4 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
               Participants
             </h4>
-            <p className="mt-2 text-gray-900">{summary.participants.join(", ")}</p>
+            <p className="mt-2 text-foreground">{summary.participants.join(", ")}</p>
           </div>
         )}
 
         {/* Metadata */}
-        <div className="border-t border-gray-200 pt-4">
-          <p className="text-xs text-gray-500">
+        <div className="border-t border-border pt-4">
+          <p className="text-xs text-muted-foreground">
             Generated:{" "}
             {summaryData.generatedAt
               ? format(new Date(summaryData.generatedAt), "MMM d, yyyy h:mm a")
@@ -312,12 +314,12 @@ _Generated: ${
     <Modal isOpen={isOpen} onClose={onClose}>
       <div className="space-y-4 p-4">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-gray-200 pb-4">
-          <h3 className="text-lg font-medium leading-6 text-gray-900">Conversation Summary</h3>
+        <div className="flex items-center justify-between border-b border-border pb-4">
+          <h3 className="text-lg font-medium leading-6 text-foreground">Conversation Summary</h3>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md text-gray-400 hover:text-gray-500 focus:outline-none"
+            className="rounded-md text-muted-foreground hover:text-foreground focus:outline-none"
             aria-label="Close modal"
           >
             <HiOutlineXMark size={24} />
