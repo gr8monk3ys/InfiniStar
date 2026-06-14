@@ -66,18 +66,18 @@ const PersonalitySelectionModal: React.FC<PersonalitySelectionModalProps> = ({
     <Modal isOpen={isOpen} onClose={onClose}>
       <form onSubmit={handleSubmit}>
         <div className="space-y-6">
-          <div className="border-b border-gray-900/10 pb-4">
-            <h2 className="text-base font-semibold leading-7 text-gray-900">
+          <div className="border-b border-border pb-4">
+            <h2 className="text-base font-semibold leading-7 text-foreground">
               Create AI Conversation
             </h2>
-            <p className="mt-1 text-sm leading-6 text-gray-600">
+            <p className="mt-1 text-sm leading-6 text-muted-foreground">
               Choose a model and personality for your AI assistant
             </p>
           </div>
 
           {/* Model Selection */}
           <div>
-            <label className="mb-3 block text-sm font-medium leading-6 text-gray-900">
+            <label className="mb-3 block text-sm font-medium leading-6 text-foreground">
               AI Model
             </label>
             <div className="grid grid-cols-1 gap-3">
@@ -90,23 +90,23 @@ const PersonalitySelectionModal: React.FC<PersonalitySelectionModalProps> = ({
                     flex items-start gap-3 rounded-lg border-2 p-4 text-left transition
                     ${
                       selectedModel === model.id
-                        ? "border-purple-500 bg-purple-50"
-                        : "border-gray-200 hover:border-gray-300"
+                        ? "border-primary bg-primary/10"
+                        : "border-border hover:border-primary/50"
                     }
                   `}
                 >
                   <span className="text-2xl">{getModelIcon(model.speed)}</span>
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-gray-900">{model.name}</span>
+                      <span className="text-sm font-medium text-foreground">{model.name}</span>
                       {model.recommended && (
-                        <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700">
+                        <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
                           Recommended
                         </span>
                       )}
                     </div>
-                    <p className="mt-1 text-xs text-gray-600">{model.description}</p>
-                    <div className="mt-2 flex items-center gap-4 text-xs text-gray-500">
+                    <p className="mt-1 text-xs text-muted-foreground">{model.description}</p>
+                    <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
                       <span>Speed: {model.speed}</span>
                       <span>Quality: {model.quality}</span>
                       <span>Cost: {formatCost(model.cost)}</span>
@@ -119,7 +119,7 @@ const PersonalitySelectionModal: React.FC<PersonalitySelectionModalProps> = ({
 
           {/* Personality Grid */}
           <div>
-            <label className="mb-3 block text-sm font-medium leading-6 text-gray-900">
+            <label className="mb-3 block text-sm font-medium leading-6 text-foreground">
               Personality Type
             </label>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -134,14 +134,14 @@ const PersonalitySelectionModal: React.FC<PersonalitySelectionModalProps> = ({
                     flex flex-col items-center gap-2 rounded-lg border-2 p-4 text-center transition
                     ${
                       selectedPersonality === personality.id
-                        ? "border-purple-500 bg-purple-50"
-                        : "border-gray-200 hover:border-gray-300"
+                        ? "border-primary bg-primary/10"
+                        : "border-border hover:border-primary/50"
                     }
                   `}
                   >
                     <span className="text-3xl">{personality.icon}</span>
-                    <span className="text-sm font-medium text-gray-900">{personality.name}</span>
-                    <span className="text-xs text-gray-500">{personality.description}</span>
+                    <span className="text-sm font-medium text-foreground">{personality.name}</span>
+                    <span className="text-xs text-muted-foreground">{personality.description}</span>
                   </button>
                 ))}
             </div>
@@ -156,16 +156,16 @@ const PersonalitySelectionModal: React.FC<PersonalitySelectionModalProps> = ({
                 flex w-full flex-col items-start gap-2 rounded-lg border-2 p-4 transition
                 ${
                   selectedPersonality === "custom"
-                    ? "border-purple-500 bg-purple-50"
-                    : "border-gray-200 hover:border-gray-300"
+                    ? "border-primary bg-primary/10"
+                    : "border-border hover:border-primary/50"
                 }
               `}
             >
               <div className="flex items-center gap-2">
                 <span className="text-2xl">🎨</span>
-                <span className="text-sm font-medium text-gray-900">Custom Personality</span>
+                <span className="text-sm font-medium text-foreground">Custom Personality</span>
               </div>
-              <span className="text-xs text-gray-500">
+              <span className="text-xs text-muted-foreground">
                 Define your own system prompt for unique AI behavior
               </span>
             </button>
@@ -174,7 +174,7 @@ const PersonalitySelectionModal: React.FC<PersonalitySelectionModalProps> = ({
               <div className="mt-4">
                 <label
                   htmlFor="customPrompt"
-                  className="block text-sm font-medium leading-6 text-gray-900"
+                  className="block text-sm font-medium leading-6 text-foreground"
                 >
                   Custom System Prompt
                 </label>
@@ -184,12 +184,12 @@ const PersonalitySelectionModal: React.FC<PersonalitySelectionModalProps> = ({
                     rows={4}
                     value={customPrompt}
                     onChange={(e) => setCustomPrompt(e.target.value)}
-                    className="block w-full rounded-md border-0 px-3 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-purple-600 sm:text-sm sm:leading-6"
+                    className="block w-full rounded-lg border-0 bg-background px-3 py-1.5 text-foreground shadow-sm ring-1 ring-inset ring-border placeholder:text-muted-foreground focus:ring-2 focus:ring-inset focus:ring-ring sm:text-sm sm:leading-6"
                     placeholder="e.g., You are a helpful coding assistant that specializes in React and TypeScript..."
                     required={selectedPersonality === "custom"}
                   />
                 </div>
-                <p className="mt-2 text-xs text-gray-500">
+                <p className="mt-2 text-xs text-muted-foreground">
                   This prompt will guide how the AI responds to your messages
                 </p>
               </div>
@@ -198,9 +198,9 @@ const PersonalitySelectionModal: React.FC<PersonalitySelectionModalProps> = ({
 
           {/* Selected Personality Preview */}
           {selectedConfig && selectedPersonality !== "custom" && (
-            <div className="rounded-lg bg-gray-50 p-4">
-              <h3 className="text-sm font-medium text-gray-900">Personality Preview</h3>
-              <p className="mt-2 text-xs text-gray-600">{selectedConfig.systemPrompt}</p>
+            <div className="rounded-lg bg-accent p-4">
+              <h3 className="text-sm font-medium text-foreground">Personality Preview</h3>
+              <p className="mt-2 text-xs text-muted-foreground">{selectedConfig.systemPrompt}</p>
             </div>
           )}
 
@@ -210,14 +210,14 @@ const PersonalitySelectionModal: React.FC<PersonalitySelectionModalProps> = ({
               type="button"
               onClick={onClose}
               disabled={isLoading}
-              className="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-md bg-background px-3 py-2 text-sm font-semibold text-foreground shadow-sm ring-1 ring-inset ring-border hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isLoading || (selectedPersonality === "custom" && !customPrompt.trim())}
-              className="rounded-md bg-gradient-to-r from-purple-500 to-pink-500 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:opacity-75 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-600 disabled:cursor-not-allowed disabled:opacity-50"
+              className="gradient-bg rounded-md px-3 py-2 text-sm font-semibold text-white shadow-sm hover:opacity-75 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isLoading ? "Creating..." : "Create AI Chat"}
             </button>
