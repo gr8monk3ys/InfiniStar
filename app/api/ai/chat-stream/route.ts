@@ -304,7 +304,10 @@ export async function POST(request: NextRequest) {
         // Bridge long conversations: when a stored AI summary exists, inject a
         // compact rendering of it so the model retains continuity beyond the
         // recent-history window.
-        const summaryContext = renderSummaryForPrompt(conversation.summary)
+        const summaryContext = renderSummaryForPrompt(
+          conversation.summary,
+          conversation.summaryMessageCount
+        )
 
         // Fetch and include user memories in system prompt
         let systemPrompt = baseSystemPrompt + personaContext + summaryContext

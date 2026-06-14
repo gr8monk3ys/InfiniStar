@@ -277,7 +277,10 @@ export async function POST(request: NextRequest) {
     const basePrompt = conversation.character?.systemPrompt
       ? buildCharacterSystemPrompt(conversation.character)
       : getSystemPrompt(personalityType, conversation.aiSystemPrompt || undefined)
-    const summaryContext = renderSummaryForPrompt(conversation.summary)
+    const summaryContext = renderSummaryForPrompt(
+      conversation.summary,
+      conversation.summaryMessageCount
+    )
     const systemPrompt = basePrompt + personaContext + summaryContext
 
     // Call Anthropic API with system prompt
