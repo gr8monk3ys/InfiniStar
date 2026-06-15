@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useEffect, useMemo, useState } from "react"
 import { ClerkProvider, useClerk } from "@clerk/nextjs"
+import posthog from "posthog-js"
 
 import {
   getClerkSignInUrl,
@@ -79,8 +80,18 @@ function BaseAuthProvider({ children, clerkSignOut }: BaseAuthProviderProps) {
     void refresh()
   }, [refresh])
 
+  useEffect(() => {
+    if (state.user?.id && posthog.__loaded) {
+      posthog.identify(state.user.id)
+    }
+  }, [state.user?.id])
+
   const signOut = useCallback(
     async ({ redirectUrl = "/" }: { redirectUrl?: string } = {}) => {
+      if (posthog.__loaded) {
+        posthog.reset()
+      }
+
       if (state.authMode === "fallback") {
         const csrfToken = await getClientCsrfToken()
 
