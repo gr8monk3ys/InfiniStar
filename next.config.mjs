@@ -199,6 +199,14 @@ const nextConfig = {
       },
     ]
   },
+  async rewrites() {
+    const posthogHost = process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com"
+    const assetHost = posthogHost.replace("us.i.posthog.com", "us-assets.i.posthog.com")
+    return [
+      { source: "/ingest/static/:path*", destination: `${assetHost}/static/:path*` },
+      { source: "/ingest/:path*", destination: `${posthogHost}/:path*` },
+    ]
+  },
   images: {
     remotePatterns: [
       {
