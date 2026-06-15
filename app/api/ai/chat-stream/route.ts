@@ -167,6 +167,9 @@ export async function POST(request: NextRequest) {
           orderBy: { createdAt: "desc" },
           take: 20, // Get last 20 messages for context
         },
+        // Total message count drives the summary-bridge gate: inject the stored
+        // summary only once the conversation outgrows the live take:20 window.
+        _count: { select: { messages: true } },
       },
     })
 
@@ -304,7 +307,10 @@ export async function POST(request: NextRequest) {
         // Bridge long conversations: when a stored AI summary exists, inject a
         // compact rendering of it so the model retains continuity beyond the
         // recent-history window.
-        const summaryContext = renderSummaryForPrompt(conversation.summary)
+        const summaryContext = renderSummaryForPrompt(
+          conversation.summary,
+          conversation._count?.messages
+        )
 
         // Fetch and include user memories in system prompt
         let systemPrompt = baseSystemPrompt + personaContext + summaryContext

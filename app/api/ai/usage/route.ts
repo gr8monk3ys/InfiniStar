@@ -130,6 +130,11 @@ export async function GET(request: NextRequest) {
         where: {
           userId: currentUser.id,
           createdAt: { gte: monthStart },
+          // Mirror the quota gate in app/lib/ai-access.ts: background
+          // "summary-auto" usage never counts against quota/cost, so it must not
+          // inflate the displayed totals either — otherwise the dashboard can
+          // show a user at/over quota while the gate still allows requests.
+          requestType: { notIn: ["summary-auto"] },
         },
         _sum: {
           totalTokens: true,

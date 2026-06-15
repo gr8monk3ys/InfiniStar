@@ -450,6 +450,47 @@ describe("POST /api/ai/chat", () => {
     )
   })
 
+  describe("summary bridge (history-window gate)", () => {
+    const summaryJson = JSON.stringify({
+      overview: "Earlier, the user and the AI planned a trip to Japan.",
+      keyTopics: ["Japan", "travel"],
+    })
+
+    function systemPromptText(): string {
+      const call = mockAnthropicCreate.mock.calls[0][0] as { system: { text: string }[] }
+      return call.system[0].text
+    }
+
+    it("injects the stored summary once the conversation outgrows the live window", async () => {
+      // Stale frozen summaryMessageCount=20 (first auto-summary), but the
+      // conversation has grown to 35 — the last-20 window no longer holds the
+      // earliest messages, so the summary must bridge them.
+      mockConversationFindFirst.mockResolvedValue({
+        ...testConversation,
+        summary: summaryJson,
+        summaryMessageCount: 20,
+        _count: { messages: 35 },
+      })
+
+      await POST(createRequest({ message: "Hi", conversationId: "conv-1" }))
+
+      expect(systemPromptText()).toContain("[Earlier Conversation Summary]")
+    })
+
+    it("does not inject when the whole conversation still fits in the live window", async () => {
+      mockConversationFindFirst.mockResolvedValue({
+        ...testConversation,
+        summary: summaryJson,
+        summaryMessageCount: 5,
+        _count: { messages: 5 },
+      })
+
+      await POST(createRequest({ message: "Hi", conversationId: "conv-1" }))
+
+      expect(systemPromptText()).not.toContain("[Earlier Conversation Summary]")
+    })
+  })
+
   it("does not call Anthropic API when moderation blocks the message", async () => {
     mockModerateText.mockResolvedValue({
       shouldBlock: true,
