@@ -20,10 +20,12 @@ export const MAX_MESSAGES_FOR_CONTEXT = 50
 
 /**
  * Number of recent messages the AI chat routes send verbatim as live history
- * (`take: 20`). A stored summary is only worth injecting when it covers MORE
- * messages than this window — otherwise every message it summarizes is still
- * present below, so injecting it just duplicates context. Keep in sync with the
- * `take` values in app/api/ai/chat/route.ts and app/api/ai/chat-stream/route.ts.
+ * (`take: 20`). A stored summary is only worth injecting once the conversation
+ * holds MORE messages than this window — past that point the earliest messages
+ * have dropped out of the verbatim history, so the summary bridges them; below
+ * it, every message is still sent verbatim and injecting would just duplicate
+ * context. Keep in sync with the `take` values in app/api/ai/chat/route.ts and
+ * app/api/ai/chat-stream/route.ts.
  */
 export const HISTORY_WINDOW = 20
 
@@ -178,21 +180,25 @@ export async function generateConversationSummary(options: {
  * prose suitable for injecting into a chat system prompt as a continuity bridge.
  * Returns "" when there is nothing usable to inject.
  *
- * `summaryMessageCount` is the number of messages the stored summary covers
- * (Conversation.summaryMessageCount). The summary is only injected when that
- * count exceeds HISTORY_WINDOW; below the window the source messages are still
- * sent verbatim, so injecting the summary would duplicate context and mis-frame
- * present messages as "earlier".
+ * `currentMessageCount` is the conversation's CURRENT total message count. The
+ * summary is only injected once that exceeds HISTORY_WINDOW — i.e. once the
+ * conversation has more messages than the live history window can hold, so the
+ * earliest messages have dropped out of the verbatim history the chat routes
+ * send and the summary is needed to bridge them. While everything still fits in
+ * the window, injecting the summary would duplicate context and mis-frame present
+ * messages as "earlier". (Gating on the stored summaryMessageCount would be
+ * wrong: that count is frozen at generation time, but the window slides as new
+ * messages arrive, so a summary becomes necessary well before it is regenerated.)
  */
 export function renderSummaryForPrompt(
   summaryJson: string | null | undefined,
-  summaryMessageCount: number | null | undefined
+  currentMessageCount: number | null | undefined
 ): string {
   if (!summaryJson) {
     return ""
   }
 
-  if (!summaryMessageCount || summaryMessageCount <= HISTORY_WINDOW) {
+  if (!currentMessageCount || currentMessageCount <= HISTORY_WINDOW) {
     return ""
   }
 

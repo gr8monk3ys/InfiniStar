@@ -6,22 +6,25 @@ describe("renderSummaryForPrompt history-window gate", () => {
     keyTopics: ["greeting"],
   })
 
-  it("does not inject when every summarized message is still in the live window", () => {
-    // A manual summary at the 5-message minimum: all 5 source messages are
-    // still sent verbatim in the last-20 window, so injecting is redundant.
+  // The second arg is the conversation's CURRENT total message count: the
+  // summary is only injected once the conversation outgrows the live take:20
+  // window, regardless of when the summary itself was generated.
+  it("does not inject when the whole conversation still fits in the live window", () => {
+    // Only 5 messages exist total — all are still sent verbatim, so injecting
+    // the summary would be redundant.
     expect(renderSummaryForPrompt(stored, 5)).toBe("")
   })
 
-  it("does not inject when the summarized count equals the window boundary", () => {
+  it("does not inject when the message count equals the window boundary", () => {
     expect(renderSummaryForPrompt(stored, HISTORY_WINDOW)).toBe("")
   })
 
-  it("does not inject when the summarized count is missing", () => {
+  it("does not inject when the message count is missing", () => {
     expect(renderSummaryForPrompt(stored, null)).toBe("")
     expect(renderSummaryForPrompt(stored, undefined)).toBe("")
   })
 
-  it("injects only when the summary covers more messages than the window", () => {
+  it("injects once the conversation holds more messages than the window", () => {
     const rendered = renderSummaryForPrompt(stored, HISTORY_WINDOW + 1)
     expect(rendered).toContain("[Earlier Conversation Summary]")
     expect(rendered).toContain("An early exchange of greetings.")
