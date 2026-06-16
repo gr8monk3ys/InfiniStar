@@ -3,6 +3,7 @@ import { z } from "zod"
 
 import { getModelForUser } from "@/app/lib/ai-model-routing"
 import { SUPPORTED_MODEL_IDS } from "@/app/lib/ai-models"
+import { captureServerEvent } from "@/app/lib/analytics"
 import { buildCharacterSystemPrompt } from "@/app/lib/character-prompt"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import { isGroupChatEnabled } from "@/app/lib/features"
@@ -333,6 +334,13 @@ export async function POST(request: NextRequest) {
           newConversation
         )
 
+        captureServerEvent(currentUser.id, "conversation_created", {
+          conversationId: newConversation.id,
+          kind: "scene",
+          isAI: true,
+          sceneCharacterCount: orderedCharacters.length,
+        })
+
         return NextResponse.json(newConversation)
       }
 
@@ -426,6 +434,13 @@ export async function POST(request: NextRequest) {
         newConversation
       )
 
+      captureServerEvent(currentUser.id, "conversation_created", {
+        conversationId: newConversation.id,
+        kind: character ? "character" : "ai",
+        isAI: true,
+        characterId: character?.id ?? null,
+      })
+
       return NextResponse.json(newConversation)
     }
 
@@ -499,6 +514,13 @@ export async function POST(request: NextRequest) {
           triggerPusherSafely(getPusherUserChannel(user.id), "conversation:new", newConversation)
         )
       )
+
+      captureServerEvent(currentUser.id, "conversation_created", {
+        conversationId: newConversation.id,
+        kind: "group",
+        isAI: false,
+        memberCount: newConversation.users.length,
+      })
 
       return NextResponse.json(newConversation)
     }
