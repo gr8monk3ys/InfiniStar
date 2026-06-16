@@ -1,6 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { z } from "zod"
 
+import { captureServerEvent } from "@/app/lib/analytics"
+import { isFirstHumanMessage } from "@/app/lib/analytics-events"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import { apiLogger } from "@/app/lib/logger"
 import {
@@ -240,6 +242,22 @@ export async function POST(request: NextRequest) {
           )
       )
     )
+
+    captureServerEvent(currentUser.id, "message_sent", {
+      conversationId,
+      messageId: newMessage.id,
+      hasImage: Boolean(sanitizedImage),
+      hasAudio: Boolean(sanitizedAudioUrl),
+      surface: "direct",
+    })
+
+    if (await isFirstHumanMessage(currentUser.id)) {
+      captureServerEvent(currentUser.id, "first_message_sent", {
+        conversationId,
+        messageId: newMessage.id,
+        surface: "direct",
+      })
+    }
 
     return NextResponse.json(newMessage)
   } catch (error) {
