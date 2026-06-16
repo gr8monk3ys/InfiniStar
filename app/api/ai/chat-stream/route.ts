@@ -12,6 +12,8 @@ import {
 } from "@/app/lib/ai-personalities"
 import { buildChatSystemBlocks } from "@/app/lib/ai-system-prompt"
 import { trackAiUsage } from "@/app/lib/ai-usage"
+import { captureServerEvent } from "@/app/lib/analytics"
+import { isFirstHumanMessage } from "@/app/lib/analytics-events"
 import anthropic from "@/app/lib/anthropic"
 import { maybeAutoExtractMemories } from "@/app/lib/auto-memory"
 import { maybeAutoSummarize } from "@/app/lib/auto-summary"
@@ -249,6 +251,22 @@ export async function POST(request: NextRequest) {
       "messages:new",
       userMessage
     )
+
+    captureServerEvent(currentUser.id, "message_sent", {
+      conversationId,
+      messageId: userMessage.id,
+      hasImage: Boolean(sanitizedImage),
+      hasAudio: Boolean(sanitizedAudioUrl),
+      surface: "ai-chat",
+    })
+
+    if (await isFirstHumanMessage(currentUser.id)) {
+      captureServerEvent(currentUser.id, "first_message_sent", {
+        conversationId,
+        messageId: userMessage.id,
+        surface: "ai-chat",
+      })
+    }
 
     // Build conversation history for Claude
     // Reverse because messages were fetched desc (newest-first) to get the last 20; restore chronological order
