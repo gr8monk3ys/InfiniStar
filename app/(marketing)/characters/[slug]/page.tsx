@@ -10,9 +10,11 @@ import {
   HiUser,
 } from "react-icons/hi2"
 
+import { siteConfig } from "@/config/site"
 import { getCategoryById } from "@/app/lib/character-categories"
 import { canAccessNsfw } from "@/app/lib/nsfw"
 import prisma from "@/app/lib/prismadb"
+import { buildCharacterJsonLd } from "@/app/lib/structured-data"
 import { cn } from "@/app/lib/utils"
 import getCurrentUser from "@/app/actions/getCurrentUser"
 import { CharacterExportButton } from "@/app/components/characters/CharacterExportButton"
@@ -78,6 +80,9 @@ export async function generateMetadata({ params }: CharacterPageProps): Promise<
   })
   if (!character) return {}
   return {
+    alternates: {
+      canonical: `/characters/${slug}`,
+    },
     title: `${character.name} | InfiniStar`,
     description: character.tagline || character.description || undefined,
     openGraph: {
@@ -470,8 +475,32 @@ export default async function CharacterPage({ params }: CharacterPageProps) {
 
   const gradient = gradientMap[character.category] || gradientMap.general
 
+  const jsonLd = buildCharacterJsonLd(
+    {
+      name: character.name,
+      slug: character.slug,
+      tagline: character.tagline,
+      description: character.description,
+      avatarUrl: character.avatarUrl,
+      category: character.category,
+      usageCount: character.usageCount,
+      likeCount: character.likeCount,
+      commentCount: character.commentCount,
+      createdById: character.createdById,
+      createdByName: character.createdBy?.name ?? null,
+    },
+    siteConfig.url
+  )
+
   return (
     <section className="pb-16">
+      <script
+        type="application/ld+json"
+        // Escape `<` to its JSON unicode form so creator-authored values (name,
+        // tagline) can never break out of the <script> tag — the standard safe
+        // JSON-LD serialization. The result is still valid JSON.
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
+      />
       <CharacterViewedTracker
         characterId={character.id}
         slug={slug}
