@@ -90,3 +90,113 @@ export function serializeAttributionCookie(payload: AttributionPayload): string 
   const value = encodeURIComponent(JSON.stringify(payload))
   return `${ATTRIBUTION_COOKIE_NAME}=${value}; path=/; max-age=${ATTRIBUTION_MAX_AGE_SECONDS}; samesite=lax`
 }
+
+// --- Slice A3: server-side cookie value parsing + persistence resolution ---
+// The helpers above (slice A1) own the cookie name and the client/document.cookie
+// read/write. The helpers below parse the persisted cookie *value* (as read server-
+// side via cookies().get(name)?.value) and resolve which User columns to write —
+// first-touch wins, so an already-attributed user is never overwritten.
+
+const MAX_FIELD_LEN = 255
+
+/** Shape of the JSON stored in the `ist_attribution` cookie. */
+export interface AttributionCookie {
+  utmSource?: string
+  utmMedium?: string
+  utmCampaign?: string
+  ref?: string
+  firstTouchAt?: string
+}
+
+/** Columns currently stored on the User row that determine "already attributed". */
+export interface UserAttributionState {
+  utmSource: string | null
+  utmMedium: string | null
+  utmCampaign: string | null
+  referralSource: string | null
+  firstTouchAt: Date | null
+}
+
+/** Subset of User columns to write. Empty object => write nothing. */
+export interface AttributionPersistInput {
+  utmSource?: string
+  utmMedium?: string
+  utmCampaign?: string
+  referralSource?: string
+  firstTouchAt?: Date
+}
+
+function coerceField(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined
+  const trimmed = value.trim()
+  if (!trimmed) return undefined
+  return trimmed.slice(0, MAX_FIELD_LEN)
+}
+
+/**
+ * Parse the raw `ist_attribution` cookie value into a typed payload.
+ * Returns null for missing/empty/malformed JSON. Non-string fields are dropped;
+ * string fields are trimmed and capped to 255 chars.
+ */
+export function parseAttributionCookie(raw: string | undefined | null): AttributionCookie | null {
+  if (!raw) return null
+  let obj: unknown
+  try {
+    obj = JSON.parse(raw)
+  } catch {
+    return null
+  }
+  if (!obj || typeof obj !== "object") return null
+  const src = obj as Record<string, unknown>
+  const out: AttributionCookie = {}
+  const utmSource = coerceField(src.utmSource)
+  const utmMedium = coerceField(src.utmMedium)
+  const utmCampaign = coerceField(src.utmCampaign)
+  const ref = coerceField(src.ref)
+  const firstTouchAt = coerceField(src.firstTouchAt)
+  if (utmSource) out.utmSource = utmSource
+  if (utmMedium) out.utmMedium = utmMedium
+  if (utmCampaign) out.utmCampaign = utmCampaign
+  if (ref) out.ref = ref
+  if (firstTouchAt) out.firstTouchAt = firstTouchAt
+  return out
+}
+
+function isAlreadyAttributed(state: UserAttributionState): boolean {
+  return Boolean(
+    state.firstTouchAt ||
+    state.utmSource ||
+    state.utmMedium ||
+    state.utmCampaign ||
+    state.referralSource
+  )
+}
+
+/**
+ * Given the parsed cookie and the user's current attribution state, return the
+ * columns to persist. Returns {} when there is no cookie OR the user is already
+ * attributed (first-touch wins). A missing/invalid firstTouchAt in the cookie is
+ * synthesized to "now" so the user is still marked attributed going forward.
+ */
+export function resolveAttribution(
+  cookie: AttributionCookie | null,
+  state: UserAttributionState
+): AttributionPersistInput {
+  if (!cookie) return {}
+  if (isAlreadyAttributed(state)) return {}
+
+  const out: AttributionPersistInput = {}
+  if (cookie.utmSource) out.utmSource = cookie.utmSource
+  if (cookie.utmMedium) out.utmMedium = cookie.utmMedium
+  if (cookie.utmCampaign) out.utmCampaign = cookie.utmCampaign
+  if (cookie.ref) out.referralSource = cookie.ref
+
+  // Only mark attributed if we actually have *some* signal.
+  const hasSignal = out.utmSource || out.utmMedium || out.utmCampaign || out.referralSource
+  if (!hasSignal) return {}
+
+  const parsedTouch = cookie.firstTouchAt ? new Date(cookie.firstTouchAt) : null
+  out.firstTouchAt = parsedTouch && !Number.isNaN(parsedTouch.getTime()) ? parsedTouch : new Date()
+
+  return out
+}
