@@ -21,6 +21,7 @@ import { CharacterExportButton } from "@/app/components/characters/CharacterExpo
 import { CharacterLikeButton } from "@/app/components/characters/CharacterLikeButton"
 import { CharacterRemixButton } from "@/app/components/characters/CharacterRemixButton"
 import { CharacterStartChatButton } from "@/app/components/characters/CharacterStartChatButton"
+import { CharacterViewBeacon } from "@/app/components/characters/CharacterViewBeacon"
 import { CharacterViewedTracker } from "@/app/components/characters/CharacterViewedTracker"
 import { PublicCharacterCard } from "@/app/components/characters/PublicCharacterCard"
 import { NsfwGateCard } from "@/app/components/safety/NsfwGateCard"
@@ -258,7 +259,7 @@ function CharacterStats({ character }: { character: CharacterDetails }) {
         <HiEye className="size-5" aria-hidden="true" />
         <span>
           <span className="font-semibold text-foreground">
-            {(character.viewCount + 1).toLocaleString()}
+            {character.viewCount.toLocaleString()}
           </span>{" "}
           views
         </span>
@@ -418,12 +419,6 @@ export default async function CharacterPage({ params }: CharacterPageProps) {
     return <CharacterNsfwGate userId={currentUser?.id ?? null} />
   }
 
-  // Increment view count
-  await prisma.character.update({
-    where: { id: character.id },
-    data: { viewCount: { increment: 1 } },
-  })
-
   // Check if current user has liked this character
   let hasLiked = false
 
@@ -494,6 +489,7 @@ export default async function CharacterPage({ params }: CharacterPageProps) {
 
   return (
     <section className="pb-16">
+      <CharacterViewBeacon characterId={character.id} />
       <script
         type="application/ld+json"
         // Escape `<` to its JSON unicode form so creator-authored values (name,
