@@ -115,11 +115,13 @@ function CharacterNsfwGate({ userId }: { userId: string | null }) {
 
 function CharacterHero({
   character,
+  slug,
   gradient,
   category,
   hasLiked,
 }: {
   character: CharacterDetails
+  slug: string
   gradient: string
   category:
     | {
@@ -201,7 +203,7 @@ function CharacterHero({
           </div>
 
           <div className="flex items-center gap-3">
-            <CharacterStartChatButton characterId={character.id} />
+            <CharacterStartChatButton characterId={character.id} slug={slug} />
             <CharacterLikeButton
               characterId={character.id}
               initialLiked={hasLiked}
@@ -471,6 +473,7 @@ export default async function CharacterPage({ params }: CharacterPageProps) {
     <section className="pb-16">
       <CharacterHero
         character={character as CharacterDetails}
+        slug={slug}
         gradient={gradient}
         category={category}
         hasLiked={hasLiked}

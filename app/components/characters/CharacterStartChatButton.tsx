@@ -1,19 +1,36 @@
 "use client"
 
 import { useRouter } from "next/navigation"
+import posthog from "posthog-js"
 import toast from "react-hot-toast"
 
 import { Button } from "@/app/components/ui/button"
 import { useAppAuth } from "@/app/hooks/useAppAuth"
 import { useCsrfToken } from "@/app/hooks/useCsrfToken"
 
-export function CharacterStartChatButton({ characterId }: { characterId: string }) {
+export function CharacterStartChatButton({
+  characterId,
+  slug,
+}: {
+  characterId: string
+  slug: string
+}) {
   const router = useRouter()
   const { userId, isSignedIn } = useAppAuth()
   const { token } = useCsrfToken()
 
   const handleStart = async () => {
-    if (!isSignedIn || !userId) {
+    const isAuthenticated = Boolean(isSignedIn && userId)
+
+    posthog.capture("character_start_chat_clicked", {
+      characterId,
+      slug,
+      isAuthenticated,
+    })
+
+    if (!isAuthenticated) {
+      // Quantify the dead-end BEFORE we bounce the visitor to sign-in.
+      posthog.capture("start_chat_signup_wall_hit", { characterId, slug })
       router.push("/sign-in")
       return
     }
