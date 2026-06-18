@@ -15,6 +15,9 @@ export const metadata = {
   title: "Community Feed | InfiniStar",
   description:
     "See trending characters, discover new creators, and follow what the InfiniStar community is building.",
+  alternates: {
+    canonical: "/feed",
+  },
   openGraph: {
     title: "Community Feed | InfiniStar",
     description:
