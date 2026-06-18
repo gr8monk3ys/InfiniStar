@@ -19,6 +19,7 @@ import { CharacterExportButton } from "@/app/components/characters/CharacterExpo
 import { CharacterLikeButton } from "@/app/components/characters/CharacterLikeButton"
 import { CharacterRemixButton } from "@/app/components/characters/CharacterRemixButton"
 import { CharacterStartChatButton } from "@/app/components/characters/CharacterStartChatButton"
+import { CharacterViewedTracker } from "@/app/components/characters/CharacterViewedTracker"
 import { PublicCharacterCard } from "@/app/components/characters/PublicCharacterCard"
 import { NsfwGateCard } from "@/app/components/safety/NsfwGateCard"
 
@@ -471,6 +472,12 @@ export default async function CharacterPage({ params }: CharacterPageProps) {
 
   return (
     <section className="pb-16">
+      <CharacterViewedTracker
+        characterId={character.id}
+        slug={slug}
+        category={character.category}
+        isNsfw={character.isNsfw}
+      />
       <CharacterHero
         character={character as CharacterDetails}
         slug={slug}
