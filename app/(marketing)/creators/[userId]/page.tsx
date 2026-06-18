@@ -16,7 +16,9 @@ import { CreatorSupportCard } from "@/app/components/monetization/CreatorSupport
 
 import FollowCreatorButton from "./FollowCreatorButton"
 
-export const dynamic = "force-dynamic"
+// ISR: render is read-only, so the creator profile can be cached and revalidated
+// hourly instead of rendered per request.
+export const revalidate = 3600
 
 export async function generateMetadata({ params }: CreatorProfilePageProps): Promise<Metadata> {
   const { userId } = await params

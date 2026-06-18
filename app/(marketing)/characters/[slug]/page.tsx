@@ -71,7 +71,9 @@ interface CharacterDetails {
   } | null
 }
 
-export const dynamic = "force-dynamic"
+// ISR: render is now read-only (view counting moved to the beacon route), so the page
+// can be cached and revalidated hourly instead of rendered per request.
+export const revalidate = 3600
 
 export async function generateMetadata({ params }: CharacterPageProps): Promise<Metadata> {
   const { slug } = await params
