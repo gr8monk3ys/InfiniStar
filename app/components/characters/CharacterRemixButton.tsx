@@ -2,19 +2,26 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import posthog from "posthog-js"
 import toast from "react-hot-toast"
 
 import { Button } from "@/app/components/ui/button"
 import { useAppAuth } from "@/app/hooks/useAppAuth"
 import { useCsrfToken } from "@/app/hooks/useCsrfToken"
 
-export function CharacterRemixButton({ characterId }: { characterId: string }) {
+export function CharacterRemixButton({ characterId, slug }: { characterId: string; slug: string }) {
   const router = useRouter()
   const { isSignedIn } = useAppAuth()
   const { token } = useCsrfToken()
   const [isLoading, setIsLoading] = useState(false)
 
   const handleRemix = async () => {
+    posthog.capture("character_remix_clicked", {
+      characterId,
+      slug,
+      isAuthenticated: Boolean(isSignedIn),
+    })
+
     if (!isSignedIn) {
       router.push("/sign-in")
       return

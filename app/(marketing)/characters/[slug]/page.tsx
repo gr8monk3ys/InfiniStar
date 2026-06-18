@@ -210,7 +210,7 @@ function CharacterHero({
               initialLiked={hasLiked}
               initialCount={character.likeCount}
             />
-            <CharacterRemixButton characterId={character.id} />
+            <CharacterRemixButton characterId={character.id} slug={slug} />
             <CharacterExportButton characterId={character.id} />
           </div>
         </div>
