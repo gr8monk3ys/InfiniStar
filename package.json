@@ -83,6 +83,8 @@
     "otplib": "^13.2.1",
     "pg": "^8.18.0",
     "pino": "^9.14.0",
+    "posthog-js": "^1",
+    "posthog-node": "^4",
     "postmark": "^4.0.5",
     "prism-react-renderer": "^2.4.1",
     "pusher": "^5.3.2",

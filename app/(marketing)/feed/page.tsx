@@ -2,6 +2,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { HiArrowTrendingUp, HiChatBubbleLeftRight, HiSparkles, HiUserGroup } from "react-icons/hi2"
 
+import { CHARACTER_SELECT } from "@/app/lib/character-select"
 import { canAccessNsfw } from "@/app/lib/nsfw"
 import prisma from "@/app/lib/prismadb"
 import { getRecommendationSignalsForUser, rankCharactersForUser } from "@/app/lib/recommendations"
@@ -14,6 +15,9 @@ export const metadata = {
   title: "Community Feed | InfiniStar",
   description:
     "See trending characters, discover new creators, and follow what the InfiniStar community is building.",
+  alternates: {
+    canonical: "/feed",
+  },
   openGraph: {
     title: "Community Feed | InfiniStar",
     description:
@@ -22,29 +26,6 @@ export const metadata = {
 }
 
 export const dynamic = "force-dynamic"
-
-const CHARACTER_SELECT = {
-  id: true,
-  slug: true,
-  name: true,
-  tagline: true,
-  avatarUrl: true,
-  createdAt: true,
-  createdById: true,
-  category: true,
-  usageCount: true,
-  likeCount: true,
-  commentCount: true,
-  featured: true,
-  isNsfw: true,
-  createdBy: {
-    select: {
-      id: true,
-      name: true,
-      image: true,
-    },
-  },
-} as const
 
 interface CreatorSummary {
   id: string

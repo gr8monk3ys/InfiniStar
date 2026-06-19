@@ -5,16 +5,20 @@ import { notFound } from "next/navigation"
 import { format } from "date-fns"
 import { HiCalendar, HiChatBubbleLeftRight, HiGlobeAlt } from "react-icons/hi2"
 
+import { siteConfig } from "@/config/site"
 import { toMonthlyRecurringCents } from "@/app/lib/creator-monetization"
 import { canAccessNsfw } from "@/app/lib/nsfw"
 import prisma from "@/app/lib/prismadb"
+import { buildCreatorJsonLd } from "@/app/lib/structured-data"
 import getCurrentUser from "@/app/actions/getCurrentUser"
 import { PublicCharacterCard } from "@/app/components/characters/PublicCharacterCard"
 import { CreatorSupportCard } from "@/app/components/monetization/CreatorSupportCard"
 
 import FollowCreatorButton from "./FollowCreatorButton"
 
-export const dynamic = "force-dynamic"
+// ISR: render is read-only, so the creator profile can be cached and revalidated
+// hourly instead of rendered per request.
+export const revalidate = 3600
 
 export async function generateMetadata({ params }: CreatorProfilePageProps): Promise<Metadata> {
   const { userId } = await params
@@ -24,6 +28,9 @@ export async function generateMetadata({ params }: CreatorProfilePageProps): Pro
   })
   if (!creator) return {}
   return {
+    alternates: {
+      canonical: `/creators/${userId}`,
+    },
     title: `${creator.name} | InfiniStar Creator`,
     description: creator.bio || `Explore ${creator.name}'s AI characters on InfiniStar.`,
     openGraph: {
@@ -163,8 +170,17 @@ export default async function CreatorProfilePage({ params }: CreatorProfilePageP
     ).length,
   }
 
+  const jsonLd = buildCreatorJsonLd(
+    { id: user.id, name: user.name, bio: user.bio, image: user.image },
+    siteConfig.url
+  )
+
   return (
     <section className="container flex flex-col gap-8 py-10">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
+      />
       {/* Profile Header */}
       <div className="flex flex-col items-center gap-4 text-center">
         {user.image ? (

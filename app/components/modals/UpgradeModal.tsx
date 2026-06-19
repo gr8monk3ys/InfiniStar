@@ -1,6 +1,8 @@
 "use client"
 
+import { useEffect } from "react"
 import Link from "next/link"
+import posthog from "posthog-js"
 import { HiCheck, HiOutlineSparkles } from "react-icons/hi2"
 
 import { cn } from "@/app/lib/utils"
@@ -67,6 +69,12 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({
   const isCostCap = reason === "PRO_TIER_COST_CAP_REACHED"
   const messageLimit = getMonthlyMessageLimit(limits)
 
+  useEffect(() => {
+    if (isOpen) {
+      posthog.capture("upgrade_modal_viewed", { reason })
+    }
+  }, [isOpen, reason])
+
   const title = isCostCap
     ? "You've reached this month's fair-use cap"
     : messageLimit !== null
@@ -116,6 +124,9 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({
               href={`mailto:${SUPPORT_EMAIL}`}
               className={cn(buttonVariants())}
               aria-label={`Contact support at ${SUPPORT_EMAIL}`}
+              onClick={() =>
+                posthog.capture("upgrade_cta_clicked", { reason, cta: "contact_support" })
+              }
             >
               Contact Support
             </a>
@@ -123,7 +134,10 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({
             <Link
               href="/pricing"
               className={cn(buttonVariants({ variant: "gradient" }))}
-              onClick={onClose}
+              onClick={() => {
+                posthog.capture("upgrade_cta_clicked", { reason, cta: "pricing" })
+                onClose()
+              }}
             >
               Upgrade to PRO — {PRO_PRICE_PER_MONTH}
             </Link>

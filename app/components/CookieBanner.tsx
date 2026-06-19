@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 
+import { setAnalyticsConsent } from "@/app/lib/analytics-consent"
+
 const STORAGE_KEY = "infinistar_cookie_notice_dismissed"
 
 export function CookieBanner() {
@@ -16,6 +18,7 @@ export function CookieBanner() {
 
   function dismiss() {
     localStorage.setItem(STORAGE_KEY, "1")
+    setAnalyticsConsent(true)
     setVisible(false)
   }
 

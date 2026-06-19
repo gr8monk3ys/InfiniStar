@@ -7,6 +7,7 @@ import {
   AI_PRO_MONTHLY_IMAGE_LIMIT,
   AI_PRO_MONTHLY_TRANSCRIBE_LIMIT,
 } from "@/app/lib/ai-limits"
+import { captureServerEvent } from "@/app/lib/analytics"
 import prisma from "@/app/lib/prismadb"
 import { getUserSubscriptionPlan } from "@/app/lib/subscription"
 
@@ -63,6 +64,15 @@ export async function getAiAccessDecision(
     const proCostCapCents = AI_PRO_MONTHLY_COST_CAP_CENTS
     const requestType = options?.requestType ?? "chat"
 
+    const denyWithEvent = (decision: AiAccessDecision): AiAccessDecision => {
+      captureServerEvent(userId, "ai_limit_reached", {
+        code: decision.code,
+        requestType,
+        isPro: decision.limits?.isPro ?? null,
+      })
+      return decision
+    }
+
     const monthStart = getMonthStartUtc()
     const featureLimit =
       requestType === "image-generate"
@@ -118,7 +128,7 @@ export async function getAiAccessDecision(
 
     if (subscriptionPlan.isPro) {
       if (proCostCapCents !== null && monthlyCostUsageCents >= proCostCapCents) {
-        return {
+        return denyWithEvent({
           allowed: false,
           code: "PRO_TIER_COST_CAP_REACHED",
           message:
@@ -133,12 +143,12 @@ export async function getAiAccessDecision(
             monthlyCostUsageCents,
             monthlyCostQuotaCents: proCostCapCents,
           },
-        }
+        })
       }
 
       if (requestType === "image-generate" && AI_PRO_MONTHLY_IMAGE_LIMIT !== null) {
         if (monthlyFeatureCount >= AI_PRO_MONTHLY_IMAGE_LIMIT) {
-          return {
+          return denyWithEvent({
             allowed: false,
             code: "PRO_TIER_IMAGE_LIMIT_REACHED",
             message:
@@ -155,13 +165,13 @@ export async function getAiAccessDecision(
               monthlyCostUsageCents,
               monthlyCostQuotaCents: proCostCapCents,
             },
-          }
+          })
         }
       }
 
       if (requestType === "transcribe" && AI_PRO_MONTHLY_TRANSCRIBE_LIMIT !== null) {
         if (monthlyFeatureCount >= AI_PRO_MONTHLY_TRANSCRIBE_LIMIT) {
-          return {
+          return denyWithEvent({
             allowed: false,
             code: "PRO_TIER_TRANSCRIBE_LIMIT_REACHED",
             message:
@@ -178,7 +188,7 @@ export async function getAiAccessDecision(
               monthlyCostUsageCents,
               monthlyCostQuotaCents: proCostCapCents,
             },
-          }
+          })
         }
       }
 
@@ -200,7 +210,7 @@ export async function getAiAccessDecision(
     const remainingMessages = Math.max(0, FREE_TIER_MONTHLY_MESSAGE_LIMIT - monthlyMessageCount)
 
     if (monthlyMessageCount >= FREE_TIER_MONTHLY_MESSAGE_LIMIT) {
-      return {
+      return denyWithEvent({
         allowed: false,
         code: "FREE_TIER_MESSAGE_LIMIT_REACHED",
         message:
@@ -215,11 +225,11 @@ export async function getAiAccessDecision(
           monthlyCostUsageCents,
           monthlyCostQuotaCents: null,
         },
-      }
+      })
     }
 
     if (monthlyTokenUsage >= FREE_TIER_MONTHLY_TOKEN_QUOTA) {
-      return {
+      return denyWithEvent({
         allowed: false,
         code: "FREE_TIER_TOKEN_QUOTA_REACHED",
         message:
@@ -234,12 +244,12 @@ export async function getAiAccessDecision(
           monthlyCostUsageCents,
           monthlyCostQuotaCents: null,
         },
-      }
+      })
     }
 
     if (requestType === "image-generate") {
       if (AI_FREE_MONTHLY_IMAGE_LIMIT === 0 || monthlyFeatureCount >= AI_FREE_MONTHLY_IMAGE_LIMIT) {
-        return {
+        return denyWithEvent({
           allowed: false,
           code: "FREE_TIER_IMAGE_LIMIT_REACHED",
           message:
@@ -256,7 +266,7 @@ export async function getAiAccessDecision(
             monthlyCostUsageCents,
             monthlyCostQuotaCents: null,
           },
-        }
+        })
       }
     }
 
@@ -265,7 +275,7 @@ export async function getAiAccessDecision(
         AI_FREE_MONTHLY_TRANSCRIBE_LIMIT === 0 ||
         monthlyFeatureCount >= AI_FREE_MONTHLY_TRANSCRIBE_LIMIT
       ) {
-        return {
+        return denyWithEvent({
           allowed: false,
           code: "FREE_TIER_TRANSCRIBE_LIMIT_REACHED",
           message:
@@ -282,7 +292,7 @@ export async function getAiAccessDecision(
             monthlyCostUsageCents,
             monthlyCostQuotaCents: null,
           },
-        }
+        })
       }
     }
 
@@ -300,6 +310,11 @@ export async function getAiAccessDecision(
       },
     }
   } catch {
+    captureServerEvent(userId, "ai_limit_reached", {
+      code: "AI_ACCESS_CHECK_FAILED",
+      requestType: options?.requestType ?? "chat",
+      isPro: null,
+    })
     return {
       allowed: false,
       code: "AI_ACCESS_CHECK_FAILED",

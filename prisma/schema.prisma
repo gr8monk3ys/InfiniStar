@@ -64,6 +64,18 @@ model User {
   stripePriceId          String?   @map("stripe_price_id")
   stripeCurrentPeriodEnd DateTime? @map("stripe_current_period_end")
 
+  // Acquisition / first-touch attribution (slice A3 — all nullable, additive)
+  referralSource String? // free-form ref/referrer label captured at first touch
+  utmSource      String? // utm_source from first-touch landing
+  utmMedium      String? // utm_medium from first-touch landing
+  utmCampaign    String? // utm_campaign from first-touch landing
+  firstTouchAt   DateTime? // when the visitor first landed (from ist_attribution cookie)
+
+  // Self-referral graph: who referred this user
+  referredById String? @db.Uuid
+  referredBy   User?   @relation("UserReferrals", fields: [referredById], references: [id], onDelete: SetNull)
+  referrals    User[]  @relation("UserReferrals")
+
   conversations Conversation[] @relation("UserConversations")
   seenMessages  Message[]      @relation("Seen")
 
@@ -90,6 +102,8 @@ model User {
   followers            UserFollow[]        @relation("UserFollowers")
 
   @@index([deletionRequested, deletionScheduledFor])
+  @@index([referredById])
+  @@index([utmSource, createdAt])
   @@map("users")
 }
 

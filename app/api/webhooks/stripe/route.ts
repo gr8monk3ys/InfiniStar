@@ -2,6 +2,7 @@ import { headers } from "next/headers"
 import { NextResponse } from "next/server"
 import type Stripe from "stripe"
 
+import { captureServerEvent } from "@/app/lib/analytics"
 import { sendPaymentFailedEmail } from "@/app/lib/email"
 import { stripeLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
@@ -307,6 +308,12 @@ export async function POST(req: Request) {
                 stripePriceId: activeSubscription.items.data[0]?.price?.id ?? null,
                 stripeCurrentPeriodEnd: currentPeriodEnd,
               },
+            })
+
+            captureServerEvent(userId, "subscription_started", {
+              plan: "pro",
+              priceId: activeSubscription.items.data[0]?.price?.id ?? null,
+              stripeSubscriptionId: activeSubscription.id,
             })
           }
         }

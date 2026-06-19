@@ -21,6 +21,7 @@ export const env = createEnv({
     PUSHER_APP_ID: z.string().min(1),
     PUSHER_SECRET: z.string().min(1),
     ANTHROPIC_API_KEY: z.string().min(1).optional(),
+    POSTHOG_API_KEY: z.string().min(1).optional(),
     SENTRY_DSN: z.string().url().optional(),
     SENTRY_ENVIRONMENT: z.string().min(1).optional(),
     SENTRY_RELEASE: z.string().min(1).optional(),
@@ -47,6 +48,8 @@ export const env = createEnv({
     // Creator payments kill switch — requires a payout mechanism before enabling
     NEXT_PUBLIC_ENABLE_CREATOR_PAYMENTS: z.string().optional(),
     NEXT_PUBLIC_ENABLE_GROUP_CHAT: z.string().optional(),
+    NEXT_PUBLIC_POSTHOG_KEY: z.string().min(1).optional(),
+    NEXT_PUBLIC_POSTHOG_HOST: z.string().url().optional(),
   },
   runtimeEnv: {
     CLERK_SECRET_KEY: process.env.CLERK_SECRET_KEY,
@@ -64,6 +67,7 @@ export const env = createEnv({
     PUSHER_APP_ID: process.env.PUSHER_APP_ID,
     PUSHER_SECRET: process.env.PUSHER_SECRET,
     ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
+    POSTHOG_API_KEY: process.env.POSTHOG_API_KEY,
     SENTRY_DSN: process.env.SENTRY_DSN,
     SENTRY_ENVIRONMENT: process.env.SENTRY_ENVIRONMENT,
     SENTRY_RELEASE: process.env.SENTRY_RELEASE,
@@ -87,5 +91,7 @@ export const env = createEnv({
     NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN,
     NEXT_PUBLIC_ENABLE_CREATOR_PAYMENTS: process.env.NEXT_PUBLIC_ENABLE_CREATOR_PAYMENTS,
     NEXT_PUBLIC_ENABLE_GROUP_CHAT: process.env.NEXT_PUBLIC_ENABLE_GROUP_CHAT,
+    NEXT_PUBLIC_POSTHOG_KEY: process.env.NEXT_PUBLIC_POSTHOG_KEY,
+    NEXT_PUBLIC_POSTHOG_HOST: process.env.NEXT_PUBLIC_POSTHOG_HOST,
   },
 })

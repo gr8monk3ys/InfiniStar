@@ -1,3 +1,7 @@
+import { cookies } from "next/headers"
+
+import { ATTRIBUTION_COOKIE_NAME } from "@/app/lib/attribution"
+import { persistAttributionForUser } from "@/app/lib/attribution-persist"
 import { getAuthSession } from "@/app/lib/auth"
 import prisma from "@/app/lib/prismadb"
 
@@ -39,7 +43,7 @@ const getCurrentUser = async () => {
       return null
     }
 
-    return prisma.user.findUnique({
+    const user = await prisma.user.findUnique({
       where: {
         id: session.user.id,
       },
@@ -49,6 +53,26 @@ const getCurrentUser = async () => {
         hashedPassword: true,
       },
     })
+
+    if (user) {
+      // First-authenticated-request enrichment: capture first-touch attribution
+      // from the visitor cookie and fire signup_completed. Fire-and-forget.
+      const cookieStore = await cookies()
+      const rawAttribution = cookieStore.get(ATTRIBUTION_COOKIE_NAME)?.value
+      void persistAttributionForUser(
+        {
+          id: user.id,
+          utmSource: user.utmSource,
+          utmMedium: user.utmMedium,
+          utmCampaign: user.utmCampaign,
+          referralSource: user.referralSource,
+          firstTouchAt: user.firstTouchAt,
+        },
+        rawAttribution
+      )
+    }
+
+    return user
   } catch {
     return null
   }
