@@ -3,6 +3,7 @@ import "@/app/globals.css"
 import { type Metadata, type Viewport } from "next"
 
 import { siteConfig } from "@/config/site"
+import { fontBody, fontHeading } from "@/app/lib/fonts"
 import { cn } from "@/app/lib/utils"
 import { ClientShell } from "@/app/components/providers/ClientShell"
 import { SiteHeader } from "@/app/components/site-header"
@@ -56,7 +57,11 @@ interface RootLayoutProps {
 
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={cn(fontHeading.variable, fontBody.variable)}
+    >
       <head />
       <body className={cn("min-h-screen bg-background antialiased")}>
         <a

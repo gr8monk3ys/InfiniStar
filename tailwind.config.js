@@ -98,6 +98,10 @@ module.exports = {
           "0%": { backgroundPosition: "-200% 0" },
           "100%": { backgroundPosition: "200% 0" },
         },
+        marquee: {
+          "0%": { transform: "translateX(0)" },
+          "100%": { transform: "translateX(-50%)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -109,6 +113,11 @@ module.exports = {
         "slide-in-right": "slide-in-right 0.3s ease-out",
         "glow-pulse": "glow-pulse 2s ease-in-out infinite",
         shimmer: "shimmer 2s linear infinite",
+        marquee: "marquee 45s linear infinite",
+      },
+      fontFamily: {
+        heading: "var(--font-heading)",
+        body: "var(--font-body)",
       },
     },
   },

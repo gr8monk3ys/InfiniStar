@@ -86,9 +86,16 @@ export const densitySpacing: Record<Density, { base: number; label: string }> = 
 }
 
 // Font family CSS values
+// Brand default stacks — resolve to the self-hosted fonts wired up in
+// app/lib/fonts.ts (Bricolage Grotesque for headings, Inter for body) and
+// degrade to system fonts when the variables are unavailable.
+export const brandHeadingFontStack =
+  "var(--font-bricolage, ui-sans-serif), ui-sans-serif, system-ui, -apple-system, sans-serif"
+export const brandBodyFontStack =
+  "var(--font-inter, ui-sans-serif), ui-sans-serif, system-ui, -apple-system, sans-serif"
+
 export const fontFamilyValues: Record<FontFamily, string> = {
-  system:
-    'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+  system: brandBodyFontStack,
   inter: '"Inter", ui-sans-serif, system-ui, sans-serif',
   roboto: '"Roboto", ui-sans-serif, system-ui, sans-serif',
   "open-sans": '"Open Sans", ui-sans-serif, system-ui, sans-serif',
@@ -99,7 +106,7 @@ export const fontFamilyValues: Record<FontFamily, string> = {
 }
 
 export const fontFamilyLabels: Record<FontFamily, string> = {
-  system: "System Default",
+  system: "InfiniStar Default",
   inter: "Inter",
   roboto: "Roboto",
   "open-sans": "Open Sans",
@@ -639,7 +646,8 @@ export function themeToCssVariables(theme: Theme, mode: "light" | "dark"): Recor
     "--chat-ai-bubble": chatBubbles.aiBubble,
     "--chat-ai-bubble-foreground": chatBubbles.aiBubbleForeground,
     "--radius": borderRadiusValues[theme.borderRadius],
-    "--font-heading": fontFamilyValues[theme.headingFont],
+    "--font-heading":
+      theme.headingFont === "system" ? brandHeadingFontStack : fontFamilyValues[theme.headingFont],
     "--font-body": fontFamilyValues[theme.bodyFont],
     "--density-multiplier": String(densitySpacing[theme.density].base),
   }
