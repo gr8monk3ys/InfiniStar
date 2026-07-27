@@ -33,13 +33,18 @@ export default async function PricingPage() {
   }
 
   return (
-    <section className="container flex flex-col gap-8 py-8 md:max-w-6xl md:py-12 lg:py-24">
+    <section className="container flex flex-col gap-8 py-10 md:max-w-6xl md:py-14 lg:py-20">
       {/* Header */}
-      <div className="mx-auto flex w-full flex-col gap-4 text-center md:max-w-3xl">
-        <h1 className="font-heading text-3xl font-bold leading-[1.1] sm:text-4xl md:text-5xl">
-          Pricing for curious chatters and serious creators
+      <div className="mx-auto flex w-full flex-col items-center gap-4 text-center md:max-w-3xl">
+        <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.24em] text-violet-700 dark:text-violet-300">
+          <span className="h-px w-6 bg-current" aria-hidden="true" />
+          Pricing
+          <span className="h-px w-6 bg-current" aria-hidden="true" />
+        </p>
+        <h1 className="font-heading text-4xl font-extrabold leading-[1.02] tracking-tight [text-wrap:balance] sm:text-5xl md:text-6xl">
+          For curious chatters and <span className="gradient-text">serious creators</span>
         </h1>
-        <p className="text-lg leading-normal text-muted-foreground sm:text-xl">
+        <p className="text-lg leading-normal text-muted-foreground [text-wrap:pretty] sm:text-xl">
           Start free, learn the product, and only upgrade when you want higher limits, better
           models, and more room to build.
         </p>
@@ -63,7 +68,7 @@ export default async function PricingPage() {
       {/* Pricing Cards */}
       <div className="mx-auto grid w-full max-w-4xl gap-8 md:grid-cols-2">
         {/* Free Plan */}
-        <div className="relative flex flex-col rounded-xl border bg-background p-8">
+        <div className="relative flex flex-col rounded-3xl border border-border/60 bg-card/60 p-8">
           <div className="mb-6">
             <h2 className="text-2xl font-bold">{freePlan.name}</h2>
             <p className="mt-2 text-sm text-muted-foreground">{freePlan.description}</p>
@@ -94,7 +99,7 @@ export default async function PricingPage() {
         </div>
 
         {/* PRO Plan */}
-        <div className="glow-sm relative flex flex-col rounded-xl border-2 border-primary bg-background p-8 shadow-lg">
+        <div className="glow-sm relative flex flex-col rounded-3xl border-2 border-primary bg-card p-8 shadow-lg">
           <div className="absolute -top-4 left-1/2 -translate-x-1/2">
             <span className="gradient-bg inline-flex items-center gap-1 rounded-full px-4 py-1 text-sm font-medium text-white">
               <HiOutlineSparkles className="size-4" />
@@ -134,11 +139,13 @@ export default async function PricingPage() {
       </div>
 
       {/* FAQ Section */}
-      <div className="mx-auto mt-8 w-full max-w-3xl">
-        <h2 className="mb-8 text-center text-2xl font-bold">Frequently Asked Questions</h2>
+      <div className="mx-auto mt-8 w-full max-w-5xl">
+        <h2 className="mb-8 text-center font-heading text-3xl font-bold tracking-tight">
+          Frequently Asked Questions
+        </h2>
 
-        <div className="space-y-6">
-          <div className="rounded-lg border bg-background p-6">
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="rounded-2xl border border-border/60 bg-card/60 p-6">
             <h3 className="font-semibold">What counts as an AI message?</h3>
             <p className="mt-2 text-sm text-muted-foreground">
               Each message you send to the AI that receives a response counts as one message. System
@@ -146,7 +153,7 @@ export default async function PricingPage() {
             </p>
           </div>
 
-          <div className="rounded-lg border bg-background p-6">
+          <div className="rounded-2xl border border-border/60 bg-card/60 p-6">
             <h3 className="font-semibold">Can I switch plans anytime?</h3>
             <p className="mt-2 text-sm text-muted-foreground">
               Yes! You can upgrade to PRO anytime and your billing will be prorated. You can also
@@ -154,7 +161,7 @@ export default async function PricingPage() {
             </p>
           </div>
 
-          <div className="rounded-lg border bg-background p-6">
+          <div className="rounded-2xl border border-border/60 bg-card/60 p-6">
             <h3 className="font-semibold">What AI models can I use?</h3>
             <p className="mt-2 text-sm text-muted-foreground">
               Free users use Claude Haiku 4.5. PRO users can choose between Claude Sonnet 4.6
@@ -162,7 +169,7 @@ export default async function PricingPage() {
             </p>
           </div>
 
-          <div className="rounded-lg border bg-background p-6">
+          <div className="rounded-2xl border border-border/60 bg-card/60 p-6">
             <h3 className="font-semibold">What are AI memories?</h3>
             <p className="mt-2 text-sm text-muted-foreground">
               AI memories allow the assistant to remember important information across
@@ -171,7 +178,7 @@ export default async function PricingPage() {
             </p>
           </div>
 
-          <div className="rounded-lg border bg-background p-6">
+          <div className="rounded-2xl border border-border/60 bg-card/60 p-6">
             <h3 className="font-semibold">Is my data secure?</h3>
             <p className="mt-2 text-sm text-muted-foreground">
               Absolutely. We use enterprise-grade security including two-factor authentication,
@@ -180,7 +187,7 @@ export default async function PricingPage() {
             </p>
           </div>
 
-          <div className="rounded-lg border bg-background p-6">
+          <div className="rounded-2xl border border-border/60 bg-card/60 p-6">
             <h3 className="font-semibold">What payment methods do you accept?</h3>
             <p className="mt-2 text-sm text-muted-foreground">
               We accept all major credit cards (Visa, Mastercard, American Express) through Stripe.

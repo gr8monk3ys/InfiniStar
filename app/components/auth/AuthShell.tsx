@@ -80,7 +80,7 @@ export function AuthShell({ eyebrow, title, description, children }: AuthShellPr
             <p className="text-sm font-medium uppercase tracking-[0.24em] text-muted-foreground">
               {eyebrow}
             </p>
-            <h1 className="font-heading max-w-xl text-4xl font-bold tracking-tight [text-wrap:balance] sm:text-5xl">
+            <h1 className="max-w-xl font-heading text-4xl font-bold tracking-tight [text-wrap:balance] sm:text-5xl">
               {title}
             </h1>
             <p className="max-w-xl text-base leading-relaxed text-muted-foreground [text-wrap:pretty] sm:text-lg">
