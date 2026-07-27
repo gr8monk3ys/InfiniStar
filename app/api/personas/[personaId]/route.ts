@@ -45,7 +45,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
 
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   const identifier = getClientIdentifier(request)
-  if (!apiLimiter.check(identifier)) {
+  if (!(await Promise.resolve(apiLimiter.check(identifier)))) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 })
   }
 

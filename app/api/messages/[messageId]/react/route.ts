@@ -35,7 +35,7 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    if (!apiLimiter.check(currentUser.id)) {
+    if (!(await Promise.resolve(apiLimiter.check(currentUser.id)))) {
       return NextResponse.json({ error: "Too many requests" }, { status: 429 })
     }
 
