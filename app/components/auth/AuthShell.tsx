@@ -50,7 +50,7 @@ export const authAppearance = {
     formFieldInput:
       "h-11 rounded-xl border border-input bg-background text-foreground shadow-none focus:border-primary focus:ring-2 focus:ring-primary/20",
     formButtonPrimary:
-      "h-11 rounded-xl bg-gradient-to-r from-violet-600 to-blue-500 text-sm font-semibold text-white shadow-lg shadow-violet-500/20 hover:from-violet-700 hover:to-blue-600",
+      "h-11 rounded-xl bg-gradient-to-r from-violet-600 via-fuchsia-600 to-rose-500 text-sm font-semibold text-white shadow-lg shadow-violet-500/20 hover:from-violet-700 hover:via-fuchsia-700 hover:to-rose-600",
     footerActionLink: "font-medium text-primary hover:text-primary/80",
     formFieldAction: "font-medium text-primary hover:text-primary/80",
     identityPreviewEditButton: "font-medium text-primary hover:text-primary/80",
@@ -65,7 +65,7 @@ export function AuthShell({ eyebrow, title, description, children }: AuthShellPr
   return (
     <section className="relative overflow-hidden">
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="via-sky-500/12 absolute left-1/2 top-0 h-[32rem] w-[32rem] -translate-x-1/2 rounded-full bg-gradient-to-br from-violet-600/15 to-cyan-400/10 blur-[96px]" />
+        <div className="via-fuchsia-500/12 absolute left-1/2 top-0 h-[32rem] w-[32rem] -translate-x-1/2 rounded-full bg-gradient-to-br from-violet-600/15 to-rose-400/10 blur-[96px]" />
         <div className="absolute bottom-0 left-0 h-72 w-72 rounded-full bg-primary/10 blur-[80px]" />
       </div>
 
@@ -115,7 +115,7 @@ export function AuthShell({ eyebrow, title, description, children }: AuthShellPr
         </div>
 
         <div className="relative">
-          <div className="from-violet-600/12 to-sky-500/12 absolute inset-0 rounded-[2rem] bg-gradient-to-br via-transparent blur-2xl" />
+          <div className="from-violet-600/12 to-fuchsia-500/12 absolute inset-0 rounded-[2rem] bg-gradient-to-br via-transparent blur-2xl" />
           <div className="relative rounded-[2rem] border border-border/60 bg-background/90 p-5 shadow-2xl shadow-primary/5 backdrop-blur md:p-8">
             <div className="border-b border-border/60 pb-5">
               <p className="text-sm font-medium text-primary">{eyebrow}</p>
