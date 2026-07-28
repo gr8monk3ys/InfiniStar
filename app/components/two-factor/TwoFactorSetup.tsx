@@ -129,7 +129,7 @@ export function TwoFactorSetup({ setupData, onVerified, onCancel }: TwoFactorSet
             </button>
             <button
               onClick={() => {
-                navigator.clipboard.writeText(setupData.secret)
+                void navigator.clipboard.writeText(setupData.secret)
                 toast.success("Secret key copied")
               }}
               className="p-2 text-gray-500 hover:text-gray-700"

@@ -98,7 +98,7 @@ const TagSelector: React.FC<TagSelectorProps> = ({
     (e: React.KeyboardEvent) => {
       if (e.key === "Enter" && newTagName.trim()) {
         e.preventDefault()
-        handleCreateTag()
+        void handleCreateTag()
       } else if (e.key === "Escape") {
         setShowCreateForm(false)
         setNewTagName("")
@@ -157,7 +157,7 @@ const TagSelector: React.FC<TagSelectorProps> = ({
                     key={tag.id}
                     onClick={(e) => {
                       e.preventDefault()
-                      handleToggleTag(tag)
+                      void handleToggleTag(tag)
                     }}
                     disabled={isUpdating}
                     className="cursor-pointer"

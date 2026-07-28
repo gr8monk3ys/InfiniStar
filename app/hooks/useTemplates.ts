@@ -396,15 +396,21 @@ export function useShortcutDetection(
 
     const shortcut = `/${shortcutMatch[1]}`
 
-    // Debounce the search
-    const timeoutId = setTimeout(async () => {
+    // Debounce the search. The async work is voided with a rejection handler so
+    // a failed lookup clears the searching state instead of surfacing as an
+    // unhandled rejection from the timer.
+    const timeoutId = setTimeout(() => {
       setIsSearching(true)
-      try {
-        const templates = await searchByShortcut(shortcut)
-        onShortcutDetected(shortcut, templates)
-      } finally {
-        setIsSearching(false)
-      }
+      void searchByShortcut(shortcut)
+        .then((templates) => {
+          onShortcutDetected(shortcut, templates)
+        })
+        .catch(() => {
+          // Shortcut lookup is advisory; leave the previous suggestions in place.
+        })
+        .finally(() => {
+          setIsSearching(false)
+        })
     }, debounceMs)
 
     return () => clearTimeout(timeoutId)

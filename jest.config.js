@@ -27,6 +27,9 @@ const customJestConfig = {
     "/node_modules/",
     "/.next/",
     "/e2e/", // Playwright E2E tests run separately
+    // Integration suites need a real Postgres database and run under
+    // jest.integration.config.js via `bun run test:integration`.
+    "/__tests__/integration/",
   ],
 }
 

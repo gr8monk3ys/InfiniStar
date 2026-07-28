@@ -72,7 +72,7 @@ export default function JoinPageClient() {
   }, [token])
 
   useEffect(() => {
-    fetchShareInfo()
+    void fetchShareInfo()
   }, [fetchShareInfo])
 
   // Handle join

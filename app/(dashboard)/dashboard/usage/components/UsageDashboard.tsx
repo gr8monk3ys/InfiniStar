@@ -122,7 +122,7 @@ export function UsageDashboard() {
   }, [period])
 
   useEffect(() => {
-    fetchUsageData()
+    void fetchUsageData()
   }, [fetchUsageData])
 
   // Format peak hours for display

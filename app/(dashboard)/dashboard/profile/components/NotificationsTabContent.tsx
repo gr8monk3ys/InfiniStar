@@ -126,7 +126,7 @@ export function NotificationsTabContent() {
   }, [])
 
   useEffect(() => {
-    fetchNotificationPreferences()
+    void fetchNotificationPreferences()
   }, [fetchNotificationPreferences])
 
   useEffect(() => {

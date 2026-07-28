@@ -19,14 +19,16 @@ const companyLinks = [
 
 export function SiteFooter() {
   return (
-    <footer className="relative overflow-hidden border-t border-border/60 bg-background/95">
-      <div className="from-primary/8 pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b to-transparent" />
+    <footer className="relative overflow-hidden border-t border-border/60 bg-background">
+      <div className="aurora-backdrop pointer-events-none absolute inset-x-0 top-0 h-40 opacity-60" />
 
-      <div className="container relative grid gap-8 py-10 md:grid-cols-[1.4fr_1fr_1fr] md:py-12">
+      <div className="container relative grid gap-10 py-12 md:grid-cols-[1.4fr_1fr_1fr] md:py-16">
         <div className="max-w-md">
           <Link href="/" className="inline-flex items-center gap-2">
-            <Icons.logo className="size-6" />
-            <span className="font-heading gradient-text text-lg font-bold">{siteConfig.name}</span>
+            <Icons.logo className="size-7 text-primary" />
+            <span className="gradient-text font-heading text-xl font-bold tracking-tight">
+              {siteConfig.name}
+            </span>
           </Link>
           <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
             Character-first AI chat for creators, roleplayers, and people who want more memorable
@@ -35,7 +37,7 @@ export function SiteFooter() {
         </div>
 
         <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
             Product
           </p>
           <div className="mt-4 flex flex-col gap-3 text-sm">
@@ -52,7 +54,7 @@ export function SiteFooter() {
         </div>
 
         <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
             Company
           </p>
           <div className="mt-4 flex flex-col gap-3 text-sm">
@@ -83,7 +85,9 @@ export function SiteFooter() {
 
       <div className="border-t border-border/60">
         <div className="container flex flex-col gap-2 py-4 text-sm text-muted-foreground md:flex-row md:items-center md:justify-between">
-          <p>&copy; {new Date().getFullYear()} {siteConfig.name}. All rights reserved.</p>
+          <p>
+            &copy; {new Date().getFullYear()} {siteConfig.name}. All rights reserved.
+          </p>
           <p>Built for creator-led worlds, fandom roleplay, and late-night curiosity.</p>
         </div>
       </div>

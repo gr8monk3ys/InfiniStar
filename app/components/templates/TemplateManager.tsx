@@ -64,7 +64,7 @@ export function TemplateManager({ isOpen, onClose, onSelectTemplate }: TemplateM
   // Load templates when dialog opens
   useEffect(() => {
     if (isOpen) {
-      fetchTemplates()
+      void fetchTemplates()
     }
   }, [isOpen, fetchTemplates])
 
@@ -140,7 +140,7 @@ export function TemplateManager({ isOpen, onClose, onSelectTemplate }: TemplateM
       }
 
       handleCancelEdit()
-      fetchTemplates()
+      void fetchTemplates()
     } catch (error) {
       setFormError(error instanceof Error ? error.message : "Failed to save template")
     } finally {
@@ -153,7 +153,7 @@ export function TemplateManager({ isOpen, onClose, onSelectTemplate }: TemplateM
       try {
         await deleteTemplate(templateId)
         setDeleteConfirmId(null)
-        fetchTemplates()
+        void fetchTemplates()
       } catch {
         // Error is handled in the hook
       }

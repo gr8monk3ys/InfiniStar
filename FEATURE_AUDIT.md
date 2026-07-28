@@ -60,11 +60,11 @@ Legend: **Implemented**, **Partial**, **Missing**
 
 ## Payments / Monetization
 
-- **Subscriptions (Stripe PRO)**: Implemented
+- **Subscriptions (Stripe PRO)**: Implemented — the only monetization path enabled by default
 - **AI usage tracking + usage dashboard**: Implemented
-- **Affiliate links**: Implemented
-- **AdSense unit(s)**: Implemented (verify config + policy compliance)
-- **Creator monetization (tips + subscriptions)**: Implemented (verify Stripe setup)
+- **Affiliate links**: Implemented, **off by default** (`NEXT_PUBLIC_ENABLE_AFFILIATE_LINKS`; the API returns 404 while disabled)
+- **AdSense unit(s)**: **Missing** — there is no ad code in the repository. This line previously read "Implemented"; nothing renders or loads an ad unit.
+- **Creator monetization (tips + subscriptions)**: Implemented, **off by default** (`NEXT_PUBLIC_ENABLE_CREATOR_PAYMENTS`; the API returns 503 while disabled). Keep it off: Stripe Checkout can collect the money, but no payout path to creators exists.
 
 ## Ops / Reliability
 

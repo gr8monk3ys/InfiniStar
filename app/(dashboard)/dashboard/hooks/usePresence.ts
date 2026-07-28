@@ -63,7 +63,7 @@ export default function usePresence() {
       // Set timer for 5 minutes of inactivity
       awayTimeoutRef.current = setTimeout(
         () => {
-          setAway()
+          void setAway()
         },
         5 * 60 * 1000
       ) // 5 minutes
@@ -73,25 +73,25 @@ export default function usePresence() {
     const activityEvents = ["mousedown", "keydown", "scroll", "touchstart"]
 
     const handleActivity = () => {
-      resetAwayTimer()
+      void resetAwayTimer()
     }
 
     // Handle page visibility change
     const handleVisibilityChange = () => {
       if (document.hidden) {
-        setOffline()
+        void setOffline()
         if (awayTimeoutRef.current) {
           clearTimeout(awayTimeoutRef.current)
         }
       } else {
-        setOnline()
-        resetAwayTimer()
+        void setOnline()
+        void resetAwayTimer()
       }
     }
 
     // Set online on mount
-    setOnline()
-    resetAwayTimer()
+    void setOnline()
+    void resetAwayTimer()
 
     // Add event listeners
     activityEvents.forEach((event) => {
@@ -101,7 +101,7 @@ export default function usePresence() {
 
     // Cleanup
     return () => {
-      setOffline()
+      void setOffline()
       if (awayTimeoutRef.current) {
         clearTimeout(awayTimeoutRef.current)
       }

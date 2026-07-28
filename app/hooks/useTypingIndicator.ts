@@ -139,7 +139,7 @@ export function useTypingIndicator(options: UseTypingIndicatorOptions): UseTypin
   }, [])
 
   // Function to emit typing status
-  const emitTyping = useCallback(
+  const emitTypingAsync = useCallback(
     async (isTyping: boolean) => {
       // Debounce: don't emit if status hasn't changed
       if (lastEmitRef.current === isTyping) return
@@ -189,6 +189,17 @@ export function useTypingIndicator(options: UseTypingIndicatorOptions): UseTypin
       }
     },
     [conversationId, timeoutMs]
+  )
+
+  // Typing indicators are fire-and-forget: callers (keystroke handlers) must not
+  // await them, and emitTypingAsync already swallows its own failures. Exposing a
+  // void-returning wrapper keeps that contract explicit rather than handing
+  // callers a promise nobody awaits.
+  const emitTyping = useCallback(
+    (isTyping: boolean) => {
+      void emitTypingAsync(isTyping)
+    },
+    [emitTypingAsync]
   )
 
   // AI typing state setters

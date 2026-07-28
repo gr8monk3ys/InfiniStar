@@ -21,7 +21,9 @@ const autoDeleteRunLimiter = createRateLimiter("autoDeleteRun", 1, 3600000)
 
 // Cleanup old in-memory entries every hour (no-op when Redis is active)
 const autoDeleteRunCleanupInterval = setInterval(() => {
-  autoDeleteRunLimiter.cleanup()
+  void Promise.resolve(autoDeleteRunLimiter.cleanup()).catch(() => {
+    // Cleanup is best-effort; Redis keys expire on their own via TTL.
+  })
 }, 3600000)
 
 autoDeleteRunCleanupInterval.unref?.()

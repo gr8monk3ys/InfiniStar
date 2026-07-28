@@ -75,7 +75,7 @@ export default function ImportCharacterPage() {
         return
       }
 
-      importFile(file)
+      void importFile(file)
     },
     [importFile]
   )
@@ -84,7 +84,7 @@ export default function ImportCharacterPage() {
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0]
       if (!file) return
-      importFile(file)
+      void importFile(file)
       e.target.value = ""
     },
     [importFile]

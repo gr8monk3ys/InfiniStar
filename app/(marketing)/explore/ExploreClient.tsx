@@ -273,7 +273,7 @@ function EmptyMarketplaceState() {
             <HiOutlineSparkles className="size-4" aria-hidden="true" />
             Launch edition marketplace
           </div>
-          <h1 className="font-heading mt-6 text-3xl font-bold leading-tight tracking-tighter [text-wrap:balance] md:text-5xl lg:text-6xl">
+          <h1 className="mt-6 font-heading text-3xl font-bold leading-tight tracking-tighter [text-wrap:balance] md:text-5xl lg:text-6xl">
             The public catalog is opening up now
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-base text-muted-foreground [text-wrap:pretty] md:text-lg">

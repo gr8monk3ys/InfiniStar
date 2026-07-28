@@ -198,10 +198,10 @@ The project uses Next.js 16 App Router with route groups:
   - `user.updated` - Updates email, name, and image from Clerk
   - `user.deleted` - Deletes the User record from the database
   - Webhook signatures verified using `svix` library
-- **Two-Factor Authentication**: Clerk handles 2FA natively. Additionally, `app/lib/two-factor-tokens.ts` provides an in-memory token store for supplementary 2FA flows. **Limitation**: This in-memory store does not persist across server restarts and does not work with multiple server instances. For production, replace with Redis or another distributed cache.
+- **Two-Factor Authentication**: Clerk handles 2FA natively. Additionally, `app/lib/two-factor-tokens.ts` provides a token store for supplementary 2FA flows. It uses Redis (via `REDIS_URL`) when configured and falls back to in-memory storage otherwise. Set `REDIS_URL` in production so tokens survive restarts and work across instances.
 - **Security Features**:
   - CSRF protection on all state-changing endpoints (Double Submit Cookie pattern via `app/lib/csrf.ts`)
-  - Rate limiting on sensitive endpoints (in-memory, see production note below)
+  - Rate limiting on sensitive endpoints (Redis-backed when `REDIS_URL` is set; in-memory fallback)
   - Input validation with Zod schemas
   - Regex-based sanitization for user inputs (server-safe, no DOMPurify dependency)
 
@@ -582,7 +582,7 @@ try {
 ### Authentication & Security
 
 - **Authentication**: Handled entirely by Clerk. Email verification, password management, OAuth, and MFA are all managed through Clerk's dashboard and components.
-- **Rate Limiting**: Apply to sensitive endpoints using in-memory rate limiters
+- **Rate Limiting**: Apply to sensitive endpoints using the shared rate limiters
 
   ```typescript
   import { authLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
@@ -595,7 +595,7 @@ try {
 
   Available limiters: `apiLimiter` (60/min), `authLimiter` (5/5min), `aiChatLimiter` (20/min), `accountDeletionLimiter` (3/hr), `twoFactorLimiter` (5/5min), `tagLimiter` (30/min), `memoryLimiter` (30/min), `memoryExtractLimiter` (5/min), `templateLimiter` (30/min), `shareLimiter` (10/min), `shareJoinLimiter` (5/min)
 
-  **Production note**: All rate limiters use in-memory storage. For production with multiple server instances, implement `IRateLimiter` interface with Redis (example provided in `app/lib/rate-limit.ts`).
+  **Production note**: Limiters are Redis-backed (sliding window, fail-open) when `REDIS_URL` is configured and fall back to in-memory storage otherwise. Serverless/multi-instance deployments MUST set `REDIS_URL` (e.g. Upstash `rediss://`) — in-memory state is per-instance and effectively unenforced on Vercel. `check()` may return a Promise, so always call it as `await Promise.resolve(limiter.check(id))`.
 
 - **Email**: Postmark used for transactional emails (welcome, account deletion notifications). Verification and password reset emails are handled by Clerk. Email utilities in `app/lib/email.ts` with templates in `app/lib/email-templates.ts`. Development mode logs emails to console.
 
@@ -618,10 +618,18 @@ try {
 - **Real-time**: Pusher channel naming follows pattern: `conversation-${conversationId}` and `user-${userId}`
 - **Type Safety**: The project uses TypeScript strictly - always run `bun run typecheck` before committing
 - **API Client**: Always use the centralized API client (`app/lib/api-client.ts`) for frontend API requests instead of raw axios
-- **Authentication**: Clerk handles the primary auth flows (sign-in, sign-up, email verification, password reset, OAuth, MFA). A supplementary fallback auth system (`app/lib/fallback-auth.ts`, `app/api/auth/fallback/*`, `app/api/auth/session/`) exists behind the `ENABLE_FALLBACK_AUTH` env flag for when Clerk is unavailable — bcrypt-hashed backup passwords and cookie sessions. Clerk's Frontend API is proxied through `app/api/clerk-proxy/` (Clerk proxy mode).
+- **Authentication**: Clerk handles the primary auth flows (sign-in, sign-up, email verification, password reset, OAuth, MFA). Clerk's Frontend API is proxied through `app/api/clerk-proxy/` (Clerk proxy mode).
+- **Fallback auth (deliberate, keep it off)**: A second auth path — bcrypt-hashed backup passwords and cookie sessions — lives behind the `ENABLE_FALLBACK_AUTH` flag (`app/lib/fallback-auth.ts`, `app/api/auth/fallback/*`). It exists as a hedge for a Clerk outage and is **off by default**: the flag must be explicitly set to `1`/`true`/`yes`/`on`, and all three mutation routes (sign-in, sign-up, sign-out) re-check it server-side, so the endpoints are inert while it is unset.
+
+  This is a conscious trade-off — a second credential store is real duplicate surface, accepted to avoid a hard dependency on one auth provider. Rules for working with it:
+  - Leave it **off** in normal operation. It is for an outage, not a feature.
+  - Never gate it in the UI alone; the server-side check in each route is what makes it safe.
+  - Before ever enabling it in production, confirm `REDIS_URL` is set (sessions and rate limits must be shared across instances) and plan to turn it back off once Clerk recovers.
+  - Any change here needs the same scrutiny as the primary auth path, including the rate limiting on the sign-in/sign-up routes.
+
 - **Development Emails**: In development mode, emails are logged to console instead of being sent via Postmark
-- **Rate Limiting**: Uses in-memory rate limiters. For production with multiple instances, implement `IRateLimiter` interface with Redis (see `app/lib/rate-limit.ts` for Redis example).
-- **2FA Tokens**: `app/lib/two-factor-tokens.ts` uses in-memory storage. Not suitable for multi-instance production deployments without replacing with a distributed cache.
+- **Rate Limiting**: Redis-backed when `REDIS_URL` is set (see `app/lib/redis-rate-limiter.ts`); in-memory fallback otherwise. Set `REDIS_URL` for any multi-instance or serverless deployment.
+- **2FA Tokens**: `app/lib/two-factor-tokens.ts` uses Redis when `REDIS_URL` is set, with an in-memory fallback for development.
 - **CSRF Protection**: All POST/PUT/PATCH/DELETE endpoints should validate CSRF tokens via `app/lib/csrf.ts`
 - **AI Usage Tracking**: Free users limited to 50 AI messages per month (configurable via `AI_FREE_MONTHLY_MESSAGE_LIMIT`). Detailed per-request tracking in `AiUsage` model with token counts and cost estimation.
 - **Server Actions**: Next.js 15 server actions require `'use server'` directive at the top of the file

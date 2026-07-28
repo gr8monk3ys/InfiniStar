@@ -39,7 +39,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   const identifier = getClientIdentifier(request)
-  if (!apiLimiter.check(identifier)) {
+  if (!(await Promise.resolve(apiLimiter.check(identifier)))) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 })
   }
 

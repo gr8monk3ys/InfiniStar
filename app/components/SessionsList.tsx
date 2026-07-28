@@ -331,7 +331,7 @@ export default function SessionsList() {
 
   // Load sessions on mount
   useEffect(() => {
-    fetchSessions()
+    void fetchSessions()
   }, [fetchSessions])
 
   // Get count of other sessions

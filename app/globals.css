@@ -43,8 +43,14 @@
 
     /* Gradient and glow */
     --gradient-start: 263 70% 58%;
-    --gradient-end: 217 91% 60%;
+    --gradient-mid: 316 72% 58%;
+    --gradient-end: 349 89% 66%;
     --glow-color: 263 70% 58%;
+
+    /* Aurora accents (marketing surfaces) */
+    --aurora-violet: 263 70% 58%;
+    --aurora-fuchsia: 316 72% 58%;
+    --aurora-amber: 32 95% 58%;
 
     /* Layered surfaces */
     --surface-1: 240 4.8% 95.9%;
@@ -52,8 +58,8 @@
     --surface-3: 240 3.7% 84%;
 
     /* Typography */
-    --font-heading: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    --font-body: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-heading: var(--font-bricolage, ui-sans-serif), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-body: var(--font-inter, ui-sans-serif), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 
     /* Density */
     --density-multiplier: 1;
@@ -101,9 +107,15 @@
     --chat-ai-bubble-foreground: 0 0% 90%;
 
     /* Gradient and glow */
-    --gradient-start: 263 70% 58%;
-    --gradient-end: 217 91% 60%;
+    --gradient-start: 263 70% 62%;
+    --gradient-mid: 316 72% 62%;
+    --gradient-end: 349 89% 68%;
     --glow-color: 263 70% 58%;
+
+    /* Aurora accents (marketing surfaces) */
+    --aurora-violet: 263 70% 62%;
+    --aurora-fuchsia: 316 72% 62%;
+    --aurora-amber: 32 95% 62%;
 
     /* Layered surfaces */
     --surface-1: 240 4% 8%;
@@ -229,14 +241,48 @@
 
   /* Gradient utilities */
   .gradient-text {
-    background: linear-gradient(135deg, hsl(var(--gradient-start)), hsl(var(--gradient-end)));
+    background: linear-gradient(
+      100deg,
+      hsl(var(--gradient-start)),
+      hsl(var(--gradient-mid)) 55%,
+      hsl(var(--gradient-end))
+    );
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
 
   .gradient-bg {
-    background: linear-gradient(135deg, hsl(var(--gradient-start)), hsl(var(--gradient-end)));
+    background: linear-gradient(
+      120deg,
+      hsl(var(--gradient-start)),
+      hsl(var(--gradient-mid)) 55%,
+      hsl(var(--gradient-end))
+    );
+  }
+
+  /* Aurora backdrop for marketing hero/CTA sections */
+  .aurora-backdrop {
+    background:
+      radial-gradient(42rem 28rem at 18% 12%, hsl(var(--aurora-violet) / 0.22), transparent 68%),
+      radial-gradient(38rem 26rem at 82% 6%, hsl(var(--aurora-fuchsia) / 0.16), transparent 66%),
+      radial-gradient(30rem 22rem at 62% 88%, hsl(var(--aurora-amber) / 0.1), transparent 70%);
+  }
+
+  /* Film-grain overlay to keep large gradients from banding */
+  .grain::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.5;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0.06 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* Dot-grid texture for section backgrounds */
+  .dot-grid {
+    background-image: radial-gradient(hsl(var(--foreground) / 0.07) 1px, transparent 1px);
+    background-size: 22px 22px;
   }
 
   /* Surface layers */

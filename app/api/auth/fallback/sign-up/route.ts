@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
   }
 
   const identifier = getClientIdentifier(request)
-  if (!authLimiter.check(identifier)) {
+  if (!(await Promise.resolve(authLimiter.check(identifier)))) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 })
   }
 

@@ -516,7 +516,7 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey) {
                       e.preventDefault()
-                      handleEdit()
+                      void handleEdit()
                     }
                     if (e.key === "Escape") {
                       handleCancelEdit()

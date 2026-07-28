@@ -76,6 +76,11 @@ Ordered by risk. Items marked [config] are environment/dashboard work; [content]
 6. **[config] Sentry (`SENTRY_DSN`, `SENTRY_ORG`, `SENTRY_PROJECT`, `SENTRY_AUTH_TOKEN`)** — without all four, production errors are minified and effectively invisible.
 7. **[config] `OPENAI_API_KEY` + Cloudinary vars** — voice transcription and image generation are hidden in the composer when unconfigured (via `/api/ai/capabilities`); set these only when you want those features live.
 8. **[config] `NEXT_PUBLIC_ENABLE_CREATOR_PAYMENTS`** — keep **off** (default) until a payout mechanism (e.g. Stripe Connect) exists; the app can collect tips/subscriptions for creators but has no way to pay them out.
+9. **[config] Clerk abuse controls** — every free account gets 50 Claude messages a month, so bot signups cost real money. In the Clerk **production** instance (not the dev instance), require email verification and enable bot protection before opening signups. Set an Anthropic console spend alert at the same time.
+10. **[dashboard] Anthropic spend alert** — set a monthly budget alert in the Anthropic console. The free-tier cap limits per-user spend, but total spend scales with signups and has no application-side ceiling.
+11. **[human] Legal + support** — have a person review `/privacy` and `/terms` before public launch, and make `support@infinistar.app` a real monitored inbox (it is linked from the auth pages and footer). Configure the Postmark sender domain with SPF/DKIM so transactional email lands.
+12. **[policy] Ads** — nothing to do at launch: there is no ad integration in the codebase, despite what older notes claimed. If you add one later, check the network's policy against the NSFW/age-gating settings first — serving ads alongside adult-capable user content is an easy account suspension.
+13. **[config] Keep the secondary monetization paths off** — `NEXT_PUBLIC_ENABLE_AFFILIATE_LINKS` and `NEXT_PUBLIC_ENABLE_CREATOR_PAYMENTS` both default to off and are enforced server-side. Launch on PRO subscriptions alone; turn the others on deliberately, and creator payments only once payouts exist.
 
 **Edge runtime constraint:** `middleware.ts` runs on the Edge runtime. Never import modules that pull in Prisma, `pg`, `bcryptjs`, or `node:crypto` into the middleware graph — Vercel deployments fail silently in the "Deploying outputs" phase when the Edge bundle contains Node-only modules (this broke all deployments from March–June 2026). Edge-safe flags live in `app/lib/auth-constants.ts`.
 
@@ -103,6 +108,7 @@ Both require `Authorization: Bearer <CRON_SECRET>`.
 - Set `NEXT_PUBLIC_CLERK_PROXY_URL=/api/clerk-proxy` and keep the `/api/clerk-proxy/*` route reachable on the app origin
 - Configure OAuth providers in Clerk if needed
 - Point the Clerk webhook to `/api/webhooks/clerk`
+- Leave `ENABLE_FALLBACK_AUTH` **unset**. The fallback password/cookie auth path is an outage hedge, off by default and enforced server-side on every fallback route. Enabling it in normal operation adds a second credential store for no benefit; if you ever need it during a Clerk outage, set `REDIS_URL` first so sessions and rate limits are shared across instances, and unset it once Clerk recovers.
 
 ### Stripe
 

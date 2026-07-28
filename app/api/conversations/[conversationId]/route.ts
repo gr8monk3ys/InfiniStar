@@ -52,13 +52,18 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
       },
     })
 
-    existingConversation.users.forEach((user: { id: string }) => {
-      pusherServer.trigger(
-        getPusherUserChannel(user.id),
-        "conversation:remove",
-        existingConversation
+    // forEach cannot await, so these triggers used to be fired and dropped:
+    // a Pusher failure surfaced as an unhandled rejection instead of a log, and
+    // the response could return before any event was delivered.
+    await Promise.all(
+      existingConversation.users.map((user: { id: string }) =>
+        pusherServer.trigger(
+          getPusherUserChannel(user.id),
+          "conversation:remove",
+          existingConversation
+        )
       )
-    })
+    )
 
     return NextResponse.json(deletedConversation)
   } catch (error) {

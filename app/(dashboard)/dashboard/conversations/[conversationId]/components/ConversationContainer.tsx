@@ -102,7 +102,7 @@ const ConversationContainer: React.FC<ConversationContainerProps> = ({
         toast.error("Already regenerating a response")
         return
       }
-      regenerate(messageId)
+      void regenerate(messageId)
     },
     [regenerate, isRegenerating]
   )
