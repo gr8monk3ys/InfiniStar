@@ -215,10 +215,11 @@ export function useSuggestions(options: UseSuggestionsOptions): UseSuggestionsRe
 
       // Debounce for continue/rephrase with partial input
       if (type === "continue" || type === "rephrase") {
-        return new Promise((resolve) => {
-          debounceTimerRef.current = setTimeout(async () => {
-            await fetchSuggestionsCore(type, partialInput)
-            resolve()
+        return new Promise((resolve, reject) => {
+          debounceTimerRef.current = setTimeout(() => {
+            // setTimeout wants a void callback; settle the outer promise from
+            // the async work rather than letting it float.
+            void fetchSuggestionsCore(type, partialInput).then(resolve, reject)
           }, debounceMs)
         })
       }
@@ -266,7 +267,7 @@ export function useSuggestions(options: UseSuggestionsOptions): UseSuggestionsRe
       if (lastAiMessageIdRef.current !== null) {
         // Small delay to ensure the message is rendered
         setTimeout(() => {
-          fetchSuggestionsCore("reply")
+          void fetchSuggestionsCore("reply")
         }, 100)
       }
     }

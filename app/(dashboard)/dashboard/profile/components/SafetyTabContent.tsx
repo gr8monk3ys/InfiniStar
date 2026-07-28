@@ -25,7 +25,7 @@ export function SafetyTabContent() {
   }, [])
 
   useEffect(() => {
-    fetchSafetyPreferences()
+    void fetchSafetyPreferences()
   }, [fetchSafetyPreferences])
 
   const handleSafetySubmit = async (e: React.FormEvent) => {

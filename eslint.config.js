@@ -48,6 +48,40 @@ module.exports = [
       "@typescript-eslint": tseslint.plugin,
     },
   },
+  // Type-aware linting for application source. These rules need real type
+  // information, so they are scoped to the app/config/prisma sources that
+  // tsconfig covers rather than every file in the repo.
+  //
+  // no-misused-promises is the rule that would have caught the rate-limiting
+  // outage: `if (!limiter.check(id))` compiled fine, but once the limiter was
+  // Redis-backed `check()` returned a Promise, which is always truthy, so the
+  // check silently passed on every request.
+  {
+    files: ["app/**/*.{ts,tsx}", "config/**/*.ts", "prisma/**/*.ts"],
+    ignores: ["app/__tests__/**"],
+    languageOptions: {
+      parser: tseslint.parser,
+      parserOptions: {
+        projectService: true,
+        tsconfigRootDir: __dirname,
+      },
+    },
+    plugins: {
+      "@typescript-eslint": tseslint.plugin,
+    },
+    rules: {
+      "@typescript-eslint/no-floating-promises": "error",
+      "@typescript-eslint/no-misused-promises": [
+        "error",
+        {
+          // Promise-returning event handlers (onClick={async () => ...}) are
+          // idiomatic in React and safe; conditionals and void-returning
+          // callbacks are the dangerous cases.
+          checksVoidReturn: { attributes: false },
+        },
+      ],
+    },
+  },
   {
     files: ["**/*.{js,jsx,ts,tsx}"],
     plugins: {

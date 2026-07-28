@@ -96,7 +96,7 @@ const TagManager: React.FC<TagManagerProps> = ({ className }) => {
     (e: React.KeyboardEvent) => {
       if (e.key === "Enter" && formName.trim()) {
         e.preventDefault()
-        handleSubmit()
+        void handleSubmit()
       } else if (e.key === "Escape") {
         resetForm()
       }

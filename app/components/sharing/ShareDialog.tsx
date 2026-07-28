@@ -78,7 +78,7 @@ export function ShareDialog({
 
   useEffect(() => {
     if (isOpen) {
-      fetchShares()
+      void fetchShares()
       setView("list")
       setCreatedShareUrl(null)
       setSettings(defaultSettings)

@@ -31,7 +31,7 @@ export function SecurityTabContent() {
   }, [])
 
   useEffect(() => {
-    checkHasPassword()
+    void checkHasPassword()
   }, [checkHasPassword])
 
   return (

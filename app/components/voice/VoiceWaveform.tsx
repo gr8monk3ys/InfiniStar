@@ -102,7 +102,7 @@ export function VoiceWaveform({
         streamRef.current = null
       }
       if (audioContextRef.current) {
-        audioContextRef.current.close()
+        void audioContextRef.current.close()
         audioContextRef.current = null
       }
       setAudioLevels(Array(barCount).fill(0.15))
@@ -162,7 +162,7 @@ export function VoiceWaveform({
   // Initialize waveform based on mode
   useEffect(() => {
     if (realAudioEnabled) {
-      initializeRealAudio()
+      void initializeRealAudio()
     } else {
       generateSimulatedWaveform()
     }
@@ -177,7 +177,7 @@ export function VoiceWaveform({
         streamRef.current.getTracks().forEach((track) => track.stop())
       }
       if (audioContextRef.current) {
-        audioContextRef.current.close()
+        void audioContextRef.current.close()
       }
     }
   }, [realAudioEnabled, initializeRealAudio, generateSimulatedWaveform])

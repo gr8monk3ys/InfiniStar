@@ -52,7 +52,7 @@ const AiUsageStats = () => {
   }, [period])
 
   useEffect(() => {
-    fetchUsageData()
+    void fetchUsageData()
   }, [fetchUsageData])
 
   if (loading) {

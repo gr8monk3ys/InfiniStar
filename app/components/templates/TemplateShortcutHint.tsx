@@ -42,12 +42,19 @@ export function TemplateShortcutHint({
 
     const shortcut = `/${shortcutMatch[1]}`
 
-    // Debounce search
-    const timeoutId = setTimeout(async () => {
-      const results = await searchByShortcut(shortcut)
-      setSuggestions(results.slice(0, maxSuggestions))
-      setSelectedIndex(0)
-      setIsVisible(results.length > 0)
+    // Debounce search. setTimeout expects a void callback, so the async work is
+    // voided with a rejection handler — a failed lookup should just leave the
+    // hint hidden, not raise an unhandled rejection.
+    const timeoutId = setTimeout(() => {
+      void searchByShortcut(shortcut)
+        .then((results) => {
+          setSuggestions(results.slice(0, maxSuggestions))
+          setSelectedIndex(0)
+          setIsVisible(results.length > 0)
+        })
+        .catch(() => {
+          setIsVisible(false)
+        })
     }, 150)
 
     return () => clearTimeout(timeoutId)
@@ -84,7 +91,7 @@ export function TemplateShortcutHint({
         case "Enter":
         case "Tab":
           e.preventDefault()
-          handleSelectTemplate(suggestions[selectedIndex])
+          void handleSelectTemplate(suggestions[selectedIndex])
           break
         case "Escape":
           e.preventDefault()
@@ -185,14 +192,19 @@ export function InlineShortcutHint({
 
     const shortcut = `/${shortcutMatch[1]}`
 
-    const timeoutId = setTimeout(async () => {
-      const results = await searchByShortcut(shortcut)
-      // Only show if there's an exact match or single result
-      if (results.length === 1 || results.some((t) => t.shortcut === shortcut)) {
-        setSuggestion(results.find((t) => t.shortcut === shortcut) || results[0])
-      } else {
-        setSuggestion(null)
-      }
+    const timeoutId = setTimeout(() => {
+      void searchByShortcut(shortcut)
+        .then((results) => {
+          // Only show if there's an exact match or single result
+          if (results.length === 1 || results.some((t) => t.shortcut === shortcut)) {
+            setSuggestion(results.find((t) => t.shortcut === shortcut) || results[0])
+          } else {
+            setSuggestion(null)
+          }
+        })
+        .catch(() => {
+          setSuggestion(null)
+        })
     }, 200)
 
     return () => clearTimeout(timeoutId)

@@ -116,7 +116,7 @@ export function useMemories(options?: UseMemoriesOptions): UseMemoriesReturn {
   }, [options?.category, options?.includeExpired])
 
   useEffect(() => {
-    fetchMemories()
+    void fetchMemories()
   }, [fetchMemories])
 
   const createMemory = useCallback(

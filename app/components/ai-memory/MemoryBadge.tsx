@@ -48,7 +48,7 @@ const MemoryBadge: React.FC<MemoryBadgeProps> = ({ className, showCount = true, 
       }
     }
 
-    fetchCount()
+    void fetchCount()
   }, [])
 
   // Don't render if loading or no memories

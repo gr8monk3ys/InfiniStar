@@ -12,7 +12,7 @@ interface TwoFactorBackupCodesProps {
 export function TwoFactorBackupCodes({ backupCodes, onDone }: TwoFactorBackupCodesProps) {
   const copyBackupCodes = useCallback(() => {
     const codesText = backupCodes.join("\n")
-    navigator.clipboard.writeText(codesText)
+    void navigator.clipboard.writeText(codesText)
     toast.success("Backup codes copied to clipboard")
   }, [backupCodes])
 

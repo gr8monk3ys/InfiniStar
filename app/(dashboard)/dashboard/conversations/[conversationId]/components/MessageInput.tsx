@@ -45,7 +45,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     // Call the original register onChange
-    registeredProps.onChange(e)
+    void registeredProps.onChange(e)
     // Call the custom onChange if provided
     onInputChange?.(e)
   }

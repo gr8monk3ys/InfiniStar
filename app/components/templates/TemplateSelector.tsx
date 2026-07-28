@@ -47,8 +47,8 @@ export function TemplateSelector({
   // Load data when dropdown opens
   useEffect(() => {
     if (isOpen) {
-      fetchTemplates()
-      fetchPopularTemplates(5)
+      void fetchTemplates()
+      void fetchPopularTemplates(5)
     }
   }, [isOpen, fetchTemplates, fetchPopularTemplates])
 
@@ -193,7 +193,7 @@ export function TemplateSelector({
         isOpen={isManagerOpen}
         onClose={() => setIsManagerOpen(false)}
         onSelectTemplate={(template) => {
-          handleSelectTemplate(template)
+          void handleSelectTemplate(template)
           setIsManagerOpen(false)
         }}
       />

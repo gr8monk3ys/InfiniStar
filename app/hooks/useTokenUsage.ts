@@ -178,7 +178,7 @@ export function useTokenUsage(
     const abortController = new AbortController()
     abortControllerRef.current = abortController
 
-    fetchUsage(abortController.signal)
+    void fetchUsage(abortController.signal)
 
     // Cleanup: abort on unmount or dependency change
     return () => {
@@ -196,7 +196,7 @@ export function useTokenUsage(
     const abortController = new AbortController()
     abortControllerRef.current = abortController
 
-    fetchUsage(abortController.signal)
+    void fetchUsage(abortController.signal)
 
     return () => {
       abortController.abort()

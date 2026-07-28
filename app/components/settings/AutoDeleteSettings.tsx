@@ -111,7 +111,7 @@ export function AutoDeleteSettings() {
       await Promise.all([fetchSettings(), fetchTags()])
       setIsLoading(false)
     }
-    loadData()
+    void loadData()
   }, [fetchSettings, fetchTags])
 
   // Check for changes

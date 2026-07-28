@@ -55,7 +55,7 @@ export function useTags(): UseTagsReturn {
   }, [])
 
   useEffect(() => {
-    fetchTags()
+    void fetchTags()
   }, [fetchTags])
 
   const createTag = useCallback(async (name: string, color: TagColor): Promise<Tag | null> => {

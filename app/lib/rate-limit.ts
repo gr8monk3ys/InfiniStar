@@ -119,23 +119,38 @@ export const csrfLimiter = createRateLimiter("csrf", 30, 60000) // 30 CSRF token
 export const creatorPaymentLimiter = createRateLimiter("creatorPayment", 5, 600000) // 5 requests per 10 minutes
 export const suggestionsLimiter = createRateLimiter("suggestions", 30, 60000) // 30 suggestion requests per minute
 
-// Cleanup old entries every 5 minutes (only relevant for in-memory limiters)
+// Every limiter in the module, so cleanup cannot silently miss one.
+const allLimiters: IRateLimiter[] = [
+  apiLimiter,
+  authLimiter,
+  aiChatLimiter,
+  aiTranscribeLimiter,
+  accountDeletionLimiter,
+  twoFactorLimiter,
+  tagLimiter,
+  memoryLimiter,
+  memoryExtractLimiter,
+  templateLimiter,
+  shareLimiter,
+  shareJoinLimiter,
+  csrfLimiter,
+  creatorPaymentLimiter,
+  suggestionsLimiter,
+]
+
+// Cleanup old entries every 5 minutes (a no-op for Redis limiters, which rely
+// on key TTLs). cleanup() returns a promise under the Redis backend, so each
+// call is explicitly voided with a rejection handler — an unhandled rejection
+// in a timer callback would otherwise crash the process.
 const cleanupInterval = setInterval(() => {
-  apiLimiter.cleanup()
-  authLimiter.cleanup()
-  aiChatLimiter.cleanup()
-  aiTranscribeLimiter.cleanup()
-  accountDeletionLimiter.cleanup()
-  twoFactorLimiter.cleanup()
-  tagLimiter.cleanup()
-  memoryLimiter.cleanup()
-  memoryExtractLimiter.cleanup()
-  templateLimiter.cleanup()
-  shareLimiter.cleanup()
-  shareJoinLimiter.cleanup()
-  csrfLimiter.cleanup()
-  creatorPaymentLimiter.cleanup()
-  suggestionsLimiter.cleanup()
+  for (const limiter of allLimiters) {
+    void Promise.resolve(limiter.cleanup()).catch((error: unknown) => {
+      apiLogger.error(
+        { err: error instanceof Error ? error : new Error(String(error)) },
+        "Rate limiter cleanup failed"
+      )
+    })
+  }
 }, 300000)
 
 cleanupInterval.unref?.()

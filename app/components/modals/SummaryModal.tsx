@@ -66,7 +66,7 @@ const SummaryModal: React.FC<SummaryModalProps> = ({ isOpen, onClose, conversati
 
   useEffect(() => {
     if (isOpen) {
-      fetchSummary()
+      void fetchSummary()
     } else {
       // Reset state when modal closes
       setSummaryData(null)

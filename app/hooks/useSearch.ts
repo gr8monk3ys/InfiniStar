@@ -343,7 +343,7 @@ export function useSearch() {
 
   // Trigger search when debounced query or filters change
   useEffect(() => {
-    performSearch()
+    void performSearch()
   }, [
     performSearch,
     debouncedQuery,
@@ -363,7 +363,7 @@ export function useSearch() {
   useEffect(() => {
     const timer = setTimeout(() => {
       if (state.query.length >= MIN_QUERY_LENGTH && !state.hasSearched) {
-        fetchSuggestions()
+        void fetchSuggestions()
       }
     }, 150)
 

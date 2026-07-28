@@ -48,7 +48,7 @@ export function TwoFactorSettings({ initialEnabled = false, hasPassword }: TwoFa
         // Ignore errors — fall back to initialEnabled prop value
       }
     }
-    fetch2FAStatus()
+    void fetch2FAStatus()
   }, [])
 
   if (step === "idle") {

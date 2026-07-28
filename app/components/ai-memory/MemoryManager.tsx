@@ -174,7 +174,7 @@ const MemoryManager: React.FC<MemoryManagerProps> = ({ className }) => {
     (e: React.KeyboardEvent) => {
       if (e.key === "Enter" && e.ctrlKey && formKey.trim() && formContent.trim()) {
         e.preventDefault()
-        handleSubmit()
+        void handleSubmit()
       } else if (e.key === "Escape") {
         resetForm()
       }

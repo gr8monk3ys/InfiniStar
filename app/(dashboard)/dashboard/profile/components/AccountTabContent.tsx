@@ -47,8 +47,8 @@ export function AccountTabContent() {
   }, [])
 
   useEffect(() => {
-    fetchDeletionStatus()
-    checkHasPassword()
+    void fetchDeletionStatus()
+    void checkHasPassword()
   }, [fetchDeletionStatus, checkHasPassword])
 
   const handleCancelDeletion = async () => {
@@ -180,7 +180,7 @@ export function AccountTabContent() {
           isOpen={isDeleteModalOpen}
           onClose={() => {
             setIsDeleteModalOpen(false)
-            fetchDeletionStatus()
+            void fetchDeletionStatus()
           }}
           hasPassword={hasPassword}
         />

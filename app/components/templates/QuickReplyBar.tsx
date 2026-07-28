@@ -35,10 +35,10 @@ export function QuickReplyBar({
   // Fetch templates on mount
   useEffect(() => {
     if (showType === "popular" || showType === "both") {
-      fetchPopularTemplates(maxTemplates)
+      void fetchPopularTemplates(maxTemplates)
     }
     if (showType === "recent" || showType === "both") {
-      fetchRecentTemplates(maxTemplates)
+      void fetchRecentTemplates(maxTemplates)
     }
   }, [fetchPopularTemplates, fetchRecentTemplates, maxTemplates, showType])
 
@@ -122,7 +122,7 @@ export function QuickReplyChips({
   const { popularTemplates, fetchPopularTemplates, applyTemplate } = useTemplates()
 
   useEffect(() => {
-    fetchPopularTemplates(maxTemplates)
+    void fetchPopularTemplates(maxTemplates)
   }, [fetchPopularTemplates, maxTemplates])
 
   const handleSelectTemplate = useCallback(

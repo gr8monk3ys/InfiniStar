@@ -57,7 +57,7 @@ export function useCsrfToken() {
       }
     }
 
-    fetchToken()
+    void fetchToken()
 
     return () => {
       isMounted = false

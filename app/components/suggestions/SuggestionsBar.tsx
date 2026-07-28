@@ -89,7 +89,10 @@ export function SuggestionsBar({
   // Handle fetch for specific type (can be used for manual type selection)
   const _handleFetchType = useCallback(
     (type: SuggestionType) => {
-      fetchSuggestions(type, type === "continue" || type === "rephrase" ? currentInput : undefined)
+      void fetchSuggestions(
+        type,
+        type === "continue" || type === "rephrase" ? currentInput : undefined
+      )
     },
     [fetchSuggestions, currentInput]
   )

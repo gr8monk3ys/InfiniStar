@@ -20,7 +20,7 @@ export function useRechartsModule() {
   useEffect(() => {
     let isMounted = true
 
-    loadRechartsModule().then((loadedModule) => {
+    void loadRechartsModule().then((loadedModule) => {
       if (isMounted) {
         setRechartsModule(loadedModule)
       }
