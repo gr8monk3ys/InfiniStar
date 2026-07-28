@@ -108,6 +108,7 @@ Both require `Authorization: Bearer <CRON_SECRET>`.
 - Set `NEXT_PUBLIC_CLERK_PROXY_URL=/api/clerk-proxy` and keep the `/api/clerk-proxy/*` route reachable on the app origin
 - Configure OAuth providers in Clerk if needed
 - Point the Clerk webhook to `/api/webhooks/clerk`
+- Leave `ENABLE_FALLBACK_AUTH` **unset**. The fallback password/cookie auth path is an outage hedge, off by default and enforced server-side on every fallback route. Enabling it in normal operation adds a second credential store for no benefit; if you ever need it during a Clerk outage, set `REDIS_URL` first so sessions and rate limits are shared across instances, and unset it once Clerk recovers.
 
 ### Stripe
 
