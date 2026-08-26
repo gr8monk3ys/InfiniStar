@@ -21,3 +21,8 @@ log.txt
 
 # clerk configuration (can include secrets)
 /.clerk/
+
+# Claude Code local state
+.claude/settings.local.json
+.claude/
+.DS_Store

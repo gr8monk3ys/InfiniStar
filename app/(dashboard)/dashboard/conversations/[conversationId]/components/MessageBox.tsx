@@ -9,34 +9,24 @@ import toast from "react-hot-toast"
 import {
   HiArrowPath,
   HiArrowUturnLeft,
-  HiChevronLeft,
-  HiChevronRight,
-  HiEllipsisVertical,
-  HiFaceSmile,
   HiOutlineSquare2Stack,
-  HiPencil,
   HiSpeakerWave,
   HiStopCircle,
-  HiTrash,
 } from "react-icons/hi2"
 
 import { api, ApiError } from "@/app/lib/api-client"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/app/components/ui/alert-dialog"
 import { MarkdownRenderer } from "@/app/components/ui/MarkdownRenderer"
 import Avatar from "@/app/components/Avatar"
 import { type FullMessageType } from "@/app/types"
 
 import ImageModal from "./ImageModal"
+import MessageActionsMenu from "./MessageActionsMenu"
+import MessageDeleteDialog from "./MessageDeleteDialog"
+import MessageEditForm from "./MessageEditForm"
+import MessageReactionPicker from "./MessageReactionPicker"
+import MessageVariantNav from "./MessageVariantNav"
 import ReplyPreview from "./ReplyPreview"
+import { useMessageSpeech } from "./useMessageSpeech"
 
 interface MessageBoxProps {
   data: FullMessageType
@@ -73,17 +63,12 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
   const [isDeleting, setIsDeleting] = useState(false)
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
   const [showReactionPicker, setShowReactionPicker] = useState(false)
-  const [isSpeechSupported, setIsSpeechSupported] = useState(false)
-  const [isSpeaking, setIsSpeaking] = useState(false)
   const [isSwitchingVariant, setIsSwitchingVariant] = useState(false)
   const [localActiveVariant, setLocalActiveVariant] = useState<number | null>(null)
   const [localBodyOverride, setLocalBodyOverride] = useState<string | null>(null)
   const [isForking, setIsForking] = useState(false)
-  const speechUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null)
   const reactionPickerRef = useRef<HTMLDivElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
-
-  const commonEmojis = ["👍", "❤️", "😄", "🎉", "🔥", "👏"]
 
   const isOwn = Boolean(currentUserId && currentUserId === data?.sender?.id)
   const seenList = (data.seen || [])
@@ -316,71 +301,11 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
     }
   }, [csrfToken, data.conversationId, data.id, isAiConversation, isForking, router])
 
-  const stopSpeech = useCallback(() => {
-    if (!isSpeechSupported || typeof window === "undefined") {
-      return
-    }
-
-    window.speechSynthesis.cancel()
-    speechUtteranceRef.current = null
-    setIsSpeaking(false)
-  }, [isSpeechSupported])
-
-  const handleToggleSpeech = useCallback(() => {
-    if (
-      !isSpeechSupported ||
-      !data.isAI ||
-      !displayBody ||
-      isThisRegenerating ||
-      typeof window === "undefined"
-    ) {
-      return
-    }
-
-    if (isSpeaking) {
-      stopSpeech()
-      return
-    }
-
-    const utterance = new SpeechSynthesisUtterance(displayBody)
-    utterance.rate = 1
-    utterance.pitch = 1
-
-    utterance.onend = () => {
-      if (speechUtteranceRef.current === utterance) {
-        speechUtteranceRef.current = null
-        setIsSpeaking(false)
-      }
-    }
-
-    utterance.onerror = () => {
-      if (speechUtteranceRef.current === utterance) {
-        speechUtteranceRef.current = null
-        setIsSpeaking(false)
-        toast.error("Text-to-speech failed")
-      }
-    }
-
-    speechUtteranceRef.current = utterance
-    window.speechSynthesis.cancel()
-    window.speechSynthesis.speak(utterance)
-    setIsSpeaking(true)
-  }, [isSpeechSupported, data.isAI, displayBody, isSpeaking, isThisRegenerating, stopSpeech])
-
-  useEffect(() => {
-    const supported =
-      typeof window !== "undefined" &&
-      "speechSynthesis" in window &&
-      typeof SpeechSynthesisUtterance !== "undefined"
-    setIsSpeechSupported(supported)
-
-    return () => {
-      if (speechUtteranceRef.current && typeof window !== "undefined") {
-        window.speechSynthesis.cancel()
-        speechUtteranceRef.current = null
-      }
-    }
-  }, [])
+  const { isSpeechSupported, isSpeaking, handleToggleSpeech } = useMessageSpeech({
+    isAI: Boolean(data.isAI),
+    text: displayBody,
+    isRegenerating: isThisRegenerating,
+  })
 
   // Dismiss reaction picker and message menu on click-outside or Escape
   useEffect(() => {
@@ -451,18 +376,11 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
 
   return (
     <>
-      <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete message?</AlertDialogTitle>
-            <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteConfirm}>Delete</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <MessageDeleteDialog
+        open={isDeleteConfirmOpen}
+        onOpenChange={setIsDeleteConfirmOpen}
+        onConfirm={handleDeleteConfirm}
+      />
       <div
         className={container}
         role="article"
@@ -505,39 +423,12 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
 
           <div className="relative flex items-start gap-2">
             {isEditing ? (
-              <div className="flex w-full flex-col gap-2">
-                <textarea
-                  value={editedBody}
-                  onChange={(e) => setEditedBody(e.target.value)}
-                  aria-label="Edit message"
-                  className="w-full rounded-lg border border-border bg-background p-2 text-sm text-foreground focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
-                  rows={3}
-                  autoFocus
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault()
-                      void handleEdit()
-                    }
-                    if (e.key === "Escape") {
-                      handleCancelEdit()
-                    }
-                  }}
-                />
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleEdit}
-                    className="rounded-lg bg-primary px-3 py-1 text-sm text-primary-foreground hover:bg-primary/90"
-                  >
-                    Save
-                  </button>
-                  <button
-                    onClick={handleCancelEdit}
-                    className="rounded border border-border px-3 py-1 text-sm text-secondary-foreground hover:bg-accent"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
+              <MessageEditForm
+                value={editedBody}
+                onChange={setEditedBody}
+                onSave={handleEdit}
+                onCancel={handleCancelEdit}
+              />
             ) : (
               <>
                 <div className={message}>
@@ -614,84 +505,21 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
                 )}
 
                 {/* Reaction button */}
-                <div className="relative" ref={reactionPickerRef}>
-                  <button
-                    type="button"
-                    onClick={() => setShowReactionPicker(!showReactionPicker)}
-                    className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
-                    aria-label="Add reaction"
-                    aria-expanded={showReactionPicker}
-                    aria-haspopup="true"
-                  >
-                    <HiFaceSmile size={16} />
-                  </button>
-
-                  {showReactionPicker && (
-                    <div
-                      className="absolute left-0 z-10 mt-1 flex gap-1 rounded-md border border-border bg-popover p-2 shadow-lg"
-                      role="toolbar"
-                      aria-label="Message reactions"
-                    >
-                      {commonEmojis.map((emoji) => (
-                        <button
-                          key={emoji}
-                          type="button"
-                          onClick={() => handleReaction(emoji)}
-                          className="rounded p-1 text-xl hover:bg-accent"
-                          aria-label={`React with ${emoji}`}
-                          title={`React with ${emoji}`}
-                        >
-                          {emoji}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                <MessageReactionPicker
+                  containerRef={reactionPickerRef}
+                  open={showReactionPicker}
+                  onToggle={() => setShowReactionPicker(!showReactionPicker)}
+                  onReact={handleReaction}
+                />
 
                 {/* Regenerate button - only show for AI messages */}
                 {data.isAI && variants.length > 1 && !data.isDeleted && (
-                  <div
-                    className={clsx(
-                      "flex items-center gap-1 rounded-md border border-border bg-background/50 px-1 py-0.5",
-                      (isSwitchingVariant || isThisRegenerating) && "opacity-60"
-                    )}
-                    aria-label="Alternative replies"
-                    title="Alternative replies"
-                  >
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const prevIndex =
-                          safeActiveVariant === 0 ? variants.length - 1 : safeActiveVariant - 1
-                        handleSetVariant(prevIndex).catch(() => {
-                          // handled in function
-                        })
-                      }}
-                      disabled={isSwitchingVariant || isThisRegenerating}
-                      className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-50"
-                      aria-label="Previous reply variant"
-                    >
-                      <HiChevronLeft size={16} />
-                    </button>
-                    <span className="min-w-10 text-center text-[10px] text-muted-foreground">
-                      {safeActiveVariant + 1}/{variants.length}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const nextIndex =
-                          safeActiveVariant === variants.length - 1 ? 0 : safeActiveVariant + 1
-                        handleSetVariant(nextIndex).catch(() => {
-                          // handled in function
-                        })
-                      }}
-                      disabled={isSwitchingVariant || isThisRegenerating}
-                      className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-50"
-                      aria-label="Next reply variant"
-                    >
-                      <HiChevronRight size={16} />
-                    </button>
-                  </div>
+                  <MessageVariantNav
+                    variantCount={variants.length}
+                    activeIndex={safeActiveVariant}
+                    disabled={isSwitchingVariant || isThisRegenerating}
+                    onSetVariant={handleSetVariant}
+                  />
                 )}
 
                 {/* Branch conversation from this point (AI conversations only) */}
@@ -754,39 +582,17 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
 
                 {/* Edit/Delete menu - only show for own messages and not AI messages */}
                 {isOwn && !data.isAI && !data.image && !data.audioUrl && (
-                  <div className="relative" ref={menuRef}>
-                    <button
-                      onClick={() => setShowMenu(!showMenu)}
-                      className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
-                      aria-label="Message options"
-                    >
-                      <HiEllipsisVertical size={16} />
-                    </button>
-
-                    {showMenu && (
-                      <div className="absolute right-0 z-10 mt-1 w-32 rounded-md border border-border bg-popover shadow-lg">
-                        <button
-                          onClick={() => {
-                            setIsEditing(true)
-                            setShowMenu(false)
-                          }}
-                          className="flex w-full items-center gap-2 px-3 py-2 text-sm text-popover-foreground hover:bg-accent"
-                          disabled={isDeleting}
-                        >
-                          <HiPencil size={16} />
-                          Edit
-                        </button>
-                        <button
-                          onClick={handleDelete}
-                          className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-100 dark:hover:bg-red-900/20"
-                          disabled={isDeleting}
-                        >
-                          <HiTrash size={16} />
-                          {isDeleting ? "Deleting..." : "Delete"}
-                        </button>
-                      </div>
-                    )}
-                  </div>
+                  <MessageActionsMenu
+                    containerRef={menuRef}
+                    open={showMenu}
+                    isDeleting={isDeleting}
+                    onToggle={() => setShowMenu(!showMenu)}
+                    onEdit={() => {
+                      setIsEditing(true)
+                      setShowMenu(false)
+                    }}
+                    onDelete={handleDelete}
+                  />
                 )}
               </>
             )}
