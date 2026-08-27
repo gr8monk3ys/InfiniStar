@@ -24,7 +24,6 @@ function getStripe(): Stripe {
     throw new Error("Missing STRIPE_API_KEY or STRIPE_SECRET_KEY environment variable")
   }
   return new Stripe(stripeApiKey, {
-    apiVersion: "2026-01-28.clover",
     typescript: true,
   })
 }
