@@ -172,7 +172,6 @@ Optional higher-signal checks:
 
 ```bash
 bun run test:e2e
-bun run ci:release:gate
 bun run test:e2e:auth
 bun run test:e2e:redirects
 ```

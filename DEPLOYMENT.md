@@ -15,7 +15,6 @@ This project is maintained for deployment on Vercel with Bun, Clerk, Prisma/Post
 Recommended:
 
 - Sentry project and alert rules
-- Scheduled review of runbooks in [`runbooks/`](runbooks/)
 
 ## Required Production Environment
 
@@ -143,7 +142,7 @@ bun run ops:stripe:webhook:verify
 bun run ops:sentry:alerts:audit
 ```
 
-## Release Gate
+## Pre-deploy checks
 
 Run before deploy:
 
@@ -153,7 +152,6 @@ bun run lint
 bun run typecheck
 bun run test --runInBand
 bun run build
-bun run ci:release:gate
 ```
 
 Higher-confidence checks:
@@ -161,7 +159,6 @@ Higher-confidence checks:
 ```bash
 bun run test:e2e
 bun run test:e2e:auth
-bun run test:load:smoke -- --base-url=https://<your-domain>
 ```
 
 ## Post-Deploy Validation
@@ -174,9 +171,6 @@ bun run test:load:smoke -- --base-url=https://<your-domain>
 6. Confirm cron routes are invoked by Vercel
 7. Check Sentry for startup/runtime errors
 
-## Rollback and Incident Response
+## Rollback
 
-- Canary / rollback: [runbooks/CANARY_DEPLOYMENT_ROLLBACK.md](runbooks/CANARY_DEPLOYMENT_ROLLBACK.md)
-- Incident response: [runbooks/INCIDENT_RESPONSE_RUNBOOK.md](runbooks/INCIDENT_RESPONSE_RUNBOOK.md)
-- Secrets rotation: [runbooks/SECRETS_ROTATION_RUNBOOK.md](runbooks/SECRETS_ROTATION_RUNBOOK.md)
-- DB drill: [runbooks/DB_BACKUP_RESTORE_DRILL.md](runbooks/DB_BACKUP_RESTORE_DRILL.md)
+Vercel keeps every deployment; promote the previous one from the dashboard (`vercel rollback`). Database migrations are forward-only — write a new migration rather than reverting one.
