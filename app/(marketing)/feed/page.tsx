@@ -10,6 +10,8 @@ import { cn } from "@/app/lib/utils"
 import { buttonVariants } from "@/app/components/ui/button"
 import getCurrentUser from "@/app/actions/getCurrentUser"
 import { PublicCharacterCard } from "@/app/components/characters/PublicCharacterCard"
+import { EmptySection } from "@/app/components/EmptySection"
+import { RetryButton } from "@/app/components/RetryButton"
 
 export const metadata = {
   title: "Community Feed | InfiniStar",
@@ -77,6 +79,7 @@ export default async function FeedPage() {
   let recommendationSignals = null
   let followingCreatorIds: string[] = []
   let followingRaw: FeedCharacter[] = []
+  let feedError = false
 
   try {
     ;[trendingRaw, freshRaw, creatorRows] = await Promise.all([
@@ -139,6 +142,9 @@ export default async function FeedPage() {
           })
         : []
   } catch (error) {
+    // A failed query is not an empty community. Flag it so the page can say so
+    // instead of rendering "nothing here yet" over what is actually an outage.
+    feedError = true
     console.error("Failed to load feed page data", error)
   }
 
@@ -207,114 +213,214 @@ export default async function FeedPage() {
         </div>
       </div>
 
-      <section>
-        <div className="mb-4 flex items-center gap-2">
-          <HiUserGroup className="size-5 text-primary" />
-          <h2 className="text-xl font-semibold">Top Creators</h2>
-        </div>
-
-        {topCreators.length === 0 ? (
-          <div className="rounded-xl border border-dashed p-8 text-sm text-muted-foreground">
-            No creator data available yet.
-          </div>
-        ) : (
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {topCreators.map((creator) => (
+      {feedError ? (
+        <EmptySection
+          variant="error"
+          title="We couldn't load the feed right now"
+          description={
+            <>
+              The community data didn't come back on this request. That is a fault on our side, not
+              an empty community, so there is nothing here for you to fix. Try again in a moment, or
+              browse the catalog directly while we recover.
+            </>
+          }
+          action={
+            <>
+              <RetryButton />
               <Link
-                key={creator.id}
-                href={`/creators/${creator.id}`}
-                className="group rounded-xl border bg-card p-4 transition-colors hover:border-primary/30 hover:bg-accent/30"
+                href="/explore"
+                className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
               >
-                <div className="flex items-center gap-3">
-                  {creator.image ? (
-                    <div className="relative size-12 overflow-hidden rounded-full border">
-                      <Image
-                        src={creator.image}
-                        alt={creator.name || "Creator"}
-                        fill
-                        sizes="48px"
-                        className="object-cover"
-                      />
-                    </div>
-                  ) : (
-                    <div className="flex size-12 items-center justify-center rounded-full bg-primary/10 text-base font-semibold text-primary">
-                      {(creator.name || "?").slice(0, 1).toUpperCase()}
-                    </div>
-                  )}
-                  <div className="min-w-0">
-                    <p className="truncate font-medium group-hover:text-primary">
-                      {creator.name || "Anonymous Creator"}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {creator.publicCharacterCount} character
-                      {creator.publicCharacterCount !== 1 ? "s" : ""}
-                    </p>
-                  </div>
-                </div>
-                {creator.bio && (
-                  <p className="mt-3 line-clamp-2 text-sm text-muted-foreground">{creator.bio}</p>
-                )}
-                <div className="mt-3 flex gap-4 text-xs text-muted-foreground">
-                  <span>{creator.totalUsageCount.toLocaleString()} chats</span>
-                  <span>{creator.totalLikeCount.toLocaleString()} likes</span>
-                </div>
+                Browse Explore instead
               </Link>
-            ))}
-          </div>
-        )}
-      </section>
+            </>
+          }
+        />
+      ) : (
+        <>
+          <section>
+            <div className="mb-4 flex items-center gap-2">
+              <HiUserGroup className="size-5 text-primary" />
+              <h2 className="text-xl font-semibold">Top Creators</h2>
+            </div>
 
-      {currentUser?.id && (
-        <section>
-          <div className="mb-4 flex items-center gap-2">
-            <HiUserGroup className="size-5 text-primary" />
-            <h2 className="text-xl font-semibold">From Creators You Follow</h2>
-          </div>
-          {followingCreatorIds.length === 0 ? (
-            <div className="rounded-xl border border-dashed p-8 text-sm text-muted-foreground">
-              Follow a few creators to see their newest characters here. Start with{" "}
-              <Link href="/explore" className="text-primary underline-offset-4 hover:underline">
-                Explore
-              </Link>
-              .
-            </div>
-          ) : followingCharacters.length === 0 ? (
-            <div className="rounded-xl border border-dashed p-8 text-sm text-muted-foreground">
-              No public characters from creators you follow yet.
-            </div>
-          ) : (
-            <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-              {followingCharacters.map((character) => (
-                <PublicCharacterCard key={character.id} character={character} />
-              ))}
-            </div>
+            {topCreators.length === 0 ? (
+              <EmptySection
+                icon={HiUserGroup}
+                title="No creators to rank yet"
+                description="Creators land on this list once they publish a public character. Publish one and you put yourself here, at the top of an empty board."
+                action={
+                  <Link
+                    href="/dashboard/characters/new"
+                    className={cn(buttonVariants({ size: "sm" }))}
+                  >
+                    Create a character
+                  </Link>
+                }
+              />
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {topCreators.map((creator) => (
+                  <Link
+                    key={creator.id}
+                    href={`/creators/${creator.id}`}
+                    className="group rounded-xl border bg-card p-4 transition-colors hover:border-primary/30 hover:bg-accent/30"
+                  >
+                    <div className="flex items-center gap-3">
+                      {creator.image ? (
+                        <div className="relative size-12 overflow-hidden rounded-full border">
+                          <Image
+                            src={creator.image}
+                            alt={creator.name || "Creator"}
+                            fill
+                            sizes="48px"
+                            className="object-cover"
+                          />
+                        </div>
+                      ) : (
+                        <div className="flex size-12 items-center justify-center rounded-full bg-primary/10 text-base font-semibold text-primary">
+                          {(creator.name || "?").slice(0, 1).toUpperCase()}
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <p className="truncate font-medium group-hover:text-primary">
+                          {creator.name || "Anonymous Creator"}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {creator.publicCharacterCount} character
+                          {creator.publicCharacterCount !== 1 ? "s" : ""}
+                        </p>
+                      </div>
+                    </div>
+                    {creator.bio && (
+                      <p className="mt-3 line-clamp-2 text-sm text-muted-foreground">
+                        {creator.bio}
+                      </p>
+                    )}
+                    <div className="mt-3 flex gap-4 text-xs text-muted-foreground">
+                      <span>{creator.totalUsageCount.toLocaleString()} chats</span>
+                      <span>{creator.totalLikeCount.toLocaleString()} likes</span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </section>
+
+          {currentUser?.id && (
+            <section>
+              <div className="mb-4 flex items-center gap-2">
+                <HiUserGroup className="size-5 text-primary" />
+                <h2 className="text-xl font-semibold">From Creators You Follow</h2>
+              </div>
+              {followingCreatorIds.length === 0 ? (
+                <EmptySection
+                  icon={HiUserGroup}
+                  title="You aren't following anyone yet"
+                  description="Follow a creator and their newest public characters show up here before they reach anyone's Trending. Explore is the fastest place to find the first few."
+                  action={
+                    <Link href="/explore" className={cn(buttonVariants({ size: "sm" }))}>
+                      Find creators to follow
+                    </Link>
+                  }
+                />
+              ) : followingCharacters.length === 0 ? (
+                <EmptySection
+                  icon={HiUserGroup}
+                  title="Nothing new from the creators you follow"
+                  description="The creators you follow haven't published a public character yet. Widen the net, or check back once they ship something."
+                  action={
+                    <Link
+                      href="/explore"
+                      className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+                    >
+                      Follow a few more creators
+                    </Link>
+                  }
+                />
+              ) : (
+                <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+                  {followingCharacters.map((character) => (
+                    <PublicCharacterCard key={character.id} character={character} />
+                  ))}
+                </div>
+              )}
+            </section>
           )}
-        </section>
+
+          <section>
+            <div className="mb-4 flex items-center gap-2">
+              <HiArrowTrendingUp className="size-5 text-orange-500" />
+              <h2 className="text-xl font-semibold">Trending Right Now</h2>
+            </div>
+            {trendingCharacters.length === 0 ? (
+              <EmptySection
+                icon={HiArrowTrendingUp}
+                title="Nothing is trending yet"
+                description="Trending ranks characters by how much the community actually chats with them, and no character has enough conversations behind it yet. The first one that catches on shows up here."
+                action={
+                  <>
+                    <Link
+                      href="/dashboard/characters/new"
+                      className={cn(buttonVariants({ size: "sm" }))}
+                    >
+                      Create a character
+                    </Link>
+                    <Link
+                      href="/explore"
+                      className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+                    >
+                      Browse the catalog
+                    </Link>
+                  </>
+                }
+              />
+            ) : (
+              <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+                {trendingCharacters.map((character) => (
+                  <PublicCharacterCard key={character.id} character={character} />
+                ))}
+              </div>
+            )}
+          </section>
+
+          <section>
+            <div className="mb-4 flex items-center gap-2">
+              <HiSparkles className="size-5 text-emerald-500" />
+              <h2 className="text-xl font-semibold">Fresh Characters</h2>
+            </div>
+            {freshCharacters.length === 0 ? (
+              <EmptySection
+                icon={HiSparkles}
+                title="No characters have been published yet"
+                description="Fresh shows the most recently published public characters, newest first. Nobody has published one yet, so the next character created lands at the top of this section on its own."
+                action={
+                  <>
+                    <Link
+                      href="/dashboard/characters/new"
+                      className={cn(buttonVariants({ size: "sm" }))}
+                    >
+                      Publish the first character
+                    </Link>
+                    <Link
+                      href="/explore"
+                      className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+                    >
+                      See how Explore works
+                    </Link>
+                  </>
+                }
+              />
+            ) : (
+              <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+                {freshCharacters.map((character) => (
+                  <PublicCharacterCard key={character.id} character={character} />
+                ))}
+              </div>
+            )}
+          </section>
+        </>
       )}
-
-      <section>
-        <div className="mb-4 flex items-center gap-2">
-          <HiArrowTrendingUp className="size-5 text-orange-500" />
-          <h2 className="text-xl font-semibold">Trending Right Now</h2>
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-          {trendingCharacters.map((character) => (
-            <PublicCharacterCard key={character.id} character={character} />
-          ))}
-        </div>
-      </section>
-
-      <section>
-        <div className="mb-4 flex items-center gap-2">
-          <HiSparkles className="size-5 text-emerald-500" />
-          <h2 className="text-xl font-semibold">Fresh Characters</h2>
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-          {freshCharacters.map((character) => (
-            <PublicCharacterCard key={character.id} character={character} />
-          ))}
-        </div>
-      </section>
     </section>
   )
 }

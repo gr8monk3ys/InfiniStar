@@ -1,8 +1,14 @@
+import Link from "next/link"
+
 import { CHARACTER_SELECT } from "@/app/lib/character-select"
 import { canAccessNsfw } from "@/app/lib/nsfw"
 import prisma from "@/app/lib/prismadb"
 import { getRecommendationSignalsForUser, rankCharactersForUser } from "@/app/lib/recommendations"
+import { cn } from "@/app/lib/utils"
+import { buttonVariants } from "@/app/components/ui/button"
 import getCurrentUser from "@/app/actions/getCurrentUser"
+import { EmptySection } from "@/app/components/EmptySection"
+import { RetryButton } from "@/app/components/RetryButton"
 
 import ExploreClient from "./ExploreClient"
 
@@ -63,6 +69,7 @@ export default async function ExplorePage({ searchParams }: ExplorePageProps) {
   let allRaw: ExploreCharacter[] = []
   let likedRecords: Array<{ characterId: string }> = []
   let recommendationSignals = null
+  let catalogError = false
 
   try {
     ;[featuredRaw, trendingRaw, allRaw, likedRecords] = await Promise.all([
@@ -96,6 +103,8 @@ export default async function ExplorePage({ searchParams }: ExplorePageProps) {
       ? await getRecommendationSignalsForUser(currentUser.id)
       : null
   } catch (error) {
+    // Same rule as the feed: a failed query must not render as an empty catalog.
+    catalogError = true
     console.error("Failed to load explore page data", error)
   }
 
@@ -114,6 +123,26 @@ export default async function ExplorePage({ searchParams }: ExplorePageProps) {
   const likedIds = likedRecords.map((r: { characterId: string }) => r.characterId)
   const initialCategory = getFirstSearchParam(resolvedSearchParams.category)
   const initialSearchQuery = getFirstSearchParam(resolvedSearchParams.q)
+
+  if (catalogError) {
+    return (
+      <section className="container py-8 md:py-12 lg:py-16">
+        <EmptySection
+          variant="error"
+          title="We couldn't load the catalog right now"
+          description="The character catalog didn't come back on this request. This is a fault on our side, not an empty marketplace, so there is nothing for you to fix. Try again in a moment."
+          action={
+            <>
+              <RetryButton />
+              <Link href="/feed" className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
+                Visit the creator feed
+              </Link>
+            </>
+          }
+        />
+      </section>
+    )
+  }
 
   return (
     <section className="container py-8 md:py-12 lg:py-16">
