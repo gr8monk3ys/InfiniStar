@@ -92,7 +92,13 @@ export function createRateLimiter(name: string, limit: number, windowMs: number)
     }
 
     const store = new RedisStore(redis, {
-      prefix: `ratelimit:${name}:`,
+      // v2 because the key format changed shape, not just contents: until this
+      // commit `ratelimit:<name>:<id>` held a ZSET (sliding window). INCR on a
+      // surviving one of those returns WRONGTYPE, which RedisStore treats as an
+      // outage and fails open — so reusing the prefix would disable rate
+      // limiting for exactly the identifiers currently being limited, for as
+      // long as the old TTL runs (5 min for auth, 60 min for accountDeletion).
+      prefix: `ratelimit:v2:${name}:`,
       // Redis being unreachable must not block legitimate traffic.
       onError: "open",
       onErrorLog: (error: unknown) => {

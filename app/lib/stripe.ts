@@ -11,7 +11,6 @@ export {
   stripe,
   getStripe,
   isStripeConfigured,
-  getStripeMode,
   constructWebhookEvent,
   createCheckoutSession,
   createBillingPortalSession,
