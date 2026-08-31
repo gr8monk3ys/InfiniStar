@@ -7,6 +7,7 @@
       "dependencies": {
         "@anthropic-ai/sdk": "^0.72.1",
         "@clerk/nextjs": "^6.37.3",
+        "@gr8monk3ys/next-kit": "https://github.com/gr8monk3ys/next-kit/archive/refs/tags/v0.1.0.tar.gz",
         "@headlessui/react": "^2.2.9",
         "@hookform/resolvers": "^5.2.2",
         "@neondatabase/serverless": "^0.10.4",
@@ -300,6 +301,8 @@
     "@floating-ui/react-dom": ["@floating-ui/react-dom@2.1.6", "", { "dependencies": { "@floating-ui/dom": "^1.7.4" }, "peerDependencies": { "react": ">=16.8.0", "react-dom": ">=16.8.0" } }, "sha512-4JX6rEatQEvlmgU80wZyq9RT96HZJa88q8hp0pBd+LrczeDI4o6uA2M+uvxngVHo4Ihr8uibXxH6+70zhAFrVw=="],
 
     "@floating-ui/utils": ["@floating-ui/utils@0.2.10", "", {}, "sha512-aGTxbpbg8/b5JfU1HXSrbH3wXZuLPJcNEcZQFMxLs3oSzgtVu6nFPkbbGGUvBcUjKV2YyB9Wxxabo+HEH9tcRQ=="],
+
+    "@gr8monk3ys/next-kit": ["@gr8monk3ys/next-kit@https://github.com/gr8monk3ys/next-kit/archive/refs/tags/v0.1.0.tar.gz", { "peerDependencies": { "@clerk/nextjs": ">=6", "next": ">=14", "stripe": ">=17" }, "optionalPeers": ["@clerk/nextjs", "next", "stripe"] }, "sha512-SfnHjiL1RQ/5EU9Q73gIPN7MZLyFCPAd69TaekXsMZOvTJKC70yRG7QQmYPI4+u4aobi+V7w6WGAq2kjlr+1/Q=="],
 
     "@happy-dom/global-registrator": ["@happy-dom/global-registrator@20.7.0", "", { "dependencies": { "@types/node": ">=20.0.0", "happy-dom": "^20.7.0" } }, "sha512-JdsfSUVeWDP8klYL4y4C4Fae0nAv2V/2W+gHhdiuktyKGZvbSZfJpsk4loakPhTtxt91KHdDroXCCZcFIJrfYQ=="],
 

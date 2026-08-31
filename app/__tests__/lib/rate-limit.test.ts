@@ -5,6 +5,9 @@
  *
  * Tests the actual rate-limit module exports: InMemoryRateLimiter, createRateLimiter,
  * the pre-built limiter instances, and getClientIdentifier.
+ *
+ * `check`, `reset` and `cleanup` are async on both backends since the module
+ * moved onto @gr8monk3ys/next-kit, so every assertion here awaits.
  */
 import { NextRequest } from "next/server"
 
@@ -60,123 +63,123 @@ describe("getClientIdentifier", () => {
     expect(getClientIdentifier(req)).toBe("5.5.5.5")
   })
 
-  it('returns "unknown" when no IP headers are present', () => {
+  it('returns the shared "anonymous" bucket when no IP headers are present', () => {
     const req = new NextRequest("http://localhost/api/test")
-    expect(getClientIdentifier(req)).toBe("unknown")
+    expect(getClientIdentifier(req)).toBe("anonymous")
   })
 })
 
 describe("InMemoryRateLimiter (direct)", () => {
-  it("allows requests under the limit", () => {
+  it("allows requests under the limit", async () => {
     const limiter = new InMemoryRateLimiter(3, 60_000)
     const id = `allow-${Date.now()}`
-    expect(limiter.check(id)).toBe(true)
-    expect(limiter.check(id)).toBe(true)
-    expect(limiter.check(id)).toBe(true)
+    expect(await limiter.check(id)).toBe(true)
+    expect(await limiter.check(id)).toBe(true)
+    expect(await limiter.check(id)).toBe(true)
   })
 
-  it("blocks requests over the limit", () => {
+  it("blocks requests over the limit", async () => {
     const limiter = new InMemoryRateLimiter(3, 60_000)
     const id = `block-${Date.now()}`
-    limiter.check(id)
-    limiter.check(id)
-    limiter.check(id)
-    expect(limiter.check(id)).toBe(false)
+    await limiter.check(id)
+    await limiter.check(id)
+    await limiter.check(id)
+    expect(await limiter.check(id)).toBe(false)
   })
 
-  it("tracks different identifiers independently", () => {
+  it("tracks different identifiers independently", async () => {
     const limiter = new InMemoryRateLimiter(2, 60_000)
     const id1 = `user-a-${Date.now()}`
     const id2 = `user-b-${Date.now()}`
 
-    limiter.check(id1)
-    limiter.check(id1)
-    expect(limiter.check(id1)).toBe(false)
+    await limiter.check(id1)
+    await limiter.check(id1)
+    expect(await limiter.check(id1)).toBe(false)
 
     // id2 should still have its full quota
-    expect(limiter.check(id2)).toBe(true)
+    expect(await limiter.check(id2)).toBe(true)
   })
 
   it("allows requests again after the window expires", async () => {
     const limiter = new InMemoryRateLimiter(2, 100) // 100ms window
     const id = `expire-${Date.now()}`
 
-    limiter.check(id)
-    limiter.check(id)
-    expect(limiter.check(id)).toBe(false)
+    await limiter.check(id)
+    await limiter.check(id)
+    expect(await limiter.check(id)).toBe(false)
 
     await new Promise((resolve) => setTimeout(resolve, 150))
 
-    expect(limiter.check(id)).toBe(true)
+    expect(await limiter.check(id)).toBe(true)
   })
 
-  it("resets the count for a specific identifier", () => {
+  it("resets the count for a specific identifier", async () => {
     const limiter = new InMemoryRateLimiter(2, 60_000)
     const id = `reset-${Date.now()}`
 
-    limiter.check(id)
-    limiter.check(id)
-    expect(limiter.check(id)).toBe(false)
+    await limiter.check(id)
+    await limiter.check(id)
+    expect(await limiter.check(id)).toBe(false)
 
-    limiter.reset(id)
+    await limiter.reset(id)
 
-    expect(limiter.check(id)).toBe(true)
+    expect(await limiter.check(id)).toBe(true)
   })
 
-  it("reset does not throw for unknown identifiers", () => {
+  it("reset does not throw for unknown identifiers", async () => {
     const limiter = new InMemoryRateLimiter(5, 60_000)
-    expect(() => limiter.reset("nonexistent-id")).not.toThrow()
+    await expect(limiter.reset("nonexistent-id")).resolves.toBeUndefined()
   })
 
   it("cleanup removes expired entries", async () => {
     const limiter = new InMemoryRateLimiter(2, 50) // 50ms window
     const id = `cleanup-${Date.now()}`
 
-    limiter.check(id)
+    await limiter.check(id)
     await new Promise((resolve) => setTimeout(resolve, 100))
 
-    limiter.cleanup()
+    await limiter.cleanup()
 
     // After cleanup, both slots should be available again
-    expect(limiter.check(id)).toBe(true)
-    expect(limiter.check(id)).toBe(true)
-    expect(limiter.check(id)).toBe(false)
+    expect(await limiter.check(id)).toBe(true)
+    expect(await limiter.check(id)).toBe(true)
+    expect(await limiter.check(id)).toBe(false)
   })
 
-  it("cleanup does not throw on empty state", () => {
+  it("cleanup does not throw on empty state", async () => {
     const limiter = new InMemoryRateLimiter(5, 60_000)
-    expect(() => limiter.cleanup()).not.toThrow()
+    await expect(limiter.cleanup()).resolves.toBeUndefined()
   })
 })
 
 describe("createRateLimiter (factory)", () => {
-  it("creates an in-memory limiter with specified max and window (Redis mocked as null)", () => {
+  it("creates an in-memory limiter with specified max and window (Redis mocked as null)", async () => {
     const limiter = createRateLimiter("test-limiter", 3, 60_000)
     const id = `factory-${Date.now()}`
-    expect(limiter.check(id)).toBe(true)
-    expect(limiter.check(id)).toBe(true)
-    expect(limiter.check(id)).toBe(true)
-    expect(limiter.check(id)).toBe(false)
+    expect(await limiter.check(id)).toBe(true)
+    expect(await limiter.check(id)).toBe(true)
+    expect(await limiter.check(id)).toBe(true)
+    expect(await limiter.check(id)).toBe(false)
   })
 })
 
 describe("pre-built limiter instances", () => {
-  it("apiLimiter allows a new unique identifier", () => {
+  it("apiLimiter allows a new unique identifier", async () => {
     const id = `api-${Date.now()}-${Math.random()}`
-    expect(apiLimiter.check(id)).toBe(true)
+    expect(await apiLimiter.check(id)).toBe(true)
   })
 
-  it("authLimiter has a stricter limit — blocks after 5 requests", () => {
+  it("authLimiter has a stricter limit — blocks after 5 requests", async () => {
     const id = `auth-${Date.now()}-${Math.random()}`
     for (let i = 0; i < 5; i++) {
-      authLimiter.check(id)
+      await authLimiter.check(id)
     }
-    expect(authLimiter.check(id)).toBe(false)
+    expect(await authLimiter.check(id)).toBe(false)
   })
 
-  it("aiChatLimiter allows a new unique identifier", () => {
+  it("aiChatLimiter allows a new unique identifier", async () => {
     const id = `ai-${Date.now()}-${Math.random()}`
-    expect(aiChatLimiter.check(id)).toBe(true)
+    expect(await aiChatLimiter.check(id)).toBe(true)
   })
 })
 
