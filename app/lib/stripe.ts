@@ -1,41 +1,17 @@
-import Stripe from "stripe"
-
-function normalizeSecret(value: string | undefined): string | undefined {
-  if (!value) {
-    return undefined
-  }
-
-  const trimmed = value.trim()
-  if (
-    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
-    (trimmed.startsWith("'") && trimmed.endsWith("'"))
-  ) {
-    return trimmed.slice(1, -1)
-  }
-
-  return trimmed
-}
-
-const stripeApiKey =
-  normalizeSecret(process.env.STRIPE_API_KEY) ?? normalizeSecret(process.env.STRIPE_SECRET_KEY)
-
-function getStripe(): Stripe {
-  if (!stripeApiKey) {
-    throw new Error("Missing STRIPE_API_KEY or STRIPE_SECRET_KEY environment variable")
-  }
-  return new Stripe(stripeApiKey, {
-    typescript: true,
-  })
-}
-
-let _stripe: Stripe | undefined
-
-export const stripe = new Proxy({} as Stripe, {
-  get(_target, prop, receiver) {
-    if (!_stripe) {
-      _stripe = getStripe()
-    }
-    const value = Reflect.get(_stripe, prop, receiver)
-    return typeof value === "function" ? value.bind(_stripe) : value
-  },
-})
+/**
+ * Stripe client.
+ *
+ * The lazily-constructed singleton from `@gr8monk3ys/next-kit/stripe`: property
+ * access builds it on first use, so importing this module never touches the
+ * secret and `next build` does not need one. The key is read from
+ * STRIPE_API_KEY (this app's variable) or STRIPE_SECRET_KEY, with wrapping
+ * quotes stripped.
+ */
+export {
+  stripe,
+  getStripe,
+  isStripeConfigured,
+  constructWebhookEvent,
+  createCheckoutSession,
+  createBillingPortalSession,
+} from "@gr8monk3ys/next-kit/stripe"

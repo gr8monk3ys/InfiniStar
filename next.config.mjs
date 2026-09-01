@@ -187,6 +187,9 @@ function buildSecurityHeaders() {
 const nextConfig = {
   output: "standalone",
   reactStrictMode: true,
+  // The kit's `import` condition points at its TypeScript source, so Next has
+  // to compile it like first-party code.
+  transpilePackages: ["@gr8monk3ys/next-kit"],
   outputFileTracingRoot: __dirname,
   turbopack: {
     root: __dirname,

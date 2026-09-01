@@ -1,18 +1,54 @@
 import { NextResponse, type NextRequest } from "next/server"
+import {
+  createRateLimiter as createKitRateLimiter,
+  getClientId,
+  MemoryStore,
+  RedisStore,
+  type RateLimiter,
+  type RateLimitStore,
+} from "@gr8monk3ys/next-kit/rate-limit"
 
 import { apiLogger } from "@/app/lib/logger"
 import { getRedisClient } from "@/app/lib/redis"
-import { RedisRateLimiter } from "@/app/lib/redis-rate-limiter"
 
 /**
  * Rate Limiter Interface
  *
- * Implement this interface to create custom rate limiters (e.g., Redis-based)
+ * The window accounting and the stores come from `@gr8monk3ys/next-kit`; this
+ * module owns the per-endpoint limits, the singletons the API routes import,
+ * and this interface.
+ *
+ * `check` is async on both backends. Every call site already writes
+ * `await Promise.resolve(limiter.check(id))`, so nothing needed changing.
  */
 export interface IRateLimiter {
-  check(identifier: string): boolean | Promise<boolean>
-  reset(identifier: string): void | Promise<void>
-  cleanup(): void | Promise<void>
+  check(identifier: string): Promise<boolean>
+  reset(identifier: string): Promise<void>
+  cleanup(): Promise<void>
+}
+
+/**
+ * Adapts a kit limiter — which reports `{ ok, remaining, resetAt }` — to the
+ * boolean this app's routes expect.
+ */
+class KitRateLimiter implements IRateLimiter {
+  constructor(private readonly limiter: RateLimiter) {}
+
+  async check(identifier: string): Promise<boolean> {
+    return (await this.limiter.check(identifier)).ok
+  }
+
+  async reset(identifier: string): Promise<void> {
+    await this.limiter.reset(identifier)
+  }
+
+  async cleanup(): Promise<void> {
+    await this.limiter.cleanup()
+  }
+}
+
+function build(store: RateLimitStore, limit: number, windowMs: number): RateLimiter {
+  return createKitRateLimiter({ store, limit, windowMs })
 }
 
 /**
@@ -23,53 +59,13 @@ export interface IRateLimiter {
  * Limitations for production:
  * - Does not persist across server restarts
  * - Does not work correctly with multiple server instances (horizontal scaling)
- * - Memory usage grows with number of unique identifiers
  *
  * This class is used as the fallback when Redis is not available.
- * When REDIS_URL is configured, RedisRateLimiter is used instead.
+ * When REDIS_URL is configured, a Redis-backed store is used instead.
  */
-export class InMemoryRateLimiter implements IRateLimiter {
-  private requests: Map<string, number[]> = new Map()
-  private limit: number
-  private windowMs: number
-
+export class InMemoryRateLimiter extends KitRateLimiter {
   constructor(limit: number = 10, windowMs: number = 60000) {
-    this.limit = limit
-    this.windowMs = windowMs
-  }
-
-  check(identifier: string): boolean {
-    const now = Date.now()
-    const requestTimestamps = this.requests.get(identifier) || []
-
-    // Remove old timestamps outside the window
-    const validTimestamps = requestTimestamps.filter((timestamp) => now - timestamp < this.windowMs)
-
-    if (validTimestamps.length >= this.limit) {
-      return false // Rate limit exceeded
-    }
-
-    // Add current timestamp
-    validTimestamps.push(now)
-    this.requests.set(identifier, validTimestamps)
-
-    return true
-  }
-
-  reset(identifier: string): void {
-    this.requests.delete(identifier)
-  }
-
-  cleanup(): void {
-    const now = Date.now()
-    for (const [identifier, timestamps] of this.requests.entries()) {
-      const validTimestamps = timestamps.filter((timestamp) => now - timestamp < this.windowMs)
-      if (validTimestamps.length === 0) {
-        this.requests.delete(identifier)
-      } else {
-        this.requests.set(identifier, validTimestamps)
-      }
-    }
+    super(build(new MemoryStore(), limit, windowMs))
   }
 }
 
@@ -77,8 +73,10 @@ export class InMemoryRateLimiter implements IRateLimiter {
  * Factory function that creates either a Redis-backed or in-memory rate limiter
  * depending on whether Redis is available.
  *
- * When REDIS_URL is set and Redis is reachable, returns a RedisRateLimiter
- * that works correctly across multiple server instances and survives restarts.
+ * When REDIS_URL is set and Redis is reachable, returns a limiter backed by a
+ * Redis counter that works correctly across multiple server instances and
+ * survives restarts. The ioredis client already satisfies the kit's `RedisLike`
+ * shape (`incr` / `pexpire` / `pttl` / `del`), so no adapter is needed.
  *
  * When Redis is unavailable, falls back to InMemoryRateLimiter.
  */
@@ -92,7 +90,26 @@ export function createRateLimiter(name: string, limit: number, windowMs: number)
       apiLogger.info("Using Redis-backed rate limiting")
       rateLimiterBackendLogged = true
     }
-    return new RedisRateLimiter(redis, name, limit, windowMs)
+
+    const store = new RedisStore(redis, {
+      // v2 because the key format changed shape, not just contents: until this
+      // commit `ratelimit:<name>:<id>` held a ZSET (sliding window). INCR on a
+      // surviving one of those returns WRONGTYPE, which RedisStore treats as an
+      // outage and fails open — so reusing the prefix would disable rate
+      // limiting for exactly the identifiers currently being limited, for as
+      // long as the old TTL runs (5 min for auth, 60 min for accountDeletion).
+      prefix: `ratelimit:v2:${name}:`,
+      // Redis being unreachable must not block legitimate traffic.
+      onError: "open",
+      onErrorLog: (error: unknown) => {
+        apiLogger.error(
+          { err: error instanceof Error ? error : new Error(String(error)), name },
+          "Rate limit check failed"
+        )
+      },
+    })
+
+    return new KitRateLimiter(build(store, limit, windowMs))
   }
 
   if (!rateLimiterBackendLogged) {
@@ -139,12 +156,12 @@ const allLimiters: IRateLimiter[] = [
 ]
 
 // Cleanup old entries every 5 minutes (a no-op for Redis limiters, which rely
-// on key TTLs). cleanup() returns a promise under the Redis backend, so each
-// call is explicitly voided with a rejection handler — an unhandled rejection
-// in a timer callback would otherwise crash the process.
+// on key TTLs). cleanup() returns a promise, so each call is explicitly voided
+// with a rejection handler — an unhandled rejection in a timer callback would
+// otherwise crash the process.
 const cleanupInterval = setInterval(() => {
   for (const limiter of allLimiters) {
-    void Promise.resolve(limiter.cleanup()).catch((error: unknown) => {
+    void limiter.cleanup().catch((error: unknown) => {
       apiLogger.error(
         { err: error instanceof Error ? error : new Error(String(error)) },
         "Rate limiter cleanup failed"
@@ -155,32 +172,19 @@ const cleanupInterval = setInterval(() => {
 
 cleanupInterval.unref?.()
 
-// Helper function to get client identifier
+/**
+ * Helper function to get client identifier.
+ *
+ * Platform-set headers first (they cannot be forged by the caller), then the
+ * RIGHT-most x-forwarded-for entry — the hop our own edge appended. Taking the
+ * left-most would let anyone mint a fresh rate-limit bucket per request just by
+ * rotating the header.
+ */
 export function getClientIdentifier(request: NextRequest): string {
-  // Vercel sets x-vercel-forwarded-for from its own trusted infrastructure — not spoofable by clients.
-  const vercelIp = request.headers.get("x-vercel-forwarded-for")
-  if (vercelIp) return vercelIp.split(",")[0].trim()
-
-  // x-real-ip is overwritten by a single trusted reverse proxy (e.g. nginx) with the
-  // actual client address, so prefer it over the client-appendable x-forwarded-for chain.
-  const realIp = request.headers.get("x-real-ip")
-  if (realIp) return realIp.trim()
-
-  // Fallback: rightmost x-forwarded-for entry. This is only trustworthy when the app sits
-  // behind a single trusted proxy that appends the real client IP — anything the client
-  // sends itself ends up further left in the list and is ignored. Without such a proxy
-  // this header is fully client-controlled and must not be relied on.
-  const forwarded = request.headers.get("x-forwarded-for")
-  if (forwarded) {
-    const ips = forwarded.split(",").map((ip) => ip.trim())
-    return ips[ips.length - 1]
-  }
-
-  return "unknown"
+  return getClientId(request, { fallback: "anonymous" })
 }
 
 // Middleware wrapper for rate limiting
-// Supports both sync (InMemoryRateLimiter) and async (RedisRateLimiter) implementations
 export function withRateLimit(
   limiter: IRateLimiter,
   handler: (request: NextRequest) => Promise<NextResponse>
@@ -188,7 +192,7 @@ export function withRateLimit(
   return async (request: NextRequest): Promise<NextResponse> => {
     const identifier = getClientIdentifier(request)
 
-    const allowed = await Promise.resolve(limiter.check(identifier))
+    const allowed = await limiter.check(identifier)
     if (!allowed) {
       return new NextResponse(
         JSON.stringify({
