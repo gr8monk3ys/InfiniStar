@@ -24,15 +24,21 @@ long relationships, and lets creators publish characters others can find and
 support. Success is a chatter who comes back to the same characters week after
 week, and a creator whose characters earn an audience.
 
-Live at https://infinistar.app (Vercel). Private repo, one-person team.
+Live at https://infini-star.vercel.app (Vercel). Private repo, one-person team.
+
+`infinistar.app` was **never registered**. It appears in the codebase as though
+it were the live domain, and it is not. Nothing may cite it as an address, and
+no email at it can be received — see Evidence on Hand.
 
 ## Positioning
 
 Three claims the owner stands behind (confirmed 2026-09-01):
 
-1. **Better conversations.** Runs on Claude. Character prompts include scenario
-   and example dialogues; system prompts are cached so long roleplays stay
-   affordable; auto memory extraction keeps continuity across sessions.
+1. **Better conversations.** Character prompts carry scenario and example
+   dialogues, system prompts are cached so long roleplays stay affordable, and
+   auto memory extraction keeps continuity across sessions. The claim is the
+   quality of the conversation, not the vendor behind it — see the model note
+   under Capabilities.
 2. **Creator earnings.** Characters carry followers, tips, and paid creator
    subscriptions — a creator flywheel, not just a chat toy.
 3. **Memory and personas.** Persistent per-character memory, user personas
@@ -61,6 +67,15 @@ Named competitors: Character.ai, Janitor AI.
 - Tiers: **Free** — 50 AI messages per month (`AI_FREE_MONTHLY_MESSAGE_LIMIT`),
   and **PRO** via Stripe with higher limits and faster/deeper model access.
 - Auth is Clerk; a fallback cookie auth path exists but stays off.
+- **The model is an implementation detail, not a commitment** (owner, 2026-09-03).
+  Claude is what runs today and marketing may say so while it is true, but
+  positioning does not rest on it and another frontier model may replace it.
+  Do not build copy, pricing or product claims that break if the vendor changes.
+- **Image generation is built but unconfigured.** The endpoint is PRO-gated and
+  currently expects OpenAI; production has no key, so the feature is dead in
+  production while the paywall still lists it. The provider is open — an
+  open-source or hosted open-weights model is acceptable. Either configure a
+  provider or stop advertising it; do not leave it advertised and dead.
 - Moderation: content reports, user blocks, safety preferences.
 - **Mature content is age-gated opt-in.** `nsfwEnabled` on User is a real
   product decision: allowed for verified adults who explicitly enable it,
@@ -71,14 +86,20 @@ Named competitors: Character.ai, Janitor AI.
   user's own identity in a chat), _memory_ (extracted facts kept per
   character), _remix_ (fork of a character), _scene_ (multi-character chat).
 - Roadmap ideas not yet built (do not present as features): character card
-  import/export (V2/SillyTavern), lorebooks, generated character portraits,
-  persona selector in conversation creation.
+  import/export (V2/SillyTavern), lorebooks, persona selector in conversation
+  creation. Character portraits are half-answered: characters without artwork
+  get a deterministic treatment derived from their slug, so the gap is designed
+  rather than empty, but no generated or authored art exists yet.
 - Actions minutes are capped; nothing heavy runs in CI beyond lint,
   typecheck, test, build.
 
 ## Brand Commitments
 
-- Name: **InfiniStar**. Domain infinistar.app. Support: support@infinistar.app.
+- Name: **InfiniStar**. No domain is owned: `infinistar.app` is aspirational and
+  was never registered, and there is **no working support address**. The app
+  shows `support@infinistar.app` to users in six places, including the sign-in
+  failure state, the upgrade modal and account deletion. Every one of those is
+  a dead end until a real contact exists.
 - Tagline in use: "Chat with anime heroes, fantasy companions, and creative AI
   personalities. Powered by Claude."
 - Binding visual constraints already decided by the owner (recorded, not
@@ -93,11 +114,18 @@ Named competitors: Character.ai, Janitor AI.
 
 - **No real testimonials, user counts, press, or case studies exist.** Never
   invent them, and never use placeholder social proof.
+- **No working support channel exists.** Do not point users at an address that
+  cannot receive mail; a support promise nobody can answer is worse than none.
+- Real content that does exist: six published starter characters, authored and
+  owned by the house account, each with a scenario and example dialogues. They
+  are genuine product content and may be shown and linked. They carry no
+  engagement numbers, and none should be invented for them.
 - Real assets: favicons and app icons in `public/`; a home screenshot at
   `docs/screenshots/home.png`; the app itself is live for screenshots.
 - Real product facts that can be shown truthfully: the free limit, the two
-  tiers, Claude as the model, persistent memory and personas, creator tips
-  and subscriptions.
+  tiers, persistent memory and personas, creator tips and subscriptions, and
+  the published catalog. The model may be named while it is accurate, but see
+  the model note under Capabilities before resting a claim on it.
 
 ## Product Principles
 
