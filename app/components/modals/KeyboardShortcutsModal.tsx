@@ -3,14 +3,7 @@
 import { useEffect, useMemo, useRef } from "react"
 import { HiOutlineXMark } from "react-icons/hi2"
 
-import {
-  CATEGORY_CONFIG,
-  formatShortcutBinding,
-  getModifierDisplay,
-  getShortcutsByCategory,
-  type ShortcutAction,
-  type ShortcutCategory,
-} from "@/app/lib/shortcuts"
+import { shortcuts, type ShortcutAction, type ShortcutGroup } from "@/app/lib/shortcuts"
 
 interface KeyboardShortcutsModalProps {
   isOpen: boolean
@@ -35,7 +28,7 @@ function KeyboardKey({ children }: { children: React.ReactNode }) {
  * Shortcut display component
  */
 function ShortcutDisplay({ action }: { action: ShortcutAction }) {
-  const formatted = formatShortcutBinding(action.defaultBinding)
+  const formatted = shortcuts.display(action.defaultBinding)
   const parts = formatted.split("+")
 
   return (
@@ -72,30 +65,22 @@ function ShortcutRow({ action }: { action: ShortcutAction }) {
 /**
  * Category section component
  */
-function CategorySection({
-  category,
-  shortcuts,
-}: {
-  category: ShortcutCategory
-  shortcuts: ShortcutAction[]
-}) {
-  const config = CATEGORY_CONFIG[category]
-
-  if (shortcuts.length === 0) return null
+function CategorySection({ group }: { group: ShortcutGroup }) {
+  if (group.shortcuts.length === 0) return null
 
   return (
     <div className="mb-6 last:mb-0">
       <div className="mb-3">
         <h3 className="text-sm font-semibold uppercase tracking-wide text-foreground/80">
-          {config.label}
+          {group.label}
         </h3>
-        {config.description && (
-          <p className="text-xs text-muted-foreground">{config.description}</p>
+        {group.description && (
+          <p className="text-xs text-muted-foreground">{group.description}</p>
         )}
       </div>
       <div className="divide-y divide-border rounded-lg border border-border bg-card">
         <div className="px-4">
-          {shortcuts.map((shortcut) => (
+          {group.shortcuts.map((shortcut) => (
             <ShortcutRow key={shortcut.id} action={shortcut} />
           ))}
         </div>
@@ -116,26 +101,10 @@ function CategorySection({
  */
 const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({ isOpen, onClose }) => {
   const modalRef = useRef<HTMLDivElement>(null)
-  const modifierKey = useMemo(() => getModifierDisplay("meta"), [])
+  const modifierKey = useMemo(() => shortcuts.platform().modifierKey, [])
 
-  // Get shortcuts grouped by category
-  const shortcutsByCategory = useMemo(() => getShortcutsByCategory(), [])
-
-  // Sort categories by order
-  const sortedCategories = useMemo(() => {
-    const categories: ShortcutCategory[] = ["navigation", "conversations", "messages", "general"]
-    return categories
-      .map((cat) => ({
-        category: cat,
-        shortcuts: shortcutsByCategory[cat] || [],
-      }))
-      .filter(({ shortcuts }) => shortcuts.length > 0)
-      .sort((a, b) => {
-        const orderA = CATEGORY_CONFIG[a.category]?.order || 99
-        const orderB = CATEGORY_CONFIG[b.category]?.order || 99
-        return orderA - orderB
-      })
-  }, [shortcutsByCategory])
+  // Shortcuts grouped by category, already ordered for display
+  const groups = useMemo(() => shortcuts.groups().filter((g) => g.shortcuts.length > 0), [])
 
   // Handle escape key to close
   useEffect(() => {
@@ -214,8 +183,8 @@ const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({ isOpen,
 
         {/* Content */}
         <div className="max-h-[60vh] overflow-y-auto p-4">
-          {sortedCategories.map(({ category, shortcuts }) => (
-            <CategorySection key={category} category={category} shortcuts={shortcuts} />
+          {groups.map((group) => (
+            <CategorySection key={group.category} group={group} />
           ))}
         </div>
 
