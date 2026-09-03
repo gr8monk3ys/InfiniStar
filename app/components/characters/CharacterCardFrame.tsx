@@ -3,6 +3,7 @@ import Link from "next/link"
 import { HiChatBubbleBottomCenterText, HiChatBubbleLeftRight, HiHeart } from "react-icons/hi2"
 
 import { getCategoryById } from "@/app/lib/character-categories"
+import { characterPortrait } from "@/app/lib/character-portrait"
 import { cn } from "@/app/lib/utils"
 
 export interface CharacterCardData {
@@ -40,6 +41,7 @@ export function CharacterCardFrame({
   sizes = "(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw",
 }: CharacterCardFrameProps) {
   const category = getCategoryById(character.category)
+  const portrait = characterPortrait(character)
   // A row of 0 · 0 · 0 tells a visitor nothing; the category tag is more useful there.
   const hasEngagement =
     character.usageCount > 0 || character.likeCount > 0 || (character.commentCount ?? 0) > 0
@@ -65,9 +67,12 @@ export function CharacterCardFrame({
             sizes={sizes}
           />
         ) : (
-          <div className="gradient-bg flex h-full w-full items-center justify-center">
-            <span className="text-5xl font-bold text-white/90">
-              {character.name.slice(0, 1).toUpperCase()}
+          <div
+            className="grain relative flex h-full w-full items-center justify-center"
+            style={{ backgroundImage: portrait.backgroundImage }}
+          >
+            <span className="font-heading text-5xl font-bold text-white/90">
+              {portrait.initial}
             </span>
           </div>
         )}
