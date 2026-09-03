@@ -67,6 +67,32 @@ describe("getClientIdentifier", () => {
     const req = new NextRequest("http://localhost/api/test")
     expect(getClientIdentifier(req)).toBe("anonymous")
   })
+
+  // Regression: next-kit <= 0.1.1 read cf-connecting-ip unconditionally. There is
+  // no Cloudflare in front of this app, so that header is client-controlled here
+  // and a caller could mint a fresh rate-limit bucket per request by rotating it.
+  // Declaring platform: "vercel" keeps it out of the trusted set.
+  it("ignores a client-supplied cf-connecting-ip", () => {
+    const headers = { "x-forwarded-for": "1.1.1.1, 2.2.2.2" }
+    const honest = new NextRequest("http://localhost/api/test", { headers })
+    const spoofed = new NextRequest("http://localhost/api/test", {
+      headers: { ...headers, "cf-connecting-ip": "6.6.6.6" },
+    })
+    expect(getClientIdentifier(spoofed)).toBe(getClientIdentifier(honest))
+    expect(getClientIdentifier(spoofed)).not.toBe("6.6.6.6")
+  })
+
+  it("a rotating cf-connecting-ip cannot mint new buckets", () => {
+    const ids = ["9.9.9.9", "8.8.8.8", "7.7.7.7"].map((ip) =>
+      getClientIdentifier(
+        new NextRequest("http://localhost/api/test", {
+          headers: { "x-real-ip": "5.5.5.5", "cf-connecting-ip": ip },
+        })
+      )
+    )
+    expect(new Set(ids).size).toBe(1)
+    expect(ids[0]).toBe("5.5.5.5")
+  })
 })
 
 describe("InMemoryRateLimiter (direct)", () => {
