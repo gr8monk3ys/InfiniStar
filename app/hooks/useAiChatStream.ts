@@ -2,6 +2,12 @@
 
 import { useCallback, useRef, useState } from "react"
 
+import {
+  AiStreamRequestError,
+  buildAiStreamRequestError,
+  type AiStreamErrorDetails,
+} from "@/app/lib/ai-stream-error"
+
 interface TokenUsage {
   inputTokens: number
   outputTokens: number
@@ -14,30 +20,6 @@ interface StreamChunk {
   messageId?: string
   error?: string
   usage?: TokenUsage
-}
-
-/**
- * Structured details for AI stream errors, populated when the API returns
- * a JSON error body (e.g. 402 limit responses from /api/ai/chat-stream).
- */
-interface AiStreamErrorDetails {
-  /** Machine-readable error code, e.g. "FREE_TIER_MESSAGE_LIMIT_REACHED" */
-  code?: string
-  /** Usage limits payload returned alongside limit errors (AiAccessDecision["limits"]) */
-  limits?: unknown
-  /** HTTP status code of the failed response */
-  status?: number
-}
-
-/** Error thrown for non-OK HTTP responses, carrying structured API details. */
-class AiStreamRequestError extends Error {
-  details: AiStreamErrorDetails
-
-  constructor(message: string, details: AiStreamErrorDetails) {
-    super(message)
-    this.name = "AiStreamRequestError"
-    this.details = details
-  }
 }
 
 interface UseAiChatStreamOptions {
@@ -115,21 +97,7 @@ export function useAiChatStream(options: UseAiChatStreamOptions) {
         })
 
         if (!response.ok) {
-          const errorBody: unknown = await response.json().catch(() => null)
-          const errorData =
-            errorBody && typeof errorBody === "object"
-              ? (errorBody as { error?: unknown; code?: unknown; limits?: unknown })
-              : {}
-          throw new AiStreamRequestError(
-            typeof errorData.error === "string" && errorData.error
-              ? errorData.error
-              : `HTTP error! status: ${response.status}`,
-            {
-              code: typeof errorData.code === "string" ? errorData.code : undefined,
-              limits: errorData.limits,
-              status: response.status,
-            }
-          )
+          throw await buildAiStreamRequestError(response)
         }
 
         if (!response.body) {

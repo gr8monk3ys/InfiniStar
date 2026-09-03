@@ -7,6 +7,7 @@ import { api } from "@/app/lib/api-client"
 import { getPusherConversationChannel } from "@/app/lib/pusher-channels"
 import { pusherClient } from "@/app/lib/pusher-client"
 import useConversation from "@/app/(dashboard)/dashboard/hooks/useConversation"
+import UpgradeModal, { type UpgradeModalReason } from "@/app/components/modals/UpgradeModal"
 import { useAiRegenerate } from "@/app/hooks/useAiRegenerate"
 import { useCsrfToken } from "@/app/hooks/useCsrfToken"
 import { useTypingIndicator } from "@/app/hooks/useTypingIndicator"
@@ -73,6 +74,12 @@ const ConversationContainer: React.FC<ConversationContainerProps> = ({
   // Lift messages state to share with Form for suggestions
   const [messages, dispatchMessages] = useReducer(messagesReducer, initialMessages)
 
+  // Upgrade dialog shown when a regeneration is refused by a tier limit
+  const [upgradeModal, setUpgradeModal] = useState<{
+    reason: UpgradeModalReason
+    limits?: unknown
+  } | null>(null)
+
   // Subscribe to typing events for this conversation with AI typing state
   const { typingUsers, isAITyping, setAITyping } = useTypingIndicator({
     conversationId,
@@ -93,7 +100,16 @@ const ConversationContainer: React.FC<ConversationContainerProps> = ({
     onComplete: () => {
       toast.success(`${characterName ?? "AI"} replied again`)
     },
-    onError: (error) => {
+    onError: (error, details) => {
+      // Limit errors get a focused upgrade dialog instead of a dead-end toast,
+      // matching the send path in Form.tsx.
+      if (
+        details?.code === "FREE_TIER_MESSAGE_LIMIT_REACHED" ||
+        details?.code === "PRO_TIER_COST_CAP_REACHED"
+      ) {
+        setUpgradeModal({ reason: details.code, limits: details.limits })
+        return
+      }
       toast.error(`Regeneration failed: ${error}`)
     },
   })
@@ -218,6 +234,13 @@ const ConversationContainer: React.FC<ConversationContainerProps> = ({
         onAIStreamingChange={handleAIStreamingChange}
         messages={messages}
         currentUserId={currentUserIdProp}
+      />
+
+      <UpgradeModal
+        isOpen={upgradeModal !== null}
+        onClose={() => setUpgradeModal(null)}
+        reason={upgradeModal?.reason}
+        limits={upgradeModal?.limits}
       />
     </>
   )

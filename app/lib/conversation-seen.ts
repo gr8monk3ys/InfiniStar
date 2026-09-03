@@ -1,3 +1,4 @@
+import { MESSAGE_INCLUDE_FLAT } from "@/app/lib/conversation-select"
 import prisma from "@/app/lib/prismadb"
 import { getPusherConversationChannel, getPusherUserChannel } from "@/app/lib/pusher-channels"
 import { pusherServer } from "@/app/lib/pusher-server"
@@ -46,10 +47,7 @@ export async function markConversationSeenByUserId({
     where: {
       id: lastMessage.id,
     },
-    include: {
-      sender: true,
-      seen: true,
-    },
+    include: MESSAGE_INCLUDE_FLAT,
     data: {
       seen: {
         connect: {

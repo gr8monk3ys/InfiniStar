@@ -1,11 +1,12 @@
 import { useMemo } from "react"
-import { type User } from "@prisma/client"
 
 import { useAppAuth } from "@/app/hooks/useAppAuth"
 
-import { type FullConversationType } from "../../../types"
+import { type FullConversationType, type UserSummary } from "../../../types"
 
-const useOtherUser = (conversation: FullConversationType | { users: User[] }): User | null => {
+const useOtherUser = (
+  conversation: FullConversationType | { users: UserSummary[] }
+): UserSummary | null => {
   const { user } = useAppAuth()
 
   const otherUser = useMemo(() => {

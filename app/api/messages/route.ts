@@ -3,6 +3,7 @@ import { z } from "zod"
 
 import { captureServerEvent } from "@/app/lib/analytics"
 import { isFirstHumanMessage } from "@/app/lib/analytics-events"
+import { MESSAGE_INCLUDE } from "@/app/lib/conversation-select"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import { apiLogger } from "@/app/lib/logger"
 import {
@@ -174,15 +175,7 @@ export async function POST(request: NextRequest) {
           },
         },
       },
-      include: {
-        sender: true,
-        seen: true,
-        replyTo: {
-          include: {
-            sender: true,
-          },
-        },
-      },
+      include: MESSAGE_INCLUDE,
     })
 
     if (moderationResult.shouldReview) {

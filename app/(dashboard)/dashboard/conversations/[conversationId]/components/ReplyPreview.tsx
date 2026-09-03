@@ -1,13 +1,14 @@
 "use client"
 
-import { type User } from "@prisma/client"
 import { HiOutlineXMark } from "react-icons/hi2"
+
+import { type UserSummary } from "@/app/types"
 
 interface ReplyMessage {
   id: string
   body: string | null
   image: string | null
-  sender: User
+  sender: UserSummary
 }
 
 interface ReplyPreviewProps {

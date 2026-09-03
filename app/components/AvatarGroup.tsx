@@ -2,10 +2,11 @@
 
 import { memo, useMemo } from "react"
 import Image from "next/image"
-import type { User } from "@prisma/client"
+
+import type { UserSummary } from "@/app/types"
 
 interface AvatarGroupProps {
-  users: User[]
+  users: UserSummary[]
 }
 
 const AvatarGroup: React.FC<AvatarGroupProps> = ({ users }) => {

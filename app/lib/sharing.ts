@@ -9,6 +9,7 @@ import crypto from "crypto"
 import { SharePermission, ShareType } from "@prisma/client"
 
 import { config } from "@/app/lib/config"
+import { PARTICIPANT_SELECT } from "@/app/lib/conversation-select"
 import { apiLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
 
@@ -75,7 +76,7 @@ export async function createShareLink(
     // Verify user is part of the conversation
     const conversation = await prisma.conversation.findUnique({
       where: { id: conversationId },
-      include: { users: true },
+      include: { users: { select: PARTICIPANT_SELECT } },
     })
 
     if (!conversation) {
@@ -132,7 +133,7 @@ export async function getShareByToken(
       include: {
         conversation: {
           include: {
-            users: true,
+            users: { select: PARTICIPANT_SELECT },
             _count: {
               select: { messages: true },
             },
@@ -209,7 +210,7 @@ export async function joinViaShare(
       where: { shareToken },
       include: {
         conversation: {
-          include: { users: true },
+          include: { users: { select: PARTICIPANT_SELECT } },
         },
       },
     })
@@ -337,7 +338,7 @@ export async function revokeShare(
       where: { id: shareId },
       include: {
         conversation: {
-          include: { users: true },
+          include: { users: { select: PARTICIPANT_SELECT } },
         },
       },
     })
@@ -394,7 +395,7 @@ export async function updateShare(
       where: { id: shareId },
       include: {
         conversation: {
-          include: { users: true },
+          include: { users: { select: PARTICIPANT_SELECT } },
         },
       },
     })
@@ -449,7 +450,7 @@ export async function getSharesForConversation(
     // Verify user is part of the conversation
     const conversation = await prisma.conversation.findUnique({
       where: { id: conversationId },
-      include: { users: true },
+      include: { users: { select: PARTICIPANT_SELECT } },
     })
 
     if (!conversation) {
@@ -491,7 +492,7 @@ export async function deleteShare(
       where: { id: shareId },
       include: {
         conversation: {
-          include: { users: true },
+          include: { users: { select: PARTICIPANT_SELECT } },
         },
       },
     })
@@ -570,7 +571,7 @@ export async function canViewSharedConversation(
     // Check if user is a direct member
     const conversation = await prisma.conversation.findUnique({
       where: { id: conversationId },
-      include: { users: true },
+      include: { users: { select: PARTICIPANT_SELECT } },
     })
 
     if (conversation?.users.some((user: { id: string }) => user.id === userId)) {

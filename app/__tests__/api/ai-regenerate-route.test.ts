@@ -23,6 +23,8 @@ const mockGetAiAccessDecision = jest.fn()
 const mockTrackAiUsage = jest.fn()
 const mockAnthropicStream = jest.fn()
 const mockBuildAiConversationHistory = jest.fn()
+const mockGetRelevantMemories = jest.fn()
+const mockBuildMemoryContext = jest.fn()
 const mockTxMessageUpdate = jest.fn()
 const mockTxConversationUpdate = jest.fn()
 
@@ -84,6 +86,11 @@ jest.mock("@/app/lib/ai-message-content", () => ({
 
 jest.mock("@/app/lib/ai-model-routing", () => ({
   getModelForUser: () => "claude-sonnet-4-5-20250929",
+}))
+
+jest.mock("@/app/lib/ai-memory", () => ({
+  getRelevantMemories: (...args: unknown[]) => mockGetRelevantMemories(...args),
+  buildMemoryContext: (...args: unknown[]) => mockBuildMemoryContext(...args),
 }))
 
 jest.mock("@/app/lib/ai-personalities", () => ({
@@ -151,7 +158,25 @@ const testConversation = {
   aiModel: null,
   aiPersonality: "assistant",
   aiSystemPrompt: null,
+  summary: null,
+  character: null,
+  persona: null,
   users: [testUser],
+}
+
+const testCharacter = {
+  name: "Aria",
+  isNsfw: false,
+  systemPrompt: "You are Aria, a starship navigator.",
+  scenario: "The ship is adrift in the Kepler belt.",
+  exampleDialogues: "User: Where are we?\nAria: *checks the console* Nowhere good.",
+}
+
+/** Reads the `system` argument the route passed to anthropic.messages.stream. */
+function getSystemBlocks(): { type: string; text: string; cache_control?: unknown }[] {
+  const call = mockAnthropicStream.mock.calls[0]
+  expect(call).toBeDefined()
+  return (call[0] as { system: { type: string; text: string; cache_control?: unknown }[] }).system
 }
 
 const testAiMessage = {
@@ -200,6 +225,8 @@ beforeEach(() => {
     ])
   )
   mockBuildAiConversationHistory.mockReturnValue([])
+  mockGetRelevantMemories.mockResolvedValue([])
+  mockBuildMemoryContext.mockReturnValue("")
 })
 
 describe("POST /api/ai/regenerate", () => {
@@ -393,7 +420,7 @@ describe("POST /api/ai/regenerate", () => {
         conversationId: "conv-1",
         inputTokens: 10,
         outputTokens: 30,
-        requestType: "chat-stream",
+        requestType: "chat",
       })
     )
   })
@@ -418,6 +445,151 @@ describe("POST /api/ai/regenerate", () => {
     mockMessageFindUnique.mockRejectedValue(new Error("DB crashed"))
     const response = await POST(createRequest({ messageId: "msg-ai-1" }))
     expect(response.status).toBe(500)
+  })
+
+  // --- Turn assembly parity with /api/ai/chat-stream ---------------------------
+  // Regression guard: this route once built `system` from the personality prompt
+  // alone, so pressing "reply again" on a character chat regenerated the reply
+  // with none of the character in it.
+
+  describe("character turn assembly", () => {
+    const characterMessage = {
+      ...testAiMessage,
+      conversation: { ...testConversation, character: testCharacter },
+    }
+
+    it("includes the character system prompt, scenario and example dialogues in the system blocks", async () => {
+      mockMessageFindUnique.mockResolvedValue(characterMessage)
+      const response = await POST(createRequest({ messageId: "msg-ai-1" }))
+      await readStreamToString(response)
+
+      const systemText = getSystemBlocks()
+        .map((block) => block.text)
+        .join("\n")
+      expect(systemText).toContain("You are Aria, a starship navigator.")
+      expect(systemText).toContain("[Scenario]")
+      expect(systemText).toContain("The ship is adrift in the Kepler belt.")
+      expect(systemText).toContain("[Example Dialogue]")
+      expect(systemText).toContain("Aria: *checks the console* Nowhere good.")
+      expect(systemText).toContain("[Roleplay Rules]")
+      // The generic personality prompt must not replace the character prompt.
+      expect(systemText).not.toContain("You are a helpful assistant.")
+    })
+
+    it("falls back to the personality prompt when the conversation has no character", async () => {
+      const response = await POST(createRequest({ messageId: "msg-ai-1" }))
+      await readStreamToString(response)
+      expect(getSystemBlocks()[0].text).toContain("You are a helpful assistant.")
+    })
+
+    it("includes the user persona in the stable (cached) block", async () => {
+      mockMessageFindUnique.mockResolvedValue({
+        ...characterMessage,
+        conversation: {
+          ...testConversation,
+          character: testCharacter,
+          persona: {
+            name: "Captain Vale",
+            description: "A weary long-haul pilot",
+            appearance: "Scarred, grey at the temples",
+            personalityTraits: "Dry humour",
+          },
+        },
+      })
+      const response = await POST(createRequest({ messageId: "msg-ai-1" }))
+      await readStreamToString(response)
+
+      const blocks = getSystemBlocks()
+      expect(blocks[0].text).toContain("[User Persona]")
+      expect(blocks[0].text).toContain("Captain Vale")
+      expect(blocks[0].text).toContain("A weary long-haul pilot")
+    })
+
+    it("includes the conversation summary and relevant memories", async () => {
+      mockMessageFindUnique.mockResolvedValue({
+        ...characterMessage,
+        conversation: {
+          ...testConversation,
+          character: testCharacter,
+          summary: JSON.stringify({
+            overview: "They escaped the blockade together.",
+            keyTopics: ["blockade"],
+          }),
+        },
+      })
+      mockGetRelevantMemories.mockResolvedValue([{ id: "mem-1" }])
+      mockBuildMemoryContext.mockReturnValue("[Memories]\n- The user pilots a freighter")
+
+      const response = await POST(createRequest({ messageId: "msg-ai-1" }))
+      await readStreamToString(response)
+
+      const systemText = getSystemBlocks()
+        .map((block) => block.text)
+        .join("\n")
+      expect(systemText).toContain("[Earlier Conversation Summary]")
+      expect(systemText).toContain("They escaped the blockade together.")
+      expect(systemText).toContain("The user pilots a freighter")
+    })
+
+    it("keeps the prompt-cache split: stable character block cached, volatile context separate", async () => {
+      mockMessageFindUnique.mockResolvedValue({
+        ...characterMessage,
+        conversation: {
+          ...testConversation,
+          character: testCharacter,
+          summary: JSON.stringify({ overview: "They escaped the blockade together." }),
+        },
+      })
+      const response = await POST(createRequest({ messageId: "msg-ai-1" }))
+      await readStreamToString(response)
+
+      const blocks = getSystemBlocks()
+      expect(blocks).toHaveLength(2)
+      expect(blocks[0].cache_control).toEqual({ type: "ephemeral" })
+      expect(blocks[0].text).toContain("You are Aria, a starship navigator.")
+      // Volatile context must sit AFTER the breakpoint so it never busts the cache.
+      expect(blocks[1].cache_control).toBeUndefined()
+      expect(blocks[1].text).toContain("[Earlier Conversation Summary]")
+    })
+
+    it("still streams when memory lookup fails", async () => {
+      mockMessageFindUnique.mockResolvedValue(characterMessage)
+      mockGetRelevantMemories.mockRejectedValue(new Error("memory store down"))
+      const response = await POST(createRequest({ messageId: "msg-ai-1" }))
+      const body = await readStreamToString(response)
+      expect(body).toContain('"type":"done"')
+    })
+  })
+
+  describe("NSFW gate", () => {
+    const nsfwMessage = {
+      ...testAiMessage,
+      conversation: {
+        ...testConversation,
+        character: { ...testCharacter, isNsfw: true },
+      },
+    }
+
+    it("returns 403 when the character is NSFW and the user cannot access NSFW", async () => {
+      mockMessageFindUnique.mockResolvedValue(nsfwMessage)
+      const response = await POST(createRequest({ messageId: "msg-ai-1" }))
+      expect(response.status).toBe(403)
+      const data = await response.json()
+      expect(data.error).toContain("NSFW")
+      expect(mockAnthropicStream).not.toHaveBeenCalled()
+    })
+
+    it("allows regeneration when the user has NSFW access", async () => {
+      mockMessageFindUnique.mockResolvedValue(nsfwMessage)
+      mockGetCurrentUser.mockResolvedValue({
+        ...testUser,
+        isAdult: true,
+        nsfwEnabled: true,
+        adultConfirmedAt: new Date("2024-01-01T00:00:00Z"),
+      })
+      const response = await POST(createRequest({ messageId: "msg-ai-1" }))
+      expect(response.status).toBe(200)
+    })
   })
 })
 

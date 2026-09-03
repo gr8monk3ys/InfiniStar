@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server"
 
+import { CONVERSATION_INCLUDE } from "@/app/lib/conversation-select"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import { apiLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
@@ -32,9 +33,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
       where: {
         id: conversationId,
       },
-      include: {
-        users: true,
-      },
+      include: CONVERSATION_INCLUDE,
     })
 
     if (!existingConversation) {

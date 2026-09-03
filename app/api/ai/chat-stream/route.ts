@@ -18,6 +18,7 @@ import anthropic from "@/app/lib/anthropic"
 import { maybeAutoExtractMemories } from "@/app/lib/auto-memory"
 import { maybeAutoSummarize } from "@/app/lib/auto-summary"
 import { buildCharacterSystemPrompt } from "@/app/lib/character-prompt"
+import { PARTICIPANT_SELECT } from "@/app/lib/conversation-select"
 import { renderSummaryForPrompt } from "@/app/lib/conversation-summary"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import { aiLogger } from "@/app/lib/logger"
@@ -240,8 +241,8 @@ export async function POST(request: NextRequest) {
         isAI: false,
       },
       include: {
-        seen: true,
-        sender: true,
+        seen: { select: PARTICIPANT_SELECT },
+        sender: { select: PARTICIPANT_SELECT },
       },
     })
 
@@ -405,8 +406,8 @@ export async function POST(request: NextRequest) {
               outputTokens: finalMessage.usage.output_tokens,
             },
             include: {
-              seen: true,
-              sender: true,
+              seen: { select: PARTICIPANT_SELECT },
+              sender: { select: PARTICIPANT_SELECT },
             },
           })
 

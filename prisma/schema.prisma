@@ -679,3 +679,19 @@ model UserPersona {
   @@index([userId])
   @@map("user_personas")
 }
+
+/// One row per webhook event that has been accepted for processing.
+/// This is the durable, always-present idempotency ledger for inbound
+/// provider webhooks (Stripe retries every non-2xx delivery). Postgres is
+/// mandatory for this app; Redis is not, so the guard must live here.
+model ProcessedWebhookEvent {
+  id          String   @id @default(uuid()) @db.Uuid
+  provider    String // "stripe", "clerk", ...
+  eventId     String // provider's own event id, e.g. "evt_1AbC..."
+  eventType   String // provider's event type, e.g. "invoice.payment_succeeded"
+  processedAt DateTime @default(now())
+
+  @@unique([provider, eventId])
+  @@index([processedAt])
+  @@map("processed_webhook_events")
+}

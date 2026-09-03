@@ -6,6 +6,7 @@ import {
   getPersonality,
   type PersonalityType,
 } from "@/app/lib/ai-personalities"
+import { PARTICIPANT_SELECT } from "@/app/lib/conversation-select"
 import { aiLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
 
@@ -49,7 +50,7 @@ export default async function createAIConversation(
         },
       },
       include: {
-        users: true,
+        users: { select: PARTICIPANT_SELECT },
         messages: true,
       },
     })

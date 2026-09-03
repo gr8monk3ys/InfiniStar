@@ -1,3 +1,4 @@
+import { MESSAGE_INCLUDE } from "@/app/lib/conversation-select"
 import { dbLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
 import { type FullMessageType } from "@/app/types"
@@ -18,15 +19,7 @@ const getMessages = async (
       where: {
         conversationId: conversationId,
       },
-      include: {
-        sender: true,
-        seen: true,
-        replyTo: {
-          include: {
-            sender: true,
-          },
-        },
-      },
+      include: MESSAGE_INCLUDE,
       orderBy: {
         createdAt: "desc",
       },

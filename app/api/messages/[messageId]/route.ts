@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { z } from "zod"
 
+import { MESSAGE_INCLUDE_FLAT, PARTICIPANT_SELECT } from "@/app/lib/conversation-select"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import { apiLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
@@ -48,7 +49,7 @@ export async function PATCH(
     // Find the message
     const message = await prisma.message.findUnique({
       where: { id: messageId },
-      include: { sender: true },
+      include: { sender: { select: PARTICIPANT_SELECT } },
     })
 
     if (!message) {
@@ -87,10 +88,7 @@ export async function PATCH(
         body: sanitizedBody,
         editedAt: new Date(),
       },
-      include: {
-        sender: true,
-        seen: true,
-      },
+      include: MESSAGE_INCLUDE_FLAT,
     })
 
     // Trigger Pusher event for real-time update
@@ -132,7 +130,7 @@ export async function DELETE(
     // Find the message
     const message = await prisma.message.findUnique({
       where: { id: messageId },
-      include: { sender: true },
+      include: { sender: { select: PARTICIPANT_SELECT } },
     })
 
     if (!message) {
@@ -158,10 +156,7 @@ export async function DELETE(
         body: null, // Clear the message content
         image: null, // Clear any image
       },
-      include: {
-        sender: true,
-        seen: true,
-      },
+      include: MESSAGE_INCLUDE_FLAT,
     })
 
     // Trigger Pusher event for real-time update
