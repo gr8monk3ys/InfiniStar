@@ -39,3 +39,17 @@ CI (`.github/workflows/ci.yml`, one job named `CI`) runs exactly lint → typech
 - `ENABLE_FALLBACK_AUTH` enables a bcrypt/cookie auth path as a hedge against a Clerk outage. Keep it off; every route re-checks the flag server-side.
 - Free tier: `AI_FREE_MONTHLY_MESSAGE_LIMIT` (default 50) messages/month, tracked in the `AiUsage` model.
 - Cron routes `/api/cron/auto-delete` and `/api/cron/process-deletions` are protected by `CRON_SECRET`.
+- **Production deploys run `prisma migrate deploy` first** (`buildCommand` in
+  `vercel.json`, guarded on `VERCEL_ENV`). A failing migration fails the build,
+  so code never ships ahead of its schema. Before this existed, eight
+  migrations sat unapplied from February to September and personas,
+  attribution, fallback auth and the roleplay fields were missing in
+  production while the code expected them.
+- **Preview deploys share the production database.** `DATABASE_URL` is scoped
+  to Production, Preview and Development with the same value, so a PR preview
+  reads and writes live data. That is why migrations are gated to production
+  builds only — otherwise every preview of a branch would apply its migrations
+  to production before review.
+- Migrations need `DIRECT_URL`: Neon's pooled connection cannot run them. It is
+  set in the Vercel project; locally, `vercel env pull .env` then run, because
+  `prisma.config.ts` reads `.env` and not `.env.local`.
