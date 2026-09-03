@@ -11,14 +11,14 @@
 const STYLES = {
   body: `font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;`,
   header: `text-align: center; margin-bottom: 30px;`,
-  logo: `color: #6366f1; margin: 0;`,
+  logo: `color: #8249df; margin: 0;`,
   h2Default: `color: #1f2937;`,
   h2Success: `color: #16a34a;`,
   h2Danger: `color: #dc2626;`,
   h3: `color: #374151;`,
-  button: `background-color: #6366f1; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 500;`,
+  button: `background-color: #8249df; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 500;`,
   buttonContainer: `text-align: center; margin: 30px 0;`,
-  link: `word-break: break-all; color: #6366f1; font-size: 14px;`,
+  link: `word-break: break-all; color: #8249df; font-size: 14px;`,
   muted: `color: #6b7280; font-size: 14px;`,
   veryMuted: `color: #9ca3af; font-size: 12px;`,
   hr: `border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;`,
@@ -190,7 +190,7 @@ export function getWelcomeEmailTemplate(params: WelcomeEmailParams) {
   <h3 style="${STYLES.h3}">Here's what you can do:</h3>
 
   <ul style="${STYLES.list}">
-    <li><strong>Chat with 7 AI personalities</strong> - Helpful, Creative, Analytical, and more</li>
+    <li><strong>Chat with any public character</strong> - companions, heroes, tutors, and more</li>
     <li><strong>Choose your AI model</strong> - Claude Sonnet 4.6 or Haiku 4.5</li>
     <li><strong>Organize conversations</strong> - Pin, archive, and tag your chats</li>
     <li><strong>AI memory</strong> - Let the AI remember important details</li>
@@ -210,7 +210,7 @@ Hi ${name},
 Your email has been verified and your account is now active. You're ready to start chatting with AI!
 
 Here's what you can do:
-- Chat with 7 AI personalities - Helpful, Creative, Analytical, and more
+- Chat with any public character - companions, heroes, tutors, and more
 - Choose your AI model - Claude Sonnet 4.6 or Haiku 4.5
 - Organize conversations - Pin, archive, and tag your chats
 - AI memory - Let the AI remember important details

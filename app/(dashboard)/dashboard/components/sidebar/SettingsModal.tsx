@@ -83,18 +83,20 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, currentU
     <Modal isOpen={isOpen} onClose={onClose}>
       <form onSubmit={handleSubmit(onSubmit)}>
         <div className="space-y-12">
-          <div className="border-b border-gray-900/10 pb-12">
+          <div className="border-b border-border pb-12">
             <h2
               className="
                 text-base 
                 font-semibold 
                 leading-7 
-                text-gray-900
+                text-foreground
               "
             >
               Profile
             </h2>
-            <p className="mt-1 text-sm leading-6 text-gray-600">Edit your public information.</p>
+            <p className="mt-1 text-sm leading-6 text-muted-foreground">
+              Edit your public information.
+            </p>
 
             <div className="mt-10 flex flex-col gap-y-8">
               <Input
@@ -113,7 +115,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, currentU
                     text-sm 
                     font-medium 
                     leading-6 
-                    text-gray-900
+                    text-foreground
                   "
                 >
                   Photo
@@ -156,7 +158,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, currentU
                     text-sm
                     font-medium
                     leading-6
-                    text-gray-900
+                    text-foreground
                   "
                 >
                   Status
@@ -164,14 +166,14 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, currentU
                 <div className="mt-2 flex items-center gap-x-3">
                   <div className="flex-1">
                     {currentUser?.customStatus || currentUser?.customStatusEmoji ? (
-                      <p className="text-sm text-gray-700">
+                      <p className="text-sm text-foreground">
                         {currentUser.customStatusEmoji && (
                           <span className="mr-1">{currentUser.customStatusEmoji}</span>
                         )}
                         {currentUser.customStatus || "No status message"}
                       </p>
                     ) : (
-                      <p className="text-sm text-gray-500">No status set</p>
+                      <p className="text-sm text-muted-foreground">No status set</p>
                     )}
                   </div>
                   <Button

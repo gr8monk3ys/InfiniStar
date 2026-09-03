@@ -6,13 +6,7 @@ import { useRouter } from "next/navigation"
 import clsx from "clsx"
 import { format } from "date-fns"
 import toast from "react-hot-toast"
-import {
-  HiArrowPath,
-  HiArrowUturnLeft,
-  HiOutlineSquare2Stack,
-  HiSpeakerWave,
-  HiStopCircle,
-} from "react-icons/hi2"
+import { HiArrowPath, HiArrowUturnLeft } from "react-icons/hi2"
 
 import { api, ApiError } from "@/app/lib/api-client"
 import { MarkdownRenderer } from "@/app/components/ui/MarkdownRenderer"
@@ -41,6 +35,9 @@ interface MessageBoxProps {
   regeneratingMessageId?: string | null
   regeneratingContent?: string
 }
+
+const actionButtonClass =
+  "rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
 
 const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
   data,
@@ -76,7 +73,7 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
     .map((user: { name?: string | null }) => user.name)
     .join(", ")
 
-  const container = clsx("flex gap-3 p-4", isOwn && "justify-end")
+  const container = clsx("group flex gap-3 p-4", isOwn && "justify-end")
   const avatar = clsx(isOwn && "order-2")
   const body = clsx("flex flex-col gap-2", isOwn && "items-end")
 
@@ -301,6 +298,17 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
     }
   }, [csrfToken, data.conversationId, data.id, isAiConversation, isForking, router])
 
+  const handleCopy = useCallback(async () => {
+    if (!displayBody) return
+    try {
+      await navigator.clipboard.writeText(displayBody)
+      toast.success("Copied")
+    } catch {
+      toast.error("Could not copy message")
+    }
+    setShowMenu(false)
+  }, [displayBody])
+
   const { isSpeechSupported, isSpeaking, handleToggleSpeech } = useMessageSpeech({
     isAI: Boolean(data.isAI),
     text: displayBody,
@@ -458,6 +466,7 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
                       object-cover
                       transition
                       hover:scale-110
+                      motion-reduce:transform-none
                     "
                       role="button"
                       tabIndex={0}
@@ -492,108 +501,111 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
                   )}
                 </div>
 
-                {/* Reply button */}
-                {onReply && !data.isDeleted && (
-                  <button
-                    onClick={() => onReply(data)}
-                    className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
-                    aria-label="Reply to message"
-                    title="Reply"
-                  >
-                    <HiArrowUturnLeft size={16} />
-                  </button>
-                )}
+                {/* Action row: quiet by default, revealed on hover or keyboard
+                    focus, and always shown on the character's latest reply so
+                    "regenerate" is one tap away. */}
+                <div
+                  className={clsx(
+                    "flex items-center gap-1 transition-opacity focus-within:opacity-100 group-hover:opacity-100",
+                    isLast && data.isAI ? "opacity-100" : "opacity-0"
+                  )}
+                >
+                  {/* Reply button */}
+                  {onReply && !data.isDeleted && (
+                    <button
+                      onClick={() => onReply(data)}
+                      className={actionButtonClass}
+                      aria-label="Reply to message"
+                      title="Reply"
+                    >
+                      <HiArrowUturnLeft size={16} />
+                    </button>
+                  )}
 
-                {/* Reaction button */}
-                <MessageReactionPicker
-                  containerRef={reactionPickerRef}
-                  open={showReactionPicker}
-                  onToggle={() => setShowReactionPicker(!showReactionPicker)}
-                  onReact={handleReaction}
-                />
+                  {/* Regenerate button - only show for AI messages */}
+                  {data.isAI && onRegenerate && !data.isDeleted && (
+                    <button
+                      onClick={() => onRegenerate(data.id)}
+                      disabled={isRegenerating}
+                      className={clsx(
+                        actionButtonClass,
+                        isRegenerating &&
+                          regeneratingMessageId === data.id &&
+                          "animate-spin text-primary"
+                      )}
+                      aria-label={`Ask ${characterName ?? "the character"} to reply again`}
+                      title={
+                        isRegenerating && regeneratingMessageId === data.id
+                          ? "Replying again..."
+                          : "Reply again"
+                      }
+                    >
+                      <HiArrowPath size={16} />
+                    </button>
+                  )}
 
-                {/* Regenerate button - only show for AI messages */}
-                {data.isAI && variants.length > 1 && !data.isDeleted && (
-                  <MessageVariantNav
-                    variantCount={variants.length}
-                    activeIndex={safeActiveVariant}
-                    disabled={isSwitchingVariant || isThisRegenerating}
-                    onSetVariant={handleSetVariant}
+                  {/* Reaction button */}
+                  <MessageReactionPicker
+                    containerRef={reactionPickerRef}
+                    open={showReactionPicker}
+                    onToggle={() => setShowReactionPicker(!showReactionPicker)}
+                    onReact={handleReaction}
                   />
-                )}
 
-                {/* Branch conversation from this point (AI conversations only) */}
-                {isAiConversation && !data.isDeleted && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      handleForkConversation().catch(() => {
-                        // handled in function
-                      })
-                    }}
-                    disabled={isForking}
-                    className={clsx(
-                      "rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground",
-                      isForking && "opacity-60"
-                    )}
-                    aria-label="Branch conversation from here"
-                    title="Branch from here"
-                  >
-                    <HiOutlineSquare2Stack size={16} />
-                  </button>
-                )}
+                  {/* Alternative replies - only when a message has more than one */}
+                  {data.isAI && variants.length > 1 && !data.isDeleted && (
+                    <MessageVariantNav
+                      variantCount={variants.length}
+                      activeIndex={safeActiveVariant}
+                      disabled={isSwitchingVariant || isThisRegenerating}
+                      onSetVariant={handleSetVariant}
+                    />
+                  )}
 
-                {/* Regenerate button - only show for AI messages */}
-                {data.isAI && onRegenerate && !data.isDeleted && (
-                  <button
-                    onClick={() => onRegenerate(data.id)}
-                    disabled={isRegenerating}
-                    className={clsx(
-                      "rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground",
-                      isRegenerating &&
-                        regeneratingMessageId === data.id &&
-                        "animate-spin text-purple-500"
-                    )}
-                    aria-label="Regenerate AI response"
-                    title={
-                      isRegenerating && regeneratingMessageId === data.id
-                        ? "Regenerating..."
-                        : "Regenerate response"
-                    }
-                  >
-                    <HiArrowPath size={16} />
-                  </button>
-                )}
-
-                {/* Text-to-speech button for AI responses */}
-                {data.isAI && displayBody && isSpeechSupported && !isThisRegenerating && (
-                  <button
-                    onClick={handleToggleSpeech}
-                    className={clsx(
-                      "rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground",
-                      isSpeaking && "text-primary"
-                    )}
-                    aria-label={isSpeaking ? "Stop reading message aloud" : "Read message aloud"}
-                    title={isSpeaking ? "Stop reading aloud" : "Read aloud"}
-                  >
-                    {isSpeaking ? <HiStopCircle size={16} /> : <HiSpeakerWave size={16} />}
-                  </button>
-                )}
-
-                {/* Edit/Delete menu - only show for own messages and not AI messages */}
-                {isOwn && !data.isAI && !data.image && !data.audioUrl && (
-                  <MessageActionsMenu
-                    containerRef={menuRef}
-                    open={showMenu}
-                    isDeleting={isDeleting}
-                    onToggle={() => setShowMenu(!showMenu)}
-                    onEdit={() => {
-                      setIsEditing(true)
-                      setShowMenu(false)
-                    }}
-                    onDelete={handleDelete}
-                  />
-                )}
+                  {/* Everything else lives in the "more" menu */}
+                  {!data.isDeleted && (
+                    <MessageActionsMenu
+                      containerRef={menuRef}
+                      open={showMenu}
+                      isDeleting={isDeleting}
+                      onToggle={() => setShowMenu(!showMenu)}
+                      onCopy={displayBody && !data.image && !data.audioUrl ? handleCopy : undefined}
+                      onBranch={
+                        isAiConversation
+                          ? () => {
+                              setShowMenu(false)
+                              handleForkConversation().catch(() => {
+                                // handled in function
+                              })
+                            }
+                          : undefined
+                      }
+                      isBranching={isForking}
+                      onReadAloud={
+                        data.isAI && displayBody && isSpeechSupported && !isThisRegenerating
+                          ? () => {
+                              setShowMenu(false)
+                              handleToggleSpeech()
+                            }
+                          : undefined
+                      }
+                      isSpeaking={isSpeaking}
+                      onEdit={
+                        isOwn && !data.isAI && !data.image && !data.audioUrl
+                          ? () => {
+                              setIsEditing(true)
+                              setShowMenu(false)
+                            }
+                          : undefined
+                      }
+                      onDelete={
+                        isOwn && !data.isAI && !data.image && !data.audioUrl
+                          ? handleDelete
+                          : undefined
+                      }
+                    />
+                  )}
+                </div>
               </>
             )}
           </div>
@@ -624,7 +636,8 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
               })}
             </div>
           )}
-          {isLast && isOwn && seenList.length > 0 && (
+          {/* Read receipts are a human-chat concept; a character never "sees" a line */}
+          {isLast && isOwn && !isAiConversation && seenList.length > 0 && (
             <div className="text-xs font-light text-muted-foreground">{`Seen by ${seenList}`}</div>
           )}
         </div>

@@ -21,6 +21,8 @@ interface ConversationContainerProps {
   isAI: boolean
   characterName?: string | null
   characterAvatar?: string | null
+  /** Name of the user's persona in this chat, when one is set */
+  personaName?: string | null
   currentUserId: string | null
 }
 
@@ -54,6 +56,7 @@ const ConversationContainer: React.FC<ConversationContainerProps> = ({
   isAI,
   characterName,
   characterAvatar,
+  personaName,
   currentUserId: currentUserIdProp,
 }) => {
   const { conversationId } = useConversation()
@@ -88,7 +91,7 @@ const ConversationContainer: React.FC<ConversationContainerProps> = ({
   const { regenerate, isRegenerating, regeneratingMessageId, streamingContent } = useAiRegenerate({
     csrfToken,
     onComplete: () => {
-      toast.success("AI response regenerated")
+      toast.success(`${characterName ?? "AI"} replied again`)
     },
     onError: (error) => {
       toast.error(`Regeneration failed: ${error}`)
@@ -175,13 +178,15 @@ const ConversationContainer: React.FC<ConversationContainerProps> = ({
 
   return (
     <>
-      {/* Screen-reader live region: announces incoming messages and typing state */}
+      {/* The one live region for this view: announces incoming messages and
+          typing state. TypingIndicator below is aria-hidden so typing is never
+          announced twice. */}
       <div aria-live="polite" aria-atomic="true" className="sr-only">
         {announcement}
         {typingUsers.length > 0
           ? ` ${typingUsers.join(", ")} is typing`
           : isAI && isAITyping
-            ? ` ${characterName ?? "AI"} is typing`
+            ? ` ${characterName ?? "AI"} is writing`
             : ""}
       </div>
 
@@ -200,10 +205,16 @@ const ConversationContainer: React.FC<ConversationContainerProps> = ({
       />
 
       {/* Typing indicator - displayed above the message input */}
-      <TypingIndicator typingUsers={typingUsers} isAITyping={isAI && isAITyping} />
+      <TypingIndicator
+        typingUsers={typingUsers}
+        isAITyping={isAI && isAITyping}
+        characterName={characterName}
+      />
 
       <Form
         isAI={isAI}
+        characterName={characterName}
+        personaName={personaName}
         onAIStreamingChange={handleAIStreamingChange}
         messages={messages}
         currentUserId={currentUserIdProp}

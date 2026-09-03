@@ -26,3 +26,6 @@ log.txt
 .claude/settings.local.json
 .claude/
 .DS_Store
+
+# Remember plugin local scratch (logs, buffers, tmp)
+.remember/

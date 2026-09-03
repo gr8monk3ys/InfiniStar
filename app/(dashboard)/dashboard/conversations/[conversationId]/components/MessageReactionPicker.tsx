@@ -23,7 +23,7 @@ export default function MessageReactionPicker({
       <button
         type="button"
         onClick={onToggle}
-        className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+        className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         aria-label="Add reaction"
         aria-expanded={open}
         aria-haspopup="true"

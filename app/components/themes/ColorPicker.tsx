@@ -109,18 +109,16 @@ export function ColorPicker({
   return (
     <div className={cn("flex items-center justify-between gap-4", className)}>
       <div className="flex-1">
-        <label htmlFor={id} className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+        <label htmlFor={id} className="block text-sm font-medium text-foreground">
           {label}
         </label>
-        {description && (
-          <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{description}</p>
-        )}
+        {description && <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>}
       </div>
       <div className="flex items-center gap-2">
         <button
           type="button"
           onClick={handleButtonClick}
-          className="size-8 rounded-md border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 dark:border-gray-600"
+          className="size-8 rounded-md border border-input shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           style={{ backgroundColor: hexValue }}
           aria-label={`Choose ${label} color`}
         />
@@ -133,7 +131,7 @@ export function ColorPicker({
           className="sr-only"
           aria-label={`${label} color picker`}
         />
-        <span className="w-20 font-mono text-xs text-gray-500 dark:text-gray-400">{hexValue}</span>
+        <span className="w-20 font-mono text-xs text-muted-foreground">{hexValue}</span>
       </div>
     </div>
   )

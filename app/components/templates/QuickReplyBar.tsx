@@ -92,7 +92,7 @@ export function QuickReplyBar({
           >
             {template.name}
             {template.shortcut && (
-              <Badge variant="secondary" className="ml-1.5 px-1 py-0 font-mono text-[10px]">
+              <Badge variant="secondary" className="ml-1.5 px-1 py-0 font-mono text-xs">
                 {template.shortcut}
               </Badge>
             )}

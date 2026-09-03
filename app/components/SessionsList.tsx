@@ -85,7 +85,7 @@ function formatRelativeTime(date: Date): string {
  * Get device icon based on device type
  */
 function DeviceIcon({ deviceType }: { deviceType: string | null }) {
-  const iconClass = "size-6 text-gray-500"
+  const iconClass = "size-6 text-muted-foreground"
 
   switch (deviceType?.toLowerCase()) {
     case "desktop":
@@ -120,16 +120,16 @@ function SessionItem({ session, onRevoke, isRevoking }: SessionItemProps) {
   return (
     <>
       <div
-        className="flex items-center justify-between rounded-lg border border-gray-200 bg-white p-4"
+        className="flex items-center justify-between rounded-lg border border-border bg-card p-4"
         role="listitem"
       >
         <div className="flex items-start gap-4">
-          <div className="mt-1 flex size-12 items-center justify-center rounded-full bg-gray-100">
+          <div className="mt-1 flex size-12 items-center justify-center rounded-full bg-muted">
             <DeviceIcon deviceType={session.deviceType} />
           </div>
           <div className="flex flex-col">
             <div className="flex items-center gap-2">
-              <span className="font-medium text-gray-900">
+              <span className="font-medium text-foreground">
                 {session.browser || "Unknown browser"}
               </span>
               {session.isCurrentSession && (
@@ -139,8 +139,8 @@ function SessionItem({ session, onRevoke, isRevoking }: SessionItemProps) {
                 </span>
               )}
             </div>
-            <span className="text-sm text-gray-600">{session.os || "Unknown OS"}</span>
-            <div className="mt-1 flex items-center gap-3 text-xs text-gray-500">
+            <span className="text-sm text-muted-foreground">{session.os || "Unknown OS"}</span>
+            <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
               <span>IP: {session.ipAddress}</span>
               <span aria-label={`Last active ${formatRelativeTime(session.lastActiveAt)}`}>
                 Active {formatRelativeTime(session.lastActiveAt)}
@@ -153,7 +153,7 @@ function SessionItem({ session, onRevoke, isRevoking }: SessionItemProps) {
           <button
             onClick={() => setShowConfirmDialog(true)}
             disabled={isRevoking}
-            className="rounded-md border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-md border border-destructive/30 bg-background px-3 py-2 text-sm font-medium text-destructive transition hover:bg-destructive/10 disabled:cursor-not-allowed disabled:opacity-50"
             aria-label={`Revoke session from ${session.browser || "Unknown browser"} on ${
               session.os || "Unknown OS"
             }`}
@@ -175,7 +175,7 @@ function SessionItem({ session, onRevoke, isRevoking }: SessionItemProps) {
               Are you sure you want to revoke this session? The device will be signed out and will
               need to log in again to access the application.
             </AlertDialogDescription>
-            <div className="mt-3 rounded-md bg-gray-100 p-3 text-sm text-gray-700">
+            <div className="mt-3 rounded-md bg-muted p-3 text-sm text-foreground">
               <strong>Device:</strong> {session.browser || "Unknown"} on {session.os || "Unknown"}
               <br />
               <strong>IP Address:</strong> {session.ipAddress}
@@ -185,7 +185,7 @@ function SessionItem({ session, onRevoke, isRevoking }: SessionItemProps) {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleRevoke}
-              className="bg-red-600 text-white hover:bg-red-700"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Revoke Session
             </AlertDialogAction>
@@ -340,7 +340,7 @@ export default function SessionsList() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="size-8 animate-spin rounded-full border-4 border-gray-300 border-t-sky-600" />
+        <div className="size-8 animate-spin rounded-full border-4 border-muted border-t-primary" />
         <span className="sr-only">Loading sessions...</span>
       </div>
     )
@@ -351,7 +351,7 @@ export default function SessionsList() {
       {/* Header with action */}
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-muted-foreground">
             {sessions.length} active session{sessions.length !== 1 ? "s" : ""}
           </p>
         </div>
@@ -359,7 +359,7 @@ export default function SessionsList() {
           <button
             onClick={() => setShowRevokeAllDialog(true)}
             disabled={isRevoking}
-            className="flex items-center gap-2 rounded-md border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex items-center gap-2 rounded-md border border-destructive/30 bg-background px-3 py-2 text-sm font-medium text-destructive transition hover:bg-destructive/10 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <HiTrash className="size-4" aria-hidden="true" />
             Revoke all other sessions
@@ -369,9 +369,9 @@ export default function SessionsList() {
 
       {/* Sessions list */}
       {sessions.length === 0 ? (
-        <div className="rounded-lg border border-gray-200 bg-gray-50 p-8 text-center">
-          <HiShieldCheck className="mx-auto size-12 text-gray-400" aria-hidden="true" />
-          <p className="mt-2 text-gray-600">No active sessions found</p>
+        <div className="rounded-lg border border-border bg-muted/50 p-8 text-center">
+          <HiShieldCheck className="mx-auto size-12 text-muted-foreground/70" aria-hidden="true" />
+          <p className="mt-2 text-muted-foreground">No active sessions found</p>
         </div>
       ) : (
         <div className="space-y-3" role="list" aria-label="Active sessions">
@@ -387,7 +387,7 @@ export default function SessionsList() {
       )}
 
       {/* Security note */}
-      <div className="flex items-start gap-2 rounded-lg bg-blue-50 p-4 text-sm text-blue-800">
+      <div className="flex items-start gap-2 rounded-lg bg-primary/10 p-4 text-sm text-primary-accent">
         <HiShieldCheck className="mt-0.5 size-5 shrink-0" aria-hidden="true" />
         <div>
           <strong>Security tip:</strong> If you see any sessions you do not recognize, revoke them
@@ -408,7 +408,7 @@ export default function SessionsList() {
               {otherSessionsCount} device{otherSessionsCount !== 1 ? "s" : ""} and they will need to
               log in again.
             </AlertDialogDescription>
-            <div className="mt-3 text-sm font-medium text-gray-700">
+            <div className="mt-3 text-sm font-medium text-foreground">
               Your current session will not be affected.
             </div>
           </AlertDialogHeader>
@@ -416,7 +416,7 @@ export default function SessionsList() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={revokeAllOtherSessions}
-              className="bg-red-600 text-white hover:bg-red-700"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Revoke All ({otherSessionsCount})
             </AlertDialogAction>

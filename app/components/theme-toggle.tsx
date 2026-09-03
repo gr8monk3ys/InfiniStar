@@ -52,11 +52,12 @@ export function ThemeToggle() {
 }
 
 /**
- * A simpler theme toggle button that can be used in compact spaces
- * like the conversation header. Cycles through light -> dark -> system.
+ * A simpler theme toggle button for compact spaces. Flips between the
+ * resolved light and dark themes; there is no "system" step, so every click
+ * visibly changes the page.
  */
 export function ThemeToggleCompact() {
-  const { setTheme, theme, resolvedTheme } = useTheme()
+  const { setTheme, resolvedTheme } = useTheme()
   const [mounted, setMounted] = React.useState(false)
 
   // Avoid hydration mismatch by only rendering after mount
@@ -64,14 +65,10 @@ export function ThemeToggleCompact() {
     setMounted(true)
   }, [])
 
-  const cycleTheme = () => {
-    if (theme === "light") {
-      setTheme("dark")
-    } else if (theme === "dark") {
-      setTheme("system")
-    } else {
-      setTheme("light")
-    }
+  const isDark = resolvedTheme === "dark"
+
+  const toggleTheme = () => {
+    setTheme(isDark ? "light" : "dark")
   }
 
   const getIcon = () => {
@@ -80,26 +77,18 @@ export function ThemeToggleCompact() {
       return <Icons.sun className="size-5" />
     }
 
-    if (theme === "system") {
-      return <Icons.laptop className="size-5" />
-    }
-    if (resolvedTheme === "dark") {
-      return <Icons.moon className="size-5" />
-    }
-    return <Icons.sun className="size-5" />
+    return isDark ? <Icons.moon className="size-5" /> : <Icons.sun className="size-5" />
   }
 
   const getLabel = () => {
     if (!mounted) return "Toggle theme"
-    if (theme === "system") return "System theme (click for light)"
-    if (theme === "dark") return "Dark theme (click for system)"
-    return "Light theme (click for dark)"
+    return isDark ? "Switch to light theme" : "Switch to dark theme"
   }
 
   return (
     <button
-      onClick={cycleTheme}
-      className="cursor-pointer rounded-full p-2 text-sky-500 transition hover:bg-accent hover:text-sky-600"
+      onClick={toggleTheme}
+      className="cursor-pointer rounded-full p-2 text-primary transition hover:bg-accent hover:text-primary/80"
       title={getLabel()}
       aria-label={getLabel()}
     >

@@ -21,8 +21,14 @@ const hasCloudinaryConfig = Boolean(
   process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME && cloudinaryUploadPreset
 )
 
+/** 44px tap target with a visible keyboard focus ring; shared by every composer icon button. */
+const iconButtonClass =
+  "inline-flex size-11 shrink-0 items-center justify-center rounded-full transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+
 export interface ComposerRowProps {
   isAI: boolean
+  /** Character name, used for the placeholder in character chats */
+  characterName?: string | null
   onUpload: (result: CloudinaryUploadWidgetResults) => void
   onOpenImageGenerator: () => void
   isLoading: boolean
@@ -49,6 +55,7 @@ export interface ComposerRowProps {
 
 export function ComposerRow({
   isAI,
+  characterName,
   onUpload,
   onOpenImageGenerator,
   isLoading,
@@ -77,16 +84,23 @@ export function ComposerRow({
   // transcription) are hidden so users never hit "not configured" errors.
   const { capabilities } = useAiCapabilities()
 
+  const placeholder = isAI
+    ? characterName
+      ? `Say something to ${characterName}`
+      : "Say something"
+    : "Write a message"
+
   return (
-    <div className="flex w-full items-center gap-2 p-4">
+    <div className="flex w-full items-center gap-1 p-3 sm:p-4">
       {hasCloudinaryConfig ? (
         <CldUploadButton
           options={{ maxFiles: 1 }}
           onUpload={onUpload}
           uploadPreset={cloudinaryUploadPreset}
           aria-label="Attach image"
+          className={`${iconButtonClass} text-primary`}
         >
-          <HiPhoto size={30} className="text-sky-500" aria-hidden="true" />
+          <HiPhoto size={24} aria-hidden="true" />
         </CldUploadButton>
       ) : (
         <button
@@ -94,9 +108,9 @@ export function ComposerRow({
           disabled
           aria-label="Attach image unavailable"
           title="Image upload is unavailable until Cloudinary is configured."
-          className="cursor-not-allowed rounded-md p-1 opacity-60"
+          className={`${iconButtonClass} cursor-not-allowed text-primary opacity-60`}
         >
-          <HiPhoto size={30} className="text-sky-500" aria-hidden="true" />
+          <HiPhoto size={24} aria-hidden="true" />
         </button>
       )}
       {isAI && capabilities.imageGeneration && (
@@ -104,11 +118,11 @@ export function ComposerRow({
           type="button"
           onClick={onOpenImageGenerator}
           disabled={isLoading || isStreaming}
-          className="rounded-md p-1 text-violet-600 transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
+          className={`${iconButtonClass} text-primary hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50`}
           aria-label="Generate image"
           title="Generate image"
         >
-          <HiSparkles size={26} />
+          <HiSparkles size={24} />
         </button>
       )}
       {voiceMessageSupported && capabilities.voiceTranscription && (
@@ -116,8 +130,8 @@ export function ComposerRow({
           type="button"
           onClick={onVoiceMessageToggle}
           disabled={isLoading || isStreaming || isGeneratingImage || isSendingVoiceMessage}
-          className={`rounded-md p-1 transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50 ${
-            isRecordingVoiceMessage ? "text-red-600" : "text-sky-600"
+          className={`${iconButtonClass} hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50 ${
+            isRecordingVoiceMessage ? "text-destructive" : "text-primary"
           }`}
           aria-label={
             isRecordingVoiceMessage ? "Stop voice message recording" : "Record voice message"
@@ -125,7 +139,7 @@ export function ComposerRow({
           aria-pressed={isRecordingVoiceMessage}
           title={isRecordingVoiceMessage ? "Stop recording" : "Record voice message"}
         >
-          {isRecordingVoiceMessage ? <HiStopCircle size={26} /> : <HiMicrophone size={26} />}
+          {isRecordingVoiceMessage ? <HiStopCircle size={24} /> : <HiMicrophone size={24} />}
         </button>
       )}
       <form
@@ -139,7 +153,7 @@ export function ComposerRow({
           register={register}
           errors={errors}
           required={!isAI}
-          placeholder={isAI ? "Ask me anything..." : "Write a message"}
+          placeholder={placeholder}
           aria-label="Message"
           onInputChange={onInputChange}
           onModifierEnter={onModifierEnterSubmit}
@@ -164,22 +178,16 @@ export function ComposerRow({
         <button
           type="submit"
           disabled={!canSubmit}
-          aria-label={isAI ? "Send message to AI" : "Send message"}
+          aria-label={isAI && characterName ? `Send message to ${characterName}` : "Send message"}
           aria-busy={isLoading || isStreaming}
           aria-disabled={!canSubmit}
-          className={`
-              cursor-pointer
-              rounded-full
-              ${isAI ? "bg-gradient-to-r from-purple-500 to-pink-500" : "bg-sky-500"}
-              p-2
-              transition
-              ${isAI ? "hover:opacity-75" : "hover:bg-sky-600"}
-              ${!canSubmit ? "cursor-not-allowed opacity-50" : ""}
-            `}
+          className={`${iconButtonClass} bg-primary text-primary-foreground hover:bg-primary/90 ${
+            !canSubmit ? "cursor-not-allowed opacity-50" : "cursor-pointer"
+          }`}
         >
           <HiPaperAirplane
-            size={18}
-            className={`text-white ${isStreaming ? "animate-pulse" : ""}`}
+            size={20}
+            className={isStreaming ? "animate-pulse" : ""}
             aria-hidden="true"
           />
         </button>

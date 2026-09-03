@@ -147,8 +147,9 @@ function CharacterHero({
       <div className="relative">
         <div
           className={cn(
-            "relative h-48 w-full sm:h-56 md:h-64",
-            !character.coverImageUrl && `bg-gradient-to-br ${gradient}`
+            "relative h-48 w-full overflow-hidden sm:h-56 md:h-64",
+            // No cover: the aurora is scenery, not a solid category fill.
+            !character.coverImageUrl && "aurora-backdrop grain"
           )}
           role="img"
           aria-label={`${character.name} cover image`}
@@ -360,7 +361,7 @@ function CharacterContent({
                 />
               </div>
             ) : (
-              <div className="flex size-10 items-center justify-center rounded-full border bg-primary/10 text-sm font-bold text-primary">
+              <div className="flex size-10 items-center justify-center rounded-full border bg-primary/10 text-sm font-bold text-primary-accent">
                 <HiUser className="size-5" />
               </div>
             )}

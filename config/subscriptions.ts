@@ -9,7 +9,7 @@ export const freePlan: SubscriptionPlan = {
   price: 0,
   features: [
     "50 AI messages per month",
-    "All 7 AI personalities",
+    "All public characters",
     "Claude Haiku 4.5 model",
     "Message history",
     "Basic search",
@@ -24,7 +24,7 @@ export const proPlan: SubscriptionPlan = {
   price: 9.99,
   features: [
     "High monthly limits (fair use cap applies)",
-    "All 7 AI personalities",
+    "All public characters",
     "Claude Sonnet 4.6 + Haiku 4.5",
     "Faster response tier",
     "Advanced search & analytics",

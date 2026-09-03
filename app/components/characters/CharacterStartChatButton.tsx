@@ -31,7 +31,8 @@ export function CharacterStartChatButton({
     if (!isAuthenticated) {
       // Quantify the dead-end BEFORE we bounce the visitor to sign-in.
       posthog.capture("start_chat_signup_wall_hit", { characterId, slug })
-      router.push("/sign-in")
+      // Send them back to this character after auth; the sign-in page and Clerk both honor redirect_url.
+      router.push(`/sign-in?redirect_url=${encodeURIComponent(`/characters/${slug}`)}`)
       return
     }
 

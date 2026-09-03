@@ -26,8 +26,8 @@ export function ThemePreview({ theme, isSelected, onClick }: ThemePreviewProps) 
       className={cn(
         "relative flex flex-col overflow-hidden rounded-lg border-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2",
         isSelected
-          ? "border-sky-500 ring-2 ring-sky-500 ring-offset-2"
-          : "border-gray-200 hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600"
+          ? "border-primary ring-2 ring-ring ring-offset-2"
+          : "border-border hover:border-primary/30"
       )}
       aria-pressed={isSelected}
       aria-label={`Select ${theme.name} theme`}
@@ -109,7 +109,7 @@ export function ThemePreview({ theme, isSelected, onClick }: ThemePreviewProps) 
 
         {/* Selection indicator */}
         {isSelected && (
-          <div className="absolute right-2 top-2 flex size-5 items-center justify-center rounded-full bg-sky-500 text-white">
+          <div className="absolute right-2 top-2 flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground">
             <HiCheck className="size-3" aria-hidden="true" />
           </div>
         )}

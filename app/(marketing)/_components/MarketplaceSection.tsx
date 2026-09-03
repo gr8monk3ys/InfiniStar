@@ -7,7 +7,6 @@ import { buttonVariants } from "@/app/components/ui/button"
 import { PublicCharacterCard } from "@/app/components/characters/PublicCharacterCard"
 
 import { starterArchetypes, type CreatorSpotlight, type MarketplaceSectionProps } from "./home-data"
-import { SectionLabel } from "./SectionLabel"
 
 function CreatorSpotlightCard({ creator }: { creator: CreatorSpotlight }) {
   return (
@@ -27,7 +26,7 @@ function CreatorSpotlightCard({ creator }: { creator: CreatorSpotlight }) {
             />
           </div>
         ) : (
-          <div className="flex size-12 items-center justify-center rounded-2xl bg-violet-100 text-base font-semibold text-violet-800 dark:bg-violet-500/20 dark:text-violet-200">
+          <div className="flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-base font-semibold text-primary">
             {(creator.name || "?").slice(0, 1).toUpperCase()}
           </div>
         )}
@@ -63,8 +62,7 @@ export function MarketplaceSection({
       <div className="container max-w-6xl">
         <div className="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div className="max-w-2xl">
-            <SectionLabel>From the marketplace</SectionLabel>
-            <h2 className="mt-4 font-heading text-3xl font-bold tracking-tight [text-wrap:balance] md:text-4xl">
+            <h2 className="font-heading text-3xl font-bold tracking-tight [text-wrap:balance] md:text-4xl">
               Start with something specific, not a blank prompt
             </h2>
             <p className="mt-3 text-lg text-muted-foreground [text-wrap:pretty]">
@@ -92,7 +90,7 @@ export function MarketplaceSection({
             </div>
 
             <div className="rounded-3xl border border-border/50 bg-card/70 p-6 shadow-sm">
-              <div className="flex items-center gap-2 text-sm font-medium text-violet-800 dark:text-violet-200">
+              <div className="flex items-center gap-2 text-sm font-medium text-primary-accent">
                 <HiArrowTrendingUp className="size-4" aria-hidden="true" />
                 Creator spotlights
               </div>
@@ -110,7 +108,7 @@ export function MarketplaceSection({
                 key={archetype.name}
                 className="group relative overflow-hidden rounded-3xl border border-border/50 bg-card/70 p-6 shadow-sm transition-colors hover:border-primary/30"
               >
-                <p className="text-xs font-medium uppercase tracking-[0.2em] text-violet-800 dark:text-violet-200">
+                <p className="text-xs font-medium uppercase tracking-[0.2em] text-primary-accent">
                   {archetype.category}
                 </p>
                 <h3 className="mt-4 font-heading text-xl font-semibold">{archetype.name}</h3>
@@ -119,7 +117,7 @@ export function MarketplaceSection({
                 </p>
                 <Link
                   href="/sign-up"
-                  className="mt-6 inline-flex items-center gap-1.5 text-sm font-semibold text-foreground underline decoration-violet-300 underline-offset-4 transition-colors hover:text-violet-700 dark:decoration-violet-400/50 dark:hover:text-violet-200"
+                  className="mt-6 inline-flex items-center gap-1.5 text-sm font-semibold text-foreground underline decoration-primary/40 underline-offset-4 transition-colors hover:text-primary"
                 >
                   Start building this vibe
                   <HiArrowRight

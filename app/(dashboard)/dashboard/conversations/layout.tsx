@@ -40,7 +40,7 @@ export default async function ConversationsLayout({ children }: { children: Reac
             <div className="h-full">
               <ConversationList
                 user={user}
-                title="Messages"
+                title="Conversations"
                 initialItems={conversations}
                 currentUserId={currentUser?.id ?? null}
                 currentUserEmail={currentUser?.email ?? null}

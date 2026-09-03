@@ -8,11 +8,14 @@ import { type VoiceInputMode } from "@/app/components/voice"
 import { type Suggestion } from "@/app/hooks/useSuggestions"
 
 import { ComposerRow, type ComposerRowProps } from "./ComposerRow"
+import { ContextStrip } from "./ContextStrip"
 import { ImageGenerationDialog, type ImageSize } from "./ImageGenerationDialog"
 import { PendingImagePreview } from "./PendingImagePreview"
 
 export interface FormPanelProps {
   isAI: boolean
+  characterName?: string | null
+  personaName?: string | null
   shouldShowSuggestions: boolean
   suggestions: Suggestion[]
   suggestionsLoading: boolean
@@ -54,6 +57,8 @@ export interface FormPanelProps {
 
 export function FormPanel({
   isAI,
+  characterName,
+  personaName,
   shouldShowSuggestions,
   suggestions,
   suggestionsLoading,
@@ -113,8 +118,10 @@ export function FormPanel({
       {isAI && pendingImage && (
         <PendingImagePreview pendingImage={pendingImage} onRemove={onRemovePendingImage} />
       )}
+      {isAI && <ContextStrip personaName={personaName} />}
       <ComposerRow
         isAI={isAI}
+        characterName={characterName}
         onUpload={onUpload}
         onOpenImageGenerator={onOpenImageGenerator}
         isLoading={isLoading}

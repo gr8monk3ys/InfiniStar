@@ -38,9 +38,11 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({ isOpen, onClose }) => {
       <DialogContent>
         <div className="sm:flex sm:items-start">
           <div className="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left">
-            <h3 className="text-base font-semibold leading-6 text-gray-900">Delete conversation</h3>
+            <h3 className="text-base font-semibold leading-6 text-foreground">
+              Delete conversation
+            </h3>
             <div className="mt-2">
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-muted-foreground">
                 Are you sure you want to delete this conversation? This action cannot be undone.
               </p>
             </div>

@@ -32,6 +32,8 @@ jobs:
 
       - run: bun install --frozen-lockfile
       - run: bun run lint
+      # DESIGN.md's named rules, enforced: see its Enforcement section.
+      - run: bun run design:check
       - run: bun run typecheck
       # Jest, not `bun test`: suites depend on jest.resetModules/jsdom.
       - run: bun run test --runInBand --forceExit

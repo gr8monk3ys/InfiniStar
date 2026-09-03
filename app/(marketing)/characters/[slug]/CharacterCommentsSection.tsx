@@ -243,7 +243,7 @@ export default function CharacterCommentsSection({
                       />
                     </div>
                   ) : (
-                    <div className="flex size-9 shrink-0 items-center justify-center rounded-full border bg-primary/10 text-sm font-semibold text-primary">
+                    <div className="flex size-9 shrink-0 items-center justify-center rounded-full border bg-primary/10 text-sm font-semibold text-primary-accent">
                       {(comment.author.name || "?").slice(0, 1).toUpperCase()}
                     </div>
                   )}

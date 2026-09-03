@@ -25,21 +25,28 @@ const DesktopItem: React.FC<DesktopItemProps> = ({ label, href, icon: Icon, acti
           `
             group
             flex
-            gap-x-3
+            w-16
+            flex-col
+            items-center
+            gap-y-1
             rounded-md
-            p-3
-            text-sm
-            leading-6
-            font-semibold
+            px-2
+            py-2.5
+            font-medium
             text-muted-foreground
             hover:text-foreground
             hover:bg-accent
+            focus-visible:outline-none
+            focus-visible:ring-2
+            focus-visible:ring-ring
+            focus-visible:ring-offset-2
           `,
           active && "bg-accent text-foreground"
         )}
+        aria-current={active ? "page" : undefined}
       >
         <Icon className="size-6 shrink-0" aria-hidden="true" />
-        <span className="sr-only">{label}</span>
+        <span className="text-xs leading-none">{label}</span>
       </Link>
     </li>
   )

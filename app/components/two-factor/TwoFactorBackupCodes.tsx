@@ -41,8 +41,8 @@ export function TwoFactorBackupCodes({ backupCodes, onDone }: TwoFactorBackupCod
         <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-green-100">
           <HiShieldCheck className="size-6 text-green-600" />
         </div>
-        <h3 className="mt-4 text-lg font-semibold text-gray-900">Save Your Backup Codes</h3>
-        <p className="mt-1 text-sm text-gray-600">
+        <h3 className="mt-4 text-lg font-semibold text-foreground">Save Your Backup Codes</h3>
+        <p className="mt-1 text-sm text-muted-foreground">
           Store these codes in a secure location. Each code can only be used once.
         </p>
       </div>
@@ -53,9 +53,12 @@ export function TwoFactorBackupCodes({ backupCodes, onDone }: TwoFactorBackupCod
         </p>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 rounded-lg bg-gray-50 p-4">
+      <div className="grid grid-cols-2 gap-2 rounded-lg bg-muted p-4">
         {backupCodes.map((code) => (
-          <code key={code} className="rounded bg-white px-3 py-2 font-mono text-sm">
+          <code
+            key={code}
+            className="rounded bg-background px-3 py-2 font-mono text-sm text-foreground"
+          >
             {code}
           </code>
         ))}
@@ -64,14 +67,14 @@ export function TwoFactorBackupCodes({ backupCodes, onDone }: TwoFactorBackupCod
       <div className="flex justify-center gap-4">
         <button
           onClick={copyBackupCodes}
-          className="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          className="inline-flex items-center gap-2 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground"
         >
           <HiDocumentDuplicate className="size-4" />
           Copy
         </button>
         <button
           onClick={downloadBackupCodes}
-          className="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          className="inline-flex items-center gap-2 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground"
         >
           <HiArrowDownTray className="size-4" />
           Download
@@ -81,7 +84,7 @@ export function TwoFactorBackupCodes({ backupCodes, onDone }: TwoFactorBackupCod
       <div className="flex justify-center">
         <button
           onClick={onDone}
-          className="rounded-md bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700"
+          className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
         >
           Done
         </button>

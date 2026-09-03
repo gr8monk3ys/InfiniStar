@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import React, { useState } from "react"
 import { type User } from "@prisma/client"
 import { HiOutlineQuestionMarkCircle } from "react-icons/hi2"
 
@@ -44,14 +44,20 @@ const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ currentUser }) => {
         <nav className="mt-4 flex flex-col justify-between">
           <ul role="list" className="flex flex-col items-center space-y-1">
             {routes.map((item) => (
-              <DesktopItem
-                key={item.label}
-                href={item.href}
-                label={item.label}
-                icon={item.icon}
-                active={item.active}
-                onClick={item.onClick}
-              />
+              <React.Fragment key={item.label}>
+                {item.label === "Logout" && (
+                  <li role="separator" aria-hidden="true" className="w-full px-4 py-1">
+                    <div className="border-t border-border" />
+                  </li>
+                )}
+                <DesktopItem
+                  href={item.href}
+                  label={item.label}
+                  icon={item.icon}
+                  active={item.active}
+                  onClick={item.onClick}
+                />
+              </React.Fragment>
             ))}
           </ul>
         </nav>
@@ -59,7 +65,7 @@ const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ currentUser }) => {
           {/* Keyboard shortcuts help button */}
           <button
             onClick={openHelp}
-            className="group relative flex cursor-pointer items-center justify-center rounded-md p-3 text-muted-foreground transition hover:bg-accent hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            className="group relative flex cursor-pointer items-center justify-center rounded-md p-3 text-muted-foreground transition hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             aria-label="Keyboard shortcuts (press ? or Cmd+/)"
             title="Keyboard shortcuts (?)"
           >

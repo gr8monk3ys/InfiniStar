@@ -317,8 +317,8 @@ export function UsageDashboard() {
       </div>
 
       {/* Info Box */}
-      <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-900/50 dark:bg-blue-950/30">
-        <p className="text-sm text-blue-800 dark:text-blue-200">
+      <div className="rounded-lg border border-primary/20 bg-primary/10 p-4">
+        <p className="text-sm text-primary-accent">
           <span className="font-medium">Note:</span> Usage tracking helps you monitor AI costs and
           stay within quota limits. Costs are estimates based on configured model pricing and
           multimodal cost assumptions. Data is updated in real-time as you use the AI features.

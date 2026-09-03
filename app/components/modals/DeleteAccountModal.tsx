@@ -105,18 +105,18 @@ const DeleteAccountModal: React.FC<DeleteAccountModalProps> = ({
   return (
     <Modal isOpen={isOpen} onClose={handleClose}>
       <div className="sm:flex sm:items-start">
-        <div className="mx-auto flex size-12 shrink-0 items-center justify-center rounded-full bg-red-100 sm:mx-0 sm:size-10">
-          <HiExclamationTriangle className="size-6 text-red-600" aria-hidden="true" />
+        <div className="mx-auto flex size-12 shrink-0 items-center justify-center rounded-full bg-destructive/10 sm:mx-0 sm:size-10">
+          <HiExclamationTriangle className="size-6 text-destructive" aria-hidden="true" />
         </div>
         <div className="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left">
-          <Dialog.Title as="h3" className="text-lg font-semibold leading-6 text-gray-900">
+          <Dialog.Title as="h3" className="text-lg font-semibold leading-6 text-foreground">
             Delete Account
           </Dialog.Title>
           <div className="mt-2">
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-muted-foreground">
               Are you sure you want to delete your account? This action will:
             </p>
-            <ul className="mt-3 list-inside list-disc space-y-1 text-sm text-gray-500">
+            <ul className="mt-3 list-inside list-disc space-y-1 text-sm text-muted-foreground">
               <li>Delete all your messages and conversations</li>
               <li>Remove you from all shared conversations</li>
               <li>Delete your profile and settings</li>
@@ -136,7 +136,7 @@ const DeleteAccountModal: React.FC<DeleteAccountModalProps> = ({
         {/* Password input for credential users */}
         {hasPassword && (
           <div>
-            <label htmlFor="delete-password" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="delete-password" className="block text-sm font-medium text-foreground">
               Enter your password to confirm
             </label>
             <div className="relative mt-1">
@@ -146,14 +146,14 @@ const DeleteAccountModal: React.FC<DeleteAccountModalProps> = ({
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={isLoading}
-                className="block w-full rounded-md border border-gray-300 px-3 py-2 pr-10 shadow-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500 disabled:cursor-not-allowed disabled:bg-gray-100"
+                className="block w-full rounded-md border border-input bg-background px-3 py-2 pr-10 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-muted"
                 placeholder="Your current password"
                 aria-required="true"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-500"
+                className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground/70 hover:text-muted-foreground"
                 aria-label={showPassword ? "Hide password" : "Show password"}
               >
                 {showPassword ? <HiEyeSlash className="size-5" /> : <HiEye className="size-5" />}
@@ -164,8 +164,8 @@ const DeleteAccountModal: React.FC<DeleteAccountModalProps> = ({
 
         {/* Confirmation text input */}
         <div>
-          <label htmlFor="confirmation-text" className="block text-sm font-medium text-gray-700">
-            Type <span className="font-bold text-red-600">DELETE</span> to confirm
+          <label htmlFor="confirmation-text" className="block text-sm font-medium text-foreground">
+            Type <span className="font-bold text-destructive">DELETE</span> to confirm
           </label>
           <input
             id="confirmation-text"
@@ -173,7 +173,7 @@ const DeleteAccountModal: React.FC<DeleteAccountModalProps> = ({
             value={confirmationText}
             onChange={(e) => setConfirmationText(e.target.value.toUpperCase())}
             disabled={isLoading}
-            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500 disabled:cursor-not-allowed disabled:bg-gray-100"
+            className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-muted"
             placeholder="DELETE"
             aria-required="true"
             autoComplete="off"
@@ -186,7 +186,7 @@ const DeleteAccountModal: React.FC<DeleteAccountModalProps> = ({
           type="button"
           onClick={handleClose}
           disabled={isLoading}
-          className="inline-flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+          className="inline-flex w-full justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground shadow-sm hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
         >
           Cancel
         </button>
@@ -195,7 +195,7 @@ const DeleteAccountModal: React.FC<DeleteAccountModalProps> = ({
           onClick={handleDelete}
           disabled={isLoading || !isConfirmationValid || !isPasswordValid}
           aria-busy={isLoading}
-          className="inline-flex w-full justify-center rounded-md border border-transparent bg-red-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+          className="inline-flex w-full justify-center rounded-md border border-transparent bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground shadow-sm hover:bg-destructive/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
         >
           {isLoading ? "Processing..." : "Delete Account"}
         </button>

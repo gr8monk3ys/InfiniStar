@@ -1,0 +1,416 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-01T17:05:00-07:00",
+  "title": "Design System: InfiniStar",
+  "extensions": {
+    "colorMeta": {
+      "nebula-violet": {
+        "role": "primary",
+        "displayName": "Nebula Violet",
+        "canonical": "hsl(263 70% 58%)",
+        "tonalRamp": [
+          "hsl(263 70% 15%)",
+          "hsl(263 70% 26%)",
+          "hsl(263 70% 37%)",
+          "hsl(263 70% 48%)",
+          "hsl(263 70% 58%)",
+          "hsl(263 70% 70%)",
+          "hsl(263 70% 83%)",
+          "hsl(263 70% 95%)"
+        ]
+      },
+      "aurora-fuchsia": {
+        "role": "primary",
+        "displayName": "Aurora Fuchsia",
+        "canonical": "hsl(316 72% 58%)",
+        "tonalRamp": [
+          "hsl(316 72% 15%)",
+          "hsl(316 72% 26%)",
+          "hsl(316 72% 37%)",
+          "hsl(316 72% 48%)",
+          "hsl(316 72% 58%)",
+          "hsl(316 72% 70%)",
+          "hsl(316 72% 83%)",
+          "hsl(316 72% 95%)"
+        ]
+      },
+      "ember-pink": {
+        "role": "primary",
+        "displayName": "Ember Pink",
+        "canonical": "hsl(349 89% 66%)",
+        "tonalRamp": [
+          "hsl(349 89% 15%)",
+          "hsl(349 89% 26%)",
+          "hsl(349 89% 38%)",
+          "hsl(349 89% 52%)",
+          "hsl(349 89% 66%)",
+          "hsl(349 89% 76%)",
+          "hsl(349 89% 86%)",
+          "hsl(349 89% 95%)"
+        ]
+      },
+      "solar-amber": {
+        "role": "primary",
+        "displayName": "Solar Amber",
+        "canonical": "hsl(32 95% 58%)",
+        "tonalRamp": [
+          "hsl(32 95% 15%)",
+          "hsl(32 95% 26%)",
+          "hsl(32 95% 37%)",
+          "hsl(32 95% 48%)",
+          "hsl(32 95% 58%)",
+          "hsl(32 95% 70%)",
+          "hsl(32 95% 83%)",
+          "hsl(32 95% 95%)"
+        ]
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Paper",
+        "canonical": "hsl(0 0% 100%)",
+        "tonalRamp": [
+          "hsl(240 6% 4%)",
+          "hsl(240 4% 11%)",
+          "hsl(240 4% 16%)",
+          "hsl(240 3.8% 46.1%)",
+          "hsl(240 3.7% 84%)",
+          "hsl(240 5.9% 90%)",
+          "hsl(240 4.8% 95.9%)",
+          "hsl(0 0% 100%)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "hsl(240 10% 3.9%)",
+        "tonalRamp": [
+          "hsl(240 10% 3.9%)",
+          "hsl(240 6% 10%)",
+          "hsl(240 5% 20%)",
+          "hsl(240 4% 32%)",
+          "hsl(240 3.8% 46.1%)",
+          "hsl(240 4% 62%)",
+          "hsl(240 4% 78%)",
+          "hsl(240 5% 92%)"
+        ]
+      },
+      "mist": {
+        "role": "neutral",
+        "displayName": "Mist",
+        "canonical": "hsl(240 4.8% 95.9%)",
+        "tonalRamp": [
+          "hsl(240 4% 16%)",
+          "hsl(240 4% 30%)",
+          "hsl(240 3.8% 46.1%)",
+          "hsl(240 4% 60%)",
+          "hsl(240 4% 72%)",
+          "hsl(240 3.7% 84%)",
+          "hsl(240 5.9% 90%)",
+          "hsl(240 4.8% 95.9%)"
+        ]
+      },
+      "graphite": {
+        "role": "neutral",
+        "displayName": "Graphite",
+        "canonical": "hsl(240 3.8% 46.1%)",
+        "tonalRamp": [
+          "hsl(240 4% 15%)",
+          "hsl(240 4% 24%)",
+          "hsl(240 4% 34%)",
+          "hsl(240 3.8% 46.1%)",
+          "hsl(240 5% 55%)",
+          "hsl(240 4% 68%)",
+          "hsl(240 4% 82%)",
+          "hsl(240 4% 94%)"
+        ]
+      },
+      "hairline": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "hsl(240 5.9% 90%)",
+        "tonalRamp": [
+          "hsl(240 4% 16%)",
+          "hsl(240 4% 28%)",
+          "hsl(240 4% 40%)",
+          "hsl(240 4% 55%)",
+          "hsl(240 4% 68%)",
+          "hsl(240 3.7% 84%)",
+          "hsl(240 5.9% 90%)",
+          "hsl(240 4.8% 95.9%)"
+        ]
+      },
+      "night": {
+        "role": "neutral",
+        "displayName": "Night",
+        "canonical": "hsl(240 6% 4%)",
+        "tonalRamp": [
+          "hsl(240 6% 4%)",
+          "hsl(240 4% 6%)",
+          "hsl(240 4% 8%)",
+          "hsl(240 4% 11%)",
+          "hsl(240 3% 15%)",
+          "hsl(240 4% 16%)",
+          "hsl(240 5% 55%)",
+          "hsl(0 0% 95%)"
+        ]
+      },
+      "moon": {
+        "role": "neutral",
+        "displayName": "Moon",
+        "canonical": "hsl(0 0% 95%)",
+        "tonalRamp": [
+          "hsl(240 6% 4%)",
+          "hsl(240 4% 11%)",
+          "hsl(240 4% 22%)",
+          "hsl(240 4% 36%)",
+          "hsl(240 5% 55%)",
+          "hsl(240 4% 72%)",
+          "hsl(0 0% 85%)",
+          "hsl(0 0% 95%)"
+        ]
+      },
+      "signal-red": {
+        "role": "semantic",
+        "displayName": "Signal Red",
+        "canonical": "hsl(0 84.2% 60.2%)",
+        "tonalRamp": [
+          "hsl(0 62.8% 15%)",
+          "hsl(0 62.8% 30.6%)",
+          "hsl(0 70% 42%)",
+          "hsl(0 78% 51%)",
+          "hsl(0 84.2% 60.2%)",
+          "hsl(0 84% 72%)",
+          "hsl(0 84% 84%)",
+          "hsl(0 84% 95%)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Hero headline only; one phrase may be gradient-clipped."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Section titles and dashboard page titles."
+      },
+      "title": { "displayName": "Title", "purpose": "Feature, step and card titles." },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Default reading size, chat messages, descriptions."
+      },
+      "body-large": { "displayName": "Lead", "purpose": "Hero and section lead paragraphs." },
+      "label": { "displayName": "Label", "purpose": "Captions, metadata, chip and badge text." }
+    },
+    "shadows": [
+      {
+        "name": "rest",
+        "value": "0 1px 2px 0 rgb(0 0 0 / 0.05)",
+        "purpose": "Base card primitive; effectively invisible, may be omitted."
+      },
+      {
+        "name": "hero-lift",
+        "value": "0 25px 50px -12px hsl(263 70% 10% / 0.10)",
+        "purpose": "Chat-preview card and models panel on the home page."
+      },
+      {
+        "name": "aurora-button",
+        "value": "0 10px 15px -3px hsl(263 70% 58% / 0.25)",
+        "purpose": "Primary hero CTA only; rises to 0.40 alpha on hover."
+      },
+      {
+        "name": "focus-ring",
+        "value": "0 0 0 2px hsl(var(--background)), 0 0 0 4px hsl(263 70% 58%)",
+        "purpose": "Every focusable control on focus-visible."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-standard",
+        "value": "cubic-bezier(0.4, 0, 0.2, 1)",
+        "purpose": "Theme and color transitions."
+      },
+      {
+        "name": "duration-control",
+        "value": "200ms",
+        "purpose": "Button, border and color state changes."
+      },
+      {
+        "name": "duration-card",
+        "value": "300ms",
+        "purpose": "Card border/shadow and portrait scale on hover."
+      },
+      {
+        "name": "fade-in-up",
+        "value": "500ms ease-out; translateY(10px) to 0, opacity 0 to 1",
+        "purpose": "Hero entrance."
+      },
+      {
+        "name": "typing-bounce",
+        "value": "1s ease-in-out infinite; translateY(-4px) at 30%",
+        "purpose": "AI typing indicator dots."
+      },
+      {
+        "name": "marquee",
+        "value": "45s linear infinite; pauses on hover; disabled under prefers-reduced-motion",
+        "purpose": "Category rail."
+      }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" },
+      { "name": "xl", "value": "1280px" },
+      { "name": "2xl", "value": "1400px (container cap)" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Default action. Nebula Violet fill, white text, 0.75rem radius.",
+      "html": "<button class=\"ds-btn-primary\">Start chatting</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; height: 40px; padding: 8px 16px; border: 0; border-radius: 0.75rem; background: hsl(263 70% 58%); color: #fff; font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: all 200ms cubic-bezier(0.4,0,0.2,1); } .ds-btn-primary:hover { background: hsl(263 70% 58% / 0.9); } .ds-btn-primary:focus-visible { outline: none; box-shadow: 0 0 0 2px #fff, 0 0 0 4px hsl(263 70% 58%); } .ds-btn-primary:disabled { opacity: .5; pointer-events: none; }"
+    },
+    {
+      "name": "Hero Gradient Button",
+      "kind": "button",
+      "refersTo": "button-hero",
+      "description": "The one gradient CTA per page. CTA gradient fill (darker stops; white text >= 4.5:1 at every point), aurora shadow, arrow slides on hover.",
+      "html": "<a class=\"ds-btn-hero\" href=\"#\">Start chatting free <svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M5 12h14\"/><path d=\"m12 5 7 7-7 7\"/></svg></a>",
+      "css": ".ds-btn-hero { display: inline-flex; align-items: center; gap: 8px; height: 48px; padding: 0 24px; border-radius: 0.75rem; background: linear-gradient(120deg, hsl(263 70% 50%), hsl(316 72% 46%) 55%, hsl(349 80% 46%)); color: #fff; text-decoration: none; font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size: 1rem; font-weight: 500; box-shadow: 0 10px 15px -3px hsl(263 70% 58% / 0.25); transition: all 200ms cubic-bezier(0.4,0,0.2,1); } .ds-btn-hero svg { transition: transform 200ms; } .ds-btn-hero:hover { box-shadow: 0 10px 15px -3px hsl(263 70% 58% / 0.40); } .ds-btn-hero:hover svg { transform: translateX(2px); } .ds-btn-hero:focus-visible { outline: none; box-shadow: 0 0 0 2px #fff, 0 0 0 4px hsl(263 70% 58%); }"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Secondary action beside a primary. Hairline stroke, Mist fill on hover.",
+      "html": "<button class=\"ds-btn-outline\">Explore characters</button>",
+      "css": ".ds-btn-outline { display: inline-flex; align-items: center; justify-content: center; height: 40px; padding: 8px 16px; border-radius: 0.75rem; border: 1px solid hsl(240 5.9% 90%); background: transparent; color: hsl(240 10% 3.9%); font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: all 200ms cubic-bezier(0.4,0,0.2,1); } .ds-btn-outline:hover { background: hsl(240 4.8% 95.9%); } .ds-btn-outline:focus-visible { outline: none; box-shadow: 0 0 0 2px #fff, 0 0 0 4px hsl(263 70% 58%); }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Token-based field (simple-input). Violet focus ring, no border shift.",
+      "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"Name your character\" />",
+      "css": ".ds-input { display: flex; width: 100%; max-width: 320px; height: 40px; padding: 8px 12px; border-radius: 0.625rem; border: 1px solid hsl(240 5.9% 90%); background: #fff; color: hsl(240 10% 3.9%); font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size: 0.875rem; } .ds-input::placeholder { color: hsl(240 3.8% 46.1%); } .ds-input:focus-visible { outline: none; box-shadow: 0 0 0 2px #fff, 0 0 0 4px hsl(263 70% 58%); } .ds-input:disabled { opacity: .5; cursor: not-allowed; }"
+    },
+    {
+      "name": "Category Chip",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "Marquee and filter rail pill. Hover lifts the border toward violet.",
+      "html": "<a class=\"ds-chip\" href=\"#\">Sci-Fi</a>",
+      "css": ".ds-chip { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 9999px; border: 1px solid hsl(240 5.9% 90% / 0.6); background: #fff; color: hsl(240 3.8% 46.1%); text-decoration: none; font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size: 0.875rem; font-weight: 500; transition: color 200ms, border-color 200ms; } .ds-chip:hover { border-color: hsl(263 70% 58% / 0.4); color: hsl(240 10% 3.9%); } .ds-chip:focus-visible { outline: none; box-shadow: 0 0 0 2px #fff, 0 0 0 4px hsl(263 70% 58%); }"
+    },
+    {
+      "name": "Badge",
+      "kind": "chip",
+      "refersTo": "badge",
+      "description": "Small status pill. Default violet; secondary Mist.",
+      "html": "<span class=\"ds-badge\">PRO</span> <span class=\"ds-badge ds-badge--secondary\">Draft</span>",
+      "css": ".ds-badge { display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 9999px; border: 1px solid transparent; background: hsl(263 70% 58%); color: #fff; font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size: 0.75rem; font-weight: 600; } .ds-badge--secondary { background: hsl(240 4.8% 95.9%); color: hsl(240 5.9% 10%); }"
+    },
+    {
+      "name": "Chat Bubbles",
+      "kind": "custom",
+      "refersTo": "chat-bubble-user",
+      "description": "The signature object. AI bubble left with cut top-left corner; user bubble right in Nebula Violet with cut top-right corner; typing indicator.",
+      "html": "<div class=\"ds-chat\"><div class=\"ds-bubble ds-bubble--ai\">The nav console flickers. \"Course locked. Where to, captain?\"</div><div class=\"ds-bubble ds-bubble--user\">Somewhere with a decent bar.</div><div class=\"ds-bubble ds-bubble--ai ds-typing\"><span></span><span></span><span></span></div></div>",
+      "css": ".ds-chat { display: flex; flex-direction: column; gap: 12px; max-width: 360px; font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size: 0.875rem; line-height: 1.625; } .ds-bubble { width: fit-content; max-width: 85%; padding: 10px 16px; border-radius: 1rem; } .ds-bubble--ai { background: hsl(240 4.8% 95.9%); color: hsl(240 10% 3.9%); border-top-left-radius: 0.375rem; } .ds-bubble--user { margin-left: auto; background: hsl(263 70% 58%); color: #fff; border-top-right-radius: 0.375rem; } .ds-typing { display: flex; align-items: center; gap: 6px; padding: 12px 16px; } .ds-typing span { width: 6px; height: 6px; border-radius: 9999px; background: currentColor; opacity: .7; animation: ds-bounce 1s ease-in-out infinite; } .ds-typing span:nth-child(2) { animation-delay: .15s; } .ds-typing span:nth-child(3) { animation-delay: .3s; } @keyframes ds-bounce { 0%,60%,100% { transform: translateY(0); opacity: .6; } 30% { transform: translateY(-4px); opacity: 1; } }"
+    },
+    {
+      "name": "Character Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "3:4 portrait, hairline, metadata pills over a bottom gradient, name turns violet on hover.",
+      "html": "<a class=\"ds-char\" href=\"#\"><div class=\"ds-char__art\"><span class=\"ds-char__initial\">N</span><div class=\"ds-char__fade\"></div><div class=\"ds-char__meta\"><span class=\"ds-char__pill\">1.2k</span><span class=\"ds-char__pill\">318</span></div></div><div class=\"ds-char__body\"><h3 class=\"ds-char__name\">Nyra, Starship Navigator</h3><p class=\"ds-char__by\">by stellarforge</p><p class=\"ds-char__tag\">A dry-witted pilot who has seen three galaxies and trusts none of them.</p><span class=\"ds-char__cat\">Sci-Fi</span></div></a>",
+      "css": ".ds-char { display: flex; flex-direction: column; width: 220px; overflow: hidden; border-radius: 0.75rem; border: 1px solid hsl(240 5.9% 90% / 0.5); background: #fff; color: hsl(240 10% 3.9%); text-decoration: none; font-family: Inter, ui-sans-serif, system-ui, sans-serif; transition: all 300ms; } .ds-char:hover { border-color: hsl(263 70% 58% / 0.3); } .ds-char__art { position: relative; aspect-ratio: 3/4; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, hsl(263 70% 58%), hsl(316 72% 58%)); overflow: hidden; } .ds-char__initial { font-size: 3rem; font-weight: 700; color: rgb(255 255 255 / .9); transition: transform 300ms; } .ds-char:hover .ds-char__initial { transform: scale(1.05); } .ds-char__fade { position: absolute; inset: auto 0 0 0; height: 33%; background: linear-gradient(to top, rgb(0 0 0 / .6), transparent); } .ds-char__meta { position: absolute; left: 8px; bottom: 8px; display: flex; gap: 8px; } .ds-char__pill { padding: 2px 8px; border-radius: 9999px; background: rgb(0 0 0 / .5); backdrop-filter: blur(4px); color: rgb(255 255 255 / .9); font-size: 0.75rem; } .ds-char__body { display: flex; flex-direction: column; gap: 6px; padding: 12px; } .ds-char__name { margin: 0; font-size: 0.875rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: color 200ms; } .ds-char:hover .ds-char__name { color: hsl(263 70% 58%); } .ds-char__by, .ds-char__tag { margin: 0; font-size: 0.75rem; color: hsl(240 3.8% 46.1%); } .ds-char__tag { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; } .ds-char__cat { margin-top: 8px; width: fit-content; padding: 2px 8px; border-radius: 9999px; background: hsl(263 70% 58% / 0.1); color: hsl(263 70% 45%); font-size: 10px; font-weight: 500; }"
+    },
+    {
+      "name": "Glass Header",
+      "kind": "nav",
+      "refersTo": "chip",
+      "description": "Sticky frosted bar: gradient logo mark, gradient wordmark in Bricolage, Graphite links that turn Ink on hover.",
+      "html": "<header class=\"ds-header\"><a class=\"ds-brand\" href=\"#\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 2l2.4 6.6L21 11l-6.6 2.4L12 20l-2.4-6.6L3 11l6.6-2.4z\"/></svg><span class=\"ds-wordmark\">InfiniStar</span></a><nav class=\"ds-nav\"><a href=\"#\">Home</a><a href=\"#\">Explore</a><a href=\"#\">Feed</a><a href=\"#\">Pricing</a></nav></header>",
+      "css": ".ds-header { display: flex; align-items: center; gap: 40px; height: 64px; padding: 0 24px; border-bottom: 1px solid hsl(240 5.9% 90% / 0.4); background: rgb(255 255 255 / 0.8); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); font-family: Inter, ui-sans-serif, system-ui, sans-serif; } .ds-brand { display: flex; align-items: center; gap: 8px; text-decoration: none; color: hsl(263 70% 58%); } .ds-wordmark { font-family: 'Bricolage Grotesque', ui-sans-serif, system-ui, sans-serif; font-size: 1.125rem; font-weight: 700; background: linear-gradient(100deg, hsl(263 70% 58%), hsl(316 72% 58%) 55%, hsl(349 89% 66%)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; } .ds-nav { display: flex; gap: 24px; } .ds-nav a { font-size: 0.875rem; font-weight: 500; color: hsl(240 3.8% 46.1%); text-decoration: none; transition: color 200ms; } .ds-nav a:hover { color: hsl(240 10% 3.9%); } .ds-nav a:focus-visible { outline: none; box-shadow: 0 0 0 2px #fff, 0 0 0 4px hsl(263 70% 58%); border-radius: 4px; }"
+    },
+    {
+      "name": "Aurora Stage Panel",
+      "kind": "custom",
+      "refersTo": "card-feature",
+      "description": "Marketing-only CTA panel: aurora radial glows, grain, dot grid, 2.5rem radius. Never on product screens.",
+      "html": "<section class=\"ds-stage\"><div class=\"ds-stage__grid\"></div><p class=\"ds-stage__eyebrow\">Free to start</p><h2 class=\"ds-stage__title\">Characters <span class=\"ds-stage__grad\">worth coming back</span> to</h2></section>",
+      "css": ".ds-stage { position: relative; overflow: hidden; width: 420px; padding: 56px 32px; border-radius: 2.5rem; border: 1px solid hsl(240 5.9% 90% / 0.5); text-align: center; background: radial-gradient(42rem 28rem at 18% 12%, hsl(263 70% 58% / 0.22), transparent 68%), radial-gradient(38rem 26rem at 82% 6%, hsl(316 72% 58% / 0.16), transparent 66%), radial-gradient(30rem 22rem at 62% 88%, hsl(32 95% 58% / 0.10), transparent 70%), #fff; } .ds-stage__grid { position: absolute; inset: 0; pointer-events: none; background-image: radial-gradient(hsl(240 10% 3.9% / 0.07) 1px, transparent 1px); background-size: 22px 22px; -webkit-mask-image: radial-gradient(60rem 40rem at 50% -10%, black, transparent); mask-image: radial-gradient(60rem 40rem at 50% -10%, black, transparent); } .ds-stage__eyebrow { position: relative; margin: 0 0 12px; font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size: 0.875rem; color: hsl(240 3.8% 46.1%); } .ds-stage__title { position: relative; margin: 0; font-family: 'Bricolage Grotesque', ui-sans-serif, system-ui, sans-serif; font-size: 2.25rem; font-weight: 800; line-height: 0.98; letter-spacing: -0.025em; color: hsl(240 10% 3.9%); text-wrap: balance; } .ds-stage__grad { background: linear-gradient(100deg, hsl(263 70% 58%), hsl(316 72% 58%) 55%, hsl(349 89% 66%)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Aurora Stage",
+    "overview": "InfiniStar is a theater for characters. The canvas is quiet and nearly monochrome, white paper by day and near-black night by default in the dark theme, so that the only saturated thing on screen is the light the characters stand in. That light is an aurora: Nebula Violet fading through Aurora Fuchsia into Ember Pink, with a faint Solar Amber warmth at the far edge. It appears as a soft radial backdrop behind hero and call-to-action sections, as a gradient fill on the brand mark and the one hero button, and as gradient-clipped text on the single phrase in a headline that matters most. Everywhere else the palette is neutral, and the aurora is felt only as a violet tint on a hover border or a focus ring.\n\nThe performer on this stage is the chat bubble. Even the marketing pages sell the product by showing a conversation, not a screenshot: a frosted-glass card, a character header, an AI bubble on the left with a small cut top-left corner, a user bubble in Nebula Violet on the right with a cut top-right corner, and a three-dot typing indicator. Density is relaxed and mobile-first. Bricolage Grotesque gives headings a confident, slightly quirky voice; Inter keeps everything readable at small sizes for long reading and typing sessions on a phone.\n\nThe system rejects generic-AI clutter it once had. Product surfaces (dashboard, cards, forms) are flat and quiet; glow belongs to hero objects and to hover, never to layout.",
+    "keyCharacteristics": [
+      "Neutral zinc canvas in both themes; saturation reserved for the aurora and the primary action",
+      "One violet family (263°) as primary, ring, user bubble, and brand gradient start",
+      "Aurora backdrop + film grain + dot grid as the marketing stage; never on product screens",
+      "Chat bubble as the signature object, with asymmetric corners that show who is speaking",
+      "Bricolage Grotesque display type at tight tracking; Inter body at generous leading",
+      "Frosted-glass header and cards (80% background, 20px blur) as the one material with depth",
+      "Pill chips and badges; 0.75rem radius for controls; 1.5rem to 2.5rem for marketing panels"
+    ],
+    "rules": [
+      {
+        "name": "The One Voice Rule",
+        "body": "Nebula Violet is the only saturated solid on a product screen. If a second saturated fill appears, it is an error unless it is a category accent on a character card tag.",
+        "section": "colors"
+      },
+      {
+        "name": "The Aurora Is Scenery Rule",
+        "body": "Fuchsia, pink and amber exist only inside gradients and radial backdrops. They are never text, never a border, never a button.",
+        "section": "colors"
+      },
+      {
+        "name": "The Alpha Border Rule",
+        "body": "Borders are the hairline token at 40 to 60% alpha (border-border/50) on marketing and glass surfaces, full strength on form controls. Hover raises a border to primary/30 or primary/40; it never changes the fill.",
+        "section": "colors"
+      },
+      {
+        "name": "The Heading Font Is Heading Only Rule",
+        "body": "Bricolage appears on h1 to h6, card and step titles, the brand wordmark, and stat numerals. It never sets a paragraph, a button, or an input.",
+        "section": "typography"
+      },
+      {
+        "name": "The One Gradient Phrase Rule",
+        "body": "Gradient-clipped text is limited to one phrase per page, plus the wordmark and step numerals. A second gradient headline on the same screen is one too many.",
+        "section": "typography"
+      },
+      {
+        "name": "The Glow Is Earned Rule",
+        "body": "Glow appears on at most one object per viewport, and that object is a hero or the primary action. Cards, inputs, nav, and lists never glow.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Glass Has an Edge Rule",
+        "body": "Every frosted-glass surface carries a border-border/60 hairline so it reads as a pane, not a smear.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do route every color through the semantic tokens (bg-primary, text-muted-foreground, border-border/50); the same component must look right in both themes without a dark: override.",
+      "Do keep Nebula Violet as the only saturated solid on product screens, and use it for the primary action, the user's bubble, and focus.",
+      "Do preserve the asymmetric bubble corners (rounded-2xl with rounded-tl-md for AI, rounded-tr-md for the user) wherever a message renders.",
+      "Do set headings in Bricolage with tracking-tight and [text-wrap:balance], body in Inter with relaxed leading, and never load a webfont over the network.",
+      "Do use hairlines at 50% alpha and tonal layers for structure; escalate to a violet 30% border on hover.",
+      "Do confine the aurora backdrop, grain, dot grid, and glow shadows to marketing hero and CTA sections.",
+      "Do respect prefers-reduced-motion: marquees stop and wrap, theme transitions drop to 0ms, entrance animations may be removed."
+    ],
+    "donts": [
+      "Don't introduce a second brand hue. Blue, teal, green and rose fills are off-system except semantic states (green live dot, red destructive and 18+).",
+      "Don't put glow, blurred blooms, or shadow-xl on cards, inputs, lists, or navigation. Glow is for one hero object per viewport.",
+      "Don't use gradient text on more than one phrase per page, and never on body copy, labels, or buttons.",
+      "Don't hardcode gray-*, violet-*, sky-*, or blue-* utilities in new components; the legacy Input primitive and the gradient button variant are the anti-reference.",
+      "Don't set body text, buttons, or inputs in Bricolage Grotesque.",
+      "Don't add sparkle-icon pill badges as decoration; the hero eyebrow pill is the single sanctioned use."
+    ]
+  }
+}

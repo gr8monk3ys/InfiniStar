@@ -34,7 +34,7 @@ const Avatar: FC<AvatarProps> = ({ user, className, showPresence = true }) => {
         return "bg-yellow-500"
       case "offline":
       default:
-        return "bg-gray-400"
+        return "bg-muted-foreground/50"
     }
   }
 

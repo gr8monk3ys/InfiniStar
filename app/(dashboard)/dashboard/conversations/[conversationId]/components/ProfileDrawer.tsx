@@ -345,7 +345,7 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = memo(function ProfileDrawer(
                           <div className="ml-3 flex h-7 items-center">
                             <button
                               type="button"
-                              className="rounded-md bg-background text-muted-foreground hover:text-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                              className="rounded-md bg-background text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                               onClick={onClose}
                               aria-label="Close panel"
                             >

@@ -26,11 +26,17 @@ export default async function EditCharacterPage({ params }: EditCharacterPagePro
           tagline: character.tagline || "",
           description: character.description || "",
           greeting: character.greeting || "",
+          scenario: character.scenario || "",
+          exampleDialogues: character.exampleDialogues || "",
           systemPrompt: character.systemPrompt,
           avatarUrl: character.avatarUrl || "",
           coverImageUrl: character.coverImageUrl || "",
           isPublic: character.isPublic,
-          tags: character.tags.join(", "),
+          isNsfw: character.isNsfw,
+          category: character.category,
+          tags: character.tags,
+          usageCount: character.usageCount,
+          likeCount: character.likeCount,
         }}
       />
     </div>

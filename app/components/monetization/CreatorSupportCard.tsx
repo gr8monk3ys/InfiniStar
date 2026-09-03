@@ -228,7 +228,7 @@ function CreatorSupportCardInner({
   return (
     <div className="rounded-xl border bg-card p-6 shadow-sm">
       <div className="mb-4 flex items-center gap-2">
-        <HiHeart className="size-5 text-rose-500" />
+        <HiHeart className="size-5 text-primary" />
         <h2 className="text-lg font-semibold">Support {creatorName}</h2>
       </div>
       <p className="text-sm text-muted-foreground">

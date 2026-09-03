@@ -128,9 +128,9 @@ export function TemplateShortcutHint({
           <Command className="size-3" />
           <span>Template Shortcuts</span>
           <span className="ml-auto">
-            <kbd className="rounded bg-muted px-1 text-[10px]">Tab</kbd>
+            <kbd className="rounded bg-muted px-1 text-xs">Tab</kbd>
             {" or "}
-            <kbd className="rounded bg-muted px-1 text-[10px]">Enter</kbd>
+            <kbd className="rounded bg-muted px-1 text-xs">Enter</kbd>
             {" to insert"}
           </span>
         </div>
@@ -229,7 +229,7 @@ export function InlineShortcutHint({
   return (
     <div className="flex items-center gap-2 px-2 py-1 text-xs text-muted-foreground">
       <span>Press</span>
-      <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px]">Tab</kbd>
+      <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">Tab</kbd>
       <span>to insert:</span>
       <button onClick={handleSelect} className="font-medium text-foreground hover:underline">
         {suggestion.name}

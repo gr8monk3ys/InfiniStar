@@ -33,7 +33,7 @@ describe("CharacterStartChatButton — logged-out signup wall", () => {
     useAppAuthMock.mockReturnValue({ userId: null, isSignedIn: false })
   })
 
-  it("fires start_chat_signup_wall_hit and redirects to /sign-in for logged-out users", () => {
+  it("fires start_chat_signup_wall_hit and redirects to /sign-in with a return URL for logged-out users", () => {
     render(<CharacterStartChatButton characterId="char-123" slug="aria" />)
 
     fireEvent.click(screen.getByRole("button", { name: /start chat/i }))
@@ -47,7 +47,7 @@ describe("CharacterStartChatButton — logged-out signup wall", () => {
       characterId: "char-123",
       slug: "aria",
     })
-    expect(pushMock).toHaveBeenCalledWith("/sign-in")
+    expect(pushMock).toHaveBeenCalledWith("/sign-in?redirect_url=%2Fcharacters%2Faria")
   })
 
   it("does NOT fire the signup wall event for authenticated users", () => {

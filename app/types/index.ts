@@ -8,6 +8,7 @@ import {
   type ShareType,
   type Tag,
   type User,
+  type UserPersona,
 } from "@prisma/client"
 
 import { type Icons } from "@/app/components/icons"
@@ -30,6 +31,7 @@ export type FullConversationType = Conversation & {
   users: User[]
   messages: FullMessageType[]
   character?: Character | null
+  persona?: UserPersona | null
   tags?: Tag[]
   title?: string
   isGroup: boolean

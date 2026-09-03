@@ -20,8 +20,8 @@ async function openAiCreationModal(page: Page): Promise<void> {
   await openConversationList(page)
 
   const aiButton = page
-    .getByRole("button", { name: /start new ai chat/i })
-    .or(page.locator('button[title="New AI Chat"]').first())
+    .getByRole("button", { name: /start new character chat/i })
+    .or(page.locator('button[title="New character chat"]').first())
 
   await expect(aiButton.first()).toBeVisible()
   await aiButton.first().click()
@@ -56,7 +56,7 @@ async function createAiConversation(page: Page): Promise<void> {
 function aiMessageInput(page: Page) {
   return page
     .locator(
-      'textarea[placeholder*="Ask me anything"], textarea[placeholder*="message"], input[placeholder*="Ask me anything"], input[placeholder*="message"], [aria-label="Message"]'
+      'textarea[placeholder*="Say something"], textarea[placeholder*="message"], input[placeholder*="Say something"], input[placeholder*="message"], [aria-label="Message"]'
     )
     .first()
 }

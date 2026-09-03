@@ -37,7 +37,7 @@ const TagBadge: React.FC<TagBadgeProps> = ({
   const colorScheme = TAG_COLORS[tag.color as TagColor] || TAG_COLORS.gray
 
   const sizeClasses = {
-    sm: "px-1.5 py-0.5 text-[10px]",
+    sm: "px-1.5 py-0.5 text-xs",
     md: "px-2 py-0.5 text-xs",
   }
 

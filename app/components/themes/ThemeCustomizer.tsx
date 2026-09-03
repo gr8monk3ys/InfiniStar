@@ -116,13 +116,10 @@ export function ThemeCustomizer({ className }: ThemeCustomizerProps) {
     return (
       <div className={className}>
         <div className="animate-pulse space-y-4">
-          <div className="h-6 w-32 rounded bg-gray-200 dark:bg-gray-700" />
+          <div className="h-6 w-32 rounded bg-muted" />
           <div className="space-y-2">
             {["one", "two", "three", "four", "five"].map((key) => (
-              <div
-                key={`skeleton-customizer-${key}`}
-                className="h-10 rounded bg-gray-200 dark:bg-gray-700"
-              />
+              <div key={`skeleton-customizer-${key}`} className="h-10 rounded bg-muted" />
             ))}
           </div>
         </div>
@@ -133,8 +130,8 @@ export function ThemeCustomizer({ className }: ThemeCustomizerProps) {
   return (
     <div className={className}>
       <div className="mb-6">
-        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Customize Theme</h3>
-        <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+        <h3 className="text-lg font-medium text-foreground">Customize Theme</h3>
+        <p className="mt-1 text-sm text-muted-foreground">
           Fine-tune your selected theme with custom colors, fonts, and spacing. Changes are saved
           automatically.
         </p>
@@ -143,10 +140,10 @@ export function ThemeCustomizer({ className }: ThemeCustomizerProps) {
       <div className="space-y-8">
         {/* Core Colors Section */}
         <section>
-          <h4 className="mb-4 text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+          <h4 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
             Core Colors
           </h4>
-          <div className="space-y-4 rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+          <div className="space-y-4 rounded-lg border border-border bg-card p-4">
             <ColorPicker
               id="primary"
               label="Primary Color"
@@ -187,10 +184,10 @@ export function ThemeCustomizer({ className }: ThemeCustomizerProps) {
 
         {/* Chat Bubble Colors Section */}
         <section>
-          <h4 className="mb-4 text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+          <h4 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
             Chat Bubbles
           </h4>
-          <div className="space-y-4 rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+          <div className="space-y-4 rounded-lg border border-border bg-card p-4">
             <ColorPicker
               id="userBubble"
               label="Your Message Bubble"
@@ -224,10 +221,10 @@ export function ThemeCustomizer({ className }: ThemeCustomizerProps) {
 
         {/* Typography Section */}
         <section>
-          <h4 className="mb-4 text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+          <h4 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
             Typography
           </h4>
-          <div className="space-y-6 rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+          <div className="space-y-6 rounded-lg border border-border bg-card p-4">
             <FontSelector
               id="headingFont"
               label="Heading Font"
@@ -247,10 +244,10 @@ export function ThemeCustomizer({ className }: ThemeCustomizerProps) {
 
         {/* Layout Section */}
         <section>
-          <h4 className="mb-4 text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+          <h4 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
             Layout
           </h4>
-          <div className="space-y-6 rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+          <div className="space-y-6 rounded-lg border border-border bg-card p-4">
             <BorderRadiusSelector
               label="Border Radius"
               description="Roundedness of corners for buttons, cards, and inputs"
@@ -268,19 +265,19 @@ export function ThemeCustomizer({ className }: ThemeCustomizerProps) {
 
         {/* Import/Export Section */}
         <section>
-          <h4 className="mb-4 text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+          <h4 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
             Import / Export
           </h4>
           <div className="flex flex-wrap gap-3">
             <button
               type="button"
               onClick={handleExport}
-              className="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+              className="inline-flex items-center gap-2 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground shadow-sm hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               <HiArrowDownTray className="size-4" aria-hidden="true" />
               Export Theme
             </button>
-            <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700">
+            <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground shadow-sm hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
               <HiArrowUpTray className="size-4" aria-hidden="true" />
               Import Theme
               <input
@@ -294,7 +291,7 @@ export function ThemeCustomizer({ className }: ThemeCustomizerProps) {
             <button
               type="button"
               onClick={handleReset}
-              className="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+              className="inline-flex items-center gap-2 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground shadow-sm hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               <HiArrowPath className="size-4" aria-hidden="true" />
               Reset to Default

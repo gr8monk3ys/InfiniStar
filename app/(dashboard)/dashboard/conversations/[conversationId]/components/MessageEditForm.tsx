@@ -19,7 +19,7 @@ export default function MessageEditForm({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         aria-label="Edit message"
-        className="w-full rounded-lg border border-border bg-background p-2 text-sm text-foreground focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+        className="w-full rounded-lg border border-border bg-background p-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         rows={3}
         autoFocus
         onKeyDown={(e) => {

@@ -298,7 +298,7 @@ export const TagSelectorWithBadges: React.FC<TagSelectorWithBadgesProps> = ({
         <TagBadge key={tag.id} tag={tag} size="sm" />
       ))}
       {hiddenCount > 0 && (
-        <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
+        <span className="rounded-full bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
           +{hiddenCount}
         </span>
       )}

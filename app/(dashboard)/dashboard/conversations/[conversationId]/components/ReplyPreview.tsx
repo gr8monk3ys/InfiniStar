@@ -31,19 +31,21 @@ const ReplyPreview: React.FC<ReplyPreviewProps> = ({
   return (
     <div
       onClick={onClick}
-      className={`flex items-start gap-2 rounded-md border-l-4 border-sky-500 bg-gray-50 p-3 ${
-        onClick ? "cursor-pointer hover:bg-gray-100" : ""
+      className={`flex items-start gap-2 rounded-md border border-border/50 bg-muted/50 p-3 ${
+        onClick ? "cursor-pointer hover:bg-muted" : ""
       }`}
     >
       <div className="flex-1 overflow-hidden">
         <div className="flex items-center gap-2">
-          <p className="text-xs font-medium text-sky-600">Replying to {replyTo.sender.name}</p>
+          <p className="text-xs font-medium text-primary-accent">
+            Replying to {replyTo.sender.name}
+          </p>
         </div>
         {replyTo.body && (
-          <p className="mt-1 text-sm text-gray-600">{truncateText(replyTo.body, 100)}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{truncateText(replyTo.body, 100)}</p>
         )}
         {replyTo.image && !replyTo.body && (
-          <p className="mt-1 text-sm italic text-gray-500">Image</p>
+          <p className="mt-1 text-sm italic text-muted-foreground">Image</p>
         )}
       </div>
       {showClose && onClose && (
@@ -53,7 +55,7 @@ const ReplyPreview: React.FC<ReplyPreviewProps> = ({
             e.stopPropagation()
             onClose()
           }}
-          className="rounded-md text-gray-400 hover:text-gray-600 focus:outline-none"
+          className="rounded-md text-muted-foreground/70 hover:text-foreground focus:outline-none"
         >
           <HiOutlineXMark size={20} />
         </button>

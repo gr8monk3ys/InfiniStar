@@ -18,6 +18,7 @@ module.exports = [
       "playwright-report/**",
       "test-results/**",
       "tmp/**",
+      ".remember/**",
     ],
   },
   {

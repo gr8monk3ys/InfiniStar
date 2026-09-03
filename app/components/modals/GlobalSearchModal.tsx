@@ -189,31 +189,31 @@ const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, onClose }
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-neutral-800/70 pt-20"
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-scrim/70 pt-20"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-labelledby="search-modal-title"
     >
       <div
-        className="relative mx-4 w-full max-w-2xl rounded-lg bg-white shadow-xl"
+        className="relative mx-4 w-full max-w-2xl rounded-lg bg-background shadow-xl"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={handleKeyDown}
       >
         {/* Header */}
-        <div className="border-b border-gray-200 p-4">
+        <div className="border-b border-border p-4">
           <div className="flex items-center justify-between">
-            <h2 id="search-modal-title" className="text-lg font-semibold text-gray-900">
+            <h2 id="search-modal-title" className="text-lg font-semibold text-foreground">
               Search
             </h2>
             <div className="flex items-center gap-2">
-              <kbd className="hidden rounded border border-gray-300 bg-gray-100 px-2 py-0.5 text-xs text-gray-500 sm:inline">
+              <kbd className="hidden rounded border-border bg-muted px-2 py-0.5 text-xs text-muted-foreground sm:inline">
                 ESC
               </kbd>
               <button
                 type="button"
                 onClick={onClose}
-                className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                className="rounded-md p-1 text-muted-foreground/70 hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 aria-label="Close search"
               >
                 <HiOutlineXMark size={24} />
@@ -227,7 +227,7 @@ const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, onClose }
               <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
                 <HiMagnifyingGlass
                   className={`size-5 ${
-                    isSearching ? "animate-pulse text-sky-500" : "text-gray-400"
+                    isSearching ? "animate-pulse text-primary" : "text-muted-foreground/70"
                   }`}
                 />
               </div>
@@ -238,7 +238,7 @@ const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, onClose }
                 onChange={(e) => setQuery(e.target.value)}
                 onFocus={() => query.length >= 2 && !hasSearched && hideSuggestions()}
                 placeholder="Search conversations and messages..."
-                className="block w-full rounded-lg border border-gray-300 py-3 pl-10 pr-24 text-base focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                className="block w-full rounded-lg border border-input bg-background py-3 pl-10 pr-24 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 aria-label="Search conversations and messages"
                 aria-describedby="search-hint"
                 autoComplete="off"
@@ -250,8 +250,8 @@ const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, onClose }
                   onClick={toggleFilters}
                   className={`flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-colors ${
                     showFilters
-                      ? "bg-sky-100 text-sky-700"
-                      : "text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+                      ? "bg-primary/10 text-primary-accent"
+                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                   }`}
                   aria-expanded={showFilters}
                   aria-label={showFilters ? "Hide filters" : "Show filters"}
@@ -261,15 +261,15 @@ const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, onClose }
                     className={`size-3 transition-transform ${showFilters ? "rotate-180" : ""}`}
                   />
                 </button>
-                <kbd className="hidden rounded border border-gray-300 bg-gray-100 px-2 py-0.5 text-xs text-gray-500 sm:inline">
+                <kbd className="hidden rounded border-border bg-muted px-2 py-0.5 text-xs text-muted-foreground sm:inline">
                   Cmd+K
                 </kbd>
               </div>
             </div>
-            <p id="search-hint" className="mt-1 text-xs text-gray-500">
+            <p id="search-hint" className="mt-1 text-xs text-muted-foreground">
               Type at least 2 characters to search
               {searchTimeMs !== undefined && hasSearched && (
-                <span className="ml-2 text-gray-400">({searchTimeMs}ms)</span>
+                <span className="ml-2 text-muted-foreground/70">({searchTimeMs}ms)</span>
               )}
             </p>
 
@@ -288,7 +288,7 @@ const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, onClose }
 
           {/* Filters Panel (collapsible) */}
           {showFilters && (
-            <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
+            <div className="mt-4 rounded-lg border border-border bg-muted p-4">
               <SearchFilters
                 filters={filters}
                 onFiltersChange={setFilters}
@@ -302,7 +302,7 @@ const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, onClose }
           {/* Tabs with result counts */}
           {hasSearched && hasResults && (
             <div
-              className="mt-4 flex gap-1 border-b border-gray-200"
+              className="mt-4 flex gap-1 border-b border-border"
               role="tablist"
               aria-label="Search result types"
             >
@@ -314,12 +314,12 @@ const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, onClose }
                 onClick={() => handleTabChange("all")}
                 className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium ${
                   filters.type === "all"
-                    ? "border-b-2 border-sky-500 text-sky-600"
-                    : "text-gray-500 hover:text-gray-700"
+                    ? "border-b-2 border-primary text-primary-accent"
+                    : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 All
-                <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs">{totalResults}</span>
+                <span className="rounded-full bg-muted px-2 py-0.5 text-xs">{totalResults}</span>
               </button>
               <button
                 id="search-tab-conversations"
@@ -329,13 +329,13 @@ const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, onClose }
                 onClick={() => handleTabChange("conversations")}
                 className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium ${
                   filters.type === "conversations"
-                    ? "border-b-2 border-sky-500 text-sky-600"
-                    : "text-gray-500 hover:text-gray-700"
+                    ? "border-b-2 border-primary text-primary-accent"
+                    : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 <HiOutlineChatBubbleLeftRight className="size-4" />
                 Conversations
-                <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs">
+                <span className="rounded-full bg-muted px-2 py-0.5 text-xs">
                   {conversationCount}
                 </span>
               </button>
@@ -347,13 +347,13 @@ const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, onClose }
                 onClick={() => handleTabChange("messages")}
                 className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium ${
                   filters.type === "messages"
-                    ? "border-b-2 border-sky-500 text-sky-600"
-                    : "text-gray-500 hover:text-gray-700"
+                    ? "border-b-2 border-primary text-primary-accent"
+                    : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 <HiMagnifyingGlass className="size-4" />
                 Messages
-                <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs">{messageCount}</span>
+                <span className="rounded-full bg-muted px-2 py-0.5 text-xs">{messageCount}</span>
               </button>
             </div>
           )}
@@ -383,11 +383,11 @@ const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, onClose }
           {/* Error State */}
           {error && !isSearching && (
             <div className="py-8 text-center">
-              <p className="text-sm text-red-500">{error}</p>
+              <p className="text-sm text-destructive">{error}</p>
               <button
                 type="button"
                 onClick={() => setQuery(query)}
-                className="mt-2 text-sm text-sky-600 hover:text-sky-700"
+                className="mt-2 text-sm text-primary-accent hover:text-primary/80"
               >
                 Try again
               </button>
@@ -397,18 +397,18 @@ const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, onClose }
           {/* No Results */}
           {hasSearched && !isSearching && !error && !hasResults && (
             <div className="py-8 text-center">
-              <HiMagnifyingGlass className="mx-auto size-12 text-gray-300" />
-              <p className="mt-2 text-sm text-gray-500">
+              <HiMagnifyingGlass className="mx-auto size-12 text-muted-foreground/50" />
+              <p className="mt-2 text-sm text-muted-foreground">
                 No results found for &quot;{debouncedQuery}&quot;
               </p>
-              <p className="mt-1 text-xs text-gray-400">
+              <p className="mt-1 text-xs text-muted-foreground/70">
                 Try different keywords or adjust your filters
               </p>
               {showFilters && (
                 <button
                   type="button"
                   onClick={resetFilters}
-                  className="mt-3 text-sm font-medium text-sky-600 hover:text-sky-700"
+                  className="mt-3 text-sm font-medium text-primary-accent hover:text-primary/80"
                 >
                   Clear all filters
                 </button>
@@ -420,7 +420,7 @@ const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, onClose }
           {!isSearching && visibleConversations.length > 0 && (
             <div className="mb-4">
               {filters.type === "all" && (
-                <h3 className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                <h3 className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   <HiOutlineChatBubbleLeftRight className="size-4" />
                   Conversations ({conversationCount})
                 </h3>
@@ -443,10 +443,10 @@ const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, onClose }
           {!isSearching && visibleMessages.length > 0 && (
             <div>
               {filters.type === "all" && visibleConversations.length > 0 && (
-                <hr className="my-4 border-gray-200" />
+                <hr className="my-4 border-border" />
               )}
               {filters.type === "all" && (
-                <h3 className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                <h3 className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   <HiMagnifyingGlass className="size-4" />
                   Messages ({messageCount})
                 </h3>
@@ -476,11 +476,11 @@ const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, onClose }
           {/* Initial State */}
           {!hasSearched && !isSearching && query.length < 2 && (
             <div className="py-8 text-center">
-              <HiMagnifyingGlass className="mx-auto size-12 text-gray-300" />
-              <p className="mt-2 text-sm text-gray-500">
+              <HiMagnifyingGlass className="mx-auto size-12 text-muted-foreground/50" />
+              <p className="mt-2 text-sm text-muted-foreground">
                 Search across all your conversations and messages
               </p>
-              <p className="mt-1 text-xs text-gray-400">
+              <p className="mt-1 text-xs text-muted-foreground/70">
                 Use filters to narrow down results by date, type, or tags
               </p>
             </div>
@@ -488,7 +488,7 @@ const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, onClose }
         </div>
 
         {/* Footer with pagination and keyboard hints */}
-        <div className="border-t border-gray-200 bg-gray-50 px-4 py-3">
+        <div className="border-t border-border bg-muted px-4 py-3">
           <div className="flex items-center justify-between">
             {/* Pagination */}
             {hasSearched && totalPages > 1 && (
@@ -497,20 +497,20 @@ const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, onClose }
                   type="button"
                   onClick={prevPage}
                   disabled={filters.page <= 1}
-                  className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-gray-600 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground disabled:cursor-not-allowed disabled:opacity-50"
                   aria-label="Previous page"
                 >
                   <HiChevronLeft className="size-4" />
                   Prev
                 </button>
-                <span className="text-xs text-gray-500">
+                <span className="text-xs text-muted-foreground">
                   Page {filters.page} of {totalPages}
                 </span>
                 <button
                   type="button"
                   onClick={nextPage}
                   disabled={filters.page >= totalPages}
-                  className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-gray-600 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground disabled:cursor-not-allowed disabled:opacity-50"
                   aria-label="Next page"
                 >
                   Next
@@ -520,18 +520,18 @@ const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, onClose }
             )}
 
             {/* Keyboard hints */}
-            <div className="flex items-center gap-4 text-xs text-gray-500">
+            <div className="flex items-center gap-4 text-xs text-muted-foreground">
               <span className="flex items-center gap-1">
-                <kbd className="rounded border border-gray-300 bg-white px-1">Up</kbd>
-                <kbd className="rounded border border-gray-300 bg-white px-1">Down</kbd>
+                <kbd className="rounded border border-border bg-background px-1">Up</kbd>
+                <kbd className="rounded border border-border bg-background px-1">Down</kbd>
                 <span className="ml-1">to navigate</span>
               </span>
               <span className="flex items-center gap-1">
-                <kbd className="rounded border border-gray-300 bg-white px-1">Enter</kbd>
+                <kbd className="rounded border border-border bg-background px-1">Enter</kbd>
                 <span className="ml-1">to select</span>
               </span>
               <span className="hidden sm:flex sm:items-center sm:gap-1">
-                <kbd className="rounded border border-gray-300 bg-white px-1">Esc</kbd>
+                <kbd className="rounded border border-border bg-background px-1">Esc</kbd>
                 <span className="ml-1">to close</span>
               </span>
             </div>

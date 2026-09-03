@@ -10,7 +10,7 @@ export default function NotFound() {
       {/* Background glow */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-          <div className="h-[400px] w-[400px] rounded-full bg-gradient-to-br from-violet-600/10 to-blue-500/10 blur-[100px]" />
+          <div className="h-[400px] w-[400px] rounded-full bg-primary/10 blur-[100px]" />
         </div>
       </div>
 
@@ -34,7 +34,7 @@ export default function NotFound() {
             href="/dashboard/conversations"
             className={cn(
               buttonVariants({ variant: "default", size: "lg" }),
-              "gradient-bg gap-2 border-0 text-white shadow-lg shadow-violet-500/25 hover:shadow-violet-500/40"
+              "gradient-bg-cta gap-2 border-0 text-white shadow-lg shadow-[color:hsl(var(--glow-color)/0.25)] hover:shadow-[color:hsl(var(--glow-color)/0.4)]"
             )}
           >
             <HiOutlineChatBubbleLeftRight className="size-5" />
