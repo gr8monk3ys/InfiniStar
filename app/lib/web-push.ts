@@ -1,5 +1,6 @@
 import webpush from "web-push"
 
+import { config } from "@/app/lib/config"
 import { apiLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
 
@@ -21,8 +22,7 @@ export function getVapidPublicKey(): string | null {
 function configureWebPush() {
   if (!isConfigured()) return
 
-  const subject =
-    process.env.VAPID_SUBJECT || process.env.NEXT_PUBLIC_APP_URL || "https://localhost"
+  const subject = process.env.VAPID_SUBJECT || config.appUrl
 
   // Safe to call multiple times; `web-push` stores these values globally.
   webpush.setVapidDetails(subject, process.env.VAPID_PUBLIC_KEY!, process.env.VAPID_PRIVATE_KEY!)

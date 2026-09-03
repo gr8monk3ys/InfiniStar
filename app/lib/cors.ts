@@ -1,3 +1,5 @@
+import { config } from "@/app/lib/config"
+
 /**
  * CORS Configuration
  *
@@ -10,7 +12,9 @@
  * In production, this should be restricted to your actual domain(s)
  */
 export function getAllowedOrigins(): string[] {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL
+  // Deliberately the raw value: an unset variable must allow no origins,
+  // never the dev fallback.
+  const appUrl = config.configuredAppUrl
   const nodeEnv = process.env.NODE_ENV
 
   if (nodeEnv === "development") {
