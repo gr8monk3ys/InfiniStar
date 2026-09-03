@@ -2,6 +2,11 @@ import { NextResponse, type NextRequest } from "next/server"
 import { type Prisma } from "@prisma/client"
 import { z } from "zod"
 
+import {
+  CONVERSATION_INCLUDE,
+  MESSAGE_INCLUDE,
+  PARTICIPANT_SELECT,
+} from "@/app/lib/conversation-select"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import { apiLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
@@ -148,9 +153,7 @@ export async function POST(
             },
           },
         },
-        include: {
-          users: true,
-        },
+        include: CONVERSATION_INCLUDE,
       })
 
       const idMap = new Map<string, string>()
@@ -261,19 +264,11 @@ export async function POST(
       return tx.conversation.findUnique({
         where: { id: createdConversation.id },
         include: {
-          users: true,
+          users: { select: PARTICIPANT_SELECT },
           character: true,
           tags: true,
           messages: {
-            include: {
-              sender: true,
-              seen: true,
-              replyTo: {
-                include: {
-                  sender: true,
-                },
-              },
-            },
+            include: MESSAGE_INCLUDE,
             orderBy: { createdAt: "asc" },
           },
         },

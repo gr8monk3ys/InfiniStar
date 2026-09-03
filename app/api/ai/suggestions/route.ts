@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server"
 import { z } from "zod"
 
 import { getAiAccessDecision } from "@/app/lib/ai-access"
+import { MESSAGE_INCLUDE_FLAT } from "@/app/lib/conversation-select"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import { aiLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
@@ -102,10 +103,7 @@ export async function POST(request: NextRequest) {
         messages: {
           orderBy: { createdAt: "desc" },
           take: 10, // Get last 10 messages for context
-          include: {
-            sender: true,
-            seen: true,
-          },
+          include: MESSAGE_INCLUDE_FLAT,
         },
       },
     })

@@ -1,3 +1,4 @@
+import { PARTICIPANT_SELECT } from "@/app/lib/conversation-select"
 import prisma from "@/app/lib/prismadb"
 
 import getCurrentUser from "./getCurrentUser"
@@ -15,7 +16,7 @@ const getConversationById = async (conversationId: string) => {
         id: conversationId,
       },
       include: {
-        users: true,
+        users: { select: PARTICIPANT_SELECT },
         // Include tags that belong to the current user
         tags: {
           where: {

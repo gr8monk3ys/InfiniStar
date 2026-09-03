@@ -1,5 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server"
 
+import {
+  CONVERSATION_INCLUDE,
+  MESSAGE_INCLUDE_FLAT,
+  PARTICIPANT_SELECT,
+} from "@/app/lib/conversation-select"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import { apiLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
@@ -34,9 +39,7 @@ export async function POST(
     // Find the conversation
     const conversation = await prisma.conversation.findUnique({
       where: { id: conversationId },
-      include: {
-        users: true,
-      },
+      include: CONVERSATION_INCLUDE,
     })
 
     if (!conversation) {
@@ -85,12 +88,9 @@ export async function POST(
             pinnedAt: pinnedBy.length === 0 ? new Date() : conversation.pinnedAt,
           },
           include: {
-            users: true,
+            users: { select: PARTICIPANT_SELECT },
             messages: {
-              include: {
-                sender: true,
-                seen: true,
-              },
+              include: MESSAGE_INCLUDE_FLAT,
               orderBy: {
                 createdAt: "desc",
               },
@@ -155,9 +155,7 @@ export async function DELETE(
     // Find the conversation
     const conversation = await prisma.conversation.findUnique({
       where: { id: conversationId },
-      include: {
-        users: true,
-      },
+      include: CONVERSATION_INCLUDE,
     })
 
     if (!conversation) {
@@ -191,12 +189,9 @@ export async function DELETE(
         pinnedAt: updatedPinnedBy.length === 0 ? null : conversation.pinnedAt,
       },
       include: {
-        users: true,
+        users: { select: PARTICIPANT_SELECT },
         messages: {
-          include: {
-            sender: true,
-            seen: true,
-          },
+          include: MESSAGE_INCLUDE_FLAT,
           orderBy: {
             createdAt: "desc",
           },

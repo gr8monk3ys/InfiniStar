@@ -1,12 +1,12 @@
 import { memo, type FC } from "react"
 import Image from "next/image"
-import type { User } from "@prisma/client"
 
 import useActiveList from "@/app/(dashboard)/dashboard/hooks/useActiveList"
+import type { UserSummary } from "@/app/types"
 
 interface AvatarProps {
   // Accepts users fetched with or without sensitive fields (e.g. hashedPassword)
-  user?: Omit<User, "hashedPassword"> | null
+  user?: UserSummary | null
   className?: string
   showPresence?: boolean
 }

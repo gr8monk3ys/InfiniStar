@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { z } from "zod"
 
+import { MESSAGE_INCLUDE_FLAT } from "@/app/lib/conversation-select"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import { apiLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
@@ -52,10 +53,7 @@ export async function POST(
     // Find the message
     const message = await prisma.message.findUnique({
       where: { id: messageId },
-      include: {
-        sender: true,
-        seen: true,
-      },
+      include: MESSAGE_INCLUDE_FLAT,
     })
 
     if (!message) {
@@ -110,10 +108,7 @@ export async function POST(
       data: {
         reactions: reactions,
       },
-      include: {
-        sender: true,
-        seen: true,
-      },
+      include: MESSAGE_INCLUDE_FLAT,
     })
 
     // Trigger Pusher event for real-time update

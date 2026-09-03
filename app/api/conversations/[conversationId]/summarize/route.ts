@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server"
 
 import { getAiAccessDecision } from "@/app/lib/ai-access"
 import { getFreeTierModel } from "@/app/lib/ai-model-routing"
+import { PARTICIPANT_SELECT } from "@/app/lib/conversation-select"
 import {
   generateConversationSummary,
   MIN_MESSAGES_FOR_SUMMARY,
@@ -175,7 +176,7 @@ export async function GET(
     const conversation = await prisma.conversation.findUnique({
       where: { id: conversationId },
       include: {
-        users: true,
+        users: { select: PARTICIPANT_SELECT },
         _count: {
           select: {
             messages: true,

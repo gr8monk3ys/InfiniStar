@@ -23,6 +23,7 @@ jest.mock("@/app/lib/prismadb", () => ({
   default: {
     user: { findFirst: jest.fn(), findUnique: jest.fn(), update: jest.fn() },
     creatorSubscription: { updateMany: jest.fn(), upsert: jest.fn() },
+    processedWebhookEvent: { create: jest.fn(), deleteMany: jest.fn() },
   },
 }))
 

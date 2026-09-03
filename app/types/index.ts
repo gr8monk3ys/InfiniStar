@@ -21,14 +21,19 @@ export interface UserSummary {
   createdAt: Date
 }
 
+/**
+ * A message as it crosses the wire: in an HTTP response, in the RSC payload,
+ * or over Pusher. Participants are projected to `UserSummary`, never the full
+ * `User` row — see `app/lib/conversation-select.ts` for why.
+ */
 export type FullMessageType = Message & {
-  sender: User
-  seen: User[]
-  replyTo?: (Message & { sender: User }) | null
+  sender: UserSummary
+  seen: UserSummary[]
+  replyTo?: (Message & { sender: UserSummary }) | null
 }
 
 export type FullConversationType = Conversation & {
-  users: User[]
+  users: UserSummary[]
   messages: FullMessageType[]
   character?: Character | null
   persona?: UserPersona | null

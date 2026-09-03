@@ -2,6 +2,7 @@ import { type NextRequest } from "next/server"
 import { z } from "zod"
 
 import { getAiAccessDecision } from "@/app/lib/ai-access"
+import { buildMemoryContext, getRelevantMemories } from "@/app/lib/ai-memory"
 import { buildAiConversationHistory } from "@/app/lib/ai-message-content"
 import { getModelForUser } from "@/app/lib/ai-model-routing"
 import {
@@ -9,10 +10,15 @@ import {
   getSystemPrompt,
   isValidPersonality,
 } from "@/app/lib/ai-personalities"
+import { buildChatSystemBlocks } from "@/app/lib/ai-system-prompt"
 import { trackAiUsage } from "@/app/lib/ai-usage"
 import anthropic from "@/app/lib/anthropic"
+import { buildCharacterSystemPrompt } from "@/app/lib/character-prompt"
+import { PARTICIPANT_SELECT } from "@/app/lib/conversation-select"
+import { renderSummaryForPrompt } from "@/app/lib/conversation-summary"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import { aiLogger } from "@/app/lib/logger"
+import { canAccessNsfw } from "@/app/lib/nsfw"
 import prisma from "@/app/lib/prismadb"
 import { getPusherConversationChannel } from "@/app/lib/pusher-channels"
 import { pusherServer } from "@/app/lib/pusher-server"
@@ -105,14 +111,34 @@ export async function POST(request: NextRequest) {
 
     const { messageId } = validation.data
 
-    // Find the message to regenerate
+    // Find the message to regenerate.
+    // The conversation is loaded with the same character/persona selection that
+    // /api/ai/chat-stream uses, so a regeneration rebuilds the identical system
+    // prompt instead of falling back to a bare personality prompt.
     const message = await prisma.message.findUnique({
       where: { id: messageId },
       include: {
-        sender: true,
+        sender: { select: PARTICIPANT_SELECT },
         conversation: {
           include: {
-            users: true,
+            users: { select: PARTICIPANT_SELECT },
+            character: {
+              select: {
+                name: true,
+                isNsfw: true,
+                systemPrompt: true,
+                scenario: true,
+                exampleDialogues: true,
+              },
+            },
+            persona: {
+              select: {
+                name: true,
+                description: true,
+                appearance: true,
+                personalityTraits: true,
+              },
+            },
           },
         },
       },
@@ -148,6 +174,17 @@ export async function POST(request: NextRequest) {
 
     if (!isUserInConversation) {
       return new Response(JSON.stringify({ error: "You are not part of this conversation" }), {
+        status: 403,
+        headers: { "Content-Type": "application/json" },
+      })
+    }
+
+    // A regeneration produces brand-new model output, so the NSFW gate is
+    // re-evaluated here exactly as it is on a fresh turn: a user who has since
+    // disabled NSFW (or lost adult confirmation) must not be able to press
+    // "reply again" and get fresh NSFW generation out of the same character.
+    if (message.conversation.character?.isNsfw && !canAccessNsfw(currentUser)) {
+      return new Response(JSON.stringify({ error: "NSFW content is not enabled." }), {
         status: 403,
         headers: { "Content-Type": "application/json" },
       })
@@ -195,30 +232,62 @@ export async function POST(request: NextRequest) {
           requestedModelId: message.conversation.aiModel,
         })
 
-        // Get system prompt based on personality with proper type validation
+        const conversation = message.conversation
+
+        // Rebuild the exact same system prompt a fresh turn would get. Character
+        // conversations rebuild from the character row so edits to a character
+        // (and the roleplay guardrails) apply to regenerations too, instead of
+        // regenerating with a bare personality prompt.
         const personalityType =
-          message.conversation.aiPersonality &&
-          isValidPersonality(message.conversation.aiPersonality)
-            ? message.conversation.aiPersonality
+          conversation.aiPersonality && isValidPersonality(conversation.aiPersonality)
+            ? conversation.aiPersonality
             : getDefaultPersonality()
-        const systemPrompt = getSystemPrompt(
-          personalityType,
-          message.conversation.aiSystemPrompt || undefined
-        )
+        const baseSystemPrompt = conversation.character?.systemPrompt
+          ? buildCharacterSystemPrompt(conversation.character)
+          : getSystemPrompt(personalityType, conversation.aiSystemPrompt || undefined)
+
+        // Build persona context if a persona is set on this conversation
+        let personaContext = ""
+        if (conversation.persona) {
+          const p = conversation.persona
+          const parts = [`\n\n[User Persona]\nThe user is roleplaying as: ${p.name}`]
+          if (p.description) parts.push(`Description: ${p.description}`)
+          if (p.appearance) parts.push(`Appearance: ${p.appearance}`)
+          if (p.personalityTraits) parts.push(`Personality: ${p.personalityTraits}`)
+          parts.push(
+            "Address the user as this persona and react to their described traits naturally."
+          )
+          personaContext = parts.join("\n")
+        }
+
+        // Bridge long conversations: when a stored AI summary exists, inject a
+        // compact rendering of it so the model retains continuity beyond the
+        // recent-history window.
+        const summaryContext = renderSummaryForPrompt(conversation.summary)
+
+        // The character + persona prefix is stable across turns and is the cached
+        // block; volatile context (summary + memories) goes in a separate trailing
+        // block so regenerating the summary or adding a memory never invalidates
+        // the cached character prompt.
+        const stablePrompt = baseSystemPrompt + personaContext
+        let volatileContext = summaryContext
+        try {
+          const memories = await getRelevantMemories(currentUser.id)
+          if (memories.length > 0) {
+            volatileContext = volatileContext + "\n" + buildMemoryContext(memories)
+          }
+        } catch (memoryError) {
+          aiLogger.warn({ err: memoryError }, "Failed to fetch memories")
+        }
 
         try {
-          // Call Anthropic API with streaming and system prompt
-          // Use cache_control to cache the system prompt for cost savings.
+          // Call Anthropic API with streaming. The stable character prompt carries
+          // the cache breakpoint; volatile summary/memory text is a separate block
+          // so it never busts the cached prefix. See buildChatSystemBlocks.
           const aiStream = await anthropic.messages.stream({
             model: modelToUse,
             max_tokens: 2048,
-            system: [
-              {
-                type: "text" as const,
-                text: systemPrompt,
-                cache_control: { type: "ephemeral" as const },
-              },
-            ],
+            system: buildChatSystemBlocks(stablePrompt, volatileContext),
             messages: conversationHistory,
           })
 
@@ -250,7 +319,15 @@ export async function POST(request: NextRequest) {
             model: modelToUse,
             inputTokens: finalMessage.usage.input_tokens,
             outputTokens: finalMessage.usage.output_tokens,
-            requestType: "chat-stream",
+            // AiRequestType (app/lib/ai-usage.ts) has no "regenerate" variant, and
+            // adding one would silently drop regenerations out of the monthly
+            // message counters, which both ai-access.ts and /api/ai/usage compute
+            // with `requestType: { in: ["chat", "chat-stream"] }` — free users
+            // could then regenerate past the cap for free. "chat" is the generic
+            // conversational-turn label (also getAiAccessDecision's default) and
+            // keeps this counted; "chat-stream" specifically means the
+            // /api/ai/chat-stream send endpoint, which this is not.
+            requestType: "chat",
             latencyMs,
           })
 
@@ -281,8 +358,8 @@ export async function POST(request: NextRequest) {
                 outputTokens: finalMessage.usage.output_tokens,
               },
               include: {
-                seen: true,
-                sender: true,
+                seen: { select: PARTICIPANT_SELECT },
+                sender: { select: PARTICIPANT_SELECT },
               },
             })
 

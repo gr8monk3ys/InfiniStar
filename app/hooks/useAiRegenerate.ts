@@ -2,6 +2,12 @@
 
 import { useCallback, useRef, useState } from "react"
 
+import {
+  AiStreamRequestError,
+  buildAiStreamRequestError,
+  type AiStreamErrorDetails,
+} from "@/app/lib/ai-stream-error"
+
 interface StreamChunk {
   type: "chunk" | "done" | "error"
   content?: string
@@ -13,7 +19,13 @@ interface UseAiRegenerateOptions {
   csrfToken: string | null
   onChunk?: (chunk: string) => void
   onComplete?: (messageId: string) => void
-  onError?: (error: string) => void
+  /**
+   * Called on failure. `details` carries the structured API error (code +
+   * limits) for non-OK responses, so a 402 tier-limit answer can open the
+   * upgrade dialog instead of a dead-end toast — same contract as
+   * useAiChatStream.
+   */
+  onError?: (error: string, details?: AiStreamErrorDetails) => void
 }
 
 /**
@@ -69,8 +81,7 @@ export function useAiRegenerate(options: UseAiRegenerateOptions) {
         })
 
         if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}))
-          throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+          throw await buildAiStreamRequestError(response)
         }
 
         if (!response.body) {
@@ -125,7 +136,11 @@ export function useAiRegenerate(options: UseAiRegenerateOptions) {
           if (err.name !== "AbortError") {
             // Only report non-abort errors to the UI
             setError(err.message)
-            onError?.(err.message)
+            if (err instanceof AiStreamRequestError) {
+              onError?.(err.message, err.details)
+            } else {
+              onError?.(err.message)
+            }
           }
           // Abort errors are expected when user cancels - silently ignore
         }
@@ -161,3 +176,6 @@ export function useAiRegenerate(options: UseAiRegenerateOptions) {
     resetState,
   }
 }
+
+// Export types for use in other components
+export type { AiStreamErrorDetails }

@@ -6,7 +6,6 @@ import { captureServerEvent } from "@/app/lib/analytics"
 import { sendPaymentFailedEmail } from "@/app/lib/email"
 import { stripeLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
-import { getRedisClient } from "@/app/lib/redis"
 import { stripe } from "@/app/lib/stripe"
 
 function getCurrentPeriodEnd(subscription: Stripe.Subscription): Date | null {
@@ -230,41 +229,71 @@ async function downgradePlatformUserFromStripeSubscription(
   )
 }
 
-export async function POST(req: Request) {
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
-  if (!webhookSecret) {
-    stripeLogger.error("STRIPE_WEBHOOK_SECRET is not configured")
-    return new NextResponse("Webhook secret not configured", { status: 500 })
-  }
+/**
+ * Prisma raises P2002 when a write violates a unique constraint. Checked
+ * structurally rather than with `instanceof PrismaClientKnownRequestError` so a
+ * mocked prisma client in tests can reproduce it.
+ */
+function isUniqueConstraintViolation(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code?: unknown }).code === "P2002"
+  )
+}
 
-  const headersList = await headers()
-  const signature = headersList.get("Stripe-Signature")
-
-  if (!signature) {
-    return new NextResponse("Missing Stripe-Signature header", { status: 400 })
-  }
-
-  let event: Stripe.Event
-
+/**
+ * Claims a Stripe event by inserting it into the processed-webhook ledger.
+ *
+ * Returns true if this delivery won the claim and should be processed, false if
+ * the event has already been claimed (a Stripe retry).
+ *
+ * Detection is the unique-constraint violation on the INSERT, never a prior
+ * read: Stripe retries arrive concurrently, and two requests that both read
+ * "not processed" would both run the handlers.
+ */
+async function claimStripeEvent(event: Stripe.Event): Promise<boolean> {
   try {
-    event = stripe.webhooks.constructEvent(await req.text(), signature, webhookSecret)
+    await prisma.processedWebhookEvent.create({
+      data: {
+        provider: "stripe",
+        eventId: event.id,
+        eventType: event.type,
+      },
+    })
+    return true
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Unknown error"
-    return new NextResponse(`Webhook Error: ${message}`, { status: 400 })
-  }
-
-  // Idempotency guard: skip events we've already processed (Stripe retries on non-2xx)
-  const redis = getRedisClient()
-  if (redis) {
-    const idempotencyKey = `stripe:event:${event.id}`
-    // SET EX NX returns "OK" on first write, null if key already existed
-    const result = await redis.set(idempotencyKey, "1", "EX", 172800, "NX")
-    if (result === null) {
-      stripeLogger.info({ eventId: event.id, type: event.type }, "Duplicate Stripe event skipped")
-      return new NextResponse(null, { status: 200 })
+    if (isUniqueConstraintViolation(error)) {
+      return false
     }
+    // Any other database failure must not fall through into the handlers
+    // unguarded -- let it propagate so the request 500s and Stripe retries.
+    throw error
   }
+}
 
+/**
+ * Releases a claim so a later Stripe retry can process the event again.
+ */
+async function releaseStripeEvent(eventId: string): Promise<void> {
+  await prisma.processedWebhookEvent
+    .deleteMany({ where: { provider: "stripe", eventId } })
+    .catch((error: unknown) => {
+      stripeLogger.error(
+        { err: error, eventId },
+        "Failed to release Stripe webhook idempotency claim; retries of this event will be skipped"
+      )
+    })
+}
+
+/**
+ * Runs the side effects for a single verified Stripe event.
+ *
+ * Split out of POST so the idempotency claim below can wrap it in a try/catch
+ * without reindenting the handlers. The bodies are unchanged.
+ */
+async function processStripeEvent(event: Stripe.Event): Promise<NextResponse> {
   if (event.type === "checkout.session.completed") {
     const session = event.data.object as Stripe.Checkout.Session
     const flowType = session.metadata?.flowType
@@ -473,4 +502,58 @@ export async function POST(req: Request) {
   }
 
   return new NextResponse(null, { status: 200 })
+}
+
+export async function POST(req: Request) {
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
+  if (!webhookSecret) {
+    stripeLogger.error("STRIPE_WEBHOOK_SECRET is not configured")
+    return new NextResponse("Webhook secret not configured", { status: 500 })
+  }
+
+  const headersList = await headers()
+  const signature = headersList.get("Stripe-Signature")
+
+  if (!signature) {
+    return new NextResponse("Missing Stripe-Signature header", { status: 400 })
+  }
+
+  let event: Stripe.Event
+
+  try {
+    event = stripe.webhooks.constructEvent(await req.text(), signature, webhookSecret)
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error"
+    return new NextResponse(`Webhook Error: ${message}`, { status: 400 })
+  }
+
+  // Idempotency guard: Stripe delivers at least once and retries every non-2xx,
+  // so the same event id arrives repeatedly and concurrently. The record of
+  // "already handled" lives in Postgres, which is mandatory for this app -- not
+  // in Redis, which is optional (REDIS_URL) and whose absence used to make this
+  // guard silently disappear, leaving the handlers below (tip checkout, creator
+  // subscription checkout, subscription upserts) exposed to every retry.
+  //
+  // Ordering trade-off: AT-LEAST-ONCE. The claim row is committed BEFORE any
+  // side effect runs, which is what makes concurrent retries lose the race. If
+  // the handlers then throw, the claim is released and the error propagates as a
+  // non-2xx so Stripe retries -- work is never silently dropped. The cost is that
+  // a handler that fails after a partial side effect will be replayed; the
+  // handlers are upserts and updateMany keyed on Stripe ids, so replay converges.
+  // At-most-once (claim and never release) was rejected: losing a paid tip or a
+  // subscription upgrade is worse than repeating an idempotent write. A hard
+  // process kill still leaves an unreleased claim -- that window is not covered
+  // by any in-process scheme.
+  const claimed = await claimStripeEvent(event)
+  if (!claimed) {
+    stripeLogger.info({ eventId: event.id, type: event.type }, "Duplicate Stripe event skipped")
+    return new NextResponse(null, { status: 200 })
+  }
+
+  try {
+    return await processStripeEvent(event)
+  } catch (error: unknown) {
+    await releaseStripeEvent(event.id)
+    throw error
+  }
 }

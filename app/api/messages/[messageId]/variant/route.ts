@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { z } from "zod"
 
+import { MESSAGE_INCLUDE, PARTICIPANT_SELECT } from "@/app/lib/conversation-select"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import prisma from "@/app/lib/prismadb"
 import { getPusherConversationChannel } from "@/app/lib/pusher-channels"
@@ -51,12 +52,10 @@ export async function PATCH(
   const message = await prisma.message.findUnique({
     where: { id: messageId },
     include: {
-      sender: true,
-      seen: true,
+      sender: { select: PARTICIPANT_SELECT },
+      seen: { select: PARTICIPANT_SELECT },
       replyTo: {
-        include: {
-          sender: true,
-        },
+        include: { sender: { select: PARTICIPANT_SELECT } },
       },
       conversation: {
         select: {
@@ -107,15 +106,7 @@ export async function PATCH(
       body: nextBody,
       activeVariant: index,
     },
-    include: {
-      sender: true,
-      seen: true,
-      replyTo: {
-        include: {
-          sender: true,
-        },
-      },
-    },
+    include: MESSAGE_INCLUDE,
   })
 
   await pusherServer.trigger(
