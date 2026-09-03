@@ -229,44 +229,37 @@ function CharacterHero({
 }
 
 function CharacterStats({ character }: { character: CharacterDetails }) {
+  /**
+   * A brand-new character has nothing to show, and a row of four zeros reads
+   * as a dead listing rather than a new one. The card already hides its stat
+   * pills for the same reason; show the row only once a number means
+   * something, and show only the counters that do.
+   */
+  const stats = [
+    { key: "chats", value: character.usageCount, noun: "chat", Icon: HiChatBubbleLeftRight },
+    { key: "likes", value: character.likeCount, noun: "like", Icon: HiHeart },
+    {
+      key: "comments",
+      value: character.commentCount,
+      noun: "comment",
+      Icon: HiChatBubbleBottomCenterText,
+    },
+    { key: "views", value: character.viewCount, noun: "view", Icon: HiEye },
+  ].filter((s) => s.value > 0)
+
+  if (stats.length === 0) return null
+
   return (
     <div className="flex items-center gap-6 border-y py-4" aria-label="Character statistics">
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <HiChatBubbleLeftRight className="size-5" aria-hidden="true" />
-        <span>
-          <span className="font-semibold text-foreground">
-            {character.usageCount.toLocaleString()}
-          </span>{" "}
-          chats
-        </span>
-      </div>
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <HiHeart className="size-5" aria-hidden="true" />
-        <span>
-          <span className="font-semibold text-foreground">
-            {character.likeCount.toLocaleString()}
-          </span>{" "}
-          likes
-        </span>
-      </div>
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <HiChatBubbleBottomCenterText className="size-5" aria-hidden="true" />
-        <span>
-          <span className="font-semibold text-foreground">
-            {character.commentCount.toLocaleString()}
-          </span>{" "}
-          comments
-        </span>
-      </div>
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <HiEye className="size-5" aria-hidden="true" />
-        <span>
-          <span className="font-semibold text-foreground">
-            {character.viewCount.toLocaleString()}
-          </span>{" "}
-          views
-        </span>
-      </div>
+      {stats.map(({ key, value, noun, Icon }) => (
+        <div key={key} className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Icon className="size-5" aria-hidden="true" />
+          <span>
+            <span className="font-semibold text-foreground">{value.toLocaleString()}</span>{" "}
+            {value === 1 ? noun : `${noun}s`}
+          </span>
+        </div>
+      ))}
     </div>
   )
 }
