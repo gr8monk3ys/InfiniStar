@@ -1,12 +1,12 @@
-import { NextResponse, type NextRequest } from "next/server"
+import { NextResponse } from "next/server"
 import { z } from "zod"
 
-import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
+import { guard } from "@/app/lib/guarded-route"
 import { apiLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
 import { PUSHER_PRESENCE_CHANNEL } from "@/app/lib/pusher-channels"
 import { pusherServer } from "@/app/lib/pusher-server"
-import getCurrentUser from "@/app/actions/getCurrentUser"
+import { apiLimiter } from "@/app/lib/rate-limit"
 
 // Validation schema
 const presenceSchema = z.object({
@@ -20,31 +20,10 @@ const shouldBroadcastPresence = Boolean(
 )
 
 // PATCH /api/users/presence - Update user presence status
-export async function PATCH(request: NextRequest) {
-  try {
-    // CSRF Protection
-    const headerToken = request.headers.get("X-CSRF-Token")
-    const cookieToken = getCsrfTokenFromRequest(request)
-
-    if (!verifyCsrfToken(headerToken, cookieToken)) {
-      return NextResponse.json({ error: "Invalid CSRF token" }, { status: 403 })
-    }
-
-    const currentUser = await getCurrentUser()
-
-    if (!currentUser?.id || !currentUser?.email) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
-    // Validate request body
-    const body = await request.json()
-    const validation = presenceSchema.safeParse(body)
-
-    if (!validation.success) {
-      return NextResponse.json({ error: validation.error.issues[0].message }, { status: 400 })
-    }
-
-    const { status, customStatus, customStatusEmoji } = validation.data
+export const PATCH = guard(
+  { limiter: apiLimiter, body: presenceSchema },
+  async ({ user, body }) => {
+    const { status, customStatus, customStatusEmoji } = body
 
     // Build update data
     const updateData: {
@@ -67,7 +46,7 @@ export async function PATCH(request: NextRequest) {
 
     // Update user presence
     const updatedUser = await prisma.user.update({
-      where: { id: currentUser.id },
+      where: { id: user.id },
       data: updateData,
     })
 
@@ -75,7 +54,7 @@ export async function PATCH(request: NextRequest) {
     if (shouldBroadcastPresence) {
       try {
         await pusherServer.trigger(PUSHER_PRESENCE_CHANNEL, "user:presence", {
-          userId: currentUser.id,
+          userId: user.id,
           presenceStatus: updatedUser.presenceStatus,
           lastSeenAt: updatedUser.lastSeenAt,
           customStatus: updatedUser.customStatus,
@@ -96,8 +75,5 @@ export async function PATCH(request: NextRequest) {
         customStatusEmoji: updatedUser.customStatusEmoji,
       },
     })
-  } catch (error: unknown) {
-    apiLogger.error({ err: error }, "Error updating presence")
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
-}
+)

@@ -24,6 +24,7 @@ const mockClerkUpdateUser = jest.fn()
 const mockHashFallbackPassword = jest.fn()
 const mockIsFallbackClerkId = jest.fn()
 const mockVerifyFallbackPassword = jest.fn()
+const mockLimiterCheck = jest.fn()
 const originalEnv = process.env
 
 jest.mock("@/app/lib/csrf", () => ({
@@ -41,10 +42,14 @@ jest.mock("@/app/lib/prismadb", () => ({
   },
 }))
 
-// The profile route does not use rate-limiting directly, but pull in the full
-// mock so any transitive imports don't blow up.
+// The route rate-limits through the guard, which resolves apiLimiter from this
+// module; the rest of the limiters are stubbed so transitive imports don't blow up.
 jest.mock("@/app/lib/rate-limit", () => {
-  const limiter = { check: () => true, reset: () => {}, cleanup: () => {} }
+  const limiter = {
+    check: (...args: unknown[]) => mockLimiterCheck(...args),
+    reset: () => {},
+    cleanup: () => {},
+  }
   return {
     apiLimiter: limiter,
     authLimiter: limiter,
@@ -126,6 +131,9 @@ afterAll(() => {
 // Helpers
 // ------------------------------------------------------------------
 
+/** Next always passes a context; only dynamic segments put anything in it. */
+const routeCtx = () => ({ params: Promise.resolve({} as Record<string, string>) })
+
 function makeGetRequest(): NextRequest {
   return new NextRequest("http://localhost:3000/api/profile", {
     method: "GET",
@@ -149,7 +157,7 @@ function makePatchRequest(body: unknown): NextRequest {
 // ------------------------------------------------------------------
 
 describe("GET /api/profile", () => {
-  let GET: (req: NextRequest) => Promise<Response>
+  let GET: (req: NextRequest, ctx: { params: Promise<Record<string, string>> }) => Promise<Response>
   let getCurrentUser: jest.Mock
 
   beforeAll(async () => {
@@ -161,21 +169,29 @@ describe("GET /api/profile", () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
+    mockLimiterCheck.mockResolvedValue(true)
     getCurrentUser.mockResolvedValue(CURRENT_USER)
     mockUserFindUnique.mockResolvedValue(DB_USER)
     mockClerkGetUser.mockResolvedValue({ passwordEnabled: true, twoFactorEnabled: true })
   })
 
+  it("returns 429 when the limiter refuses, without touching the database", async () => {
+    mockLimiterCheck.mockResolvedValue(false)
+    const res = await GET(makeGetRequest(), routeCtx())
+    expect(res.status).toBe(429)
+    expect(mockUserFindUnique).not.toHaveBeenCalled()
+  })
+
   it("returns 401 when user is not authenticated", async () => {
     getCurrentUser.mockResolvedValue(null)
-    const res = await GET(makeGetRequest())
+    const res = await GET(makeGetRequest(), routeCtx())
     expect(res.status).toBe(401)
     const data = await res.json()
     expect(data.error).toMatch(/unauthorized/i)
   })
 
   it("returns user profile data for authenticated user", async () => {
-    const res = await GET(makeGetRequest())
+    const res = await GET(makeGetRequest(), routeCtx())
     expect(res.status).toBe(200)
     const data = await res.json()
     expect(data.user).toBeDefined()
@@ -192,14 +208,14 @@ describe("GET /api/profile", () => {
 
   it("returns 404 when user record is not found in database", async () => {
     mockUserFindUnique.mockResolvedValue(null)
-    const res = await GET(makeGetRequest())
+    const res = await GET(makeGetRequest(), routeCtx())
     expect(res.status).toBe(404)
     const data = await res.json()
     expect(data.error).toMatch(/not found/i)
   })
 
   it("queries by the current user id", async () => {
-    await GET(makeGetRequest())
+    await GET(makeGetRequest(), routeCtx())
     expect(mockUserFindUnique).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { id: CURRENT_USER.id },
@@ -213,7 +229,10 @@ describe("GET /api/profile", () => {
 // ------------------------------------------------------------------
 
 describe("PATCH /api/profile", () => {
-  let PATCH: (req: NextRequest) => Promise<Response>
+  let PATCH: (
+    req: NextRequest,
+    ctx: { params: Promise<Record<string, string>> }
+  ) => Promise<Response>
   let getCurrentUser: jest.Mock
 
   beforeAll(async () => {
@@ -225,6 +244,7 @@ describe("PATCH /api/profile", () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
+    mockLimiterCheck.mockResolvedValue(true)
     mockVerifyCsrfToken.mockReturnValue(true)
     mockGetCsrfTokenFromRequest.mockReturnValue("test-csrf")
     getCurrentUser.mockResolvedValue(CURRENT_USER)
@@ -237,9 +257,17 @@ describe("PATCH /api/profile", () => {
     mockVerifyFallbackPassword.mockResolvedValue(true)
   })
 
+  it("returns 429 when the limiter refuses, before CSRF or auth run", async () => {
+    mockLimiterCheck.mockResolvedValue(false)
+    const res = await PATCH(makePatchRequest({ name: "Bob" }), routeCtx())
+    expect(res.status).toBe(429)
+    expect(mockVerifyCsrfToken).not.toHaveBeenCalled()
+    expect(mockUserUpdate).not.toHaveBeenCalled()
+  })
+
   it("returns 403 when CSRF token is invalid", async () => {
     mockVerifyCsrfToken.mockReturnValue(false)
-    const res = await PATCH(makePatchRequest({ name: "Bob" }))
+    const res = await PATCH(makePatchRequest({ name: "Bob" }), routeCtx())
     expect(res.status).toBe(403)
     const data = await res.json()
     expect(data.error).toMatch(/csrf/i)
@@ -247,7 +275,7 @@ describe("PATCH /api/profile", () => {
 
   it("returns 401 when user is not authenticated", async () => {
     getCurrentUser.mockResolvedValue(null)
-    const res = await PATCH(makePatchRequest({ name: "Bob" }))
+    const res = await PATCH(makePatchRequest({ name: "Bob" }), routeCtx())
     expect(res.status).toBe(401)
     const data = await res.json()
     expect(data.error).toMatch(/unauthorized/i)
@@ -257,7 +285,7 @@ describe("PATCH /api/profile", () => {
     const updated = { ...DB_USER, name: "Alice Updated" }
     mockUserUpdate.mockResolvedValue(updated)
 
-    const res = await PATCH(makePatchRequest({ name: "Alice Updated" }))
+    const res = await PATCH(makePatchRequest({ name: "Alice Updated" }), routeCtx())
     expect(res.status).toBe(200)
     const data = await res.json()
     expect(data.message).toMatch(/updated/i)
@@ -275,7 +303,7 @@ describe("PATCH /api/profile", () => {
     const updated = { ...DB_USER, bio }
     mockUserUpdate.mockResolvedValue(updated)
 
-    const res = await PATCH(makePatchRequest({ bio }))
+    const res = await PATCH(makePatchRequest({ bio }), routeCtx())
     expect(res.status).toBe(200)
     const data = await res.json()
     expect(data.user.bio).toBe(bio)
@@ -283,7 +311,7 @@ describe("PATCH /api/profile", () => {
 
   it("returns 400 when bio exceeds 500 characters", async () => {
     const bio = "A".repeat(501)
-    const res = await PATCH(makePatchRequest({ bio }))
+    const res = await PATCH(makePatchRequest({ bio }), routeCtx())
     expect(res.status).toBe(400)
     const data = await res.json()
     expect(data.error).toMatch(/bio too long/i)
@@ -295,7 +323,8 @@ describe("PATCH /api/profile", () => {
       makePatchRequest({
         currentPassword: "old-password",
         newPassword: "new-password-123",
-      })
+      }),
+      routeCtx()
     )
 
     expect(res.status).toBe(200)
@@ -331,7 +360,8 @@ describe("PATCH /api/profile", () => {
       makePatchRequest({
         currentPassword: "old-password",
         newPassword: "new-password-123",
-      })
+      }),
+      routeCtx()
     )
 
     expect(res.status).toBe(200)
@@ -359,7 +389,8 @@ describe("PATCH /api/profile", () => {
       makePatchRequest({
         currentPassword: "wrong-password",
         newPassword: "new-password-123",
-      })
+      }),
+      routeCtx()
     )
 
     expect(res.status).toBe(400)
@@ -372,7 +403,7 @@ describe("PATCH /api/profile", () => {
     const updated = { ...DB_USER, location }
     mockUserUpdate.mockResolvedValue(updated)
 
-    const res = await PATCH(makePatchRequest({ location }))
+    const res = await PATCH(makePatchRequest({ location }), routeCtx())
     expect(res.status).toBe(200)
     const data = await res.json()
     expect(data.user.location).toBe(location)
@@ -380,7 +411,7 @@ describe("PATCH /api/profile", () => {
 
   it("returns 400 when location exceeds 100 characters", async () => {
     const location = "C".repeat(101)
-    const res = await PATCH(makePatchRequest({ location }))
+    const res = await PATCH(makePatchRequest({ location }), routeCtx())
     expect(res.status).toBe(400)
     expect(mockUserUpdate).not.toHaveBeenCalled()
   })
@@ -390,14 +421,14 @@ describe("PATCH /api/profile", () => {
     const updated = { ...DB_USER, website }
     mockUserUpdate.mockResolvedValue(updated)
 
-    const res = await PATCH(makePatchRequest({ website }))
+    const res = await PATCH(makePatchRequest({ website }), routeCtx())
     expect(res.status).toBe(200)
     const data = await res.json()
     expect(data.user.website).toBe(website)
   })
 
   it("returns 400 for invalid URL in website field", async () => {
-    const res = await PATCH(makePatchRequest({ website: "not-a-url" }))
+    const res = await PATCH(makePatchRequest({ website: "not-a-url" }), routeCtx())
     expect(res.status).toBe(400)
     const data = await res.json()
     expect(data.error).toMatch(/invalid url/i)
@@ -408,7 +439,7 @@ describe("PATCH /api/profile", () => {
     const updated = { ...DB_USER, website: null }
     mockUserUpdate.mockResolvedValue(updated)
 
-    const res = await PATCH(makePatchRequest({ website: "" }))
+    const res = await PATCH(makePatchRequest({ website: "" }), routeCtx())
     expect(res.status).toBe(200)
     // Empty string is stored as null
     expect(mockUserUpdate).toHaveBeenCalledWith(
@@ -423,20 +454,20 @@ describe("PATCH /api/profile", () => {
     const updated = { ...DB_USER, image }
     mockUserUpdate.mockResolvedValue(updated)
 
-    const res = await PATCH(makePatchRequest({ image }))
+    const res = await PATCH(makePatchRequest({ image }), routeCtx())
     expect(res.status).toBe(200)
     const data = await res.json()
     expect(data.user.image).toBe(image)
   })
 
   it("returns 400 when image is an invalid URL", async () => {
-    const res = await PATCH(makePatchRequest({ image: "not-a-url" }))
+    const res = await PATCH(makePatchRequest({ image: "not-a-url" }), routeCtx())
     expect(res.status).toBe(400)
     expect(mockUserUpdate).not.toHaveBeenCalled()
   })
 
   it("returns 400 when name is an empty string", async () => {
-    const res = await PATCH(makePatchRequest({ name: "" }))
+    const res = await PATCH(makePatchRequest({ name: "" }), routeCtx())
     expect(res.status).toBe(400)
     const data = await res.json()
     expect(data.error).toMatch(/name is required/i)
@@ -446,7 +477,7 @@ describe("PATCH /api/profile", () => {
   it("only includes provided fields in the database update", async () => {
     mockUserUpdate.mockResolvedValue({ ...DB_USER, bio: "New bio" })
 
-    const res = await PATCH(makePatchRequest({ bio: "New bio" }))
+    const res = await PATCH(makePatchRequest({ bio: "New bio" }), routeCtx())
     expect(res.status).toBe(200)
 
     // name, image, location, website should NOT appear in update data
@@ -461,7 +492,7 @@ describe("PATCH /api/profile", () => {
   it("returns 500 when a database error occurs", async () => {
     mockUserUpdate.mockRejectedValue(new Error("DB connection failed"))
 
-    const res = await PATCH(makePatchRequest({ name: "Alice" }))
+    const res = await PATCH(makePatchRequest({ name: "Alice" }), routeCtx())
     expect(res.status).toBe(500)
   })
 })

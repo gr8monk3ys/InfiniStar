@@ -7,6 +7,7 @@ import { NextRequest } from "next/server"
 const mockGetCurrentUser = jest.fn()
 const mockFindUnique = jest.fn()
 const mockUpdate = jest.fn()
+const mockLimiterCheck = jest.fn()
 
 jest.mock("@/app/actions/getCurrentUser", () => ({
   __esModule: true,
@@ -22,6 +23,14 @@ jest.mock("@/app/lib/prismadb", () => ({
     },
   },
 }))
+
+jest.mock("@/app/lib/rate-limit", () => ({
+  apiLimiter: { check: (...args: unknown[]) => mockLimiterCheck(...args) },
+  getClientIdentifier: () => "127.0.0.1",
+}))
+
+/** Next always passes a context; only dynamic segments put anything in it. */
+const routeCtx = () => ({ params: Promise.resolve({}) })
 
 function createRequest(method: string, body?: unknown): NextRequest {
   return new NextRequest("http://localhost:3000/api/safety/preferences", {
@@ -39,6 +48,7 @@ describe("/api/safety/preferences", () => {
   beforeEach(() => {
     jest.resetModules()
     jest.clearAllMocks()
+    mockLimiterCheck.mockResolvedValue(true)
     mockGetCurrentUser.mockResolvedValue({ id: "user-1", email: "user@example.com" })
     mockFindUnique.mockResolvedValue({
       isAdult: false,
@@ -56,12 +66,12 @@ describe("/api/safety/preferences", () => {
 
   async function runGet() {
     const { GET } = await import("@/app/api/safety/preferences/route")
-    return GET()
+    return GET(createRequest("GET"), routeCtx())
   }
 
   async function runPatch(body: unknown) {
     const { PATCH } = await import("@/app/api/safety/preferences/route")
-    return PATCH(createRequest("PATCH", body))
+    return PATCH(createRequest("PATCH", body), routeCtx())
   }
 
   it("GET returns 401 when signed out", async () => {
@@ -120,6 +130,36 @@ describe("/api/safety/preferences", () => {
         }),
       })
     )
+  })
+
+  it("PATCH rate-limits by the identifier the platform derives, not one the caller supplies", async () => {
+    mockLimiterCheck.mockResolvedValue(false)
+
+    const res = await runPatch({ isAdult: true })
+
+    expect(res.status).toBe(429)
+    // The guard always asks getClientIdentifier; the route no longer reads the
+    // left-most (client-written) x-forwarded-for entry for itself.
+    expect(mockLimiterCheck).toHaveBeenCalledWith("127.0.0.1")
+    expect(mockUpdate).not.toHaveBeenCalled()
+  })
+
+  it("PATCH returns 403 when the CSRF token does not match the cookie", async () => {
+    const { PATCH } = await import("@/app/api/safety/preferences/route")
+    const req = new NextRequest("http://localhost:3000/api/safety/preferences", {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": "forged-token",
+        cookie: "csrf-token=real-token",
+      },
+      body: JSON.stringify({ isAdult: true }),
+    })
+
+    const res = await PATCH(req, routeCtx())
+
+    expect(res.status).toBe(403)
+    expect(mockUpdate).not.toHaveBeenCalled()
   })
 
   it("PATCH turning off adult also disables NSFW", async () => {

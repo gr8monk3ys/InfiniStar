@@ -4,17 +4,25 @@
 
 import { NextRequest } from "next/server"
 
-const mockAuth = jest.fn()
+const mockGetCurrentUser = jest.fn()
 const mockVerifyCsrfToken = jest.fn()
-const mockFindUser = jest.fn()
+const mockLimiterCheck = jest.fn()
 const mockFindMany = jest.fn()
 const mockCreate = jest.fn()
 const mockFindUnique = jest.fn()
 const mockUpdate = jest.fn()
 const mockSanitizePlainText = jest.fn((value: string) => value)
 
-jest.mock("@clerk/nextjs/server", () => ({
-  auth: () => mockAuth(),
+// The route now resolves its user through the guard, which calls getCurrentUser
+// — so the fallback-auth path is honoured here as it is everywhere else.
+jest.mock("@/app/actions/getCurrentUser", () => ({
+  __esModule: true,
+  default: () => mockGetCurrentUser(),
+}))
+
+jest.mock("@/app/lib/rate-limit", () => ({
+  apiLimiter: { check: (...args: unknown[]) => mockLimiterCheck(...args) },
+  getClientIdentifier: () => "127.0.0.1",
 }))
 
 jest.mock("@/app/lib/csrf", () => ({
@@ -30,9 +38,6 @@ jest.mock("@/app/lib/sanitize", () => ({
 jest.mock("@/app/lib/prismadb", () => ({
   __esModule: true,
   default: {
-    user: {
-      findUnique: (args: unknown) => mockFindUser(args),
-    },
     contentReport: {
       findMany: (args: unknown) => mockFindMany(args),
       create: (args: unknown) => mockCreate(args),
@@ -41,6 +46,9 @@ jest.mock("@/app/lib/prismadb", () => ({
     },
   },
 }))
+
+/** Next always passes a context; only dynamic segments put anything in it. */
+const routeCtx = () => ({ params: Promise.resolve({}) })
 
 function createRequest(method: string, path: string, body?: object): NextRequest {
   const headers: Record<string, string> = {
@@ -75,10 +83,10 @@ describe("api/moderation/reports route", () => {
       MODERATION_REVIEWER_EMAILS: reviewerEmail,
     }
 
-    mockAuth.mockResolvedValue({ userId: "clerk_123" })
+    mockLimiterCheck.mockResolvedValue(true)
     mockVerifyCsrfToken.mockReturnValue(true)
     mockSanitizePlainText.mockImplementation((value: string) => value.trim())
-    mockFindUser.mockResolvedValue({
+    mockGetCurrentUser.mockResolvedValue({
       id: standardUserId,
       email: standardEmail,
     })
@@ -90,17 +98,17 @@ describe("api/moderation/reports route", () => {
 
   async function runGet(path: string = "/api/moderation/reports") {
     const { GET } = await import("@/app/api/moderation/reports/route")
-    return GET(createRequest("GET", path))
+    return GET(createRequest("GET", path), routeCtx())
   }
 
   async function runPost(body: object) {
     const { POST } = await import("@/app/api/moderation/reports/route")
-    return POST(createRequest("POST", "/api/moderation/reports", body))
+    return POST(createRequest("POST", "/api/moderation/reports", body), routeCtx())
   }
 
   async function runPatch(body: object) {
     const { PATCH } = await import("@/app/api/moderation/reports/route")
-    return PATCH(createRequest("PATCH", "/api/moderation/reports", body))
+    return PATCH(createRequest("PATCH", "/api/moderation/reports", body), routeCtx())
   }
 
   it("returns reports scoped to the current user for non-reviewers", async () => {
@@ -129,7 +137,7 @@ describe("api/moderation/reports route", () => {
   })
 
   it("returns all reports for reviewer allowlist users", async () => {
-    mockFindUser.mockResolvedValue({
+    mockGetCurrentUser.mockResolvedValue({
       id: reviewerId,
       email: reviewerEmail,
     })
@@ -198,7 +206,7 @@ describe("api/moderation/reports route", () => {
   })
 
   it("allows reviewer allowlist users to resolve reports", async () => {
-    mockFindUser.mockResolvedValue({
+    mockGetCurrentUser.mockResolvedValue({
       id: reviewerId,
       email: reviewerEmail,
     })
@@ -234,8 +242,31 @@ describe("api/moderation/reports route", () => {
     )
   })
 
+  it("returns 429 when the limiter refuses, without reaching the database", async () => {
+    mockLimiterCheck.mockResolvedValue(false)
+
+    const response = await runPost({
+      targetType: "MESSAGE",
+      targetId: "msg-123",
+      reason: "SPAM",
+    })
+
+    expect(response.status).toBe(429)
+    expect(mockCreate).not.toHaveBeenCalled()
+  })
+
+  it("returns 401 when signed out", async () => {
+    mockGetCurrentUser.mockResolvedValue(null)
+
+    const response = await runGet()
+
+    expect(response.status).toBe(401)
+    expect(await response.json()).toEqual({ error: "Unauthorized" })
+    expect(mockFindMany).not.toHaveBeenCalled()
+  })
+
   it("returns 404 when reviewer updates a missing report", async () => {
-    mockFindUser.mockResolvedValue({
+    mockGetCurrentUser.mockResolvedValue({
       id: reviewerId,
       email: reviewerEmail,
     })

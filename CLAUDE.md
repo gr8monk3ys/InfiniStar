@@ -24,6 +24,11 @@ CI (`.github/workflows/ci.yml`, one job named `CI`) runs exactly lint → typech
 - `prisma/schema.prisma` (UUID ids, `@db.Uuid`), migrations in `prisma/migrations/` — production uses `migrate deploy`, never `db push`
 - `env.mjs` — typed env schema; `.env.template` lists every variable
 - `app/__tests__/` Jest unit, `tests/` integration, `e2e/` Playwright
+- `CONTEXT.md` — the domain glossary. Read it before naming anything; several
+  terms (personality vs persona vs character, tier vs plan) are overloaded and
+  the codebase has been bitten by conflating them
+- `docs/adr/` — decisions that look wrong without their reasoning. Check here
+  before "fixing" something deliberate
 
 ## Gotchas
 
