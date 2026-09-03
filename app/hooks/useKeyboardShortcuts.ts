@@ -3,29 +3,20 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 
 import {
-  DEFAULT_SHORTCUTS,
-  eventMatchesBinding,
-  formatShortcutBinding,
-  getEffectiveBinding,
-  getModifierDisplay,
-  getModifierSymbol,
-  getShortcutsByCategory as getShortcutsByCategoryFromConfig,
-  getVisibleShortcuts,
-  isMac,
-  isMetaPressed,
-  isTypingInInput,
-  loadCustomShortcuts,
-  loadShortcutsEnabled,
-  saveShortcutsEnabled,
-  type CustomShortcuts,
+  shortcuts as registry,
   type ShortcutAction,
   type ShortcutActionId,
   type ShortcutBinding,
   type ShortcutCategory,
 } from "@/app/lib/shortcuts"
 
-// Re-export isMac for backward compatibility
-export { isMac } from "@/app/lib/shortcuts"
+/**
+ * Whether the current platform is a Mac. Kept here because message and voice
+ * inputs render platform-specific hints without touching the registry.
+ */
+export function isMac(): boolean {
+  return registry.platform().isMac
+}
 
 /**
  * Registered shortcut handler
@@ -105,38 +96,30 @@ export function useKeyboardShortcuts({
   // Load initial enabled state from localStorage
   const [enabled, setEnabledState] = useState(() => {
     if (typeof window === "undefined") return enabledProp
-    return loadShortcutsEnabled() && enabledProp
+    return registry.isEnabled() && enabledProp
   })
-
-  // Load custom shortcuts
-  const [customShortcuts] = useState<CustomShortcuts>(() => loadCustomShortcuts())
 
   // Update enabled state when prop changes
   useEffect(() => {
-    setEnabledState(loadShortcutsEnabled() && enabledProp)
+    setEnabledState(registry.isEnabled() && enabledProp)
   }, [enabledProp])
 
   // Set enabled state and persist to localStorage
   const setEnabled = useCallback((newEnabled: boolean) => {
     setEnabledState(newEnabled)
-    saveShortcutsEnabled(newEnabled)
+    registry.setEnabled(newEnabled)
   }, [])
 
   // Get binding for an action
   const getBinding = useCallback(
-    (actionId: ShortcutActionId): ShortcutBinding => {
-      return getEffectiveBinding(actionId, customShortcuts)
-    },
-    [customShortcuts]
+    (actionId: ShortcutActionId): ShortcutBinding => registry.binding(actionId),
+    []
   )
 
   // Format binding for display
   const formatBinding = useCallback(
-    (actionId: ShortcutActionId): string => {
-      const binding = getBinding(actionId)
-      return formatShortcutBinding(binding)
-    },
-    [getBinding]
+    (actionId: ShortcutActionId): string => registry.display(actionId),
+    []
   )
 
   // Handle keydown events
@@ -144,33 +127,19 @@ export function useKeyboardShortcuts({
     (event: KeyboardEvent) => {
       if (!enabled) return
 
-      const isTyping = isTypingInInput()
+      // The registry decides which action a key event belongs to; handlers are
+      // offered in registration order and carry their own overrides.
+      const actionId = registry.resolve(event, { among: handlers })
+      if (!actionId) return
 
-      for (const handler of handlers) {
-        // Skip disabled handlers
-        if (handler.enabled === false) continue
+      const handler = handlers.find((h) => h.id === actionId && h.enabled !== false)
+      if (!handler) return
 
-        // Get the action definition
-        const action = DEFAULT_SHORTCUTS[handler.id]
-        if (!action) continue
-
-        // Check if we should allow this shortcut in input
-        const allowInInput = handler.allowInInput ?? action.allowInInput ?? false
-        if (isTyping && !allowInInput) continue
-
-        // Get the effective binding (custom or default)
-        const binding = getEffectiveBinding(handler.id, customShortcuts)
-
-        // Check if the event matches the binding
-        if (eventMatchesBinding(event, binding)) {
-          event.preventDefault()
-          event.stopPropagation()
-          handler.action()
-          return
-        }
-      }
+      event.preventDefault()
+      event.stopPropagation()
+      handler.action()
     },
-    [enabled, handlers, customShortcuts]
+    [enabled, handlers]
   )
 
   // Register keyboard event listener
@@ -180,11 +149,23 @@ export function useKeyboardShortcuts({
   }, [handleKeyDown])
 
   // Memoized values
-  const shortcuts = useMemo(() => getVisibleShortcuts(), [])
-  const byCategory = useMemo(() => getShortcutsByCategoryFromConfig(), [])
-  const modifierKey = useMemo(() => getModifierDisplay("meta"), [])
-  const modifierSymbol = useMemo(() => getModifierSymbol("meta"), [])
-  const isMacPlatform = useMemo(() => isMac(), [])
+  const groups = useMemo(() => registry.groups(), [])
+  const shortcuts = useMemo(() => registry.list(), [])
+  const byCategory = useMemo(
+    () =>
+      groups.reduce(
+        (acc, group) => {
+          acc[group.category] = group.shortcuts
+          return acc
+        },
+        {} as Record<ShortcutCategory, ShortcutAction[]>
+      ),
+    [groups]
+  )
+  const platform = useMemo(() => registry.platform(), [])
+  const modifierKey = platform.modifierKey
+  const modifierSymbol = platform.modifierSymbol
+  const isMacPlatform = platform.isMac
 
   return {
     enabled,
@@ -226,18 +207,18 @@ interface LegacyUseKeyboardShortcutsOptions {
 
 /**
  * Get display string for the modifier key based on platform
- * @deprecated Use getModifierDisplay from shortcuts.ts instead
+ * @deprecated Use shortcuts.platform() instead
  */
 export function getModifierKeyDisplay(): string {
-  return getModifierDisplay("meta")
+  return registry.platform().modifierKey
 }
 
 /**
  * Get symbol for the modifier key based on platform
- * @deprecated Use getModifierSymbol from shortcuts.ts instead
+ * @deprecated Use shortcuts.platform() instead
  */
 export function getModifierKeySymbol(): string {
-  return getModifierSymbol("meta")
+  return registry.platform().modifierSymbol
 }
 
 /**
@@ -247,13 +228,13 @@ export function formatShortcut(shortcut: KeyboardShortcut): string {
   const parts: string[] = []
 
   if (shortcut.modifierKey) {
-    parts.push(getModifierDisplay("meta"))
+    parts.push(registry.platform().modifierKey)
   }
   if (shortcut.shiftKey) {
     parts.push("Shift")
   }
   if (shortcut.altKey) {
-    parts.push(isMac() ? "Option" : "Alt")
+    parts.push(registry.platform().isMac ? "Option" : "Alt")
   }
 
   // Format the key for display
@@ -299,8 +280,9 @@ export function useFormattedShortcuts(shortcuts: KeyboardShortcut[]): {
   modifierKey: string
   modifierSymbol: string
 } {
-  const modifierKey = useMemo(() => getModifierDisplay("meta"), [])
-  const modifierSymbol = useMemo(() => getModifierSymbol("meta"), [])
+  const platform = useMemo(() => registry.platform(), [])
+  const modifierKey = platform.modifierKey
+  const modifierSymbol = platform.modifierSymbol
   const byCategory = useMemo(() => getShortcutsByCategory(shortcuts), [shortcuts])
 
   return {
@@ -343,31 +325,22 @@ export function useLegacyKeyboardShortcuts({
     (event: KeyboardEvent) => {
       if (!enabled) return
 
-      const isTyping = isTypingInInput()
-
       for (const shortcut of shortcuts) {
         // Skip disabled shortcuts
         if (shortcut.enabled === false) continue
 
-        // Skip if typing in input and shortcut doesn't allow it
-        if (isTyping && !shortcut.allowInInput) continue
+        // These shortcuts are component-local and not registry actions, so
+        // match them as a binding rather than resolving an action id.
+        const binding: ShortcutBinding = {
+          key: shortcut.key,
+          modifiers: [
+            ...(shortcut.modifierKey ? (["meta"] as const) : []),
+            ...(shortcut.shiftKey ? (["shift"] as const) : []),
+            ...(shortcut.altKey ? (["alt"] as const) : []),
+          ],
+        }
 
-        // Check if the key matches
-        const keyMatches = event.key.toLowerCase() === shortcut.key.toLowerCase()
-        if (!keyMatches) continue
-
-        // Check modifier key requirements
-        const modifierPressed = isMetaPressed(event)
-        const modifierMatches = shortcut.modifierKey ? modifierPressed : !modifierPressed
-        if (!modifierMatches) continue
-
-        // Check shift key requirement
-        const shiftMatches = shortcut.shiftKey ? event.shiftKey : !event.shiftKey
-        if (!shiftMatches) continue
-
-        // Check alt key requirement
-        const altMatches = shortcut.altKey ? event.altKey : !event.altKey
-        if (!altMatches) continue
+        if (!registry.matches(event, binding, { allowInInput: shortcut.allowInInput })) continue
 
         // All conditions met - execute the action
         event.preventDefault()

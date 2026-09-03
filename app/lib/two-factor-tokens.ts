@@ -83,10 +83,14 @@ export async function get2FAToken(email: string): Promise<string | null> {
     try {
       const key = `${REDIS_KEY_PREFIX}${normalizedEmail}`
       const raw = await redis.get(key)
-      if (!raw) return null
-
-      const parsed = JSON.parse(raw) as { token: string }
-      return parsed.token
+      if (raw) {
+        const parsed = JSON.parse(raw) as { token: string }
+        return parsed.token
+      }
+      // Redis answered, but with nothing. Fall through to the in-memory store
+      // rather than returning null: if Redis was unreachable when the token was
+      // stored, store2FAToken wrote it in memory, and returning null here would
+      // strand a user mid-login with a token that does exist.
     } catch (error) {
       authLogger.error(
         { err: error, email: normalizedEmail },
