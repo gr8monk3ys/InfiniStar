@@ -7,6 +7,7 @@
  * Note: Verification, password reset, and 2FA emails are now handled by Clerk.
  */
 
+import { config } from "@/app/lib/config"
 import logger from "@/app/lib/logger"
 
 import {
@@ -26,7 +27,7 @@ function getEmailConfig() {
   return {
     apiToken: process.env.POSTMARK_API_TOKEN,
     fromAddress: process.env.SMTP_FROM || "noreply@infinistar.app",
-    appUrl: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+    appUrl: config.appUrl,
     isDevelopment: process.env.NODE_ENV === "development",
   }
 }

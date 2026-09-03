@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { z } from "zod"
 
+import { config } from "@/app/lib/config"
 import { isValidSubscriptionPlan } from "@/app/lib/creator-monetization"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import { monetizationConfig } from "@/app/lib/monetization"
@@ -127,7 +128,7 @@ export async function POST(
     })
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+  const appUrl = config.appUrl
   const normalizedInterval = interval === "YEARLY" ? "year" : "month"
   const sanitizedTierName = sanitizePlainText(tierName) || tierName
 

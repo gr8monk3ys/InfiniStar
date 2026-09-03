@@ -1,5 +1,6 @@
 import { PostHog } from "posthog-node"
 
+import { config } from "@/app/lib/config"
 import { apiLogger } from "@/app/lib/logger"
 
 let _client: PostHog | null | undefined
@@ -20,7 +21,7 @@ function getPostHogClient(): PostHog | null {
   }
 
   _client = new PostHog(apiKey, {
-    host: process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com",
+    host: config.posthog.ingestHost,
     // Server routes are short-lived; flush eagerly so events are not lost when
     // the function instance is torn down.
     flushAt: 1,

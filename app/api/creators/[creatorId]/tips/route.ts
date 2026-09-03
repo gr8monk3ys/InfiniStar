@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { z } from "zod"
 
+import { config } from "@/app/lib/config"
 import { isValidTipAmount } from "@/app/lib/creator-monetization"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import { monetizationConfig } from "@/app/lib/monetization"
@@ -89,7 +90,7 @@ export async function POST(
   }
 
   const sanitizedNote = note ? sanitizePlainText(note) : null
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+  const appUrl = config.appUrl
 
   const checkoutSession = await stripe.checkout.sessions.create({
     mode: "payment",

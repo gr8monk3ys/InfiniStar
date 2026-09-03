@@ -49,7 +49,11 @@ export const env = createEnv({
     NEXT_PUBLIC_ENABLE_CREATOR_PAYMENTS: z.string().optional(),
     NEXT_PUBLIC_ENABLE_GROUP_CHAT: z.string().optional(),
     NEXT_PUBLIC_POSTHOG_KEY: z.string().min(1).optional(),
+    // The PostHog INGESTION host (where events are posted).
     NEXT_PUBLIC_POSTHOG_HOST: z.string().url().optional(),
+    // The PostHog UI host (where dashboard links point). A different host
+    // from the ingestion one; see app/lib/config.ts.
+    NEXT_PUBLIC_POSTHOG_UI_HOST: z.string().url().optional(),
   },
   runtimeEnv: {
     CLERK_SECRET_KEY: process.env.CLERK_SECRET_KEY,
@@ -93,5 +97,6 @@ export const env = createEnv({
     NEXT_PUBLIC_ENABLE_GROUP_CHAT: process.env.NEXT_PUBLIC_ENABLE_GROUP_CHAT,
     NEXT_PUBLIC_POSTHOG_KEY: process.env.NEXT_PUBLIC_POSTHOG_KEY,
     NEXT_PUBLIC_POSTHOG_HOST: process.env.NEXT_PUBLIC_POSTHOG_HOST,
+    NEXT_PUBLIC_POSTHOG_UI_HOST: process.env.NEXT_PUBLIC_POSTHOG_UI_HOST,
   },
 })

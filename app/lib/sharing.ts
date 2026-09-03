@@ -8,6 +8,7 @@
 import crypto from "crypto"
 import { SharePermission, ShareType } from "@prisma/client"
 
+import { config } from "@/app/lib/config"
 import { apiLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
 
@@ -586,6 +587,6 @@ export async function canViewSharedConversation(
  * Get share URL from token
  */
 export function getShareUrl(token: string): string {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+  const baseUrl = config.appUrl
   return `${baseUrl}/join/${token}`
 }
