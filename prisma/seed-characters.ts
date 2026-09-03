@@ -1,3 +1,8 @@
+// The prisma CLI loads .env through prisma.config.ts; this script is run
+// directly by `bun run seed:characters` and gets no such treatment, so it
+// loaded nothing and failed on a missing DATABASE_URL even with .env present.
+import "dotenv/config"
+
 import { PrismaPg } from "@prisma/adapter-pg"
 import { PrismaClient } from "@prisma/client"
 
