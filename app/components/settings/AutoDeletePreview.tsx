@@ -128,7 +128,7 @@ export function AutoDeletePreview({
                           <div className="flex items-center gap-3">
                             <div className="flex size-10 items-center justify-center rounded-full bg-muted">
                               {conversation.isAI ? (
-                                <HiCpuChip className="size-5 text-purple-600" />
+                                <HiCpuChip className="size-5 text-primary" />
                               ) : (
                                 <HiChatBubbleLeftRight className="size-5 text-primary" />
                               )}
@@ -164,8 +164,8 @@ export function AutoDeletePreview({
                                     key={tag.id}
                                     className="inline-flex rounded-full px-2 py-1 text-xs"
                                     style={{
-                                      backgroundColor: `var(--tag-${tag.color}-bg, #f3f4f6)`,
-                                      color: `var(--tag-${tag.color}-text, #374151)`,
+                                      backgroundColor: `var(--tag-${tag.color}-bg, hsl(var(--muted)))`,
+                                      color: `var(--tag-${tag.color}-text, hsl(var(--muted-foreground)))`,
                                     }}
                                   >
                                     {tag.name}

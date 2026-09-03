@@ -88,13 +88,13 @@ export function RecentSearches({ onSelect, onClear, className = "" }: RecentSear
       {/* Header */}
       <div className="mb-2 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <HiClock className="size-4 text-gray-400" />
-          <span className="text-xs font-medium text-gray-500">Recent searches</span>
+          <HiClock className="size-4 text-muted-foreground/70" />
+          <span className="text-xs font-medium text-muted-foreground">Recent searches</span>
         </div>
         <button
           type="button"
           onClick={handleClearAll}
-          className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600"
+          className="flex items-center gap-1 text-xs text-muted-foreground/70 hover:text-muted-foreground"
           aria-label="Clear all recent searches"
         >
           <HiOutlineTrash className="size-3" />
@@ -109,29 +109,33 @@ export function RecentSearches({ onSelect, onClear, className = "" }: RecentSear
             <button
               type="button"
               onClick={() => onSelect(search.query)}
-              className="group flex w-full items-center gap-3 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-gray-100"
+              className="group flex w-full items-center gap-3 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-accent"
             >
               {/* Query text */}
-              <span className="min-w-0 flex-1 truncate text-sm text-gray-700">{search.query}</span>
+              <span className="min-w-0 flex-1 truncate text-sm text-foreground">
+                {search.query}
+              </span>
 
               {/* Result count badge */}
               {search.resultCount !== undefined && (
-                <span className="shrink-0 text-xs text-gray-400">
+                <span className="shrink-0 text-xs text-muted-foreground/70">
                   {search.resultCount} result{search.resultCount !== 1 ? "s" : ""}
                 </span>
               )}
 
               {/* Timestamp */}
-              <span className="shrink-0 text-xs text-gray-400">{formatTime(search.timestamp)}</span>
+              <span className="shrink-0 text-xs text-muted-foreground/70">
+                {formatTime(search.timestamp)}
+              </span>
 
               {/* Delete button */}
               <button
                 type="button"
                 onClick={(e) => handleDelete(search.id, e)}
-                className="shrink-0 rounded p-1 opacity-0 transition-opacity hover:bg-gray-200 group-hover:opacity-100"
+                className="shrink-0 rounded p-1 opacity-0 transition-opacity hover:bg-border group-hover:opacity-100"
                 aria-label={`Delete search "${search.query}"`}
               >
-                <HiOutlineXMark className="size-3.5 text-gray-400" />
+                <HiOutlineXMark className="size-3.5 text-muted-foreground/70" />
               </button>
             </button>
           </li>

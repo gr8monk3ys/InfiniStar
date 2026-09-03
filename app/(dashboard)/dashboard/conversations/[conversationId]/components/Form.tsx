@@ -24,6 +24,10 @@ const EMPTY_MESSAGES: FullMessageType[] = []
 
 interface FormProps {
   isAI?: boolean
+  /** Name of the character in this chat (AI conversations) */
+  characterName?: string | null
+  /** Name of the user's persona in this chat, when one is set */
+  personaName?: string | null
   enableStreaming?: boolean
   /** Callback when typing users change (for parent component to display indicator) */
   _onTypingChange?: (typingUsers: string[]) => void
@@ -39,6 +43,8 @@ interface FormProps {
 
 const Form: React.FC<FormProps> = ({
   isAI = false,
+  characterName,
+  personaName,
   enableStreaming = true,
   _onTypingChange,
   onAIStreamingChange,
@@ -264,6 +270,8 @@ const Form: React.FC<FormProps> = ({
       />
       <FormPanel
         isAI={isAI}
+        characterName={characterName}
+        personaName={personaName}
         shouldShowSuggestions={shouldShowSuggestions}
         suggestions={suggestions}
         suggestionsLoading={suggestionsLoading}

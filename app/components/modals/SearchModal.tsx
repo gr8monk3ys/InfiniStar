@@ -100,7 +100,10 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose, conversation
     const parts = text.split(new RegExp(`(${searchQuery})`, "gi"))
     return parts.map((part) =>
       part.toLowerCase() === searchQuery.toLowerCase() ? (
-        <mark key={`highlight-${part}-${Math.random()}`} className="bg-yellow-200 font-medium">
+        <mark
+          key={`highlight-${part}-${Math.random()}`}
+          className="rounded-sm bg-primary/20 font-medium text-foreground"
+        >
           {part}
         </mark>
       ) : (
@@ -112,14 +115,14 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose, conversation
   return (
     <Modal isOpen={isOpen} onClose={onClose}>
       <div className="space-y-4">
-        <div className="flex items-center justify-between border-b border-gray-200 pb-4">
-          <h3 className="text-lg font-medium leading-6 text-gray-900">
+        <div className="flex items-center justify-between border-b border-border pb-4">
+          <h3 className="text-lg font-medium leading-6 text-foreground">
             {conversationId ? "Search in conversation" : "Search messages"}
           </h3>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md text-gray-400 hover:text-gray-500 focus:outline-none"
+            className="rounded-md text-muted-foreground/70 hover:text-muted-foreground focus:outline-none"
           >
             <HiOutlineXMark size={24} />
           </button>
@@ -129,21 +132,21 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose, conversation
         <form onSubmit={handleSearch} className="space-y-4">
           <div className="relative">
             <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-              <HiMagnifyingGlass className="size-5 text-gray-400" />
+              <HiMagnifyingGlass className="size-5 text-muted-foreground/70" />
             </div>
             <input
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search for messages..."
-              className="block w-full rounded-md border border-gray-300 py-2 pl-10 pr-3 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+              className="block w-full rounded-md border border-input bg-background py-2 pl-10 pr-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               disabled={isSearching}
             />
           </div>
           <button
             type="submit"
             disabled={isSearching || !query.trim()}
-            className="w-full rounded-md bg-sky-600 px-4 py-2 text-white hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className="w-full rounded-md bg-primary px-4 py-2 text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isSearching ? "Searching..." : "Search"}
           </button>
@@ -152,35 +155,35 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose, conversation
         {/* Results */}
         <div className="max-h-96 overflow-y-auto">
           {hasSearched && results.length === 0 && !isSearching && (
-            <div className="py-8 text-center text-sm text-gray-500">
+            <div className="py-8 text-center text-sm text-muted-foreground">
               No messages found for &quot;{query}&quot;
             </div>
           )}
 
           {results.length > 0 && (
             <div className="space-y-2">
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-muted-foreground">
                 Found {results.length} result{results.length !== 1 ? "s" : ""}
               </p>
               {results.map((result) => (
                 <div
                   key={result.id}
                   onClick={() => handleResultClick(result)}
-                  className="cursor-pointer rounded-lg border border-gray-200 p-3 transition hover:bg-gray-50"
+                  className="cursor-pointer rounded-lg border border-border p-3 transition hover:bg-accent"
                 >
                   <div className="flex items-start gap-3">
                     <Avatar user={result.sender} showPresence={false} />
                     <div className="flex-1 overflow-hidden">
                       <div className="flex items-center gap-2">
-                        <p className="text-sm font-medium text-gray-900">{result.sender.name}</p>
-                        <span className="text-xs text-gray-500">
+                        <p className="text-sm font-medium text-foreground">{result.sender.name}</p>
+                        <span className="text-xs text-muted-foreground">
                           {format(new Date(result.createdAt), "MMM d, yyyy h:mm a")}
                         </span>
                       </div>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-muted-foreground">
                         in {getConversationName(result.conversation)}
                       </p>
-                      <p className="mt-1 text-sm text-gray-700">
+                      <p className="mt-1 text-sm text-foreground">
                         {highlightMatch(result.body, query)}
                       </p>
                     </div>

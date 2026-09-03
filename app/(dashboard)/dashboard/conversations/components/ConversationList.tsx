@@ -154,17 +154,17 @@ function ConversationListHeader({
         </button>
         <button
           onClick={onOpenNewConversation}
-          className="cursor-pointer rounded-full bg-gradient-to-r from-purple-500 to-pink-500 p-2 text-white transition hover:opacity-75"
-          title="New AI Chat"
-          aria-label="Start new AI Chat"
+          className="gradient-bg cursor-pointer rounded-full p-2 text-white transition hover:opacity-75"
+          title="New character chat"
+          aria-label="Start new character chat"
         >
           <HiSparkles size={20} />
         </button>
         <button
           onClick={onOpenSceneChat}
           className="cursor-pointer rounded-full bg-secondary p-2 text-secondary-foreground transition hover:opacity-75"
-          title="New Scene Chat"
-          aria-label="Create new Scene Chat"
+          title="New scene: a chat with several characters at once"
+          aria-label="Create new scene, a chat with several characters at once"
         >
           <HiChatBubbleLeftRight size={20} />
         </button>
@@ -356,7 +356,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
   user,
   currentUserId,
   currentUserEmail,
-  title = "Messages",
+  title = "Conversations",
   initialNotificationPrefs,
   sceneCharacters,
 }) => {

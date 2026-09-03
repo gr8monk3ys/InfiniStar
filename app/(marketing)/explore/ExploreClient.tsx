@@ -111,10 +111,10 @@ function ExploreHeroSection({ searchQuery, onSearchChange }: ExploreHeroSectionP
     <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5 px-6 py-16 text-center md:px-12 md:py-24">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/10 via-transparent to-transparent" />
       <div className="relative mx-auto max-w-3xl">
-        <h1 className="font-heading text-3xl font-bold leading-tight tracking-tighter [text-wrap:balance] md:text-5xl lg:text-6xl">
+        <h1 className="font-heading text-3xl font-bold leading-tight tracking-tight [text-wrap:balance] md:text-5xl lg:text-6xl">
           Discover AI Characters
         </h1>
-        <p className="mt-4 text-base text-muted-foreground [text-wrap:pretty] md:text-lg">
+        <p className="mx-auto mt-4 max-w-2xl text-base text-foreground/75 [text-wrap:pretty] md:text-lg">
           Browse creator-made characters across roleplay, fandom, companionship, tutoring, and
           stranger niches that feel authored instead of generic.
         </p>
@@ -247,7 +247,7 @@ function ExploreCtaSection() {
       <h2 className="text-2xl font-bold [text-wrap:balance] md:text-3xl">
         Create Your Own Character
       </h2>
-      <p className="mx-auto mt-3 max-w-lg text-muted-foreground [text-wrap:pretty]">
+      <p className="mx-auto mt-3 max-w-lg text-foreground/75 [text-wrap:pretty]">
         Design a unique AI personality with custom instructions, a backstory, and greeting message.
         Share it with the community.
       </p>
@@ -266,17 +266,13 @@ function ExploreCtaSection() {
 function EmptyMarketplaceState() {
   return (
     <div className="flex flex-col gap-10">
-      <section className="relative overflow-hidden rounded-3xl border border-border/50 bg-gradient-to-br from-primary/5 via-background to-sky-500/5 px-6 py-16 md:px-12 md:py-24">
+      <section className="relative overflow-hidden rounded-3xl border border-border/50 bg-gradient-to-br from-primary/5 via-background to-[hsl(var(--aurora-fuchsia)/0.05)] px-6 py-16 md:px-12 md:py-24">
         <div className="pointer-events-none absolute right-0 top-0 h-56 w-56 rounded-full bg-primary/10 blur-2xl" />
         <div className="relative mx-auto max-w-3xl text-center">
-          <div className="inline-flex items-center gap-2 rounded-full border border-violet-200 bg-violet-50 px-4 py-1.5 text-sm text-violet-800 dark:border-violet-400/30 dark:bg-violet-500/15 dark:text-violet-200">
-            <HiOutlineSparkles className="size-4" aria-hidden="true" />
-            Launch edition marketplace
-          </div>
-          <h1 className="mt-6 font-heading text-3xl font-bold leading-tight tracking-tighter [text-wrap:balance] md:text-5xl lg:text-6xl">
+          <h1 className="font-heading text-3xl font-bold leading-tight tracking-tight [text-wrap:balance] md:text-5xl lg:text-6xl">
             The public catalog is opening up now
           </h1>
-          <p className="mx-auto mt-4 max-w-2xl text-base text-muted-foreground [text-wrap:pretty] md:text-lg">
+          <p className="mx-auto mt-4 max-w-2xl text-base text-foreground/75 [text-wrap:pretty] md:text-lg">
             No public characters are live yet. Publish early to shape the front page and set the
             tone for the community — the first characters here get seen the most.
           </p>
@@ -307,7 +303,7 @@ function EmptyMarketplaceState() {
               key={archetype.title}
               className="rounded-3xl border border-border/50 bg-card/70 p-6 shadow-sm"
             >
-              <p className="text-xs font-medium uppercase tracking-[0.2em] text-violet-800 dark:text-violet-200">
+              <p className="text-xs font-medium uppercase tracking-[0.2em] text-primary-accent">
                 {archetype.label}
               </p>
               <h3 className="mt-4 text-xl font-semibold">{archetype.title}</h3>
@@ -350,6 +346,19 @@ function EmptyMarketplaceState() {
       </section>
     </div>
   )
+}
+
+// A section that mostly repeats the "All" grid adds scrolling, not information.
+// Collapse it when more than half of its characters are already in `all`.
+const SECTION_OVERLAP_COLLAPSE_RATIO = 0.5
+// "Trending" implies traffic; below this many chats nothing is trending yet.
+const TRENDING_MIN_USAGE_COUNT = 5
+
+function overlapRatio(section: CharacterData[], all: CharacterData[]) {
+  if (section.length === 0) return 0
+  const allIds = new Set(all.map((character) => character.id))
+  const shared = section.filter((character) => allIds.has(character.id)).length
+  return shared / section.length
 }
 
 function normalizeCategory(category: string | null | undefined) {
@@ -543,8 +552,16 @@ export default function ExploreClient({
 
   const activeCategoryLabel =
     activeCategory === DEFAULT_CATEGORY
-      ? "All Characters"
+      ? "All characters"
       : (TABS.find((tab) => tab.id === activeCategory)?.name ?? "Characters")
+
+  const showFeatured =
+    filteredFeatured.length > 0 &&
+    overlapRatio(filteredFeatured, filteredAll) <= SECTION_OVERLAP_COLLAPSE_RATIO
+  const showTrending =
+    filteredTrending.length > 0 &&
+    filteredTrending.some((character) => character.usageCount >= TRENDING_MIN_USAGE_COUNT) &&
+    overlapRatio(filteredTrending, filteredAll) <= SECTION_OVERLAP_COLLAPSE_RATIO
 
   const clearFilters = () => {
     setSearchQuery("")
@@ -556,7 +573,7 @@ export default function ExploreClient({
       <ExploreHeroSection searchQuery={searchQuery} onSearchChange={setSearchQuery} />
       <ExploreCategoryTabs activeCategory={activeCategory} onSelectCategory={setActiveCategory} />
 
-      {filteredFeatured.length > 0 && (
+      {showFeatured && (
         <CharacterSection
           title="Featured"
           icon={HiOutlineSparkles}
@@ -569,9 +586,9 @@ export default function ExploreClient({
         />
       )}
 
-      {filteredTrending.length > 0 && (
+      {showTrending && (
         <CharacterSection
-          title="Trending Characters"
+          title="Trending"
           icon={HiOutlineFire}
           iconClassName="text-orange-500"
           characters={filteredTrending}
@@ -583,12 +600,11 @@ export default function ExploreClient({
       )}
 
       <section>
-        <div className="mb-6 flex items-center justify-between">
-          <h2 className="text-xl font-bold">{activeCategoryLabel}</h2>
-          <span className="text-sm text-muted-foreground">
-            {filteredAll.length} character
-            {filteredAll.length !== 1 ? "s" : ""}
-          </span>
+        <div className="mb-6">
+          <h2 className="text-xl font-bold">
+            {activeCategoryLabel}{" "}
+            <span className="font-normal text-muted-foreground">({filteredAll.length})</span>
+          </h2>
         </div>
 
         {filteredAll.length === 0 ? (

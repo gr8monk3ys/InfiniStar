@@ -5,15 +5,13 @@ import { buttonVariants } from "@/app/components/ui/button"
 import { Icons } from "@/app/components/icons"
 
 import { featureCards, howItWorksSteps, modelCards } from "./home-data"
-import { SectionLabel } from "./SectionLabel"
 
 export function HowItWorksSection() {
   return (
     <section className="relative border-y border-border/50 bg-muted/30 py-16 md:py-24">
       <div className="container max-w-6xl">
         <div className="mb-12 max-w-2xl">
-          <SectionLabel>How it works</SectionLabel>
-          <h2 className="mt-4 font-heading text-3xl font-bold tracking-tight [text-wrap:balance] md:text-4xl">
+          <h2 className="font-heading text-3xl font-bold tracking-tight [text-wrap:balance] md:text-4xl">
             From first hello to your own front-page character
           </h2>
         </div>
@@ -47,8 +45,7 @@ export function FeaturesSection() {
     <section className="relative py-16 md:py-24">
       <div className="container max-w-6xl">
         <div className="mb-12 max-w-2xl">
-          <SectionLabel>Why InfiniStar</SectionLabel>
-          <h2 className="mt-4 font-heading text-3xl font-bold tracking-tight [text-wrap:balance] md:text-4xl">
+          <h2 className="font-heading text-3xl font-bold tracking-tight [text-wrap:balance] md:text-4xl">
             The goal is not “more AI.” It is a conversation you want to keep going.
           </h2>
         </div>
@@ -76,7 +73,7 @@ export function FeaturesSection() {
                 </span>
               </div>
               <h3 className="mb-3 mt-6 font-heading text-xl font-semibold">{feature.title}</h3>
-              <p className="text-sm leading-relaxed text-muted-foreground">{feature.description}</p>
+              <p className="text-sm leading-relaxed text-foreground/75">{feature.description}</p>
             </div>
           ))}
         </div>
@@ -91,8 +88,7 @@ export function ModelsSection() {
       <div className="container max-w-6xl">
         <div className="grid items-center gap-12 lg:grid-cols-2">
           <div>
-            <SectionLabel>Models</SectionLabel>
-            <h2 className="mt-4 font-heading text-3xl font-bold tracking-tight [text-wrap:balance] md:text-4xl">
+            <h2 className="font-heading text-3xl font-bold tracking-tight [text-wrap:balance] md:text-4xl">
               Fast when you want it, deeper when you need it
             </h2>
             <p className="mt-4 text-lg text-muted-foreground [text-wrap:pretty]">
@@ -124,7 +120,7 @@ export function ModelsSection() {
           </div>
 
           <div className="relative">
-            <div className="absolute -inset-4 rounded-3xl bg-gradient-to-br from-violet-600/10 via-fuchsia-500/10 to-amber-500/10 blur-2xl" />
+            <div className="absolute -inset-4 rounded-3xl bg-gradient-to-br from-[hsl(var(--aurora-violet)/0.10)] via-[hsl(var(--aurora-fuchsia)/0.10)] to-[hsl(var(--aurora-amber)/0.10)] blur-2xl" />
             <div className="relative rounded-3xl border border-border/50 bg-card p-6 shadow-2xl">
               <div className="mb-4 flex items-center gap-3">
                 <div className="gradient-bg flex size-10 items-center justify-center rounded-full text-white">
@@ -160,9 +156,9 @@ export function FinalCtaSection() {
           <div className="relative mx-auto flex max-w-3xl flex-col items-center gap-6">
             <Icons.logo className="size-10 text-primary" aria-hidden="true" />
             <h2 className="font-heading text-4xl font-extrabold tracking-tight [text-wrap:balance] md:text-5xl">
-              Ready to build a character people <span className="gradient-text">remember</span>?
+              Ready to build a character people remember?
             </h2>
-            <p className="text-lg text-muted-foreground [text-wrap:pretty]">
+            <p className="text-lg text-foreground/75 [text-wrap:pretty]">
               Create your account, explore what other creators are publishing, and put your own
               voice on the front page while the catalog is still early.
             </p>
@@ -171,7 +167,7 @@ export function FinalCtaSection() {
                 href="/sign-up"
                 className={cn(
                   buttonVariants({ size: "lg" }),
-                  "gradient-bg h-12 gap-2 border-0 px-6 text-base text-white shadow-lg shadow-violet-500/25"
+                  "gradient-bg-cta h-12 gap-2 border-0 px-6 text-base text-white shadow-lg shadow-[color:hsl(var(--glow-color)/0.25)]"
                 )}
               >
                 Create Free Account

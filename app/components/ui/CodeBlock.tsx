@@ -197,10 +197,7 @@ const CodeBlock = React.forwardRef<HTMLDivElement, CodeBlockProps>(
                     >
                       {showLineNumbers && (
                         <span
-                          className={cn(
-                            "table-cell select-none pr-4 text-right text-muted-foreground",
-                            isDarkMode ? "text-gray-500" : "text-gray-400"
-                          )}
+                          className="table-cell select-none pr-4 text-right text-muted-foreground/70"
                           aria-hidden="true"
                         >
                           {i + 1}

@@ -92,7 +92,7 @@ function HighlightedText({ text }: { text: string }) {
           return (
             <mark
               key={segment.key}
-              className="rounded bg-yellow-200 px-0.5 font-medium text-gray-900"
+              className="rounded-sm bg-primary/20 px-0.5 font-medium text-foreground"
             >
               {segment.text}
             </mark>
@@ -143,17 +143,17 @@ export function ConversationResultItem({
       data-index={dataIndex}
       onClick={onClick}
       className={`flex w-full items-start gap-3 rounded-lg border p-3 text-left transition-colors ${
-        isSelected ? "border-sky-500 bg-sky-50" : "border-gray-200 bg-white hover:bg-gray-50"
+        isSelected ? "border-primary bg-primary/10" : "border-border bg-card hover:bg-accent"
       }`}
       role="option"
       aria-selected={isSelected}
     >
       {/* Icon/Avatar */}
-      <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-gray-100">
+      <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted">
         {conversation.isAI ? (
-          <HiSparkles className="size-5 text-purple-500" />
+          <HiSparkles className="size-5 text-primary" />
         ) : conversation.isGroup ? (
-          <HiOutlineChatBubbleLeftRight className="size-5 text-sky-500" />
+          <HiOutlineChatBubbleLeftRight className="size-5 text-primary" />
         ) : conversation.users[0] ? (
           <Avatar
             name={conversation.users[0].name}
@@ -161,7 +161,7 @@ export function ConversationResultItem({
             image={conversation.users[0].image}
           />
         ) : (
-          <HiUser className="size-5 text-gray-400" />
+          <HiUser className="size-5 text-muted-foreground/70" />
         )}
       </div>
 
@@ -169,24 +169,27 @@ export function ConversationResultItem({
       <div className="min-w-0 flex-1">
         {/* Header */}
         <div className="flex items-center gap-2">
-          <p className="truncate font-medium text-gray-900">{displayName}</p>
+          <p className="truncate font-medium text-foreground">{displayName}</p>
           {conversation.isAI && (
-            <span className="shrink-0 rounded bg-purple-100 px-1.5 py-0.5 text-xs text-purple-600">
+            <span className="shrink-0 rounded bg-primary/10 px-1.5 py-0.5 text-xs text-primary-accent">
               AI
             </span>
           )}
           {conversation.isGroup && (
-            <span className="shrink-0 rounded bg-sky-100 px-1.5 py-0.5 text-xs text-sky-600">
+            <span className="shrink-0 rounded bg-primary/10 px-1.5 py-0.5 text-xs text-primary-accent">
               Group
             </span>
           )}
           {conversation.isArchived && (
-            <HiOutlineArchiveBox className="size-4 shrink-0 text-gray-400" title="Archived" />
+            <HiOutlineArchiveBox
+              className="size-4 shrink-0 text-muted-foreground/70"
+              title="Archived"
+            />
           )}
         </div>
 
         {/* Meta info */}
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-muted-foreground">
           {conversation.messageCount} messages · {timeAgo}
         </p>
 
@@ -198,14 +201,14 @@ export function ConversationResultItem({
               return (
                 <span
                   key={tag.id}
-                  className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${colorScheme.bg} ${colorScheme.text}`}
+                  className={`rounded-full px-2 py-0.5 text-xs font-medium ${colorScheme.bg} ${colorScheme.text}`}
                 >
                   {tag.name}
                 </span>
               )
             })}
             {conversation.tags.length > 3 && (
-              <span className="text-[10px] text-gray-400">
+              <span className="text-xs text-muted-foreground/70">
                 +{conversation.tags.length - 3} more
               </span>
             )}
@@ -214,7 +217,7 @@ export function ConversationResultItem({
 
         {/* AI Personality */}
         {conversation.isAI && conversation.aiPersonality && (
-          <p className="mt-1 text-xs capitalize text-purple-600">
+          <p className="mt-1 text-xs capitalize text-primary-accent">
             {conversation.aiPersonality} personality
           </p>
         )}
@@ -223,7 +226,7 @@ export function ConversationResultItem({
       {/* Relevance indicator */}
       {conversation.relevanceScore !== undefined && conversation.relevanceScore > 20 && (
         <div
-          className="shrink-0 rounded bg-green-100 px-1.5 py-0.5 text-[10px] font-medium text-green-700"
+          className="shrink-0 rounded bg-green-100 px-1.5 py-0.5 text-xs font-medium text-green-700"
           title={`Relevance: ${conversation.relevanceScore}`}
         >
           Top match
@@ -269,7 +272,7 @@ export function MessageResultItem({
       data-index={dataIndex}
       onClick={onClick}
       className={`flex w-full items-start gap-3 rounded-lg border p-3 text-left transition-colors ${
-        isSelected ? "border-sky-500 bg-sky-50" : "border-gray-200 bg-white hover:bg-gray-50"
+        isSelected ? "border-primary bg-primary/10" : "border-border bg-card hover:bg-accent"
       }`}
       role="option"
       aria-selected={isSelected}
@@ -285,34 +288,34 @@ export function MessageResultItem({
       <div className="min-w-0 flex-1">
         {/* Header */}
         <div className="flex items-center gap-2">
-          <p className="text-sm font-medium text-gray-900">
+          <p className="text-sm font-medium text-foreground">
             {message.sender.name || message.sender.email}
           </p>
           {message.isAI && (
-            <span className="shrink-0 rounded bg-purple-100 px-1.5 py-0.5 text-xs text-purple-600">
+            <span className="shrink-0 rounded bg-primary/10 px-1.5 py-0.5 text-xs text-primary-accent">
               AI
             </span>
           )}
           {message.hasImage && (
             <HiOutlinePhoto className="size-4 shrink-0 text-amber-500" title="Has image" />
           )}
-          <span className="text-xs text-gray-400">{formattedDate}</span>
+          <span className="text-xs text-muted-foreground/70">{formattedDate}</span>
         </div>
 
         {/* Conversation context */}
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-muted-foreground">
           in <span className="font-medium">{conversationName}</span>
           {message.conversation.isGroup && " (Group)"}
         </p>
 
         {/* Message body with highlighting */}
-        <p className="mt-1 line-clamp-2 text-sm text-gray-700">
+        <p className="mt-1 line-clamp-2 text-sm text-foreground">
           <HighlightedText text={message.highlightedBody} />
         </p>
 
         {/* Context preview */}
         {message.context && (message.context.before || message.context.after) && (
-          <div className="mt-1.5 rounded border-l-2 border-gray-200 pl-2 text-xs text-gray-400">
+          <div className="mt-1.5 rounded border border-border/50 bg-muted/50 px-2 py-1 text-xs text-muted-foreground/70">
             {message.context.before && <p className="line-clamp-1">...{message.context.before}</p>}
             {message.context.after && <p className="line-clamp-1">{message.context.after}...</p>}
           </div>
@@ -322,7 +325,7 @@ export function MessageResultItem({
       {/* Relevance indicator */}
       {message.relevanceScore !== undefined && message.relevanceScore > 15 && (
         <div
-          className="shrink-0 rounded bg-green-100 px-1.5 py-0.5 text-[10px] font-medium text-green-700"
+          className="shrink-0 rounded bg-green-100 px-1.5 py-0.5 text-xs font-medium text-green-700"
           title={`Relevance: ${message.relevanceScore}`}
         >
           Top match
@@ -337,15 +340,15 @@ export function MessageResultItem({
  */
 export function SearchResultSkeleton() {
   return (
-    <div className="flex w-full items-start gap-3 rounded-lg border border-gray-200 bg-white p-3">
+    <div className="flex w-full items-start gap-3 rounded-lg border border-border bg-card p-3">
       {/* Avatar skeleton */}
-      <div className="size-10 shrink-0 animate-pulse rounded-full bg-gray-200" />
+      <div className="size-10 shrink-0 animate-pulse rounded-full bg-muted" />
 
       {/* Content skeleton */}
       <div className="min-w-0 flex-1 space-y-2">
-        <div className="h-4 w-1/3 animate-pulse rounded bg-gray-200" />
-        <div className="h-3 w-1/2 animate-pulse rounded bg-gray-200" />
-        <div className="h-3 w-full animate-pulse rounded bg-gray-200" />
+        <div className="h-4 w-1/3 animate-pulse rounded bg-muted" />
+        <div className="h-3 w-1/2 animate-pulse rounded bg-muted" />
+        <div className="h-3 w-full animate-pulse rounded bg-muted" />
       </div>
     </div>
   )

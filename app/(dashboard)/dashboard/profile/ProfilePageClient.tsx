@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import dynamic from "next/dynamic"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import {
   HiBell,
   HiClock,
@@ -58,9 +58,30 @@ type TabType =
   | "auto-delete"
   | "account"
 
+const TAB_IDS: TabType[] = [
+  "profile",
+  "password",
+  "security",
+  "safety",
+  "notifications",
+  "sessions",
+  "appearance",
+  "memory",
+  "auto-delete",
+  "account",
+]
+
+function isTabType(value: string): value is TabType {
+  return (TAB_IDS as string[]).includes(value)
+}
+
 export default function ProfilePageClient({ hasPendingDeletion }: { hasPendingDeletion: boolean }) {
   const router = useRouter()
-  const [activeTab, setActiveTab] = useState<TabType>("profile")
+  const searchParams = useSearchParams()
+  const requestedTab = searchParams.get("tab")
+  const [activeTab, setActiveTab] = useState<TabType>(
+    requestedTab && isTabType(requestedTab) ? requestedTab : "profile"
+  )
 
   const tabs: { id: TabType; label: string; icon: React.ReactNode; isDestructive?: boolean }[] = [
     { id: "profile", label: "Profile Information", icon: <HiUser size={20} /> },
@@ -104,7 +125,7 @@ export default function ProfilePageClient({ hasPendingDeletion }: { hasPendingDe
                     activeTab === tab.id
                       ? tab.isDestructive
                         ? "border-red-500 text-red-600"
-                        : "border-primary text-primary"
+                        : "border-primary text-primary-accent"
                       : "border-transparent text-muted-foreground hover:border-border hover:text-foreground"
                   }`}
                 >

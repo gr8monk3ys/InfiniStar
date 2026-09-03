@@ -59,9 +59,9 @@ const MemoryBadge: React.FC<MemoryBadgeProps> = ({ className, showCount = true, 
   return (
     <div
       className={cn(
-        "inline-flex items-center gap-1 rounded-full bg-purple-100 dark:bg-purple-900/30",
+        "inline-flex items-center gap-1 rounded-full bg-primary/10",
         size === "sm" ? "px-2 py-0.5 text-xs" : "px-3 py-1 text-sm",
-        "text-purple-700 dark:text-purple-300",
+        "text-primary-accent",
         className
       )}
       title={`${count} memories stored`}

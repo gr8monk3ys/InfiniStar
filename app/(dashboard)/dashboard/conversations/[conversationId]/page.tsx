@@ -61,6 +61,7 @@ export default async function ChatPage({
           isAI={conversation.isAI || false}
           characterName={conversation.character?.name}
           characterAvatar={conversation.character?.avatarUrl}
+          personaName={conversation.persona?.name}
           currentUserId={currentUser?.id ?? null}
         />
       </div>

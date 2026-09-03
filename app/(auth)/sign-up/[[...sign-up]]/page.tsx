@@ -6,6 +6,7 @@ import {
   isClerkSatellite,
 } from "@/app/lib/clerk-auth"
 import { isFallbackAuthEnabled } from "@/app/lib/fallback-auth"
+import { AuthFormBoundary, AuthFormUnavailable } from "@/app/components/auth/AuthFormBoundary"
 import { authAppearance, AuthShell } from "@/app/components/auth/AuthShell"
 import { FallbackAuthPanel } from "@/app/components/auth/FallbackAuthPanel"
 import { SatelliteAuthRedirect } from "@/app/components/auth/SatelliteAuthRedirect"
@@ -22,7 +23,6 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
 
   return (
     <AuthShell
-      eyebrow="Create Your Account"
       title="Join the front row while the marketplace is still taking shape."
       description="Start free, chat with creator-built characters, and publish your own once you are ready."
     >
@@ -31,17 +31,16 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
           isClerkSatellite() ? (
             <SatelliteAuthRedirect mode="sign-up" redirectPath={redirectPath} />
           ) : (
-            <SignUp appearance={authAppearance} signInUrl="/sign-in" />
+            <AuthFormBoundary mode="sign-up">
+              <SignUp appearance={authAppearance} signInUrl="/sign-in" />
+            </AuthFormBoundary>
           )
         ) : null}
 
         {fallbackEnabled ? (
           <FallbackAuthPanel mode="sign-up" redirectPath={redirectPath} />
         ) : clerkEnabled ? null : (
-          <p className="text-sm text-muted-foreground">
-            Sign-up is temporarily unavailable. Enable fallback auth or restore the Clerk keys to
-            continue.
-          </p>
+          <AuthFormUnavailable mode="sign-up" />
         )}
       </div>
     </AuthShell>

@@ -33,6 +33,15 @@
 
     --ring: 263 70% 58%;
 
+    /* Violet that stays legible as small text on the page canvas.
+       --primary keeps its lightness in both themes so solid buttons match;
+       this one lifts in dark so labels and links clear WCAG AA. */
+    --primary-accent: 263 70% 42%;
+
+    /* Dialog scrim. One value for both themes: a scrim is the absence of the
+       page, not a surface, so it must not lighten with the light theme. */
+    --scrim: 240 10% 2%;
+
     --radius: 0.75rem;
 
     /* Chat bubble colors */
@@ -45,6 +54,10 @@
     --gradient-start: 263 70% 58%;
     --gradient-mid: 316 72% 58%;
     --gradient-end: 349 89% 66%;
+    /* CTA gradient: darker stops so white text clears WCAG AA (>= 4.5:1) at every point */
+    --gradient-cta-start: 263 70% 50%;
+    --gradient-cta-mid: 316 72% 46%;
+    --gradient-cta-end: 349 80% 46%;
     --glow-color: 263 70% 58%;
 
     /* Aurora accents (marketing surfaces) */
@@ -58,8 +71,12 @@
     --surface-3: 240 3.7% 84%;
 
     /* Typography */
-    --font-heading: var(--font-bricolage, ui-sans-serif), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    --font-body: var(--font-inter, ui-sans-serif), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-heading:
+      var(--font-bricolage, ui-sans-serif), ui-sans-serif, system-ui, -apple-system,
+      BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-body:
+      var(--font-inter, ui-sans-serif), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+      "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 
     /* Density */
     --density-multiplier: 1;
@@ -98,6 +115,10 @@
 
     --ring: 263 70% 58%;
 
+    /* See the light-theme note: lifted so violet text clears AA on near-black. */
+    --primary-accent: 263 70% 76%;
+    --scrim: 240 10% 2%;
+
     --radius: 0.75rem;
 
     /* Chat bubble colors - dark mode */
@@ -110,6 +131,10 @@
     --gradient-start: 263 70% 62%;
     --gradient-mid: 316 72% 62%;
     --gradient-end: 349 89% 68%;
+    /* CTA gradient stays identical across themes so buttons read the same everywhere */
+    --gradient-cta-start: 263 70% 50%;
+    --gradient-cta-mid: 316 72% 46%;
+    --gradient-cta-end: 349 80% 46%;
     --glow-color: 263 70% 58%;
 
     /* Aurora accents (marketing surfaces) */
@@ -138,11 +163,18 @@
 
   body {
     @apply bg-background text-foreground;
-    font-feature-settings: "rlig" 1, "calt" 1;
+    font-feature-settings:
+      "rlig" 1,
+      "calt" 1;
     font-family: var(--font-body);
   }
 
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     font-family: var(--font-heading);
   }
 }
@@ -150,7 +182,8 @@
 /* Theme transition utilities */
 @layer utilities {
   .theme-transition {
-    transition-property: background-color, border-color, color, fill, stroke, opacity, box-shadow, transform;
+    transition-property:
+      background-color, border-color, color, fill, stroke, opacity, box-shadow, transform;
     transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
     transition-duration: var(--theme-transition-duration);
   }
@@ -219,7 +252,10 @@
     margin-right: calc(1rem * var(--density-multiplier));
   }
 
-  /* Glass morphism */
+  /* Glass morphism. Only for surfaces with a STILL background behind them
+     (the hero preview cards). Not for the sticky header: scrolling content
+     under a translucent bar is unreadable wherever backdrop-filter is
+     unavailable or dropped. */
   .glass {
     background: hsl(var(--background) / 0.8);
     backdrop-filter: blur(20px);
@@ -252,12 +288,23 @@
     background-clip: text;
   }
 
+  /* Decorative surfaces only (avatars, logo mark): no text sits on this. */
   .gradient-bg {
     background: linear-gradient(
       120deg,
       hsl(var(--gradient-start)),
       hsl(var(--gradient-mid)) 55%,
       hsl(var(--gradient-end))
+    );
+  }
+
+  /* Button-shaped surfaces carrying white text: every stop clears AA for white. */
+  .gradient-bg-cta {
+    background: linear-gradient(
+      120deg,
+      hsl(var(--gradient-cta-start)),
+      hsl(var(--gradient-cta-mid)) 55%,
+      hsl(var(--gradient-cta-end))
     );
   }
 

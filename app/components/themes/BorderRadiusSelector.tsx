@@ -31,10 +31,8 @@ export function BorderRadiusSelector({
   return (
     <div className={cn("space-y-3", className)}>
       <div>
-        <span className="block text-sm font-medium text-gray-700 dark:text-gray-300">{label}</span>
-        {description && (
-          <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{description}</p>
-        )}
+        <span className="block text-sm font-medium text-foreground">{label}</span>
+        {description && <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>}
       </div>
 
       <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={label}>
@@ -48,17 +46,15 @@ export function BorderRadiusSelector({
             className={cn(
               "flex flex-col items-center gap-2 border-2 px-4 py-3 transition-all",
               value === option.value
-                ? "border-sky-500 bg-sky-50 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300"
-                : "border-gray-200 bg-white text-gray-600 hover:border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:border-gray-600"
+                ? "border-primary bg-primary/10 text-primary"
+                : "border-border bg-card text-muted-foreground hover:border-primary/30"
             )}
             style={{ borderRadius: borderRadiusValues[option.value] }}
           >
             <div
               className={cn(
                 "size-8 border-2",
-                value === option.value
-                  ? "border-sky-500 bg-sky-100 dark:bg-sky-800"
-                  : "border-gray-300 bg-gray-100 dark:border-gray-600 dark:bg-gray-700"
+                value === option.value ? "border-primary bg-primary/20" : "border-border bg-muted"
               )}
               style={{ borderRadius: borderRadiusValues[option.value] }}
             />

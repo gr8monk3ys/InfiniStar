@@ -26,11 +26,11 @@ function getHeatmapColor(count: number, maxCount: number): string {
 
   const intensity = maxCount > 0 ? count / maxCount : 0
 
-  if (intensity < 0.2) return "bg-purple-200 dark:bg-purple-900/50"
-  if (intensity < 0.4) return "bg-purple-300 dark:bg-purple-800/60"
-  if (intensity < 0.6) return "bg-purple-400 dark:bg-purple-700/70"
-  if (intensity < 0.8) return "bg-purple-500 dark:bg-purple-600/80"
-  return "bg-purple-600 dark:bg-purple-500"
+  if (intensity < 0.2) return "bg-primary/20"
+  if (intensity < 0.4) return "bg-primary/40"
+  if (intensity < 0.6) return "bg-primary/60"
+  if (intensity < 0.8) return "bg-primary/80"
+  return "bg-primary"
 }
 
 /**
@@ -142,11 +142,11 @@ export function UsageHeatmap({ data, className }: UsageHeatmapProps) {
           <span className="text-xs text-muted-foreground">Less</span>
           <div className="flex gap-0.5">
             <div className="size-4 rounded-sm bg-muted/30" />
-            <div className="size-4 rounded-sm bg-purple-200 dark:bg-purple-900/50" />
-            <div className="size-4 rounded-sm bg-purple-300 dark:bg-purple-800/60" />
-            <div className="size-4 rounded-sm bg-purple-400 dark:bg-purple-700/70" />
-            <div className="size-4 rounded-sm bg-purple-500 dark:bg-purple-600/80" />
-            <div className="size-4 rounded-sm bg-purple-600 dark:bg-purple-500" />
+            <div className="size-4 rounded-sm bg-primary/20" />
+            <div className="size-4 rounded-sm bg-primary/40" />
+            <div className="size-4 rounded-sm bg-primary/60" />
+            <div className="size-4 rounded-sm bg-primary/80" />
+            <div className="size-4 rounded-sm bg-primary" />
           </div>
           <span className="text-xs text-muted-foreground">More</span>
         </div>

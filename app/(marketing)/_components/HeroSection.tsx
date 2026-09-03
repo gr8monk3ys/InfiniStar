@@ -14,9 +14,9 @@ import { Icons } from "@/app/components/icons"
 function HeroChatPreview() {
   return (
     <div className="relative mx-auto w-full max-w-md" aria-hidden="true">
-      <div className="absolute -inset-6 rounded-[2.5rem] bg-gradient-to-br from-violet-600/15 via-fuchsia-500/10 to-amber-500/10 blur-2xl" />
+      <div className="absolute -inset-6 rounded-[2.5rem] bg-gradient-to-br from-[hsl(var(--aurora-violet)/0.15)] via-[hsl(var(--aurora-fuchsia)/0.10)] to-[hsl(var(--aurora-amber)/0.10)] blur-2xl" />
 
-      <div className="glass relative rounded-3xl border border-border/60 p-5 shadow-2xl shadow-violet-950/10">
+      <div className="glass relative rounded-3xl border border-border/60 p-5 shadow-2xl shadow-[color:hsl(var(--glow-color)/0.10)]">
         <div className="flex items-center gap-3 border-b border-border/60 pb-4">
           <div className="gradient-bg flex size-11 shrink-0 items-center justify-center rounded-2xl text-white">
             <Icons.logo className="size-6" />
@@ -104,7 +104,7 @@ export function HeroSection() {
 
       <div className="container relative grid max-w-6xl items-center gap-12 pb-16 pt-14 md:pb-24 md:pt-20 lg:grid-cols-[1.05fr_0.95fr] lg:gap-8 lg:pb-28 lg:pt-24">
         <div className="flex flex-col items-start gap-6 text-left">
-          <div className="inline-flex animate-fade-in-up items-center gap-2 rounded-full border border-violet-300/60 bg-violet-50/80 px-4 py-1.5 text-sm text-violet-800 dark:border-violet-400/30 dark:bg-violet-500/15 dark:text-violet-200">
+          <div className="inline-flex animate-fade-in-up items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-sm text-primary-accent">
             <HiOutlineSparkles className="size-4" aria-hidden="true" />
             <span>Creator-built character platform</span>
           </div>
@@ -113,7 +113,7 @@ export function HeroSection() {
             Characters <span className="gradient-text">worth coming back</span> to
           </h1>
 
-          <p className="max-w-xl text-lg leading-relaxed text-muted-foreground [text-wrap:pretty] sm:text-xl">
+          <p className="max-w-xl text-lg leading-relaxed text-foreground/75 [text-wrap:pretty] sm:text-xl">
             Explore creator-made personalities for roleplay, romance, tutoring, and worldbuilding.
             Save favorites, keep context, and publish your own when you are ready.
           </p>
@@ -123,7 +123,7 @@ export function HeroSection() {
               href="/sign-up"
               className={cn(
                 buttonVariants({ variant: "default", size: "lg" }),
-                "gradient-bg group h-12 gap-2 border-0 px-6 text-base text-white shadow-lg shadow-violet-500/25 hover:shadow-violet-500/40"
+                "gradient-bg-cta group h-12 gap-2 border-0 px-6 text-base text-white shadow-lg shadow-[color:hsl(var(--glow-color)/0.25)] hover:shadow-[color:hsl(var(--glow-color)/0.4)]"
               )}
             >
               Create Free Account
@@ -144,7 +144,7 @@ export function HeroSection() {
             </Link>
           </div>
 
-          <div className="mt-2 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
+          <div className="mt-2 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-foreground/75">
             <span className="flex items-center gap-2">
               <HiOutlineChatBubbleLeftRight className="size-4 text-primary" aria-hidden="true" />
               Free to start — 50 messages a month

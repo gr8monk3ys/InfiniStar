@@ -166,7 +166,7 @@ export function AccountTabContent() {
               </p>
               <a
                 href="mailto:support@infinistar.app"
-                className="mt-3 inline-block text-sm font-medium text-primary hover:text-primary/80"
+                className="mt-3 inline-block text-sm font-medium text-primary-accent hover:text-primary/80"
               >
                 Contact Support
               </a>

@@ -100,6 +100,48 @@ describe("ExploreClient", () => {
     })
   })
 
+  it("collapses featured and trending into one section when they repeat the catalog", () => {
+    render(
+      <ExploreClient
+        featured={sampleCharacters}
+        trending={sampleCharacters}
+        all={sampleCharacters}
+        likedIds={[]}
+      />
+    )
+
+    expect(screen.queryByRole("heading", { name: /featured/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole("heading", { name: /trending/i })).not.toBeInTheDocument()
+    expect(screen.getByRole("heading", { name: /all characters \(2\)/i })).toBeInTheDocument()
+    // Each character renders exactly once, not once per section.
+    expect(screen.getAllByTestId("character-card")).toHaveLength(2)
+  })
+
+  it("keeps a distinct trending section only when it has traffic and new characters", () => {
+    const trendingOnly = [
+      {
+        id: "character-3",
+        slug: "ember",
+        name: "Ember",
+        tagline: "Hot streak",
+        category: "romance",
+        usageCount: 42,
+        likeCount: 3,
+        commentCount: 0,
+      },
+    ]
+    const quiet = [{ ...trendingOnly[0], id: "character-4", slug: "quiet", usageCount: 1 }]
+
+    const { unmount } = render(
+      <ExploreClient featured={[]} trending={trendingOnly} all={sampleCharacters} likedIds={[]} />
+    )
+    expect(screen.getByRole("heading", { name: /^trending$/i })).toBeInTheDocument()
+    unmount()
+
+    render(<ExploreClient featured={[]} trending={quiet} all={sampleCharacters} likedIds={[]} />)
+    expect(screen.queryByRole("heading", { name: /^trending$/i })).not.toBeInTheDocument()
+  })
+
   it("lets users clear filters after an empty result", async () => {
     const user = userEvent.setup()
 

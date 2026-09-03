@@ -39,7 +39,7 @@ export default function MessageVariantNav({
       >
         <HiChevronLeft size={16} />
       </button>
-      <span className="min-w-10 text-center text-[10px] text-muted-foreground">
+      <span className="min-w-10 text-center text-xs text-muted-foreground">
         {activeIndex + 1}/{variantCount}
       </span>
       <button

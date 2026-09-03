@@ -23,15 +23,15 @@ interface SearchSuggestionsProps {
 function getSuggestionIcon(type: SearchSuggestion["type"]) {
   switch (type) {
     case "conversation":
-      return <HiOutlineChatBubbleLeftRight className="size-4 text-sky-500" />
+      return <HiOutlineChatBubbleLeftRight className="size-4 text-primary" />
     case "message":
-      return <HiOutlineDocumentText className="size-4 text-gray-500" />
+      return <HiOutlineDocumentText className="size-4 text-muted-foreground" />
     case "tag":
-      return <HiOutlineTag className="size-4 text-purple-500" />
+      return <HiOutlineTag className="size-4 text-primary" />
     case "recent":
-      return <HiClock className="size-4 text-gray-400" />
+      return <HiClock className="size-4 text-muted-foreground/70" />
     default:
-      return <HiOutlineDocumentText className="size-4 text-gray-500" />
+      return <HiOutlineDocumentText className="size-4 text-muted-foreground" />
   }
 }
 
@@ -48,7 +48,7 @@ function HighlightedText({ text }: { text: string }) {
           return (
             <mark
               key={`hl-${index}`}
-              className="rounded bg-yellow-200 px-0.5 font-medium text-gray-900"
+              className="rounded-sm bg-primary/20 px-0.5 font-medium text-foreground"
             >
               {part}
             </mark>
@@ -77,12 +77,12 @@ export function SearchSuggestions({
 }: SearchSuggestionsProps) {
   if (isLoading) {
     return (
-      <div className={`rounded-lg border border-gray-200 bg-white p-2 shadow-lg ${className}`}>
+      <div className={`rounded-lg border border-border bg-popover p-2 shadow-lg ${className}`}>
         <div className="space-y-2">
           {[1, 2, 3].map((i) => (
             <div key={i} className="flex items-center gap-3 px-3 py-2">
-              <div className="size-4 animate-pulse rounded bg-gray-200" />
-              <div className="h-4 flex-1 animate-pulse rounded bg-gray-200" />
+              <div className="size-4 animate-pulse rounded bg-muted" />
+              <div className="h-4 flex-1 animate-pulse rounded bg-muted" />
             </div>
           ))}
         </div>
@@ -96,7 +96,7 @@ export function SearchSuggestions({
 
   return (
     <div
-      className={`rounded-lg border border-gray-200 bg-white shadow-lg ${className}`}
+      className={`rounded-lg border border-border bg-popover shadow-lg ${className}`}
       role="listbox"
       aria-label="Search suggestions"
     >
@@ -108,8 +108,8 @@ export function SearchSuggestions({
               onClick={() => onSelect(suggestion)}
               className={`flex w-full items-center gap-3 px-3 py-2 text-left transition-colors ${
                 index === selectedIndex
-                  ? "bg-sky-50 text-sky-900"
-                  : "text-gray-700 hover:bg-gray-50"
+                  ? "bg-primary/10 text-primary"
+                  : "text-foreground hover:bg-accent hover:text-accent-foreground"
               }`}
               role="option"
               aria-selected={index === selectedIndex}
@@ -127,12 +127,12 @@ export function SearchSuggestions({
                   )}
                 </p>
                 {suggestion.context && (
-                  <p className="truncate text-xs text-gray-500">{suggestion.context}</p>
+                  <p className="truncate text-xs text-muted-foreground">{suggestion.context}</p>
                 )}
               </div>
 
               {/* Type badge */}
-              <span className="shrink-0 rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium capitalize text-gray-500">
+              <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-xs font-medium capitalize text-muted-foreground">
                 {suggestion.type}
               </span>
             </button>
@@ -141,11 +141,10 @@ export function SearchSuggestions({
       </ul>
 
       {/* Footer hint */}
-      <div className="border-t border-gray-100 px-3 py-2">
-        <p className="text-xs text-gray-400">
-          Press <kbd className="rounded border border-gray-200 bg-gray-50 px-1">Enter</kbd> to
-          select or <kbd className="rounded border border-gray-200 bg-gray-50 px-1">Esc</kbd> to
-          dismiss
+      <div className="border-t border-border px-3 py-2">
+        <p className="text-xs text-muted-foreground/70">
+          Press <kbd className="rounded border-border bg-muted px-1">Enter</kbd> to select or{" "}
+          <kbd className="rounded border-border bg-muted px-1">Esc</kbd> to dismiss
         </p>
       </div>
     </div>

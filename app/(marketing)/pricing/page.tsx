@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { HiCheck, HiOutlineBolt, HiOutlineShieldCheck, HiOutlineSparkles } from "react-icons/hi2"
+import { HiCheck, HiOutlineBolt, HiOutlineShieldCheck } from "react-icons/hi2"
 
 import { freePlan, proPlan } from "@/config/subscriptions"
 import { getUserSubscriptionPlan } from "@/app/lib/subscription"
@@ -36,11 +36,6 @@ export default async function PricingPage() {
     <section className="container flex flex-col gap-8 py-10 md:max-w-6xl md:py-14 lg:py-20">
       {/* Header */}
       <div className="mx-auto flex w-full flex-col items-center gap-4 text-center md:max-w-3xl">
-        <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.24em] text-violet-700 dark:text-violet-300">
-          <span className="h-px w-6 bg-current" aria-hidden="true" />
-          Pricing
-          <span className="h-px w-6 bg-current" aria-hidden="true" />
-        </p>
         <h1 className="font-heading text-4xl font-extrabold leading-[1.02] tracking-tight [text-wrap:balance] sm:text-5xl md:text-6xl">
           For curious chatters and <span className="gradient-text">serious creators</span>
         </h1>
@@ -52,7 +47,6 @@ export default async function PricingPage() {
 
       <div className="mx-auto flex w-full max-w-4xl flex-wrap items-center justify-center gap-3 text-sm text-muted-foreground">
         <span className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background px-4 py-2">
-          <HiOutlineSparkles className="size-4 text-primary" />
           50 messages every month on free
         </span>
         <span className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background px-4 py-2">
@@ -101,8 +95,7 @@ export default async function PricingPage() {
         {/* PRO Plan */}
         <div className="glow-sm relative flex flex-col rounded-3xl border-2 border-primary bg-card p-8 shadow-lg">
           <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-            <span className="gradient-bg inline-flex items-center gap-1 rounded-full px-4 py-1 text-sm font-medium text-white">
-              <HiOutlineSparkles className="size-4" />
+            <span className="inline-flex items-center rounded-full bg-primary px-4 py-1 text-sm font-medium text-primary-foreground">
               Most Popular
             </span>
           </div>
@@ -132,7 +125,7 @@ export default async function PricingPage() {
             isSignedIn={isSignedIn}
             isPro={isPro}
             className={cn(
-              "gradient-bg w-full gap-2 border-0 text-white shadow-lg shadow-violet-500/25"
+              "gradient-bg-cta w-full gap-2 border-0 text-white shadow-lg shadow-[color:hsl(var(--glow-color)/0.25)]"
             )}
           />
         </div>
@@ -181,9 +174,9 @@ export default async function PricingPage() {
           <div className="rounded-2xl border border-border/60 bg-card/60 p-6">
             <h3 className="font-semibold">Is my data secure?</h3>
             <p className="mt-2 text-sm text-muted-foreground">
-              Absolutely. We use enterprise-grade security including two-factor authentication,
-              encrypted storage, CSRF protection, and rate limiting. Your conversations are private
-              and encrypted.
+              Sign-in is handled by Clerk and billing by Stripe, so we never store your password or
+              card details. Data is encrypted in transit, two-factor authentication is available,
+              and your conversations are visible only to you unless you share them.
             </p>
           </div>
 
@@ -203,14 +196,14 @@ export default async function PricingPage() {
           Questions? Check out our{" "}
           <Link
             href="/privacy"
-            className="font-medium text-foreground underline decoration-violet-300 underline-offset-4 hover:text-violet-700 dark:decoration-violet-400/50 dark:hover:text-violet-200"
+            className="font-medium text-foreground underline decoration-primary/40 underline-offset-4 hover:text-primary"
           >
             privacy policy
           </Link>{" "}
           or{" "}
           <Link
             href="/explore"
-            className="font-medium text-foreground underline decoration-violet-300 underline-offset-4 hover:text-violet-700 dark:decoration-violet-400/50 dark:hover:text-violet-200"
+            className="font-medium text-foreground underline decoration-primary/40 underline-offset-4 hover:text-primary"
           >
             explore features
           </Link>

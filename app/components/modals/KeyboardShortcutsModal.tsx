@@ -23,7 +23,7 @@ interface KeyboardShortcutsModalProps {
 function KeyboardKey({ children }: { children: React.ReactNode }) {
   return (
     <kbd
-      className="inline-flex min-w-[24px] items-center justify-center rounded border border-gray-300 bg-gray-100 px-2 py-1 text-xs font-medium text-gray-700 shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
+      className="inline-flex min-w-[24px] items-center justify-center rounded border-border bg-muted px-2 py-1 text-xs font-medium text-foreground shadow-sm"
       aria-hidden="true"
     >
       {children}
@@ -45,7 +45,7 @@ function ShortcutDisplay({ action }: { action: ShortcutAction }) {
         const uniqueKey = `${action.id}-part-${part}`
         return (
           <span key={uniqueKey} className="flex items-center gap-1">
-            {partIndex > 0 && <span className="text-gray-400 dark:text-gray-500">+</span>}
+            {partIndex > 0 && <span className="text-muted-foreground/70">+</span>}
             <KeyboardKey>{part}</KeyboardKey>
           </span>
         )
@@ -61,8 +61,8 @@ function ShortcutRow({ action }: { action: ShortcutAction }) {
   return (
     <div className="flex items-center justify-between py-2">
       <div className="flex flex-col">
-        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{action.name}</span>
-        <span className="text-xs text-gray-500 dark:text-gray-400">{action.description}</span>
+        <span className="text-sm font-medium text-foreground">{action.name}</span>
+        <span className="text-xs text-muted-foreground">{action.description}</span>
       </div>
       <ShortcutDisplay action={action} />
     </div>
@@ -86,14 +86,14 @@ function CategorySection({
   return (
     <div className="mb-6 last:mb-0">
       <div className="mb-3">
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">
+        <h3 className="text-sm font-semibold uppercase tracking-wide text-foreground/80">
           {config.label}
         </h3>
         {config.description && (
-          <p className="text-xs text-gray-500 dark:text-gray-400">{config.description}</p>
+          <p className="text-xs text-muted-foreground">{config.description}</p>
         )}
       </div>
-      <div className="divide-y divide-gray-200 rounded-lg border border-gray-200 bg-white dark:divide-gray-700 dark:border-gray-700 dark:bg-gray-800">
+      <div className="divide-y divide-border rounded-lg border border-border bg-card">
         <div className="px-4">
           {shortcuts.map((shortcut) => (
             <ShortcutRow key={shortcut.id} action={shortcut} />
@@ -179,7 +179,7 @@ const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({ isOpen,
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-neutral-800/70 pt-16 dark:bg-black/70"
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-scrim/70 pt-16"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
@@ -187,28 +187,25 @@ const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({ isOpen,
     >
       <div
         ref={modalRef}
-        className="relative mx-4 mb-8 w-full max-w-xl rounded-lg bg-white shadow-xl dark:bg-gray-900"
+        className="relative mx-4 mb-8 w-full max-w-xl rounded-lg bg-background shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-gray-200 p-4 dark:border-gray-700">
+        <div className="flex items-center justify-between border-b border-border p-4">
           <div>
-            <h2
-              id="keyboard-shortcuts-title"
-              className="text-lg font-semibold text-gray-900 dark:text-gray-100"
-            >
+            <h2 id="keyboard-shortcuts-title" className="text-lg font-semibold text-foreground">
               Keyboard Shortcuts
             </h2>
-            <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
+            <p className="mt-0.5 text-sm text-muted-foreground">
               Press <KeyboardKey>{modifierKey}</KeyboardKey>
-              <span className="mx-1 text-gray-400">+</span>
+              <span className="mx-1 text-muted-foreground/70">+</span>
               <KeyboardKey>/</KeyboardKey> or <KeyboardKey>?</KeyboardKey> to toggle this panel
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-sky-500 dark:hover:bg-gray-800 dark:hover:text-gray-300"
+            className="rounded-md p-2 text-muted-foreground/70 transition hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             aria-label="Close keyboard shortcuts panel"
           >
             <HiOutlineXMark size={20} />
@@ -223,8 +220,8 @@ const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({ isOpen,
         </div>
 
         {/* Footer */}
-        <div className="border-t border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-800">
-          <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+        <div className="border-t border-border bg-muted px-4 py-3">
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
             <p>Shortcuts are disabled when typing in text fields</p>
             <p className="flex items-center gap-1">
               <KeyboardKey>Esc</KeyboardKey>

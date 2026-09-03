@@ -34,7 +34,7 @@ function ProgressBar({
 }) {
   const percentage = max > 0 ? Math.min((value / max) * 100, 100) : 0
   const colorClasses = {
-    sky: "bg-sky-500",
+    sky: "bg-primary",
     green: "bg-green-500",
     yellow: "bg-yellow-500",
     red: "bg-red-500",
@@ -114,9 +114,7 @@ function TokenCountsGrid({
   return (
     <div className="grid grid-cols-3 gap-2 text-center">
       <div>
-        <div className="text-lg font-semibold text-sky-600 dark:text-sky-400">
-          {formatTokenCount(inputTokens)}
-        </div>
+        <div className="text-lg font-semibold text-primary">{formatTokenCount(inputTokens)}</div>
         <div className="text-xs text-muted-foreground">Input</div>
       </div>
       <div>
@@ -362,7 +360,7 @@ export const TokenUsageCompact = memo(function TokenUsageCompact({
               <HiInformationCircle className="size-3.5" aria-hidden="true" />
               <span>{formatTokenCount(conversationTokens)} tokens</span>
               {latestMessageUsage && (
-                <span className="text-[10px] opacity-70">
+                <span className="text-xs opacity-70">
                   (+{formatTokenCount(latestMessageUsage.totalTokens)})
                 </span>
               )}
@@ -442,7 +440,7 @@ export const TokenUsageDisplay = memo(function TokenUsageDisplay({
           <HiInformationCircle className="size-4" aria-hidden="true" />
           <span className="font-medium">Token Usage</span>
           {latestMessageUsage && (
-            <span className="rounded-full bg-sky-100 px-2 py-0.5 text-xs text-sky-700 dark:bg-sky-900/30 dark:text-sky-400">
+            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary-accent">
               Last: {formatTokenCount(latestMessageUsage.totalTokens)} tokens
             </span>
           )}

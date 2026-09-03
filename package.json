@@ -9,6 +9,7 @@
     "start": "next start",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
+    "design:check": "node scripts/check-design-system.mjs",
     "preview": "next build && next start",
     "typecheck": "next typegen && tsc --noEmit --incremental false",
     "format:write": "prettier --write \"**/*.{ts,tsx,mdx}\" --cache",

@@ -122,10 +122,10 @@ export function SearchFilters({
       {/* Header with filter count and clear button */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <HiAdjustmentsHorizontal className="size-4 text-gray-500" />
-          <span className="text-sm font-medium text-gray-700">Filters</span>
+          <HiAdjustmentsHorizontal className="size-4 text-muted-foreground" />
+          <span className="text-sm font-medium text-foreground">Filters</span>
           {activeFilterCount > 0 && (
-            <span className="flex size-5 items-center justify-center rounded-full bg-sky-100 text-xs font-medium text-sky-700">
+            <span className="flex size-5 items-center justify-center rounded-full bg-primary/10 text-xs font-medium text-primary-accent">
               {activeFilterCount}
             </span>
           )}
@@ -135,7 +135,7 @@ export function SearchFilters({
             type="button"
             onClick={onClearAll}
             disabled={isLoading}
-            className="flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-gray-700 disabled:opacity-50"
+            className="flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-50"
             aria-label="Clear all filters"
           >
             <HiOutlineXMark className="size-3.5" />
@@ -146,8 +146,10 @@ export function SearchFilters({
 
       {/* Result type tabs */}
       <div>
-        <label className="mb-1.5 block text-xs font-medium text-gray-700">Show results from</label>
-        <div className="flex rounded-lg border border-gray-200 p-0.5">
+        <label className="mb-1.5 block text-xs font-medium text-foreground">
+          Show results from
+        </label>
+        <div className="flex rounded-lg border border-border p-0.5">
           {(["all", "conversations", "messages"] as SearchResultType[]).map((type) => (
             <button
               key={type}
@@ -155,7 +157,9 @@ export function SearchFilters({
               onClick={() => onFiltersChange({ type })}
               disabled={isLoading}
               className={`flex-1 rounded-md px-3 py-1.5 text-xs font-medium capitalize transition-colors ${
-                filters.type === type ? "bg-sky-100 text-sky-700" : "text-gray-600 hover:bg-gray-50"
+                filters.type === type
+                  ? "bg-primary/10 text-primary-accent"
+                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
               } disabled:opacity-50`}
               aria-pressed={filters.type === type}
             >
@@ -167,7 +171,9 @@ export function SearchFilters({
 
       {/* AI/Human toggle */}
       <div>
-        <label className="mb-1.5 block text-xs font-medium text-gray-700">Conversation type</label>
+        <label className="mb-1.5 block text-xs font-medium text-foreground">
+          Conversation type
+        </label>
         <div className="flex gap-2">
           <button
             type="button"
@@ -175,8 +181,8 @@ export function SearchFilters({
             disabled={isLoading}
             className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
               filters.isAI === undefined
-                ? "border-sky-300 bg-sky-50 text-sky-700"
-                : "border-gray-200 text-gray-600 hover:bg-gray-50"
+                ? "border-primary/20 bg-primary/10 text-primary-accent"
+                : "border-border text-muted-foreground hover:bg-accent hover:text-accent-foreground"
             } disabled:opacity-50`}
             aria-pressed={filters.isAI === undefined}
           >
@@ -188,8 +194,8 @@ export function SearchFilters({
             disabled={isLoading}
             className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
               filters.isAI === true
-                ? "border-purple-300 bg-purple-50 text-purple-700"
-                : "border-gray-200 text-gray-600 hover:bg-gray-50"
+                ? "border-primary/20 bg-primary/10 text-primary-accent"
+                : "border-border text-muted-foreground hover:bg-accent hover:text-accent-foreground"
             } disabled:opacity-50`}
             aria-pressed={filters.isAI === true}
           >
@@ -203,7 +209,7 @@ export function SearchFilters({
             className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
               filters.isAI === false
                 ? "border-green-300 bg-green-50 text-green-700"
-                : "border-gray-200 text-gray-600 hover:bg-gray-50"
+                : "border-border text-muted-foreground hover:bg-accent hover:text-accent-foreground"
             } disabled:opacity-50`}
             aria-pressed={filters.isAI === false}
           >
@@ -218,7 +224,7 @@ export function SearchFilters({
         <div>
           <label
             htmlFor="personality-filter"
-            className="mb-1.5 block text-xs font-medium text-gray-700"
+            className="mb-1.5 block text-xs font-medium text-foreground"
           >
             AI Personality
           </label>
@@ -231,7 +237,7 @@ export function SearchFilters({
               })
             }
             disabled={isLoading}
-            className="block w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 disabled:opacity-50"
+            className="block w-full rounded-md border border-input bg-background px-2.5 py-1.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50"
           >
             <option value="">All personalities</option>
             {AI_PERSONALITIES.map((personality) => (
@@ -245,7 +251,7 @@ export function SearchFilters({
 
       {/* Date range picker */}
       <div>
-        <label className="mb-1.5 block text-xs font-medium text-gray-700">Date range</label>
+        <label className="mb-1.5 block text-xs font-medium text-foreground">Date range</label>
         <DateRangePicker
           dateFrom={filters.dateFrom || ""}
           dateTo={filters.dateTo || ""}
@@ -258,7 +264,7 @@ export function SearchFilters({
       {/* Tag filter */}
       {tags.length > 0 && (
         <div>
-          <label className="mb-1.5 flex items-center gap-1 text-xs font-medium text-gray-700">
+          <label className="mb-1.5 flex items-center gap-1 text-xs font-medium text-foreground">
             <HiOutlineTag className="size-3.5" />
             Tags
           </label>
@@ -283,7 +289,7 @@ export function SearchFilters({
                 >
                   {tag.name}
                   {tag.conversationCount > 0 && (
-                    <span className="text-[10px] opacity-70">({tag.conversationCount})</span>
+                    <span className="text-xs opacity-70">({tag.conversationCount})</span>
                   )}
                 </button>
               )
@@ -302,7 +308,7 @@ export function SearchFilters({
           className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
             filters.hasAttachments
               ? "border-amber-300 bg-amber-50 text-amber-700"
-              : "border-gray-200 text-gray-600 hover:bg-gray-50"
+              : "border-border text-muted-foreground hover:bg-accent hover:text-accent-foreground"
           } disabled:opacity-50`}
           aria-pressed={filters.hasAttachments}
         >
@@ -317,8 +323,8 @@ export function SearchFilters({
           disabled={isLoading}
           className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
             filters.archived
-              ? "border-gray-400 bg-gray-100 text-gray-700"
-              : "border-gray-200 text-gray-600 hover:bg-gray-50"
+              ? "border-border bg-muted text-foreground"
+              : "border-border text-muted-foreground hover:bg-accent hover:text-accent-foreground"
           } disabled:opacity-50`}
           aria-pressed={filters.archived}
         >
@@ -329,7 +335,7 @@ export function SearchFilters({
 
       {/* Sort options */}
       <div>
-        <label htmlFor="sort-filter" className="mb-1.5 block text-xs font-medium text-gray-700">
+        <label htmlFor="sort-filter" className="mb-1.5 block text-xs font-medium text-foreground">
           Sort by
         </label>
         <select
@@ -337,7 +343,7 @@ export function SearchFilters({
           value={filters.sortBy}
           onChange={(e) => onFiltersChange({ sortBy: e.target.value as SearchSortBy })}
           disabled={isLoading}
-          className="block w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 disabled:opacity-50"
+          className="block w-full rounded-md border border-input bg-background px-2.5 py-1.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50"
         >
           {SORT_OPTIONS.map((option) => (
             <option key={option.value} value={option.value}>

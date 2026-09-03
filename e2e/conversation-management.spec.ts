@@ -508,6 +508,12 @@ if (hasE2EAuthCredentials) {
   // =========================================================================
   // Export
   // =========================================================================
+  /** Open the header overflow menu, then the Export submenu. */
+  async function openExportMenu(page: Page): Promise<void> {
+    await page.getByRole("button", { name: /more conversation actions/i }).click()
+    await page.getByRole("menuitem", { name: /export conversation/i }).click()
+  }
+
   test.describe("Conversation Export", () => {
     test.beforeEach(async ({ page }) => {
       await requireLogin(page, "E2E export tests require valid credentials")
@@ -519,9 +525,9 @@ if (hasE2EAuthCredentials) {
         return
       }
 
-      // ExportDropdown renders a button with aria-label "Export conversation"
-      const exportButton = page.getByRole("button", { name: /export conversation/i })
-      await expect(exportButton).toBeVisible()
+      // Export lives in the header's overflow menu as a submenu trigger
+      await page.getByRole("button", { name: /more conversation actions/i }).click()
+      await expect(page.getByRole("menuitem", { name: /export conversation/i })).toBeVisible()
     })
 
     test("should open export format dropdown when Export button is clicked", async ({ page }) => {
@@ -530,8 +536,7 @@ if (hasE2EAuthCredentials) {
         return
       }
 
-      const exportButton = page.getByRole("button", { name: /export conversation/i })
-      await exportButton.click()
+      await openExportMenu(page)
 
       // The dropdown menu shows three format options
       await expect(page.getByText("Markdown (.md)")).toBeVisible()
@@ -569,8 +574,7 @@ if (hasE2EAuthCredentials) {
         })
       })
 
-      const exportButton = page.getByRole("button", { name: /export conversation/i })
-      await exportButton.click()
+      await openExportMenu(page)
 
       await page.getByText("Markdown (.md)").click()
 
@@ -606,8 +610,7 @@ if (hasE2EAuthCredentials) {
         })
       })
 
-      const exportButton = page.getByRole("button", { name: /export conversation/i })
-      await exportButton.click()
+      await openExportMenu(page)
 
       await page.getByText("JSON (.json)").click()
 
@@ -643,8 +646,7 @@ if (hasE2EAuthCredentials) {
         })
       })
 
-      const exportButton = page.getByRole("button", { name: /export conversation/i })
-      await exportButton.click()
+      await openExportMenu(page)
 
       await page.getByText("Plain Text (.txt)").click()
 
@@ -671,8 +673,7 @@ if (hasE2EAuthCredentials) {
         })
       })
 
-      const exportButton = page.getByRole("button", { name: /export conversation/i })
-      await exportButton.click()
+      await openExportMenu(page)
 
       await page.getByText("Markdown (.md)").click()
 
@@ -704,12 +705,12 @@ if (hasE2EAuthCredentials) {
         })
       })
 
-      const exportButton = page.getByRole("button", { name: /export conversation/i })
-      await exportButton.click()
+      await openExportMenu(page)
       await page.getByText("Markdown (.md)").click()
 
-      // While exporting the button becomes disabled
-      await expect(exportButton).toBeDisabled()
+      // While exporting, the export entry is disabled and labelled as busy
+      await page.getByRole("button", { name: /more conversation actions/i }).click()
+      await expect(page.getByRole("menuitem", { name: /exporting/i })).toBeDisabled()
     })
   })
 

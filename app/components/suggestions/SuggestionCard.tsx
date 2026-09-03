@@ -85,10 +85,10 @@ function getTypeColors(type: SuggestionType): {
       }
     default:
       return {
-        bg: "bg-gray-50 dark:bg-gray-950/30",
-        border: "border-gray-200 dark:border-gray-800",
-        hover: "hover:bg-gray-100 dark:hover:bg-gray-900/40",
-        icon: "text-gray-600 dark:text-gray-400",
+        bg: "bg-muted/50",
+        border: "border-border",
+        hover: "hover:bg-accent",
+        icon: "text-muted-foreground",
       }
   }
 }

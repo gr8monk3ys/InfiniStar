@@ -111,7 +111,7 @@ export default function JoinPageClient() {
   // Loading state
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
+      <div className="flex min-h-screen items-center justify-center bg-background">
         <Card className="w-full max-w-md">
           <CardContent className="flex flex-col items-center py-12">
             <Loader2 className="size-8 animate-spin text-primary" />
@@ -125,11 +125,11 @@ export default function JoinPageClient() {
   // Error state
   if (error) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
+      <div className="flex min-h-screen items-center justify-center bg-background">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
-            <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/20">
-              <AlertCircle className="size-8 text-red-600 dark:text-red-400" />
+            <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-destructive/10">
+              <AlertCircle className="size-8 text-destructive" />
             </div>
             <CardTitle>Unable to Load Share</CardTitle>
             <CardDescription>{error}</CardDescription>
@@ -147,7 +147,7 @@ export default function JoinPageClient() {
   // Share not found
   if (!shareInfo) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
+      <div className="flex min-h-screen items-center justify-center bg-background">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-yellow-100 dark:bg-yellow-900/20">
@@ -169,7 +169,7 @@ export default function JoinPageClient() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4 dark:bg-gray-900">
+    <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-primary/10">
@@ -241,7 +241,7 @@ export default function JoinPageClient() {
 
           {/* Invite-only notice */}
           {shareInfo.shareType === "INVITE" && (
-            <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-200">
+            <div className="rounded-lg border border-primary/20 bg-primary/10 p-3 text-sm text-primary-accent">
               <p>This is an invite-only share. Only invited email addresses can join.</p>
             </div>
           )}

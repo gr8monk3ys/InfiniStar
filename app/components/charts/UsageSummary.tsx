@@ -149,7 +149,7 @@ export function UsageSummary({
                 ? "bg-red-500"
                 : quotaPercentage > 70
                   ? "bg-yellow-500"
-                  : "bg-gradient-to-r from-purple-500 to-pink-500"
+                  : "bg-primary"
             )}
             style={{ width: `${quotaPercentage}%` }}
           />
@@ -175,7 +175,7 @@ export function UsageSummary({
             className={cn(
               "rounded-full px-2 py-0.5 text-xs font-medium",
               subscription.isPro
-                ? "bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300"
+                ? "bg-primary/10 text-primary-accent"
                 : "bg-muted text-muted-foreground"
             )}
           >

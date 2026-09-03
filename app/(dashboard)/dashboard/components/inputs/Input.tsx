@@ -31,7 +31,7 @@ const Input: React.FC<InputProps> = ({
           text-sm 
           font-medium 
           leading-6 
-          text-gray-900
+          text-foreground
         "
       >
         {label}
@@ -49,20 +49,20 @@ const Input: React.FC<InputProps> = ({
             block 
             w-full 
             rounded-md 
-            border-0 
-            py-1.5 
-            text-gray-900 
-            shadow-sm 
-            ring-1 
-            ring-inset 
-            ring-gray-300 
-            placeholder:text-gray-400 
-            focus:ring-2 
-            focus:ring-inset 
-            focus:ring-sky-600 
+            border
+            border-input
+            bg-background
+            py-1.5
+            text-foreground
+            shadow-sm
+            placeholder:text-muted-foreground
+            focus-visible:outline-none
+            focus-visible:ring-2
+            focus-visible:ring-ring
+            focus-visible:ring-offset-2
             sm:text-sm 
             sm:leading-6`,
-            errors[id] && "focus:ring-rose-500",
+            errors[id] && "border-destructive focus-visible:ring-destructive",
             disabled && "opacity-50 cursor-default"
           )}
         />

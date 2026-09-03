@@ -131,10 +131,7 @@ const parseInlineCode = (text: string): ParsedContent[] => {
  */
 const InlineCode: React.FC<{ children: string }> = ({ children }) => (
   <code
-    className={cn(
-      "rounded-md bg-muted px-1.5 py-0.5 font-mono text-sm",
-      "text-sky-600 dark:text-sky-400"
-    )}
+    className={cn("rounded-md bg-muted px-1.5 py-0.5 font-mono text-sm", "text-primary-accent")}
   >
     {children}
   </code>

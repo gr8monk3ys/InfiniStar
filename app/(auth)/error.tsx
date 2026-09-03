@@ -23,12 +23,14 @@ export default function AuthError({
           We could not complete your request. Please try again.
         </p>
         {process.env.NODE_ENV === "development" && (
-          <p className="mb-4 rounded-lg bg-red-50 p-3 text-xs text-red-600">{error.message}</p>
+          <p className="mb-4 rounded-lg bg-destructive/10 p-3 text-xs text-destructive">
+            {error.message}
+          </p>
         )}
         <div className="flex flex-col gap-3">
           <button
             onClick={reset}
-            className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700"
+            className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
           >
             Try again
           </button>

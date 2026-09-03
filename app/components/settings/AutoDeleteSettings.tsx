@@ -401,7 +401,7 @@ export function AutoDeleteSettings() {
                       disabled={isSaving || !enabled}
                       className={`inline-flex items-center rounded-full px-3 py-1.5 text-sm font-medium transition-all focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
                         isExcluded
-                          ? "bg-primary/10 text-primary ring-2 ring-primary"
+                          ? "bg-primary/10 text-primary-accent ring-2 ring-primary"
                           : "bg-muted text-foreground hover:bg-muted/80"
                       }`}
                       aria-pressed={isExcluded}
@@ -439,7 +439,7 @@ export function AutoDeleteSettings() {
           <div className="rounded-lg border border-primary/20 bg-primary/10 p-4">
             <div className="flex items-start gap-3">
               <HiInformationCircle className="mt-0.5 size-5 shrink-0 text-primary" />
-              <div className="text-sm text-primary">
+              <div className="text-sm text-primary-accent">
                 <p className="font-medium">How Auto-Delete Works</p>
                 <ul className="mt-2 list-inside list-disc space-y-1">
                   <li>

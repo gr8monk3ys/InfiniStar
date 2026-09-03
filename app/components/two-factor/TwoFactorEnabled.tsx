@@ -107,12 +107,12 @@ export function TwoFactorEnabled({
           <HiShieldCheck className="size-6 text-green-600" />
         </div>
         <div className="flex-1">
-          <h3 className="font-medium text-gray-900">Two-Factor Authentication is On</h3>
-          <p className="mt-1 text-sm text-gray-600">
+          <h3 className="font-medium text-foreground">Two-Factor Authentication is On</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
             Your account is protected with two-factor authentication.
           </p>
           {remainingBackupCodes !== null && (
-            <p className="mt-2 text-sm text-gray-600">
+            <p className="mt-2 text-sm text-muted-foreground">
               <HiKey className="mr-1 inline size-4" />
               {remainingBackupCodes} backup code{remainingBackupCodes !== 1 ? "s" : ""} remaining
             </p>
@@ -124,18 +124,23 @@ export function TwoFactorEnabled({
       {!showRegenerateForm ? (
         <button
           onClick={() => setShowRegenerateForm(true)}
-          className="inline-flex items-center gap-2 text-sm font-medium text-sky-600 hover:text-sky-700"
+          className="inline-flex items-center gap-2 text-sm font-medium text-primary-accent hover:text-primary/80"
         >
           <HiKey className="size-4" />
           Generate new backup codes
         </button>
       ) : (
         <form onSubmit={handleRegenerateBackupCodes} className="space-y-4 rounded-lg border p-4">
-          <h4 className="font-medium text-gray-900">Generate New Backup Codes</h4>
-          <p className="text-sm text-gray-600">This will invalidate all existing backup codes.</p>
+          <h4 className="font-medium text-foreground">Generate New Backup Codes</h4>
+          <p className="text-sm text-muted-foreground">
+            This will invalidate all existing backup codes.
+          </p>
 
           <div>
-            <label htmlFor="regeneratePassword" className="block text-sm font-medium text-gray-700">
+            <label
+              htmlFor="regeneratePassword"
+              className="block text-sm font-medium text-foreground"
+            >
               Password
             </label>
             <div className="relative mt-1">
@@ -145,12 +150,12 @@ export function TwoFactorEnabled({
                 value={regeneratePassword}
                 onChange={(e) => setRegeneratePassword(e.target.value)}
                 disabled={isLoading}
-                className="block w-full rounded-md border border-gray-300 py-2 pl-3 pr-10 shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 disabled:bg-gray-100"
+                className="block w-full rounded-md border border-input bg-background py-2 pl-3 pr-10 text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:bg-muted"
               />
               <button
                 type="button"
                 onClick={() => setShowRegeneratePassword(!showRegeneratePassword)}
-                className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500"
+                className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground"
                 aria-label={showRegeneratePassword ? "Hide password" : "Show password"}
               >
                 {showRegeneratePassword ? (
@@ -163,7 +168,7 @@ export function TwoFactorEnabled({
           </div>
 
           <div>
-            <label htmlFor="regenerateCode" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="regenerateCode" className="block text-sm font-medium text-foreground">
               Authenticator Code
             </label>
             <input
@@ -175,7 +180,7 @@ export function TwoFactorEnabled({
               placeholder="000000"
               disabled={isLoading}
               maxLength={6}
-              className="mt-1 block w-full rounded-md border border-gray-300 py-2 text-center font-mono tracking-widest shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 disabled:bg-gray-100"
+              className="mt-1 block w-full rounded-md border border-input bg-background py-2 text-center font-mono tracking-widest text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:bg-muted"
             />
           </div>
 
@@ -188,14 +193,14 @@ export function TwoFactorEnabled({
                 setRegenerateCode("")
               }}
               disabled={isLoading}
-              className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              className="rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isLoading || !regeneratePassword || regenerateCode.length !== 6}
-              className="rounded-md bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isLoading ? "Generating..." : "Generate Codes"}
             </button>
@@ -207,7 +212,7 @@ export function TwoFactorEnabled({
       {!showDisableForm ? (
         <button
           onClick={() => setShowDisableForm(true)}
-          className="inline-flex items-center gap-2 text-sm font-medium text-red-600 hover:text-red-700"
+          className="inline-flex items-center gap-2 text-sm font-medium text-destructive hover:text-destructive/80"
         >
           <HiShieldExclamation className="size-4" />
           Disable two-factor authentication
@@ -215,16 +220,16 @@ export function TwoFactorEnabled({
       ) : (
         <form
           onSubmit={handleDisable2FA}
-          className="space-y-4 rounded-lg border border-red-200 bg-red-50 p-4"
+          className="space-y-4 rounded-lg border border-destructive/30 bg-destructive/10 p-4"
         >
-          <h4 className="font-medium text-red-900">Disable Two-Factor Authentication</h4>
-          <p className="text-sm text-red-700">
+          <h4 className="font-medium text-destructive">Disable Two-Factor Authentication</h4>
+          <p className="text-sm text-destructive/90">
             This will make your account less secure. Enter your password and a verification code to
             confirm.
           </p>
 
           <div>
-            <label htmlFor="disablePassword" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="disablePassword" className="block text-sm font-medium text-foreground">
               Password
             </label>
             <div className="relative mt-1">
@@ -234,12 +239,12 @@ export function TwoFactorEnabled({
                 value={disablePassword}
                 onChange={(e) => setDisablePassword(e.target.value)}
                 disabled={isLoading}
-                className="block w-full rounded-md border border-gray-300 py-2 pl-3 pr-10 shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 disabled:bg-gray-100"
+                className="block w-full rounded-md border border-input bg-background py-2 pl-3 pr-10 text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:bg-muted"
               />
               <button
                 type="button"
                 onClick={() => setShowDisablePassword(!showDisablePassword)}
-                className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500"
+                className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground"
                 aria-label={showDisablePassword ? "Hide password" : "Show password"}
               >
                 {showDisablePassword ? (
@@ -252,7 +257,7 @@ export function TwoFactorEnabled({
           </div>
 
           <div>
-            <label htmlFor="disableCode" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="disableCode" className="block text-sm font-medium text-foreground">
               Authenticator Code or Backup Code
             </label>
             <input
@@ -262,7 +267,7 @@ export function TwoFactorEnabled({
               onChange={(e) => setDisableCode(e.target.value.toUpperCase())}
               placeholder="000000 or XXXX-XXXX"
               disabled={isLoading}
-              className="mt-1 block w-full rounded-md border border-gray-300 py-2 text-center font-mono tracking-widest shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 disabled:bg-gray-100"
+              className="mt-1 block w-full rounded-md border border-input bg-background py-2 text-center font-mono tracking-widest text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:bg-muted"
             />
           </div>
 
@@ -275,14 +280,14 @@ export function TwoFactorEnabled({
                 setDisableCode("")
               }}
               disabled={isLoading}
-              className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              className="rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isLoading || !disablePassword || !disableCode}
-              className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground hover:bg-destructive/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isLoading ? "Disabling..." : "Disable 2FA"}
             </button>

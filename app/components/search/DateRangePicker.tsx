@@ -100,8 +100,8 @@ export function DateRangePicker({
             onClick={() => applyPreset(preset.days)}
             className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
               activePreset === preset.days
-                ? "bg-sky-100 text-sky-700 ring-1 ring-sky-300"
-                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                ? "bg-primary/10 text-primary-accent ring-1 ring-primary/20"
+                : "bg-muted text-muted-foreground hover:bg-border"
             }`}
             aria-pressed={activePreset === preset.days}
           >
@@ -112,7 +112,7 @@ export function DateRangePicker({
           <button
             type="button"
             onClick={onClear}
-            className="flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-200"
+            className="flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-border"
             aria-label="Clear date range"
           >
             <HiOutlineXMark className="size-3" />
@@ -126,7 +126,7 @@ export function DateRangePicker({
         <div>
           <label
             htmlFor="date-from"
-            className="mb-1 flex items-center gap-1 text-xs font-medium text-gray-700"
+            className="mb-1 flex items-center gap-1 text-xs font-medium text-foreground"
           >
             <HiOutlineCalendar className="size-3.5" />
             From
@@ -137,14 +137,14 @@ export function DateRangePicker({
             value={dateFrom}
             onChange={(e) => onDateFromChange(e.target.value)}
             max={dateTo || today}
-            className="block w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+            className="block w-full rounded-md border border-input bg-background px-2.5 py-1.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             aria-label="Start date"
           />
         </div>
         <div>
           <label
             htmlFor="date-to"
-            className="mb-1 flex items-center gap-1 text-xs font-medium text-gray-700"
+            className="mb-1 flex items-center gap-1 text-xs font-medium text-foreground"
           >
             <HiOutlineCalendar className="size-3.5" />
             To
@@ -156,7 +156,7 @@ export function DateRangePicker({
             onChange={(e) => onDateToChange(e.target.value)}
             min={dateFrom || undefined}
             max={today}
-            className="block w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+            className="block w-full rounded-md border border-input bg-background px-2.5 py-1.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             aria-label="End date"
           />
         </div>
@@ -164,7 +164,7 @@ export function DateRangePicker({
 
       {/* Date range summary */}
       {hasDateRange && (
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-muted-foreground">
           Showing results{" "}
           {dateFrom && (
             <>

@@ -23,6 +23,7 @@ const getConversationById = async (conversationId: string) => {
           },
         },
         character: true,
+        persona: true,
       },
     })
 

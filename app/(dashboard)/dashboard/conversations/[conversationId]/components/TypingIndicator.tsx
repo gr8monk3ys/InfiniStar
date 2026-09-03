@@ -9,6 +9,8 @@ interface TypingIndicatorProps {
   typingUsers?: string[]
   /** Whether AI is currently generating a response */
   isAITyping?: boolean
+  /** Name of the character replying; falls back to a neutral label */
+  characterName?: string | null
   /** Custom class name */
   className?: string
 }
@@ -17,17 +19,19 @@ interface TypingIndicatorProps {
  * TypingIndicator - Displays animated typing indicators for chat
  *
  * Shows "[User] is typing..." for human users
- * Shows "AI is typing..." when AI is generating a response
+ * Shows "[Character] is writing..." when the character is generating a reply
  *
  * Features:
  * - Smooth fade in/out transitions
  * - Three bouncing dots animation with staggered delays
- * - Accessible with ARIA labels and live region
+ * - Hidden from assistive tech: ConversationContainer owns the single
+ *   aria-live region that announces typing, so this never double-announces
  * - Respects reduced motion preferences
  */
 const TypingIndicator: React.FC<TypingIndicatorProps> = ({
   typingUsers = [],
   isAITyping = false,
+  characterName,
   className,
 }) => {
   // Track visibility for fade animation
@@ -54,7 +58,7 @@ const TypingIndicator: React.FC<TypingIndicatorProps> = ({
   // Generate the typing message
   const getTypingMessage = (): string => {
     if (isAITyping) {
-      return "AI is typing"
+      return `${characterName ?? "AI"} is writing`
     }
 
     if (typingUsers.length === 1) {
@@ -84,37 +88,22 @@ const TypingIndicator: React.FC<TypingIndicatorProps> = ({
         isVisible ? "translate-y-0 opacity-100" : "translate-y-1 opacity-0",
         className
       )}
-      role="status"
-      aria-live="polite"
-      aria-atomic="true"
-      aria-label={`${getTypingMessage()}...`}
+      aria-hidden="true"
     >
       {/* Animated dots container */}
       <div
         className={cn(
-          "flex items-center justify-center gap-1 rounded-full px-3 py-1.5",
-          isAITyping
-            ? "bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30"
-            : "bg-muted"
+          "chat-bubble-ai flex items-center justify-center gap-1 rounded-2xl rounded-tl-md px-3 py-1.5"
         )}
         aria-hidden="true"
       >
-        <BouncingDot delay={0} isAI={isAITyping} />
-        <BouncingDot delay={150} isAI={isAITyping} />
-        <BouncingDot delay={300} isAI={isAITyping} />
+        <BouncingDot delay={0} />
+        <BouncingDot delay={150} />
+        <BouncingDot delay={300} />
       </div>
 
       {/* Typing message */}
-      <span
-        className={cn(
-          "text-sm font-medium",
-          isAITyping
-            ? "bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent dark:from-purple-400 dark:to-pink-400"
-            : "text-muted-foreground"
-        )}
-      >
-        {getTypingMessage()}...
-      </span>
+      <span className="text-sm font-medium text-muted-foreground">{getTypingMessage()}...</span>
     </div>
   )
 }
@@ -124,16 +113,12 @@ const TypingIndicator: React.FC<TypingIndicatorProps> = ({
  */
 interface BouncingDotProps {
   delay: number
-  isAI?: boolean
 }
 
-const BouncingDot: React.FC<BouncingDotProps> = ({ delay, isAI = false }) => {
+const BouncingDot: React.FC<BouncingDotProps> = ({ delay }) => {
   return (
     <span
-      className={cn(
-        "size-2 animate-typing-bounce rounded-full",
-        isAI ? "bg-gradient-to-r from-purple-500 to-pink-500" : "bg-muted-foreground/60"
-      )}
+      className="size-1.5 animate-typing-bounce rounded-full bg-current opacity-70"
       style={{
         animationDelay: `${delay}ms`,
       }}

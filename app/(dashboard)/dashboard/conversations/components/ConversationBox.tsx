@@ -3,7 +3,7 @@
 import { memo, useCallback, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import clsx from "clsx"
-import { format } from "date-fns"
+import { format, isSameDay, isSameYear } from "date-fns"
 import { BsPinAngleFill } from "react-icons/bs"
 import { HiOutlineBellSlash } from "react-icons/hi2"
 
@@ -12,6 +12,18 @@ import Avatar from "@/app/components/Avatar"
 import AvatarGroup from "@/app/components/AvatarGroup"
 import { TagBadge } from "@/app/components/tags"
 import type { FullConversationType } from "@/app/types"
+
+/**
+ * Time for today, weekday within the last week, otherwise a short date so a
+ * returning reader can tell "Tue" from "3 Sep" at a glance.
+ */
+export function formatConversationTimestamp(value: Date | string, now = new Date()): string {
+  const date = new Date(value)
+  if (isSameDay(date, now)) return format(date, "p")
+  const dayMs = 24 * 60 * 60 * 1000
+  if (now.getTime() - date.getTime() < 6 * dayMs) return format(date, "EEE")
+  return isSameYear(date, now) ? format(date, "d MMM") : format(date, "d MMM yyyy")
+}
 
 interface ConversationBoxProps {
   data: FullConversationType
@@ -135,8 +147,11 @@ const ConversationBox: React.FC<ConversationBoxProps> = ({
               )}
             </div>
             {lastMessage?.createdAt && (
-              <p className="text-xs font-light text-muted-foreground">
-                {format(new Date(lastMessage.createdAt), "p")}
+              <p
+                className="text-xs font-light text-muted-foreground"
+                title={format(new Date(lastMessage.createdAt), "PPp")}
+              >
+                {formatConversationTimestamp(lastMessage.createdAt)}
               </p>
             )}
           </div>
@@ -165,7 +180,7 @@ const ConversationBox: React.FC<ConversationBoxProps> = ({
                   <TagBadge key={tag.id} tag={tag} size="sm" />
                 ))}
               {data.tags.length > 3 && (
-                <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                <span className="rounded-full bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
                   +{data.tags.length - 3}
                 </span>
               )}

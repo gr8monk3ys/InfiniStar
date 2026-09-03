@@ -94,14 +94,14 @@ export function TwoFactorSetup({ setupData, onVerified, onCancel }: TwoFactorSet
     return (
       <div className="space-y-6">
         <div className="text-center">
-          <h3 className="text-lg font-semibold text-gray-900">Scan QR Code</h3>
-          <p className="mt-1 text-sm text-gray-600">
+          <h3 className="text-lg font-semibold text-foreground">Scan QR Code</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
             Open your authenticator app and scan this QR code
           </p>
         </div>
 
         <div className="flex justify-center">
-          <div className="rounded-lg border-2 border-gray-200 bg-white p-4">
+          <div className="rounded-lg border-2 border-border bg-white p-4">
             <Image
               src={setupData.qrCode}
               alt="QR Code for authenticator app"
@@ -112,17 +112,17 @@ export function TwoFactorSetup({ setupData, onVerified, onCancel }: TwoFactorSet
           </div>
         </div>
 
-        <div className="rounded-lg bg-gray-50 p-4">
-          <p className="mb-2 text-sm font-medium text-gray-700">
+        <div className="rounded-lg bg-muted p-4">
+          <p className="mb-2 text-sm font-medium text-foreground">
             Cannot scan the code? Enter this key manually:
           </p>
           <div className="flex items-center gap-2">
-            <code className="flex-1 rounded bg-gray-200 px-3 py-2 font-mono text-sm">
+            <code className="flex-1 rounded bg-background px-3 py-2 font-mono text-sm text-foreground">
               {showSecret ? setupData.secret : "••••••••••••••••"}
             </code>
             <button
               onClick={() => setShowSecret(!showSecret)}
-              className="p-2 text-gray-500 hover:text-gray-700"
+              className="p-2 text-muted-foreground hover:text-foreground"
               aria-label={showSecret ? "Hide secret key" : "Show secret key"}
             >
               {showSecret ? <HiEyeSlash className="size-5" /> : <HiEye className="size-5" />}
@@ -132,7 +132,7 @@ export function TwoFactorSetup({ setupData, onVerified, onCancel }: TwoFactorSet
                 void navigator.clipboard.writeText(setupData.secret)
                 toast.success("Secret key copied")
               }}
-              className="p-2 text-gray-500 hover:text-gray-700"
+              className="p-2 text-muted-foreground hover:text-foreground"
               aria-label="Copy secret key"
             >
               <HiDocumentDuplicate className="size-5" />
@@ -141,7 +141,10 @@ export function TwoFactorSetup({ setupData, onVerified, onCancel }: TwoFactorSet
         </div>
 
         <div className="flex justify-between">
-          <button onClick={onCancel} className="text-sm text-gray-600 hover:text-gray-900">
+          <button
+            onClick={onCancel}
+            className="text-sm text-muted-foreground hover:text-foreground"
+          >
             Cancel
           </button>
           <button
@@ -149,7 +152,7 @@ export function TwoFactorSetup({ setupData, onVerified, onCancel }: TwoFactorSet
               setPhase("verifying")
               setTimeout(() => inputRefs.current[0]?.focus(), 100)
             }}
-            className="rounded-md bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700"
+            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
           >
             Continue
           </button>
@@ -162,8 +165,8 @@ export function TwoFactorSetup({ setupData, onVerified, onCancel }: TwoFactorSet
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <h3 className="text-lg font-semibold text-gray-900">Verify Setup</h3>
-        <p className="mt-1 text-sm text-gray-600">
+        <h3 className="text-lg font-semibold text-foreground">Verify Setup</h3>
+        <p className="mt-1 text-sm text-muted-foreground">
           Enter the 6-digit code from your authenticator app
         </p>
       </div>
@@ -188,7 +191,7 @@ export function TwoFactorSetup({ setupData, onVerified, onCancel }: TwoFactorSet
             onChange={(e) => handleCodeChange(index, e.target.value)}
             onKeyDown={(e) => handleKeyDown(index, e)}
             disabled={isLoading}
-            className="size-12 rounded-lg border-2 border-gray-300 text-center text-xl font-semibold focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 disabled:bg-gray-100"
+            className="size-12 rounded-lg border-2 border-input bg-background text-center text-xl font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:bg-muted"
             aria-label={`Digit ${index + 1}`}
           />
         ))}
@@ -199,14 +202,14 @@ export function TwoFactorSetup({ setupData, onVerified, onCancel }: TwoFactorSet
         <button
           onClick={() => setPhase("scanning")}
           disabled={isLoading}
-          className="text-sm text-gray-600 hover:text-gray-900"
+          className="text-sm text-muted-foreground hover:text-foreground"
         >
           Back
         </button>
         <button
           onClick={handleVerifySetup}
           disabled={isLoading || verificationCode.some((d) => !d)}
-          className="rounded-md bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isLoading ? "Verifying..." : "Verify"}
         </button>

@@ -21,7 +21,7 @@ export function ThemeSelector({ className }: ThemeSelectorProps) {
             <div
               // eslint-disable-next-line react/no-array-index-key -- Static skeleton placeholders
               key={`theme-selector-skeleton-${index}`}
-              className="aspect-[4/3] animate-pulse rounded-lg bg-gray-200 dark:bg-gray-700"
+              className="aspect-[4/3] animate-pulse rounded-lg bg-muted"
             />
           ))}
         </div>
@@ -32,8 +32,8 @@ export function ThemeSelector({ className }: ThemeSelectorProps) {
   return (
     <div className={className}>
       <div className="mb-4">
-        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Choose a Theme</h3>
-        <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+        <h3 className="text-lg font-medium text-foreground">Choose a Theme</h3>
+        <p className="mt-1 text-sm text-muted-foreground">
           Select a preset theme to customize the appearance of InfiniStar.
         </p>
       </div>

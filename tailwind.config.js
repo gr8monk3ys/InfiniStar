@@ -15,11 +15,13 @@ module.exports = {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
+        scrim: "hsl(var(--scrim))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
+          accent: "hsl(var(--primary-accent))",
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",

@@ -21,7 +21,7 @@ const LoadingModal = () => {
             className="
               fixed 
               inset-0 
-              bg-gray-100/50
+              bg-background/50
               transition-opacity
             "
           />
@@ -48,7 +48,7 @@ const LoadingModal = () => {
               leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
             >
               <Dialog.Panel>
-                <ClipLoader size={40} color="#0284c7" />
+                <ClipLoader size={40} color="hsl(var(--primary))" />
               </Dialog.Panel>
             </Transition.Child>
           </div>
