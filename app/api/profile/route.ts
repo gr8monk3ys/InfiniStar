@@ -1,16 +1,15 @@
-import { NextResponse, type NextRequest } from "next/server"
+import { NextResponse } from "next/server"
 import { clerkClient } from "@clerk/nextjs/server"
 import { z } from "zod"
 
-import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import {
   hashFallbackPassword,
   isFallbackClerkId,
   verifyFallbackPassword,
 } from "@/app/lib/fallback-auth"
-import { apiLogger } from "@/app/lib/logger"
+import { guard } from "@/app/lib/guarded-route"
 import prisma from "@/app/lib/prismadb"
-import getCurrentUser from "@/app/actions/getCurrentUser"
+import { apiLimiter, authLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 
 // Validation schema
 const updateProfileSchema = z.object({
@@ -32,24 +31,34 @@ const changePasswordSchema = z.object({
   newPassword: z.string().min(8, "Password must be at least 8 characters"),
 })
 
+/**
+ * PATCH takes two different shapes on one endpoint — a profile edit or a
+ * password change — and picks between them by which keys are present, so the
+ * guard only asserts "some JSON object" and the handler branches.
+ */
+const anyObjectSchema = z.record(z.string(), z.unknown())
+
 // PATCH /api/profile - Update user profile
-export async function PATCH(request: NextRequest) {
-  try {
-    // CSRF Protection
-    if (!verifyCsrfToken(request.headers.get("X-CSRF-Token"), getCsrfTokenFromRequest(request))) {
-      return NextResponse.json({ error: "Invalid CSRF token" }, { status: 403 })
-    }
-
-    const currentUser = await getCurrentUser()
-
-    if (!currentUser?.id || !currentUser?.email) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
-    const body = await request.json()
+export const PATCH = guard(
+  { limiter: apiLimiter, body: anyObjectSchema },
+  async ({ user, body, request }) => {
     const shouldChangePassword = "currentPassword" in body || "newPassword" in body
 
     if (shouldChangePassword) {
+      // This branch verifies a credential, so the endpoint limiter (60/min) is
+      // the wrong bound for it — that is 60 password guesses a minute. Apply the
+      // auth limiter (5 per 5 min) to the password path only, so ordinary
+      // profile edits are not throttled to five saves per five minutes.
+      // Splitting the password change onto its own route would be the cleaner
+      // fix, and is worth doing when this file is next opened.
+      const allowed = await authLimiter.check(getClientIdentifier(request))
+      if (!allowed) {
+        return NextResponse.json(
+          { error: "Too many password attempts. Please try again later." },
+          { status: 429, headers: { "Retry-After": "300" } }
+        )
+      }
+
       const validation = changePasswordSchema.safeParse(body)
 
       if (!validation.success) {
@@ -59,10 +68,10 @@ export async function PATCH(request: NextRequest) {
       const { currentPassword, newPassword } = validation.data
       const nextHashedPassword = await hashFallbackPassword(newPassword)
 
-      if (!currentUser.clerkId || isFallbackClerkId(currentUser.clerkId)) {
+      if (!user.clerkId || isFallbackClerkId(user.clerkId)) {
         // getCurrentUser() intentionally omits hashedPassword; fetch it directly here.
         const userWithPassword = await prisma.user.findUnique({
-          where: { id: currentUser.id },
+          where: { id: user.id },
           select: { hashedPassword: true },
         })
 
@@ -79,7 +88,7 @@ export async function PATCH(request: NextRequest) {
         }
 
         await prisma.user.update({
-          where: { id: currentUser.id },
+          where: { id: user.id },
           data: {
             hashedPassword: nextHashedPassword,
           },
@@ -89,7 +98,7 @@ export async function PATCH(request: NextRequest) {
       }
 
       const clerk = await clerkClient()
-      const clerkUser = await clerk.users.getUser(currentUser.clerkId)
+      const clerkUser = await clerk.users.getUser(user.clerkId)
 
       if (!clerkUser.passwordEnabled) {
         return NextResponse.json(
@@ -100,20 +109,20 @@ export async function PATCH(request: NextRequest) {
 
       try {
         await clerk.users.verifyPassword({
-          userId: currentUser.clerkId,
+          userId: user.clerkId,
           password: currentPassword,
         })
       } catch {
         return NextResponse.json({ error: "Current password is incorrect" }, { status: 400 })
       }
 
-      await clerk.users.updateUser(currentUser.clerkId, {
+      await clerk.users.updateUser(user.clerkId, {
         password: newPassword,
         signOutOfOtherSessions: false,
       })
 
       await prisma.user.update({
-        where: { id: currentUser.id },
+        where: { id: user.id },
         data: {
           hashedPassword: nextHashedPassword,
         },
@@ -146,7 +155,7 @@ export async function PATCH(request: NextRequest) {
 
     // Update user profile
     const updatedUser = await prisma.user.update({
-      where: { id: currentUser.id },
+      where: { id: user.id },
       data: updateData,
       select: {
         id: true,
@@ -165,69 +174,55 @@ export async function PATCH(request: NextRequest) {
       message: "Profile updated successfully",
       user: updatedUser,
     })
-  } catch (error: unknown) {
-    apiLogger.error({ err: error }, "Error updating profile")
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
-}
+)
 
 // GET /api/profile - Get current user profile
-export async function GET(_request: NextRequest) {
-  try {
-    const currentUser = await getCurrentUser()
+export const GET = guard({ limiter: apiLimiter }, async ({ user: currentUser }) => {
+  const user = await prisma.user.findUnique({
+    where: { id: currentUser.id },
+    select: {
+      id: true,
+      clerkId: true,
+      name: true,
+      email: true,
+      image: true,
+      bio: true,
+      location: true,
+      website: true,
+      emailVerified: true,
+      createdAt: true,
+      updatedAt: true,
+      hashedPassword: true,
+    },
+  })
 
-    if (!currentUser?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { id: currentUser.id },
-      select: {
-        id: true,
-        clerkId: true,
-        name: true,
-        email: true,
-        image: true,
-        bio: true,
-        location: true,
-        website: true,
-        emailVerified: true,
-        createdAt: true,
-        updatedAt: true,
-        hashedPassword: true,
-      },
-    })
-
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 })
-    }
-
-    const shouldLoadClerkUser =
-      Boolean(process.env.CLERK_SECRET_KEY) && user.clerkId && !isFallbackClerkId(user.clerkId)
-    const clerkUser = shouldLoadClerkUser
-      ? await (await clerkClient()).users.getUser(user.clerkId!)
-      : null
-
-    return NextResponse.json({
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        image: user.image,
-        bio: user.bio,
-        location: user.location,
-        website: user.website,
-        emailVerified: user.emailVerified,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt,
-      },
-      authMode: isFallbackClerkId(user.clerkId) ? "fallback" : "clerk",
-      hasBackupPassword: Boolean(user.hashedPassword),
-      hasPassword: clerkUser?.passwordEnabled ?? Boolean(user.hashedPassword),
-      twoFactorEnabled: clerkUser?.twoFactorEnabled ?? false,
-    })
-  } catch (error: unknown) {
-    apiLogger.error({ err: error }, "Error fetching profile")
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+  if (!user) {
+    return NextResponse.json({ error: "User not found" }, { status: 404 })
   }
-}
+
+  const shouldLoadClerkUser =
+    Boolean(process.env.CLERK_SECRET_KEY) && user.clerkId && !isFallbackClerkId(user.clerkId)
+  const clerkUser = shouldLoadClerkUser
+    ? await (await clerkClient()).users.getUser(user.clerkId!)
+    : null
+
+  return NextResponse.json({
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      image: user.image,
+      bio: user.bio,
+      location: user.location,
+      website: user.website,
+      emailVerified: user.emailVerified,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    },
+    authMode: isFallbackClerkId(user.clerkId) ? "fallback" : "clerk",
+    hasBackupPassword: Boolean(user.hashedPassword),
+    hasPassword: clerkUser?.passwordEnabled ?? Boolean(user.hashedPassword),
+    twoFactorEnabled: clerkUser?.twoFactorEnabled ?? false,
+  })
+})

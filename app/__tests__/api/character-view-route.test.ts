@@ -22,6 +22,10 @@ jest.mock("@/app/lib/rate-limit", () => ({
   getClientIdentifier: jest.fn(() => "127.0.0.1"),
 }))
 
+// The guard verifies the double-submit token for real here: createRequest sends
+// a header that matches its cookie, and the forged-token test sends one that
+// does not.
+
 jest.mock("@/app/lib/logger", () => ({
   __esModule: true,
   default: {
@@ -39,9 +43,13 @@ jest.mock("@/app/lib/logger", () => ({
 
 const VALID_ID = "11111111-1111-4111-8111-111111111111"
 
-function createRequest() {
+function createRequest(csrfHeader = "beacon-token") {
   return new NextRequest(`http://localhost:3000/api/characters/${VALID_ID}/view`, {
     method: "POST",
+    headers: {
+      "X-CSRF-Token": csrfHeader,
+      cookie: "csrf-token=beacon-token",
+    },
   })
 }
 
@@ -83,6 +91,24 @@ describe("POST /api/characters/[characterId]/view", () => {
 
     expect(response.status).toBe(429)
     expect(prisma.character.update).not.toHaveBeenCalled()
+  })
+
+  /**
+   * Deliberate, not an oversight. CSRF defends against an attacker spending a
+   * victim's ambient credentials; this endpoint takes none and only increments
+   * a public counter, so there is nothing to forge — anyone wanting to inflate
+   * a count can fetch a token themselves. Requiring one would cost every cold
+   * character page an extra round trip to /api/csrf and would break view
+   * counting silently whenever that request failed. The rate limiter above is
+   * the control that actually bounds abuse here.
+   */
+  it("does not require a CSRF token, because there is no credential to forge", async () => {
+    const response = await POST(createRequest("forged-token"), {
+      params: Promise.resolve({ characterId: VALID_ID }),
+    })
+
+    expect(response.status).toBe(200)
+    expect(prisma.character.update).toHaveBeenCalledTimes(1)
   })
 
   it("returns 200 (fire-and-forget) when the record does not exist", async () => {

@@ -8,6 +8,7 @@ const mockGetCurrentUser = jest.fn()
 const mockCount = jest.fn()
 const mockUpsert = jest.fn()
 const mockDeleteMany = jest.fn()
+const mockLimiterCheck = jest.fn()
 
 jest.mock("@/app/actions/getCurrentUser", () => ({
   __esModule: true,
@@ -25,10 +26,18 @@ jest.mock("@/app/lib/prismadb", () => ({
   },
 }))
 
+jest.mock("@/app/lib/rate-limit", () => ({
+  apiLimiter: { check: (...args: unknown[]) => mockLimiterCheck(...args) },
+  getClientIdentifier: () => "127.0.0.1",
+}))
+
 jest.mock("@/app/lib/web-push", () => ({
   getVapidPublicKey: () => "test-public-key",
   sendWebPushToUser: jest.fn(),
 }))
+
+/** Next always passes a context; only dynamic segments put anything in it. */
+const routeCtx = () => ({ params: Promise.resolve({}) })
 
 function createRequest(url: string, method: string, body?: unknown): NextRequest {
   return new NextRequest(url, {
@@ -49,6 +58,7 @@ describe("/api/notifications/push", () => {
     jest.resetModules()
     jest.clearAllMocks()
     process.env = { ...originalEnv, VAPID_PRIVATE_KEY: "test-private-key" }
+    mockLimiterCheck.mockResolvedValue(true)
     mockGetCurrentUser.mockResolvedValue({ id: "user-1", email: "user@example.com" })
     mockCount.mockResolvedValue(2)
     mockUpsert.mockResolvedValue({ id: "sub-1" })
@@ -61,18 +71,22 @@ describe("/api/notifications/push", () => {
 
   async function runGet() {
     const { GET } = await import("@/app/api/notifications/push/route")
-    return GET(createRequest("http://localhost:3000/api/notifications/push", "GET"))
+    return GET(createRequest("http://localhost:3000/api/notifications/push", "GET"), routeCtx())
   }
 
   async function runPost(body: unknown) {
     const { POST } = await import("@/app/api/notifications/push/route")
-    return POST(createRequest("http://localhost:3000/api/notifications/push", "POST", body))
+    return POST(
+      createRequest("http://localhost:3000/api/notifications/push", "POST", body),
+      routeCtx()
+    )
   }
 
   async function runDelete(body?: unknown) {
     const { DELETE } = await import("@/app/api/notifications/push/route")
     return DELETE(
-      createRequest("http://localhost:3000/api/notifications/push", "DELETE", body as unknown)
+      createRequest("http://localhost:3000/api/notifications/push", "DELETE", body as unknown),
+      routeCtx()
     )
   }
 
@@ -133,6 +147,20 @@ describe("/api/notifications/push", () => {
     )
   })
 
+  it("POST returns 429 when the limiter refuses", async () => {
+    mockLimiterCheck.mockResolvedValue(false)
+    const res = await runPost({
+      subscription: {
+        endpoint: "https://example.com/push/1",
+        keys: { p256dh: "p256", auth: "auth" },
+      },
+    })
+
+    expect(res.status).toBe(429)
+    expect(res.headers.get("Retry-After")).toBe("60")
+    expect(mockUpsert).not.toHaveBeenCalled()
+  })
+
   it("DELETE deletes by endpoint when provided", async () => {
     const res = await runDelete({ endpoint: "https://example.com/push/1" })
     expect(res.status).toBe(200)
@@ -151,7 +179,7 @@ describe("/api/notifications/push", () => {
       },
     })
 
-    const res = await DELETE(req)
+    const res = await DELETE(req, routeCtx())
     expect(res.status).toBe(200)
     expect(mockDeleteMany).toHaveBeenCalledWith({ where: { userId: "user-1" } })
   })

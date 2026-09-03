@@ -1,9 +1,9 @@
-import { NextResponse, type NextRequest } from "next/server"
-import { auth } from "@clerk/nextjs/server"
+import { NextResponse } from "next/server"
 import { z } from "zod"
 
-import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
+import { guard } from "@/app/lib/guarded-route"
 import prisma from "@/app/lib/prismadb"
+import { apiLimiter } from "@/app/lib/rate-limit"
 import { sanitizePlainText } from "@/app/lib/sanitize"
 
 const reportSchema = z.object({
@@ -48,37 +48,20 @@ function canUserReviewAllReports(email: string | null | undefined): boolean {
   return reviewerEmails.includes(email.toLowerCase())
 }
 
-async function getCurrentUserForModeration() {
-  const { userId } = await auth()
-  if (!userId) {
-    return null
-  }
-
-  return prisma.user.findUnique({
-    where: { clerkId: userId },
-    select: { id: true, email: true },
-  })
-}
-
-export async function GET(request: NextRequest) {
-  const currentUser = await getCurrentUserForModeration()
-  if (!currentUser) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
+export const GET = guard({ limiter: apiLimiter }, async ({ user, request }) => {
   const { searchParams } = new URL(request.url)
   const queryValidation = reportQuerySchema.safeParse(Object.fromEntries(searchParams.entries()))
   if (!queryValidation.success) {
     return NextResponse.json({ error: queryValidation.error.issues[0].message }, { status: 400 })
   }
 
-  const canReviewAll = canUserReviewAllReports(currentUser.email)
+  const canReviewAll = canUserReviewAllReports(user.email)
 
   const { status, targetType, limit } = queryValidation.data
 
   const reports = await prisma.contentReport.findMany({
     where: {
-      ...(canReviewAll ? {} : { reporterId: currentUser.id }),
+      ...(canReviewAll ? {} : { reporterId: user.id }),
       ...(status ? { status } : {}),
       ...(targetType ? { targetType } : {}),
     },
@@ -96,85 +79,53 @@ export async function GET(request: NextRequest) {
   })
 
   return NextResponse.json({ reports, canReviewAll })
-}
+})
 
-export async function POST(request: NextRequest) {
-  const currentUser = await getCurrentUserForModeration()
-  if (!currentUser) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
-  const headerToken = request.headers.get("X-CSRF-Token")
-  const cookieToken = getCsrfTokenFromRequest(request)
-
-  if (!verifyCsrfToken(headerToken, cookieToken)) {
-    return NextResponse.json({ error: "Invalid CSRF token" }, { status: 403 })
-  }
-
-  const body = await request.json()
-  const validation = reportSchema.safeParse(body)
-  if (!validation.success) {
-    return NextResponse.json({ error: validation.error.issues[0].message }, { status: 400 })
-  }
-
+export const POST = guard({ limiter: apiLimiter, body: reportSchema }, async ({ user, body }) => {
   const report = await prisma.contentReport.create({
     data: {
-      reporterId: currentUser.id,
-      targetType: validation.data.targetType,
-      targetId: validation.data.targetId,
-      reason: validation.data.reason,
-      details: validation.data.details,
+      reporterId: user.id,
+      targetType: body.targetType,
+      targetId: body.targetId,
+      reason: body.reason,
+      details: body.details,
     },
   })
 
   return NextResponse.json({ report }, { status: 201 })
-}
+})
 
-export async function PATCH(request: NextRequest) {
-  const currentUser = await getCurrentUserForModeration()
-  if (!currentUser) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+export const PATCH = guard(
+  { limiter: apiLimiter, body: reportUpdateSchema },
+  async ({ user, body }) => {
+    if (!canUserReviewAllReports(user.email)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+    }
+
+    const { reportId, status, resolutionNote } = body
+    const existingReport = await prisma.contentReport.findUnique({
+      where: { id: reportId },
+    })
+    if (!existingReport) {
+      return NextResponse.json({ error: "Report not found" }, { status: 404 })
+    }
+
+    const sanitizedNote = resolutionNote ? sanitizePlainText(resolutionNote) : null
+    const nextDetails = sanitizedNote
+      ? `${existingReport.details ? `${existingReport.details}\n\n` : ""}Reviewer note: ${sanitizedNote}`
+      : existingReport.details
+
+    const shouldSetResolvedState = status === "RESOLVED" || status === "DISMISSED"
+    const report = await prisma.contentReport.update({
+      where: { id: reportId },
+      data: {
+        status,
+        details: nextDetails || null,
+        resolvedAt: shouldSetResolvedState ? new Date() : null,
+        resolvedBy: shouldSetResolvedState ? user.id : null,
+      },
+    })
+
+    return NextResponse.json({ report })
   }
-
-  if (!canUserReviewAllReports(currentUser.email)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 })
-  }
-
-  const headerToken = request.headers.get("X-CSRF-Token")
-  const cookieToken = getCsrfTokenFromRequest(request)
-  if (!verifyCsrfToken(headerToken, cookieToken)) {
-    return NextResponse.json({ error: "Invalid CSRF token" }, { status: 403 })
-  }
-
-  const body = await request.json()
-  const validation = reportUpdateSchema.safeParse(body)
-  if (!validation.success) {
-    return NextResponse.json({ error: validation.error.issues[0].message }, { status: 400 })
-  }
-
-  const { reportId, status, resolutionNote } = validation.data
-  const existingReport = await prisma.contentReport.findUnique({
-    where: { id: reportId },
-  })
-  if (!existingReport) {
-    return NextResponse.json({ error: "Report not found" }, { status: 404 })
-  }
-
-  const sanitizedNote = resolutionNote ? sanitizePlainText(resolutionNote) : null
-  const nextDetails = sanitizedNote
-    ? `${existingReport.details ? `${existingReport.details}\n\n` : ""}Reviewer note: ${sanitizedNote}`
-    : existingReport.details
-
-  const shouldSetResolvedState = status === "RESOLVED" || status === "DISMISSED"
-  const report = await prisma.contentReport.update({
-    where: { id: reportId },
-    data: {
-      status,
-      details: nextDetails || null,
-      resolvedAt: shouldSetResolvedState ? new Date() : null,
-      resolvedBy: shouldSetResolvedState ? currentUser.id : null,
-    },
-  })
-
-  return NextResponse.json({ report })
-}
+)
