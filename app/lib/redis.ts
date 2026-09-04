@@ -59,6 +59,10 @@ export function getRedisClient(): Redis | null {
   }
 
   try {
+    // Reachable: the constructor throws on a malformed URL, which is precisely
+    // the misconfiguration that caused this incident. env.mjs validates the
+    // shape, but builds run with SKIP_ENV_VALIDATION and this reads process.env
+    // directly, so the guard cannot be assumed.
     redisClient = new Redis({ url, token })
     return redisClient
   } catch (error) {
@@ -79,8 +83,7 @@ export async function isRedisAvailable(): Promise<boolean> {
   }
 
   try {
-    const result = await client.ping()
-    return typeof result === "string" && result.toUpperCase() === "PONG"
+    return (await client.ping()) === "PONG"
   } catch {
     return false
   }

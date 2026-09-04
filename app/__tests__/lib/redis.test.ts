@@ -1,20 +1,30 @@
 /**
- * The client is built from env on first call and memoised, so every case
- * resets the module registry and the env it reads.
+ * The client is built from env on first call and memoised, so every case resets
+ * the module registry and the env it reads. Both suites below need that, so the
+ * hooks live at file scope — Jest applies them to each nested describe.
  */
+const originalEnv = process.env
+
+/**
+ * `NODE_ENV` is typed read-only, so it cannot be assigned directly even though
+ * it is an ordinary property at runtime.
+ */
+function setNodeEnv(value: string): void {
+  Object.defineProperty(process.env, "NODE_ENV", { value, configurable: true, writable: true })
+}
+
+beforeEach(() => {
+  jest.resetModules()
+  process.env = { ...originalEnv }
+  delete process.env.UPSTASH_REDIS_REST_URL
+  delete process.env.UPSTASH_REDIS_REST_TOKEN
+})
+
+afterAll(() => {
+  process.env = originalEnv
+})
+
 describe("getRedisClient", () => {
-  const originalEnv = process.env
-
-  beforeEach(() => {
-    jest.resetModules()
-    process.env = { ...originalEnv }
-    delete process.env.UPSTASH_REDIS_REST_URL
-    delete process.env.UPSTASH_REDIS_REST_TOKEN
-  })
-
-  afterAll(() => {
-    process.env = originalEnv
-  })
 
   it("returns null when Upstash is not configured", async () => {
     const { getRedisClient } = await import("@/app/lib/redis")
@@ -64,30 +74,6 @@ describe("getRedisClient", () => {
  * nothing reported it anywhere a person would look.
  */
 describe("production fallback reporting", () => {
-  const originalEnv = process.env
-
-  /**
-   * `NODE_ENV` is typed read-only, so it cannot be assigned directly even
-   * though it is an ordinary property at runtime.
-   */
-  function setNodeEnv(value: string): void {
-    Object.defineProperty(process.env, "NODE_ENV", {
-      value,
-      configurable: true,
-      writable: true,
-    })
-  }
-
-  beforeEach(() => {
-    jest.resetModules()
-    process.env = { ...originalEnv }
-    delete process.env.UPSTASH_REDIS_REST_URL
-    delete process.env.UPSTASH_REDIS_REST_TOKEN
-  })
-
-  afterAll(() => {
-    process.env = originalEnv
-  })
 
   it("reports to Sentry when it falls back in production", async () => {
     const captureMessage = jest.fn()

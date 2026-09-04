@@ -75,7 +75,7 @@ export class InMemoryRateLimiter extends KitRateLimiter {
  *
  * When Upstash is configured and reachable, returns a limiter backed by a
  * Redis counter that works correctly across multiple server instances and
- * survives restarts. The ioredis client already satisfies the kit's `RedisLike`
+ * survives restarts. The Upstash client already satisfies the kit's `RedisLike`
  * shape (`incr` / `pexpire` / `pttl` / `del`), so no adapter is needed.
  *
  * When Redis is unavailable, falls back to InMemoryRateLimiter.

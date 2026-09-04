@@ -18,6 +18,12 @@ declare global {
  * `disable` is deliberately not in this set: a local or containerised database
  * has no certificate to verify, and upgrading it would break development and
  * the integration suite.
+ *
+ * `DIRECT_URL` is deliberately out of scope. It is consumed only by
+ * `prisma.config.ts`, which hands it to Prisma's own schema engine for
+ * migrations — that engine parses its own connection string and never goes
+ * through the `pg` / `pg-connection-string` packages this deprecation belongs
+ * to.
  */
 const IMPLICIT_VERIFY_FULL_MODES = new Set(["prefer", "require", "verify-ca"])
 
