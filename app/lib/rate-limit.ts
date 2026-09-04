@@ -61,7 +61,7 @@ function build(store: RateLimitStore, limit: number, windowMs: number): RateLimi
  * - Does not work correctly with multiple server instances (horizontal scaling)
  *
  * This class is used as the fallback when Redis is not available.
- * When REDIS_URL is configured, a Redis-backed store is used instead.
+ * When Upstash is configured, a Redis-backed store is used instead.
  */
 export class InMemoryRateLimiter extends KitRateLimiter {
   constructor(limit: number = 10, windowMs: number = 60000) {
@@ -73,7 +73,7 @@ export class InMemoryRateLimiter extends KitRateLimiter {
  * Factory function that creates either a Redis-backed or in-memory rate limiter
  * depending on whether Redis is available.
  *
- * When REDIS_URL is set and Redis is reachable, returns a limiter backed by a
+ * When Upstash is configured and reachable, returns a limiter backed by a
  * Redis counter that works correctly across multiple server instances and
  * survives restarts. The ioredis client already satisfies the kit's `RedisLike`
  * shape (`incr` / `pexpire` / `pttl` / `del`), so no adapter is needed.

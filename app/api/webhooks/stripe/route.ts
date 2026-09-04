@@ -530,7 +530,7 @@ export async function POST(req: Request) {
   // Idempotency guard: Stripe delivers at least once and retries every non-2xx,
   // so the same event id arrives repeatedly and concurrently. The record of
   // "already handled" lives in Postgres, which is mandatory for this app -- not
-  // in Redis, which is optional (REDIS_URL) and whose absence used to make this
+  // in Redis, which is optional (Upstash) and whose absence used to make this
   // guard silently disappear, leaving the handlers below (tip checkout, creator
   // subscription checkout, subscription upserts) exposed to every retry.
   //
