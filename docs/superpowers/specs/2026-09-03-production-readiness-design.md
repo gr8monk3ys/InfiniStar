@@ -184,9 +184,20 @@ The 503 has stood long enough that nobody noticed, which says more about
 alerting than about Redis. Sentry is wired (`tracesSampleRate: 0.1`) and the
 runtime log is otherwise clean.
 
-**Change.** A scheduled probe of `/api/health` that actually pages on a
-non-200. Audit Sentry alert rules. Move the 5 server-side `console.*` calls in
-`app/lib` to the structured logger.
+**Change.** Report the degradation from the code path that causes it: when
+`getRedisClient()` returns null in production, rate limiting and 2FA tokens have
+silently become per-instance, so that call reports to Sentry at error level,
+once per cold start.
+
+A scheduled probe of `/api/health` was considered and rejected. Every cron in
+`vercel.json` runs daily, which is this project's plan granularity, so a probe
+would find an outage up to 24 hours late. The fallback path fires on real
+traffic instead. Pair it with a Sentry alert rule that reaches a person — the
+report existing is not the same as someone seeing it, and that gap is exactly
+what let the original 503 stand.
+
+Also audit the existing Sentry alert rules, and move the 5 server-side
+`console.*` calls in `app/lib` to the structured logger.
 
 **Explicitly not doing:** a blanket `console.*` → logger migration. 31 of the
 36 calls are in client components and hooks, where `console.error` is the
@@ -249,4 +260,6 @@ Eight PRs, each independently green and reviewable, each branched from
 - The guard check passes, and every allowlist entry states why the guard
   cannot express that route.
 - `coverageThreshold` holds at lib/api 80%, global 60%.
+- A production fallback to in-memory storage reports to Sentry, and an alert
+  rule on it reaches a person.
 - No document names a path, script, address or domain that does not resolve.
