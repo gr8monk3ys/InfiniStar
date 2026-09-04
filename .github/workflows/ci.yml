@@ -88,3 +88,41 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bunx prisma migrate deploy
       - run: bun run test:integration
+
+  # 35 collected tests (many specs hold conditionally-skipped describes, so the
+  # collected count is well below the declaration count). Every network call is
+  # intercepted with page.route(), so this needs no database — only the app.
+  e2e:
+    name: e2e
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.8"
+
+      - name: Load CI environment
+        run: |
+          while IFS='=' read -r key value; do
+            [[ "$key" =~ ^#.*$ || -z "$key" ]] && continue
+            key=$(echo "$key" | xargs)
+            value=$(echo "$value" | xargs)
+            [ -n "$key" ] && echo "$key=$value" >> "$GITHUB_ENV"
+          done < .env.ci.example
+
+      - run: bun install --frozen-lockfile
+      - run: bunx playwright install --with-deps chromium
+
+      # playwright.config.ts's webServer builds and starts the app itself.
+      - run: bun run test:e2e
+        env:
+          CI: true
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
