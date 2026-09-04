@@ -88,8 +88,8 @@ set -a; source .env.ci.example; set +a
 bun run test:e2e
 ```
 
-Expected: Playwright builds the app, starts it on port 3101, and runs 128
-tests. Record which specs fail and why. `payments-live-probe.spec.ts` is
+Expected: Playwright builds the app, starts it on port 3101, and runs 35
+collected tests. Record which specs fail and why. `payments-live-probe.spec.ts` is
 expected to self-skip (it calls `test.skip` without live credentials).
 
 - [ ] **Step 4: Record findings in the plan**
@@ -97,6 +97,36 @@ expected to self-skip (it calls `test.skip` without live credentials).
 Append a `### Findings` block under this task listing: exact pass/fail counts,
 any spec that needs `test.skip` in CI, and the env vars that turned out to be
 required. Tasks 2 and 3 consume this.
+
+### Findings (recorded 2026-09-03)
+
+**Integration** — works as-is. `postgres:16`, `prisma migrate deploy` applies
+all 21 migrations, then 2 suites / **14 tests pass in 2.0s**. No code changes
+needed; the job simply had to exist.
+
+**e2e** — the suite collects **35 tests, not 128**. The 128 figure came from
+counting `test(` declarations; most sit inside `describe` blocks that skip
+themselves without `E2E_ASSERT_AUTH_REDIRECTS` or live credentials. One test
+self-skips (`payments-live-probe`).
+
+Of those 35, **6 failed, all stale tests rather than app defects**:
+
+| Test                                        | Cause                                                                                                                                                            |
+| ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `auth.spec.ts:14`                           | `locator("main, body")` matches both, and Playwright strict mode rejects a locator resolving to two elements. The app grew a `#main-content` skip-link landmark. |
+| `payments.spec.ts:97`, `pricing.spec.ts:13` | Assert the signed-out "Upgrade to PRO" CTA points at `/sign-in`. It points at `/sign-up`, which is correct — a visitor with no account belongs in registration.  |
+| `payments.spec.ts:106`                      | Looks for "Get Started Free". The CTA reads "Create Free Account".                                                                                               |
+| `pricing.spec.ts:4`, `pricing.spec.ts:30`   | Assert the h1 reads "Simple, transparent pricing". The PR #50 rebrand replaced it with "For curious chatters and serious creators".                              |
+
+All six were corrected against the app's verified behavior — probed with
+`curl` against a locally built server — rather than the reverse. Result:
+**34 passed, 1 skipped, 0 failed**.
+
+**One config change was required.** The webServer budget was 180s, but its
+command builds before it starts: ~150s locally, and a GitHub runner is slower.
+An expired budget surfaces as `ERR_CONNECTION_REFUSED` on every test rather
+than as a timeout, which is exactly how the first local run presented. Raised
+to 300s.
 
 - [ ] **Step 5: Tear down**
 
@@ -333,8 +363,8 @@ git commit -m "ci: pin coverage at the measured floor so it cannot regress"
 ```bash
 git push -u origin ci/gate-integration-and-e2e
 gh pr create --title "ci: run integration and e2e, pin the coverage floor" --body "$(cat <<'EOF'
-128 Playwright tests across 13 specs and 2 integration suites exist in this
-repo and have never run in CI. Both configs already name a CI job that was
+35 collected Playwright tests across 13 specs and 2 integration suites exist
+in this repo and have never run in CI. Both configs already name a CI job that was
 never written. The money path and the auth path were covered only by tests
 nobody ran.
 

@@ -97,8 +97,10 @@ deprecation warning is 52 of 52 production log events, and `pg` v9 /
 `.github/workflows/ci.yml` runs lint → design:check → typecheck → unit →
 build. It does not run:
 
-- **128 Playwright tests** across 13 specs, covering payments, auth redirects,
-  conversation sharing, account deletion and voice.
+- **35 collected Playwright tests** across 13 specs, covering payments, auth
+  redirects, conversation sharing, account deletion and voice. (The suite
+  declares more; most sit in describe blocks that skip themselves without
+  live credentials.)
 - **2 integration suites** (`app/__tests__/integration/`) against real Postgres.
 
 Both configs already reference a CI job that was never written —
