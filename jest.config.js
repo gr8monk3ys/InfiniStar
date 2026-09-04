@@ -22,6 +22,17 @@ const customJestConfig = {
     "!app/**/*.stories.{js,jsx,ts,tsx}",
     "!app/**/_*.{js,jsx,ts,tsx}",
   ],
+  // Pinned at the 2026-09-03 measured floor (29.16/23.83/21.65/29.84) minus
+  // two points of slack. The point is that coverage cannot regress while it is
+  // being raised. Raised deliberately; never lowered to make a build pass.
+  coverageThreshold: {
+    global: {
+      statements: 27,
+      branches: 21,
+      functions: 19,
+      lines: 27,
+    },
+  },
   testMatch: ["**/__tests__/**/*.[jt]s?(x)", "**/?(*.)+(spec|test).[jt]s?(x)"],
   testPathIgnorePatterns: [
     "/node_modules/",

@@ -58,6 +58,10 @@ export default defineConfig({
           `bash -lc 'set -a; [ -f .env.ci.example ] && source .env.ci.example; set +a; SKIP_ENV_VALIDATION=1 SKIP_CLERK_AUTH_HANDSHAKE=${skipClerkAuthHandshake} NEXT_PUBLIC_APP_URL=http://localhost:3101 PORT=3101 bun run build && SKIP_ENV_VALIDATION=1 SKIP_CLERK_AUTH_HANDSHAKE=${skipClerkAuthHandshake} NEXT_PUBLIC_APP_URL=http://localhost:3101 PORT=3101 bun run start'`,
         url: defaultBaseURL,
         reuseExistingServer: false,
-        timeout: 180000,
+        // The command builds before it starts. That took ~150s on an
+        // M-series Mac, and a GitHub runner is slower, so 180s left no
+        // headroom — an expired budget surfaces as ERR_CONNECTION_REFUSED
+        // on every test rather than as a timeout.
+        timeout: 300000,
       },
 })
