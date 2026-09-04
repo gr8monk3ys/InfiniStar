@@ -1,27 +1,29 @@
-import Redis from "ioredis"
+import { captureMessage } from "@sentry/nextjs"
+import { Redis } from "@upstash/redis"
 
 import { dbLogger } from "@/app/lib/logger"
 
 /**
- * Redis Client Singleton
+ * Redis client singleton.
  *
- * Provides a shared Redis connection for rate limiting, 2FA token storage,
- * and other distributed state needs. Falls back gracefully when REDIS_URL
- * is not configured -- callers should check for null and use in-memory
- * alternatives.
+ * Upstash's REST client, not ioredis. A serverless function that opens a raw
+ * TCP connection at module load — which is what `new Redis(url, { lazyConnect:
+ * false })` did — leaks a connection per cold start and cannot survive the
+ * platform freezing the instance between invocations. The REST client holds no
+ * socket, so there is nothing to leak and nothing to reconnect.
+ *
+ * `RedisLike` in `@gr8monk3ys/next-kit/rate-limit` is documented as satisfied
+ * by this client as-is (`incr`, `pexpire`, `pttl`, `del`), so `rate-limit.ts`
+ * needs no change.
+ *
+ * Returns null when Upstash is not configured, and callers fall back to
+ * in-memory storage. That is correct locally and is NOT correct in production,
+ * where it makes rate limiting per-instance — `/api/health` reports degraded
+ * when it happens there.
  */
-
 let redisClient: Redis | null = null
 let connectionAttempted = false
 
-/**
- * Returns the singleton Redis client, or null if Redis is not configured
- * or the connection failed.
- *
- * The client is created lazily on first call and reused for all subsequent
- * calls. If REDIS_URL is not set, this always returns null without logging
- * repeated warnings.
- */
 export function getRedisClient(): Redis | null {
   if (connectionAttempted) {
     return redisClient
@@ -29,60 +31,51 @@ export function getRedisClient(): Redis | null {
 
   connectionAttempted = true
 
-  const redisUrl = process.env.REDIS_URL
+  const url = process.env.UPSTASH_REDIS_REST_URL
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN
 
-  if (!redisUrl) {
-    dbLogger.warn(
-      "REDIS_URL is not configured. Falling back to in-memory storage. " +
-        "Set REDIS_URL for distributed rate limiting and 2FA token storage."
-    )
+  if (!url || !token) {
+    const message =
+      "Upstash is not configured. Falling back to in-memory storage. " +
+      "Set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN for " +
+      "distributed rate limiting and 2FA token storage."
+
+    dbLogger.warn(message)
+
+    // In production this is not a warning, it is an outage — rate limiting and
+    // 2FA tokens silently become per-instance. The original incident stood for
+    // days because nothing reported it anywhere a person would look.
+    //
+    // `connectionAttempted` is already true above, so this fires once per cold
+    // start rather than once per request. A scheduled probe was the obvious
+    // alternative and is worse here: every cron in vercel.json runs daily, so
+    // a probe would find the outage up to 24 hours late. This fires on real
+    // traffic.
+    if (process.env.NODE_ENV === "production") {
+      captureMessage(message, { level: "error" })
+    }
+
     return null
   }
 
   try {
-    redisClient = new Redis(redisUrl, {
-      maxRetriesPerRequest: 3,
-      retryStrategy(times: number): number | null {
-        if (times > 5) {
-          dbLogger.error("Max reconnection attempts reached. Giving up.")
-          return null
-        }
-        // Exponential backoff: 200ms, 400ms, 800ms, 1600ms, 3200ms
-        const delay = Math.min(times * 200, 5000)
-        return delay
-      },
-      lazyConnect: false,
-      enableReadyCheck: true,
-      connectTimeout: 10000,
-    })
-
-    redisClient.on("connect", () => {
-      dbLogger.info("Redis connected successfully")
-    })
-
-    redisClient.on("error", (error: Error) => {
-      dbLogger.error({ err: error }, "Redis connection error")
-    })
-
-    redisClient.on("close", () => {
-      dbLogger.warn("Redis connection closed")
-    })
-
+    // Reachable: the constructor throws on a malformed URL, which is precisely
+    // the misconfiguration that caused this incident. env.mjs validates the
+    // shape, but builds run with SKIP_ENV_VALIDATION and this reads process.env
+    // directly, so the guard cannot be assumed.
+    redisClient = new Redis({ url, token })
     return redisClient
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error"
     dbLogger.error(
-      { err: error instanceof Error ? error : new Error(message) },
-      "Failed to create Redis client. Falling back to in-memory storage."
+      { err: error instanceof Error ? error : new Error(String(error)) },
+      "Failed to create the Upstash client. Falling back to in-memory storage."
     )
     redisClient = null
     return null
   }
 }
 
-/**
- * Checks whether a Redis connection is available and responsive.
- */
+/** Whether Redis is configured and responding. Drives `/api/health`. */
 export async function isRedisAvailable(): Promise<boolean> {
   const client = getRedisClient()
   if (!client) {
@@ -90,8 +83,7 @@ export async function isRedisAvailable(): Promise<boolean> {
   }
 
   try {
-    const result = await client.ping()
-    return result === "PONG"
+    return (await client.ping()) === "PONG"
   } catch {
     return false
   }

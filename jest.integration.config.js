@@ -28,7 +28,7 @@ const customJestConfig = {
 module.exports = async () => {
   const config = await createJestConfig(customJestConfig)()
   config.transformIgnorePatterns = [
-    "/node_modules/(?!(react-icons|@radix-ui|class-variance-authority|tailwind-merge|nanoid|@t3-oss)/)",
+    "/node_modules/(?!(react-icons|@radix-ui|class-variance-authority|tailwind-merge|nanoid|@t3-oss|@upstash|uncrypto)/)",
     "^.+\\.module\\.(css|sass|scss)$",
   ]
   return config
