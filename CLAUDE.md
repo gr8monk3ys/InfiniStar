@@ -53,3 +53,22 @@ CI (`.github/workflows/ci.yml`, one job named `CI`) runs exactly lint → typech
 - Migrations need `DIRECT_URL`: Neon's pooled connection cannot run them. It is
   set in the Vercel project; locally, `vercel env pull .env` then run, because
   `prisma.config.ts` reads `.env` and not `.env.local`.
+
+## Agent skills
+
+### Issue tracker
+
+Issues live in GitHub Issues on `gr8monk3ys/InfiniStar`, driven by the `gh` CLI.
+See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The five canonical roles, each label string equal to its name: `needs-triage`,
+`needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See
+`docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: `CONTEXT.md` and `docs/adr/` at the repo root. Both exist and
+are worth reading before changing anything in an area they cover. See
+`docs/agents/domain.md`.
