@@ -13,3 +13,16 @@ The skills speak in terms of five canonical triage roles. This file maps those r
 When a skill mentions a role (e.g. "apply the AFK-ready triage label"), use the corresponding label string from this table.
 
 Edit the right-hand column to match whatever vocabulary you actually use.
+
+## Which of these exist today
+
+Only `wontfix` exists in the repo right now; the other four have never been
+created. `gh issue edit --add-label` fails on a label that does not exist, so
+create one before first use rather than after a skill has already errored:
+
+```bash
+gh label create needs-triage    --description "Maintainer needs to evaluate this issue"
+gh label create needs-info      --description "Waiting on reporter for more information"
+gh label create ready-for-agent --description "Fully specified, ready for an AFK agent"
+gh label create ready-for-human --description "Requires human implementation"
+```
