@@ -94,19 +94,22 @@ test.describe("Pricing Page (public)", () => {
     await expect(page.getByText(/200 ai memories/i).first()).toBeVisible()
   })
 
-  test("should show Upgrade to PRO link pointing to sign-in for unauthenticated visitors", async ({
+  // Sign-UP, not sign-in: a signed-out visitor clicking an upgrade CTA has no
+  // account yet, so the funnel sends them to registration.
+  test("should show Upgrade to PRO link pointing to sign-up for unauthenticated visitors", async ({
     page,
   }) => {
     await page.goto("/pricing")
     const upgradeLink = page.getByRole("link", { name: /upgrade to pro/i }).first()
     await expect(upgradeLink).toBeVisible()
-    await expect(upgradeLink).toHaveAttribute("href", "/sign-in")
+    await expect(upgradeLink).toHaveAttribute("href", "/sign-up")
   })
 
-  test("should show Get Started Free link for unauthenticated visitors", async ({ page }) => {
+  test("should show the free-plan CTA for unauthenticated visitors", async ({ page }) => {
     await page.goto("/pricing")
-    const freeLink = page.getByRole("link", { name: /get started free/i }).first()
+    const freeLink = page.getByRole("link", { name: /create free account/i }).first()
     await expect(freeLink).toBeVisible()
+    await expect(freeLink).toHaveAttribute("href", "/sign-up")
   })
 
   test("should render FAQ section with expected questions", async ({ page }) => {

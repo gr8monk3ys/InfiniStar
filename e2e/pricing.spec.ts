@@ -5,17 +5,20 @@ test.describe("Pricing Page", () => {
     await page.goto("/pricing")
 
     await expect(page).toHaveTitle(/pricing|infinistar/i)
-    await expect(page.getByRole("heading", { name: /simple, transparent pricing/i })).toBeVisible()
+    // The h1 is brand copy and has changed once already; assert that the page
+    // has a heading, not which words are in it. The plan headings below are
+    // the part that actually has to be right.
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible()
     await expect(page.getByRole("heading", { name: /free/i }).first()).toBeVisible()
     await expect(page.getByRole("heading", { name: /pro/i }).first()).toBeVisible()
   })
 
-  test("should show signed-out upgrade CTA links to sign-in", async ({ page }) => {
+  test("should show signed-out upgrade CTA linking to sign-up", async ({ page }) => {
     await page.goto("/pricing")
 
     const upgradeLink = page.getByRole("link", { name: /upgrade to pro/i }).first()
     await expect(upgradeLink).toBeVisible()
-    await expect(upgradeLink).toHaveAttribute("href", "/sign-in")
+    await expect(upgradeLink).toHaveAttribute("href", "/sign-up")
   })
 
   test("should render FAQ section", async ({ page }) => {
@@ -35,6 +38,6 @@ test.describe("Homepage to Pricing Navigation", () => {
     await pricingLink.click()
 
     await expect(page).toHaveURL(/\/pricing$/)
-    await expect(page.getByRole("heading", { name: /simple, transparent pricing/i })).toBeVisible()
+    await expect(page.getByRole("heading", { name: /frequently asked questions/i })).toBeVisible()
   })
 })

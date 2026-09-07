@@ -36,7 +36,95 @@ jobs:
       - run: bun run design:check
       - run: bun run typecheck
       # Jest, not `bun test`: suites depend on jest.resetModules/jsdom.
-      - run: bun run test --runInBand --forceExit
+      # Coverage, not plain test: jest.config.js carries a coverageThreshold
+      # that only enforces anything when coverage is actually collected.
+      - run: bun run test:coverage --runInBand --forceExit
         env:
           CI: true
       - run: SKIP_ENV_VALIDATION=1 bun run build
+
+  # 2 suites, 14 tests, against a real Postgres. jest.integration.config.js has
+  # named "the `integration` CI job" in its own header comment since it was
+  # written; this is that job.
+  integration:
+    name: integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: infinistar_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.8"
+
+      - name: Load CI environment
+        run: |
+          while IFS='=' read -r key value; do
+            [[ "$key" =~ ^#.*$ || -z "$key" ]] && continue
+            key=$(echo "$key" | xargs)
+            value=$(echo "$value" | xargs)
+            [ -n "$key" ] && echo "$key=$value" >> "$GITHUB_ENV"
+          done < .env.ci.example
+
+      # Must come after the loop above: that file carries a dummy DATABASE_URL,
+      # and the last write to GITHUB_ENV wins.
+      - name: Point at the service container
+        run: |
+          URL="postgresql://postgres:postgres@localhost:5432/infinistar_test"
+          echo "DATABASE_URL=$URL" >> "$GITHUB_ENV"
+          echo "DIRECT_URL=$URL" >> "$GITHUB_ENV"
+
+      - run: bun install --frozen-lockfile
+      - run: bunx prisma migrate deploy
+      - run: bun run test:integration
+
+  # 35 collected tests (many specs hold conditionally-skipped describes, so the
+  # collected count is well below the declaration count). Every network call is
+  # intercepted with page.route(), so this needs no database — only the app.
+  e2e:
+    name: e2e
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.8"
+
+      - name: Load CI environment
+        run: |
+          while IFS='=' read -r key value; do
+            [[ "$key" =~ ^#.*$ || -z "$key" ]] && continue
+            key=$(echo "$key" | xargs)
+            value=$(echo "$value" | xargs)
+            [ -n "$key" ] && echo "$key=$value" >> "$GITHUB_ENV"
+          done < .env.ci.example
+
+      - run: bun install --frozen-lockfile
+      - run: bunx playwright install --with-deps chromium
+
+      # playwright.config.ts's webServer builds and starts the app itself.
+      - run: bun run test:e2e
+        env:
+          CI: true
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7

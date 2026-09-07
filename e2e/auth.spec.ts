@@ -13,7 +13,10 @@ if (hasAuthUiEnvironment) {
 
     test("should render auth page shell", async ({ page }) => {
       await page.goto("/sign-in")
-      await expect(page.locator("main, body")).toBeVisible()
+      // Not `main, body`: both match, and Playwright strict mode rejects a
+      // locator resolving to two elements. The skip-to-content landmark is
+      // the stable one.
+      await expect(page.locator("#main-content")).toBeVisible()
     })
 
     test("should display sign-up page", async ({ page }) => {
