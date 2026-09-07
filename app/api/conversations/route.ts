@@ -5,7 +5,7 @@ import { getModelForUser } from "@/app/lib/ai-model-routing"
 import { SUPPORTED_MODEL_IDS } from "@/app/lib/ai-models"
 import { captureServerEvent } from "@/app/lib/analytics"
 import { buildCharacterSystemPrompt } from "@/app/lib/character-prompt"
-import { MESSAGE_INCLUDE_FLAT, PARTICIPANT_SELECT } from "@/app/lib/conversation-select"
+import { MESSAGE_INCLUDE, PARTICIPANT_SELECT } from "@/app/lib/conversation-select"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import { isGroupChatEnabled } from "@/app/lib/features"
 import { apiLogger } from "@/app/lib/logger"
@@ -280,7 +280,7 @@ export async function POST(request: NextRequest) {
           include: {
             users: { select: PARTICIPANT_SELECT },
             messages: {
-              include: MESSAGE_INCLUDE_FLAT,
+              include: MESSAGE_INCLUDE,
             },
           },
         })
@@ -311,10 +311,7 @@ export async function POST(request: NextRequest) {
               seen: { connect: { id: currentUser.id } },
               isAI: true,
             },
-            include: {
-              seen: { select: PARTICIPANT_SELECT },
-              sender: { select: PARTICIPANT_SELECT },
-            },
+            include: MESSAGE_INCLUDE,
           })
 
           await prisma.conversation.update({
@@ -383,7 +380,7 @@ export async function POST(request: NextRequest) {
         include: {
           users: { select: PARTICIPANT_SELECT },
           messages: {
-            include: MESSAGE_INCLUDE_FLAT,
+            include: MESSAGE_INCLUDE,
           },
         },
       })
@@ -408,7 +405,7 @@ export async function POST(request: NextRequest) {
             seen: { connect: { id: currentUser.id } },
             isAI: true,
           },
-          include: { seen: { select: PARTICIPANT_SELECT }, sender: { select: PARTICIPANT_SELECT } },
+          include: MESSAGE_INCLUDE,
         })
 
         // Update conversation lastMessageAt
@@ -498,7 +495,7 @@ export async function POST(request: NextRequest) {
         include: {
           users: { select: PARTICIPANT_SELECT },
           messages: {
-            include: MESSAGE_INCLUDE_FLAT,
+            include: MESSAGE_INCLUDE,
           },
         },
       })
@@ -540,7 +537,7 @@ export async function POST(request: NextRequest) {
       include: {
         users: { select: PARTICIPANT_SELECT },
         messages: {
-          include: MESSAGE_INCLUDE_FLAT,
+          include: MESSAGE_INCLUDE,
         },
       },
     })
@@ -565,7 +562,7 @@ export async function POST(request: NextRequest) {
       include: {
         users: { select: PARTICIPANT_SELECT },
         messages: {
-          include: MESSAGE_INCLUDE_FLAT,
+          include: MESSAGE_INCLUDE,
         },
       },
     })

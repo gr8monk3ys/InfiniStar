@@ -9,7 +9,7 @@ import {
   AI_IMAGE_GENERATION_COST_CENTS_1792x1024,
 } from "@/app/lib/ai-limits"
 import { trackAiUsage } from "@/app/lib/ai-usage"
-import { PARTICIPANT_SELECT } from "@/app/lib/conversation-select"
+import { MESSAGE_INCLUDE, PARTICIPANT_SELECT } from "@/app/lib/conversation-select"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import { aiLogger } from "@/app/lib/logger"
 import { moderateTextModelAssisted } from "@/app/lib/moderation"
@@ -235,7 +235,7 @@ export async function POST(request: NextRequest) {
         seen: { connect: { id: currentUser.id } },
         isAI: true,
       },
-      include: { seen: { select: PARTICIPANT_SELECT }, sender: { select: PARTICIPANT_SELECT } },
+      include: MESSAGE_INCLUDE,
     })
 
     await prisma.conversation.update({

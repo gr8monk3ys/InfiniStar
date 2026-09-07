@@ -1,4 +1,4 @@
-import { MESSAGE_INCLUDE_FLAT, PARTICIPANT_SELECT } from "@/app/lib/conversation-select"
+import { MESSAGE_INCLUDE, PARTICIPANT_SELECT } from "@/app/lib/conversation-select"
 import { dbLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
 import { type FullConversationType } from "@/app/types"
@@ -35,7 +35,7 @@ const getConversations = async (): Promise<FullConversationType[]> => {
         },
         // Only fetch the last message for performance
         messages: {
-          include: MESSAGE_INCLUDE_FLAT,
+          include: MESSAGE_INCLUDE,
           orderBy: {
             createdAt: "desc",
           },

@@ -14,7 +14,7 @@ import { buildChatSystemBlocks } from "@/app/lib/ai-system-prompt"
 import { trackAiUsage } from "@/app/lib/ai-usage"
 import anthropic from "@/app/lib/anthropic"
 import { buildCharacterSystemPrompt } from "@/app/lib/character-prompt"
-import { PARTICIPANT_SELECT } from "@/app/lib/conversation-select"
+import { MESSAGE_INCLUDE, PARTICIPANT_SELECT } from "@/app/lib/conversation-select"
 import { renderSummaryForPrompt } from "@/app/lib/conversation-summary"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import { aiLogger } from "@/app/lib/logger"
@@ -357,10 +357,7 @@ export async function POST(request: NextRequest) {
                 inputTokens: finalMessage.usage.input_tokens,
                 outputTokens: finalMessage.usage.output_tokens,
               },
-              include: {
-                seen: { select: PARTICIPANT_SELECT },
-                sender: { select: PARTICIPANT_SELECT },
-              },
+              include: MESSAGE_INCLUDE,
             })
 
             // Mark activity for conversation ordering and presence.

@@ -4,7 +4,6 @@ import path from "node:path"
 import {
   CONVERSATION_INCLUDE,
   MESSAGE_INCLUDE,
-  MESSAGE_INCLUDE_FLAT,
   PARTICIPANT_SELECT,
 } from "@/app/lib/conversation-select"
 
@@ -61,9 +60,7 @@ describe("participant projection", () => {
     })
   })
 
-  it("projects the flat message shape and the conversation participants", () => {
-    expect(MESSAGE_INCLUDE_FLAT.sender).toEqual({ select: PARTICIPANT_SELECT })
-    expect(MESSAGE_INCLUDE_FLAT).not.toHaveProperty("replyTo")
+  it("projects the conversation participants", () => {
     expect(CONVERSATION_INCLUDE.users).toEqual({ select: PARTICIPANT_SELECT })
   })
 })
@@ -84,6 +81,42 @@ describe("no raw user includes remain in app/", () => {
       )
     } catch (error) {
       // grep exits 1 when there are no matches, which is the passing case.
+      const status = (error as { status?: number }).status
+      if (status !== 1) throw error
+      output = ""
+    }
+
+    const offenders = output
+      .split("\n")
+      .filter(Boolean)
+      .filter((line) => !line.startsWith("app/lib/conversation-select.ts"))
+      .filter((line) => !line.startsWith("app/__tests__/"))
+
+    expect(offenders).toEqual([])
+  })
+})
+
+describe("one wire shape for a message", () => {
+  /**
+   * The other half of the guard. The grep above catches a field wrongly
+   * *present*; this one catches a field wrongly *absent*.
+   *
+   * The reducer at ConversationContainer replaces the whole message object, so
+   * a publisher that reads a narrower shape than `getMessages` does not merely
+   * omit a field on the wire — it deletes that field from state for every
+   * subscriber. `replyTo` was lost exactly this way. Spelling a message include
+   * inline is how a narrower shape gets reintroduced, so no file outside the
+   * select module may spell one.
+   */
+  it("finds no message include spelled inline outside the select module", () => {
+    let output = ""
+    try {
+      output = execFileSync(
+        "grep",
+        ["-rn", "seen: { select: PARTICIPANT_SELECT }", "--include=*.ts", "--include=*.tsx", "app"],
+        { cwd: REPO_ROOT, encoding: "utf8" }
+      )
+    } catch (error) {
       const status = (error as { status?: number }).status
       if (status !== 1) throw error
       output = ""

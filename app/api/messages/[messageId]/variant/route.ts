@@ -52,11 +52,7 @@ export async function PATCH(
   const message = await prisma.message.findUnique({
     where: { id: messageId },
     include: {
-      sender: { select: PARTICIPANT_SELECT },
-      seen: { select: PARTICIPANT_SELECT },
-      replyTo: {
-        include: { sender: { select: PARTICIPANT_SELECT } },
-      },
+      ...MESSAGE_INCLUDE,
       conversation: {
         select: {
           id: true,

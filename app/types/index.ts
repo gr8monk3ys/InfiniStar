@@ -25,11 +25,22 @@ export interface UserSummary {
  * A message as it crosses the wire: in an HTTP response, in the RSC payload,
  * or over Pusher. Participants are projected to `UserSummary`, never the full
  * `User` row — see `app/lib/conversation-select.ts` for why.
+ *
+ * `replyTo` is required rather than optional because the client reducer
+ * replaces the whole message object, so a reader that saw a narrower shape used
+ * to delete the quoted parent from state for every subscriber.
+ *
+ * This catches consumers, not publishers. A route that hands a narrow Prisma
+ * result to `pusherServer.trigger` is still not type-checked, because the
+ * trigger payload is untyped — verified by reintroducing a narrow include and
+ * watching `tsc` stay green. Until the publish path has a typed seam, the
+ * enforcement for publishers is the grep guard in
+ * `app/__tests__/lib/conversation-select.test.ts`.
  */
 export type FullMessageType = Message & {
   sender: UserSummary
   seen: UserSummary[]
-  replyTo?: (Message & { sender: UserSummary }) | null
+  replyTo: (Message & { sender: UserSummary }) | null
 }
 
 export type FullConversationType = Conversation & {

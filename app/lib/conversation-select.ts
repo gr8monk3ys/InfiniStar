@@ -30,11 +30,22 @@ export const PARTICIPANT_SELECT = {
 } satisfies Prisma.UserSelect
 
 /**
- * The canonical shape of a message on the wire: what `getMessages` returns,
- * what the message routes respond with, and what every Pusher publisher must
- * send. Keeping one constant is what stops publishers from disagreeing — six
- * of them previously omitted `replyTo`, and the client reducer replaces the
- * whole object, so an edit or a reaction silently dropped the quote.
+ * The one shape of a message on the wire: what `getMessages` returns, what the
+ * message routes respond with, and what every Pusher publisher sends.
+ *
+ * There is deliberately no narrower variant. The client reducer replaces the
+ * whole message object rather than merging into it, so a publisher reading a
+ * narrower shape does not merely omit a field on the wire — it *deletes* that
+ * field from state for every subscriber until the next full reload. A
+ * `MESSAGE_INCLUDE_FLAT` without `replyTo` existed here for exactly the reason
+ * this comment warns about, and it cost the quoted parent on every edit,
+ * reaction, delete, regeneration and seen-receipt.
+ *
+ * The publish path is not type-checked — `pusherServer.trigger` takes an
+ * untyped payload — so the guard that keeps this honest is the grep in
+ * `conversation-select.test.ts`: no message include may be spelled inline
+ * outside this module. `FullMessageType.replyTo` is required, which catches
+ * consumers but not publishers.
  */
 export const MESSAGE_INCLUDE = {
   sender: { select: PARTICIPANT_SELECT },
@@ -47,30 +58,9 @@ export const MESSAGE_INCLUDE = {
 } satisfies Prisma.MessageInclude
 
 /**
- * `MESSAGE_INCLUDE` without the quoted parent, for the publishers that never
- * carried one. Prefer `MESSAGE_INCLUDE`; this exists for update paths where
- * the quote is genuinely irrelevant.
- */
-export const MESSAGE_INCLUDE_FLAT = {
-  sender: { select: PARTICIPANT_SELECT },
-  seen: { select: PARTICIPANT_SELECT },
-} satisfies Prisma.MessageInclude
-
-/**
  * A conversation with its participants projected safely. Use for any
  * conversation that is returned to a client or broadcast.
  */
 export const CONVERSATION_INCLUDE = {
   users: { select: PARTICIPANT_SELECT },
-} satisfies Prisma.ConversationInclude
-
-/**
- * A conversation with its participants and its messages, both projected
- * safely. The detail shape.
- */
-export const CONVERSATION_WITH_MESSAGES_INCLUDE = {
-  users: { select: PARTICIPANT_SELECT },
-  messages: {
-    include: MESSAGE_INCLUDE,
-  },
 } satisfies Prisma.ConversationInclude
