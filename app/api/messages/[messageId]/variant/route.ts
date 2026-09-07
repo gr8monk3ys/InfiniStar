@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { z } from "zod"
 
+import { publishMessageUpdated } from "@/app/lib/conversation-events"
 import { MESSAGE_INCLUDE, PARTICIPANT_SELECT } from "@/app/lib/conversation-select"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import prisma from "@/app/lib/prismadb"
@@ -105,11 +106,10 @@ export async function PATCH(
     include: MESSAGE_INCLUDE,
   })
 
-  await pusherServer.trigger(
-    getPusherConversationChannel(message.conversation.id),
-    "message:update",
-    updatedMessage
-  )
+  await publishMessageUpdated({
+    conversationId: message.conversation.id,
+    message: updatedMessage,
+  })
 
   return NextResponse.json(updatedMessage)
 }

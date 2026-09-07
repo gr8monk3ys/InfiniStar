@@ -9,14 +9,13 @@ import {
   AI_IMAGE_GENERATION_COST_CENTS_1792x1024,
 } from "@/app/lib/ai-limits"
 import { trackAiUsage } from "@/app/lib/ai-usage"
+import { publishNewMessage } from "@/app/lib/conversation-events"
 import { MESSAGE_INCLUDE, PARTICIPANT_SELECT } from "@/app/lib/conversation-select"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import { aiLogger } from "@/app/lib/logger"
 import { moderateTextModelAssisted } from "@/app/lib/moderation"
 import { canAccessNsfw } from "@/app/lib/nsfw"
 import prisma from "@/app/lib/prismadb"
-import { getPusherConversationChannel, getPusherUserChannel } from "@/app/lib/pusher-channels"
-import { pusherServer } from "@/app/lib/pusher-server"
 import { aiChatLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 import { sanitizePlainText } from "@/app/lib/sanitize"
 import getCurrentUser from "@/app/actions/getCurrentUser"
@@ -243,14 +242,10 @@ export async function POST(request: NextRequest) {
       data: { lastMessageAt: new Date() },
     })
 
-    await pusherServer.trigger(
-      getPusherConversationChannel(conversation.id),
-      "messages:new",
-      aiMessage
-    )
-    await pusherServer.trigger(getPusherUserChannel(currentUser.id), "conversation:update", {
-      id: conversation.id,
-      messages: [aiMessage],
+    await publishNewMessage({
+      conversationId: conversation.id,
+      message: aiMessage,
+      notify: [currentUser.id],
     })
 
     return NextResponse.json({ aiMessage })

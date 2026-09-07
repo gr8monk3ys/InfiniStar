@@ -6,6 +6,7 @@
 
 import { NextResponse, type NextRequest } from "next/server"
 
+import { publishParticipantJoined } from "@/app/lib/conversation-events"
 import { MESSAGE_INCLUDE, PARTICIPANT_SELECT } from "@/app/lib/conversation-select"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import { apiLogger } from "@/app/lib/logger"
@@ -77,17 +78,17 @@ export async function POST(request: NextRequest, { params }: { params: Promise<I
       },
     })
 
-    // Notify other users in the conversation about the new participant
+    // A new Participant is not a new message. This used to be sent as
+    // `conversation:update`, whose handler keeps only `messages` and discards
+    // `users`, so the join never reached anyone already in the conversation.
     if (conversation) {
-      for (const user of conversation.users) {
-        if (user.id !== currentUser.id) {
-          await pusherServer.trigger(
-            getPusherUserChannel(user.id),
-            "conversation:update",
-            conversation
-          )
-        }
-      }
+      await publishParticipantJoined({
+        conversationId: conversation.id,
+        users: conversation.users,
+        notify: conversation.users
+          .filter((user) => user.id !== currentUser.id)
+          .map((user) => user.id),
+      })
     }
 
     return NextResponse.json({

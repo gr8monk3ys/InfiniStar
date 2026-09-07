@@ -18,6 +18,7 @@ import anthropic from "@/app/lib/anthropic"
 import { maybeAutoExtractMemories } from "@/app/lib/auto-memory"
 import { maybeAutoSummarize } from "@/app/lib/auto-summary"
 import { buildCharacterSystemPrompt } from "@/app/lib/character-prompt"
+import { publishNewMessage } from "@/app/lib/conversation-events"
 import { MESSAGE_INCLUDE, PARTICIPANT_SELECT } from "@/app/lib/conversation-select"
 import { renderSummaryForPrompt } from "@/app/lib/conversation-summary"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
@@ -29,8 +30,6 @@ import {
 } from "@/app/lib/moderation"
 import { canAccessNsfw } from "@/app/lib/nsfw"
 import prisma from "@/app/lib/prismadb"
-import { getPusherConversationChannel } from "@/app/lib/pusher-channels"
-import { pusherServer } from "@/app/lib/pusher-server"
 import { aiChatLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 import { sanitizeUrl } from "@/app/lib/sanitize"
 import { sendWebPushToUser } from "@/app/lib/web-push"
@@ -243,12 +242,15 @@ export async function POST(request: NextRequest) {
       include: MESSAGE_INCLUDE,
     })
 
-    // Trigger Pusher event for user message
-    await pusherServer.trigger(
-      getPusherConversationChannel(conversationId),
-      "messages:new",
-      userMessage
-    )
+    // The chatter is the only participant of an AI conversation, so they are
+    // the whole notify list. Publishing through the module emits the sidebar
+    // half too; this route used to emit only the conversation half, which is
+    // why the default send path did not update the sidebar live.
+    await publishNewMessage({
+      conversationId,
+      message: userMessage,
+      notify: [currentUser.id],
+    })
 
     captureServerEvent(currentUser.id, "message_sent", {
       conversationId,
@@ -411,12 +413,11 @@ export async function POST(request: NextRequest) {
             data: { lastMessageAt: new Date() },
           })
 
-          // Trigger Pusher event for complete AI response
-          await pusherServer.trigger(
-            getPusherConversationChannel(conversationId),
-            "messages:new",
-            aiMessage
-          )
+          await publishNewMessage({
+            conversationId,
+            message: aiMessage,
+            notify: [currentUser.id],
+          })
 
           // Best-effort background memory extraction
           maybeAutoExtractMemories(currentUser.id, conversationId).catch((err) => {

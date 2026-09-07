@@ -15,6 +15,7 @@ import anthropic from "@/app/lib/anthropic"
 import { maybeAutoExtractMemories } from "@/app/lib/auto-memory"
 import { maybeAutoSummarize } from "@/app/lib/auto-summary"
 import { buildCharacterSystemPrompt } from "@/app/lib/character-prompt"
+import { publishNewMessage } from "@/app/lib/conversation-events"
 import { MESSAGE_INCLUDE, PARTICIPANT_SELECT } from "@/app/lib/conversation-select"
 import { renderSummaryForPrompt } from "@/app/lib/conversation-summary"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
@@ -26,8 +27,6 @@ import {
 } from "@/app/lib/moderation"
 import { canAccessNsfw } from "@/app/lib/nsfw"
 import prisma from "@/app/lib/prismadb"
-import { getPusherConversationChannel, getPusherUserChannel } from "@/app/lib/pusher-channels"
-import { pusherServer } from "@/app/lib/pusher-server"
 import { aiChatLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 import { sanitizeUrl } from "@/app/lib/sanitize"
 import { sendWebPushToUser } from "@/app/lib/web-push"
@@ -231,12 +230,11 @@ export async function POST(request: NextRequest) {
       include: MESSAGE_INCLUDE,
     })
 
-    // Trigger Pusher event for user message
-    await pusherServer.trigger(
-      getPusherConversationChannel(conversationId),
-      "messages:new",
-      userMessage
-    )
+    await publishNewMessage({
+      conversationId,
+      message: userMessage,
+      notify: [currentUser.id],
+    })
 
     // Build conversation history for Claude
     // Reverse because messages were fetched desc (newest-first) to get the last 20; restore chronological order
@@ -330,17 +328,10 @@ export async function POST(request: NextRequest) {
       data: { lastMessageAt: new Date() },
     })
 
-    // Trigger Pusher event for AI response
-    await pusherServer.trigger(
-      getPusherConversationChannel(conversationId),
-      "messages:new",
-      aiMessage
-    )
-
-    // Notify user of conversation update
-    await pusherServer.trigger(getPusherUserChannel(currentUser.id), "conversation:update", {
-      id: conversationId,
-      messages: [aiMessage],
+    await publishNewMessage({
+      conversationId,
+      message: aiMessage,
+      notify: [currentUser.id],
     })
 
     // Best-effort background memory extraction

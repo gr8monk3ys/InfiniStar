@@ -381,22 +381,32 @@ describe("POST /api/ai/chat", () => {
     )
   })
 
-  it("triggers Pusher events for both user message and AI message", async () => {
+  /**
+   * Both messages go out through `publishNewMessage`, which emits the pairing:
+   * the conversation channel so an open thread appends the message, and the
+   * chatter's user channel so the sidebar re-sorts and shows the new preview.
+   *
+   * This asserted three triggers when only the AI message carried the sidebar
+   * half; sending a message is as much a reason to re-sort the sidebar as
+   * receiving a reply is, so both halves now fire for both messages.
+   */
+  it("publishes both halves of the pairing for the user message and the AI message", async () => {
     const request = createRequest({ message: "Hello AI", conversationId: "conv-1" })
     await POST(request)
 
-    // user message event + AI message event + conversation:update event
-    expect(mockPusherTrigger).toHaveBeenCalledTimes(3)
-    expect(mockPusherTrigger).toHaveBeenCalledWith(
-      "private-conversation-conv-1",
-      "messages:new",
-      testUserMessage
-    )
-    expect(mockPusherTrigger).toHaveBeenCalledWith(
-      "private-conversation-conv-1",
-      "messages:new",
-      testAiMessage
-    )
+    expect(mockPusherTrigger).toHaveBeenCalledTimes(4)
+
+    for (const message of [testUserMessage, testAiMessage]) {
+      expect(mockPusherTrigger).toHaveBeenCalledWith(
+        "private-conversation-conv-1",
+        "messages:new",
+        message
+      )
+      expect(mockPusherTrigger).toHaveBeenCalledWith("private-user-user-1", "conversation:update", {
+        id: "conv-1",
+        messages: [message],
+      })
+    }
   })
 
   it("updates conversation lastMessageAt after AI response", async () => {

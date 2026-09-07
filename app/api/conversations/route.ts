@@ -5,6 +5,7 @@ import { getModelForUser } from "@/app/lib/ai-model-routing"
 import { SUPPORTED_MODEL_IDS } from "@/app/lib/ai-models"
 import { captureServerEvent } from "@/app/lib/analytics"
 import { buildCharacterSystemPrompt } from "@/app/lib/character-prompt"
+import { publishNewMessage } from "@/app/lib/conversation-events"
 import { MESSAGE_INCLUDE, PARTICIPANT_SELECT } from "@/app/lib/conversation-select"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import { isGroupChatEnabled } from "@/app/lib/features"
@@ -319,11 +320,13 @@ export async function POST(request: NextRequest) {
             data: { lastMessageAt: new Date() },
           })
 
-          await triggerPusherSafely(
-            getPusherConversationChannel(newConversation.id),
-            "messages:new",
-            greetingMessage
-          )
+          await publishNewMessage({
+            conversationId: newConversation.id,
+            message: greetingMessage,
+            // Nobody's sidebar needs a separate update: the `conversation:new`
+            // below carries the whole conversation, greeting included.
+            notify: [],
+          })
         }
 
         await triggerPusherSafely(
@@ -414,12 +417,13 @@ export async function POST(request: NextRequest) {
           data: { lastMessageAt: new Date() },
         })
 
-        // Trigger Pusher event for greeting
-        await triggerPusherSafely(
-          getPusherConversationChannel(newConversation.id),
-          "messages:new",
-          greetingMessage
-        )
+        await publishNewMessage({
+          conversationId: newConversation.id,
+          message: greetingMessage,
+          // Nobody's sidebar needs a separate update: the `conversation:new`
+          // below carries the whole conversation, greeting included.
+          notify: [],
+        })
       }
 
       // Trigger Pusher event for user

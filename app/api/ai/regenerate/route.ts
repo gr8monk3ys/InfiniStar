@@ -14,14 +14,13 @@ import { buildChatSystemBlocks } from "@/app/lib/ai-system-prompt"
 import { trackAiUsage } from "@/app/lib/ai-usage"
 import anthropic from "@/app/lib/anthropic"
 import { buildCharacterSystemPrompt } from "@/app/lib/character-prompt"
+import { publishMessageUpdated } from "@/app/lib/conversation-events"
 import { MESSAGE_INCLUDE, PARTICIPANT_SELECT } from "@/app/lib/conversation-select"
 import { renderSummaryForPrompt } from "@/app/lib/conversation-summary"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import { aiLogger } from "@/app/lib/logger"
 import { canAccessNsfw } from "@/app/lib/nsfw"
 import prisma from "@/app/lib/prismadb"
-import { getPusherConversationChannel } from "@/app/lib/pusher-channels"
-import { pusherServer } from "@/app/lib/pusher-server"
 import { aiChatLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 import getCurrentUser from "@/app/actions/getCurrentUser"
 
@@ -369,12 +368,10 @@ export async function POST(request: NextRequest) {
             return updated
           })
 
-          // Trigger Pusher update event for real-time UI refresh.
-          await pusherServer.trigger(
-            getPusherConversationChannel(message.conversationId),
-            "message:update",
-            updatedMessage
-          )
+          await publishMessageUpdated({
+            conversationId: message.conversationId,
+            message: updatedMessage,
+          })
 
           // Send completion signal
           const completeData = JSON.stringify({

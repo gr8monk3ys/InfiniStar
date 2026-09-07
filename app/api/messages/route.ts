@@ -3,6 +3,7 @@ import { z } from "zod"
 
 import { captureServerEvent } from "@/app/lib/analytics"
 import { isFirstHumanMessage } from "@/app/lib/analytics-events"
+import { publishNewMessage } from "@/app/lib/conversation-events"
 import { MESSAGE_INCLUDE } from "@/app/lib/conversation-select"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import { apiLogger } from "@/app/lib/logger"
@@ -215,26 +216,11 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // Trigger Pusher events for real-time updates
-    await pusherServer.trigger(
-      getPusherConversationChannel(conversationId),
-      "messages:new",
-      newMessage
-    )
-
-    // Notify all users in the conversation
-    await Promise.all(
-      updatedConversation.users.map((user: { id: string }) =>
-        pusherServer
-          .trigger(getPusherUserChannel(user.id), "conversation:update", {
-            id: conversationId,
-            messages: [newMessage],
-          })
-          .catch((err: unknown) =>
-            apiLogger.error({ err, userId: user.id }, "Pusher trigger failed for user")
-          )
-      )
-    )
+    await publishNewMessage({
+      conversationId,
+      message: newMessage,
+      notify: updatedConversation.users.map((user: { id: string }) => user.id),
+    })
 
     captureServerEvent(currentUser.id, "message_sent", {
       conversationId,

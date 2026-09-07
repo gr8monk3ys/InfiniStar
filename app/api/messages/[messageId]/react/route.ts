@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { z } from "zod"
 
+import { publishMessageReaction } from "@/app/lib/conversation-events"
 import { MESSAGE_INCLUDE } from "@/app/lib/conversation-select"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import { apiLogger } from "@/app/lib/logger"
@@ -112,11 +113,10 @@ export async function POST(
     })
 
     // Trigger Pusher event for real-time update
-    await pusherServer.trigger(
-      getPusherConversationChannel(message.conversationId),
-      "message:reaction",
-      updatedMessage
-    )
+    await publishMessageReaction({
+      conversationId: message.conversationId,
+      message: updatedMessage,
+    })
 
     return NextResponse.json(updatedMessage)
   } catch (error: unknown) {

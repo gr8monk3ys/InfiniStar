@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { z } from "zod"
 
+import { publishMessageDeleted, publishMessageUpdated } from "@/app/lib/conversation-events"
 import { MESSAGE_INCLUDE, PARTICIPANT_SELECT } from "@/app/lib/conversation-select"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import { apiLogger } from "@/app/lib/logger"
@@ -91,12 +92,10 @@ export async function PATCH(
       include: MESSAGE_INCLUDE,
     })
 
-    // Trigger Pusher event for real-time update
-    await pusherServer.trigger(
-      getPusherConversationChannel(message.conversationId),
-      "message:update",
-      updatedMessage
-    )
+    await publishMessageUpdated({
+      conversationId: message.conversationId,
+      message: updatedMessage,
+    })
 
     return NextResponse.json(updatedMessage)
   } catch (error: unknown) {
@@ -159,12 +158,10 @@ export async function DELETE(
       include: MESSAGE_INCLUDE,
     })
 
-    // Trigger Pusher event for real-time update
-    await pusherServer.trigger(
-      getPusherConversationChannel(message.conversationId),
-      "message:delete",
-      deletedMessage
-    )
+    await publishMessageDeleted({
+      conversationId: message.conversationId,
+      message: deletedMessage,
+    })
 
     return NextResponse.json(deletedMessage)
   } catch (error: unknown) {
