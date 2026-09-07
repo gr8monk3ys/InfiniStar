@@ -56,7 +56,7 @@ export async function store2FAToken(email: string, token: string): Promise<void>
     logBackend(true)
     try {
       const key = `${REDIS_KEY_PREFIX}${normalizedEmail}`
-      await redis.set(key, JSON.stringify({ token }), "EX", TWO_FACTOR_TOKEN_TTL_SECONDS)
+      await redis.set(key, JSON.stringify({ token }), { ex: TWO_FACTOR_TOKEN_TTL_SECONDS })
       return
     } catch (error) {
       authLogger.error(
@@ -84,7 +84,9 @@ export async function get2FAToken(email: string): Promise<string | null> {
       const key = `${REDIS_KEY_PREFIX}${normalizedEmail}`
       const raw = await redis.get(key)
       if (raw) {
-        const parsed = JSON.parse(raw) as { token: string }
+        // The Upstash REST client deserialises JSON on the way out, so this is
+        // already an object where ioredis handed back a string.
+        const parsed = (typeof raw === "string" ? JSON.parse(raw) : raw) as { token: string }
         return parsed.token
       }
       // Redis answered, but with nothing. Fall through to the in-memory store

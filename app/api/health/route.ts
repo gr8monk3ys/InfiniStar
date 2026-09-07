@@ -9,7 +9,9 @@ export async function GET(): Promise<NextResponse> {
   try {
     await prisma.$queryRaw`SELECT 1`
 
-    const redisConfigured = Boolean(process.env.REDIS_URL)
+    const redisConfigured = Boolean(
+      process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
+    )
     const redisAvailable = redisConfigured ? await isRedisAvailable() : false
     const shouldRequireRedisInProd = process.env.NODE_ENV === "production"
 
