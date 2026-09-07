@@ -1,7 +1,7 @@
 import { type NextRequest } from "next/server"
 import { z } from "zod"
 
-import { requestAiAccess } from "@/app/lib/ai-access"
+import { claimAllowanceSlot, releaseAllowanceClaim } from "@/app/lib/ai-access"
 import { buildAiMessageContent } from "@/app/lib/ai-message-content"
 import { trackAiUsage } from "@/app/lib/ai-usage"
 import { captureServerEvent } from "@/app/lib/analytics"
@@ -174,9 +174,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const grant = await requestAiAccess({
+    // The Claim is taken before the provider is called, so a concurrent turn
+    // counts it. Released below if this turn produces nothing.
+    const grant = await claimAllowanceSlot({
       userId: currentUser.id,
       requestType: "chat-stream",
+      conversationId: conversationId,
     })
     if (!grant.ok) return grant.response
 
@@ -245,6 +248,8 @@ export async function POST(request: NextRequest) {
     const timeoutId = setTimeout(() => abortController.abort(), 60_000)
     request.signal.addEventListener("abort", () => abortController.abort())
 
+    let usageRecorded = false
+
     // Create a ReadableStream for streaming response
     const stream = new ReadableStream({
       async start(controller) {
@@ -302,7 +307,9 @@ export async function POST(request: NextRequest) {
             outputTokens: finalMessage.usage.output_tokens,
             requestType: "chat-stream",
             latencyMs,
+            claimId: grant.claim?.id,
           })
+          usageRecorded = true
 
           // Create AI message in database with full response and token usage
           const aiMessage = await prisma.message.create({
@@ -389,6 +396,11 @@ export async function POST(request: NextRequest) {
         } catch (error) {
           clearTimeout(timeoutId)
           aiLogger.error({ err: error }, "Streaming error")
+          // Released only when the turn produced nothing; once usage is
+          // recorded the Allowance slot was genuinely spent.
+          if (grant.claim && !usageRecorded) {
+            await releaseAllowanceClaim(grant.claim)
+          }
 
           // Send error to client
           const errorData = JSON.stringify({

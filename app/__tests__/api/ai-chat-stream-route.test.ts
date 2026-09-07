@@ -21,7 +21,8 @@ const mockContentReportCreate = jest.fn()
 const mockPusherTrigger = jest.fn()
 const mockVerifyCsrfToken = jest.fn()
 const mockAiChatLimiterCheck = jest.fn()
-const mockRequestAiAccess = jest.fn()
+const mockClaimAllowanceSlot = jest.fn()
+const mockReleaseAllowanceClaim = jest.fn()
 const mockTrackAiUsage = jest.fn()
 const mockModerateText = jest.fn()
 const mockAnthropicStream = jest.fn()
@@ -84,7 +85,8 @@ jest.mock("@/app/lib/rate-limit", () => ({
 }))
 
 jest.mock("@/app/lib/ai-access", () => ({
-  requestAiAccess: (...args: unknown[]) => mockRequestAiAccess(...args),
+  claimAllowanceSlot: (...args: unknown[]) => mockClaimAllowanceSlot(...args),
+  releaseAllowanceClaim: (...args: unknown[]) => mockReleaseAllowanceClaim(...args),
 }))
 
 jest.mock("@/app/lib/ai-usage", () => ({
@@ -228,7 +230,13 @@ beforeEach(() => {
   mockConversationUpdate.mockResolvedValue({ id: "conv-1" })
   mockUserFindUnique.mockResolvedValue({ browserNotifications: false, notifyOnAIComplete: false })
   mockPusherTrigger.mockResolvedValue(undefined)
-  mockRequestAiAccess.mockResolvedValue({ ok: true, isPro: false, limits: {} })
+  mockClaimAllowanceSlot.mockResolvedValue({
+    ok: true,
+    isPro: false,
+    limits: {},
+    claim: { id: "claim-1" },
+  })
+  mockReleaseAllowanceClaim.mockResolvedValue(undefined)
   mockTrackAiUsage.mockResolvedValue(undefined)
   mockModerateText.mockResolvedValue({ shouldBlock: false, shouldReview: false, categories: [] })
   mockAnthropicStream.mockReturnValue(
@@ -333,7 +341,7 @@ describe("POST /api/ai/chat-stream", () => {
   })
 
   it("returns 402 when free tier message limit is exceeded", async () => {
-    mockRequestAiAccess.mockResolvedValue({
+    mockClaimAllowanceSlot.mockResolvedValue({
       ok: false,
       response: NextResponse.json(
         { error: "Limit reached", code: "FREE_TIER_MESSAGE_LIMIT_REACHED", limits: {} },
@@ -494,7 +502,7 @@ describe("what this route asks the Turn for", () => {
    * no error anywhere. There is no longer a shape that can express that.
    */
   it("routes a PRO chatter using the tier the grant carries", async () => {
-    mockRequestAiAccess.mockResolvedValue({ ok: true, isPro: true, limits: {} })
+    mockClaimAllowanceSlot.mockResolvedValue({ ok: true, isPro: true, limits: {} })
 
     const request = createRequest({ message: "Hello AI", conversationId: "conv-1" })
     await POST(request)
@@ -503,7 +511,7 @@ describe("what this route asks the Turn for", () => {
   })
 
   it("returns the grant's own response when access is denied, and assembles nothing", async () => {
-    mockRequestAiAccess.mockResolvedValue({
+    mockClaimAllowanceSlot.mockResolvedValue({
       ok: false,
       response: NextResponse.json({ code: "FREE_TIER_MESSAGE_LIMIT_REACHED" }, { status: 402 }),
     })

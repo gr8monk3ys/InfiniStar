@@ -1,7 +1,7 @@
 import { type NextRequest } from "next/server"
 import { z } from "zod"
 
-import { requestAiAccess } from "@/app/lib/ai-access"
+import { claimAllowanceSlot, releaseAllowanceClaim } from "@/app/lib/ai-access"
 import { trackAiUsage } from "@/app/lib/ai-usage"
 import anthropic from "@/app/lib/anthropic"
 import { publishMessageUpdated } from "@/app/lib/conversation-events"
@@ -162,11 +162,16 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    const grant = await requestAiAccess({
+    // The Claim is taken before the provider is called, so a concurrent turn
+    // counts it. Released below if this turn produces nothing.
+    const grant = await claimAllowanceSlot({
       userId: currentUser.id,
       requestType: "chat",
+      conversationId: message.conversationId,
     })
     if (!grant.ok) return grant.response
+
+    let usageRecorded = false
 
     // Create a ReadableStream for streaming response
     const stream = new ReadableStream({
@@ -232,7 +237,9 @@ export async function POST(request: NextRequest) {
             // /api/ai/chat-stream send endpoint, which this is not.
             requestType: "chat",
             latencyMs,
+            claimId: grant.claim?.id,
           })
+          usageRecorded = true
 
           const existingVariants = Array.isArray(message.variants)
             ? message.variants.filter((variant): variant is string => typeof variant === "string")
@@ -287,6 +294,11 @@ export async function POST(request: NextRequest) {
           controller.close()
         } catch (error) {
           aiLogger.error({ err: error }, "Regeneration streaming error")
+          // Released only when the turn produced nothing; once usage is
+          // recorded the Allowance slot was genuinely spent.
+          if (grant.claim && !usageRecorded) {
+            await releaseAllowanceClaim(grant.claim)
+          }
 
           // Send error to client
           const errorData = JSON.stringify({

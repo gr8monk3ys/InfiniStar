@@ -24,7 +24,8 @@ const mockContentReportCreate = jest.fn()
 const mockPusherTrigger = jest.fn()
 const mockVerifyCsrfToken = jest.fn()
 const mockAiChatLimiterCheck = jest.fn()
-const mockRequestAiAccess = jest.fn()
+const mockClaimAllowanceSlot = jest.fn()
+const mockReleaseAllowanceClaim = jest.fn()
 const mockTrackAiUsage = jest.fn()
 const mockModerateText = jest.fn()
 const mockAnthropicCreate = jest.fn()
@@ -91,7 +92,8 @@ jest.mock("@/app/lib/rate-limit", () => ({
 }))
 
 jest.mock("@/app/lib/ai-access", () => ({
-  requestAiAccess: (...args: unknown[]) => mockRequestAiAccess(...args),
+  claimAllowanceSlot: (...args: unknown[]) => mockClaimAllowanceSlot(...args),
+  releaseAllowanceClaim: (...args: unknown[]) => mockReleaseAllowanceClaim(...args),
 }))
 
 jest.mock("@/app/lib/ai-usage", () => ({
@@ -208,7 +210,13 @@ beforeEach(() => {
   mockConversationUpdate.mockResolvedValue({ id: "conv-1" })
   mockUserFindUnique.mockResolvedValue({ browserNotifications: false, notifyOnAIComplete: false })
   mockPusherTrigger.mockResolvedValue(undefined)
-  mockRequestAiAccess.mockResolvedValue({ ok: true, isPro: false, limits: {} })
+  mockClaimAllowanceSlot.mockResolvedValue({
+    ok: true,
+    isPro: false,
+    limits: {},
+    claim: { id: "claim-1" },
+  })
+  mockReleaseAllowanceClaim.mockResolvedValue(undefined)
   mockTrackAiUsage.mockResolvedValue(undefined)
   mockModerateText.mockResolvedValue({ shouldBlock: false, shouldReview: false, categories: [] })
   mockAnthropicCreate.mockResolvedValue(testAnthropicResponse)
@@ -338,7 +346,7 @@ describe("POST /api/ai/chat", () => {
   })
 
   it("returns 402 when free tier message limit is exceeded", async () => {
-    mockRequestAiAccess.mockResolvedValue({
+    mockClaimAllowanceSlot.mockResolvedValue({
       ok: false,
       response: NextResponse.json(
         { error: "Limit reached", code: "FREE_TIER_MESSAGE_LIMIT_REACHED", limits: {} },
@@ -536,7 +544,7 @@ describe("what this route asks the Turn for", () => {
    * no error anywhere. There is no longer a shape that can express that.
    */
   it("routes a PRO chatter using the tier the grant carries", async () => {
-    mockRequestAiAccess.mockResolvedValue({ ok: true, isPro: true, limits: {} })
+    mockClaimAllowanceSlot.mockResolvedValue({ ok: true, isPro: true, limits: {} })
 
     const request = createRequest({ message: "Hello AI", conversationId: "conv-1" })
     await POST(request)
@@ -545,7 +553,7 @@ describe("what this route asks the Turn for", () => {
   })
 
   it("returns the grant's own response when access is denied, and assembles nothing", async () => {
-    mockRequestAiAccess.mockResolvedValue({
+    mockClaimAllowanceSlot.mockResolvedValue({
       ok: false,
       response: NextResponse.json({ code: "FREE_TIER_MESSAGE_LIMIT_REACHED" }, { status: 402 }),
     })
@@ -638,6 +646,62 @@ describe("moderation knows whether this is a mature conversation", () => {
 
     expect(response.status).toBe(400)
     expect(mockMessageCreate).not.toHaveBeenCalled()
+  })
+})
+
+/**
+ * The Claim's release rule.
+ *
+ * Releasing too eagerly is worse than not releasing: it hands back an Allowance
+ * slot that was genuinely spent, which is a free message. Releasing too little
+ * costs the chatter one message, which is the safe direction.
+ */
+describe("the allowance claim", () => {
+  it("passes the claim to trackAiUsage so the reserved row is filled in, not duplicated", async () => {
+    await POST(createRequest({ message: "Hello AI", conversationId: "conv-1" }))
+
+    expect(mockTrackAiUsage).toHaveBeenCalledWith(expect.objectContaining({ claimId: "claim-1" }))
+  })
+
+  it("does not release a claim for a turn that produced a reply", async () => {
+    await POST(createRequest({ message: "Hello AI", conversationId: "conv-1" }))
+
+    expect(mockReleaseAllowanceClaim).not.toHaveBeenCalled()
+  })
+
+  it("releases the claim when the provider call fails", async () => {
+    mockAnthropicCreate.mockRejectedValue(new Error("anthropic is down"))
+
+    const response = await POST(createRequest({ message: "Hello AI", conversationId: "conv-1" }))
+
+    expect(response.status).toBe(500)
+    expect(mockReleaseAllowanceClaim).toHaveBeenCalledWith({ id: "claim-1" })
+  })
+
+  it("does not release when the turn was denied and never claimed", async () => {
+    mockClaimAllowanceSlot.mockResolvedValue({
+      ok: false,
+      response: NextResponse.json({ code: "FREE_TIER_MESSAGE_LIMIT_REACHED" }, { status: 402 }),
+    })
+
+    await POST(createRequest({ message: "Hello AI", conversationId: "conv-1" }))
+
+    expect(mockReleaseAllowanceClaim).not.toHaveBeenCalled()
+  })
+
+  /**
+   * The failure that would give away a free message: the reply landed and was
+   * recorded, then something later in the request threw. The slot was spent.
+   */
+  it("keeps the claim when usage was already recorded and a later step throws", async () => {
+    mockMessageCreate.mockResolvedValueOnce(testUserMessage).mockResolvedValueOnce(testAiMessage)
+    mockConversationUpdate.mockRejectedValue(new Error("write failed after the reply"))
+
+    const response = await POST(createRequest({ message: "Hello AI", conversationId: "conv-1" }))
+
+    expect(response.status).toBe(500)
+    expect(mockTrackAiUsage).toHaveBeenCalled()
+    expect(mockReleaseAllowanceClaim).not.toHaveBeenCalled()
   })
 })
 

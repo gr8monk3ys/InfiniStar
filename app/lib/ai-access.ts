@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { Prisma } from "@prisma/client"
 
 import {
   AI_FREE_MONTHLY_IMAGE_LIMIT,
@@ -10,6 +11,7 @@ import {
   AI_PRO_MONTHLY_TRANSCRIBE_LIMIT,
 } from "@/app/lib/ai-limits"
 import { captureServerEvent } from "@/app/lib/analytics"
+import { aiLogger as aiAccessLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
 import { getUserSubscriptionPlan } from "@/app/lib/subscription"
 
@@ -81,6 +83,12 @@ export const COUNTED_MESSAGE_REQUEST_TYPES = ["chat", "chat-stream"] as const
  * it. It is still tracked as an AiUsage row for analytics.
  */
 export const UNCOUNTED_REQUEST_TYPES = ["summary-auto"] as const
+
+/**
+ * The model recorded on a Claim that has not been filled in yet. A row still
+ * carrying it was claimed by a turn that never reported a result.
+ */
+export const PENDING_CLAIM_MODEL = "pending"
 
 export async function monthlySnapshot(userId: string): Promise<MonthlySnapshot> {
   const monthStart = getMonthStartUtc()
@@ -452,4 +460,114 @@ export async function requestAiAccess({
   }
 
   return { ok: true, isPro, limits: decision.limits }
+}
+
+/**
+ * A reserved slot in the chatter's Allowance.
+ *
+ * The id is an `AiUsage` row that already exists with zero tokens. It counts
+ * toward the month from the moment it is written, which is what makes a
+ * concurrent turn see it.
+ */
+export interface AllowanceClaim {
+  id: string
+}
+
+/**
+ * Serialises a chatter's Allowance decisions against each other.
+ *
+ * A transaction-scoped Postgres advisory lock, keyed on the chatter. Two turns
+ * from the same account queue; turns from different accounts never contend.
+ * The lock is released when the transaction ends, including on rollback, so
+ * there is nothing to leak.
+ */
+async function lockAllowance(tx: Prisma.TransactionClient, userId: string): Promise<void> {
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${userId}))`
+}
+
+/**
+ * Takes a Claim on the Allowance before the provider is called.
+ *
+ * `getAiAccessDecision` counts and `trackAiUsage` writes, and nothing reserved
+ * anything in between — so two turns at 49 of 50 both counted 49 and both
+ * proceeded. `aiChatLimiter` allows 20/min, which is the size of the overshoot.
+ *
+ * ADR-0001 already has the word for the fix: a Claim, "written before any side
+ * effect runs so that a retry cannot double-process it". The same shape works
+ * here, with one difference — a webhook claim is keyed on the provider's event
+ * id, and there is no id to key an Allowance on, so the serialisation comes
+ * from an advisory lock rather than a unique constraint.
+ *
+ * The Claim is the `AiUsage` row itself, written with zero tokens and filled in
+ * when the reply lands. Deliberately not a second table: the displayed and
+ * enforced Allowance drifted apart once already because the month was counted
+ * in two places, and a separate reservations table would be a third.
+ */
+export async function claimAllowanceSlot({
+  userId,
+  // Defaulted to match `getAiAccessDecision`, so the Claim is recorded under
+  // the same label the decision was made under.
+  requestType = "chat",
+  conversationId,
+  estimatedCostCents = 0,
+}: RequestAiAccessArgs & { conversationId: string }): Promise<
+  AiAccessGrant & { claim?: AllowanceClaim }
+> {
+  try {
+    return await prisma.$transaction(async (tx) => {
+      await lockAllowance(tx, userId)
+
+      const grant = await requestAiAccess({ userId, requestType, estimatedCostCents })
+      if (!grant.ok) {
+        return grant
+      }
+
+      const claim = await tx.aiUsage.create({
+        data: {
+          userId,
+          conversationId,
+          // Filled in by `trackAiUsage` when the reply lands. A row still
+          // carrying this was claimed by a turn that never finished.
+          model: PENDING_CLAIM_MODEL,
+          inputTokens: 0,
+          outputTokens: 0,
+          totalTokens: 0,
+          inputCost: 0,
+          outputCost: 0,
+          totalCost: 0,
+          requestType,
+        },
+        select: { id: true },
+      })
+
+      return { ...grant, claim }
+    })
+  } catch (error) {
+    // A failure to take the Claim is a failure to verify the Allowance, and the
+    // fail-safe answer to that is the same as any other: deny.
+    aiAccessLogger.error({ err: error, userId, requestType }, "ALLOWANCE_CLAIM_FAILED")
+    return {
+      ok: false,
+      response: accessDenied({
+        allowed: false,
+        code: "AI_ACCESS_CHECK_FAILED",
+        message: "Unable to verify AI usage limits right now. Please try again.",
+      }),
+    }
+  }
+}
+
+/**
+ * Gives back a Claim whose turn never produced anything.
+ *
+ * Best-effort: a Claim that outlives its turn costs the chatter one message of
+ * their monthly Allowance, which is the safe direction to fail in. Leaving it
+ * is much better than releasing one that did produce a reply.
+ */
+export async function releaseAllowanceClaim(claim: AllowanceClaim): Promise<void> {
+  try {
+    await prisma.aiUsage.delete({ where: { id: claim.id } })
+  } catch (error) {
+    aiAccessLogger.warn({ err: error, claimId: claim.id }, "ALLOWANCE_CLAIM_RELEASE_FAILED")
+  }
 }

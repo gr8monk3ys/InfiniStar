@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { z } from "zod"
 
-import { requestAiAccess } from "@/app/lib/ai-access"
+import { claimAllowanceSlot, releaseAllowanceClaim, type AllowanceClaim } from "@/app/lib/ai-access"
 import { buildAiMessageContent } from "@/app/lib/ai-message-content"
 import { trackAiUsage } from "@/app/lib/ai-usage"
 import anthropic from "@/app/lib/anthropic"
@@ -38,6 +38,10 @@ const chatSchema = z.object({
 })
 
 export async function POST(request: NextRequest) {
+  // Declared outside the try so the catch can release a Claim whose turn died.
+  let claim: AllowanceClaim | undefined
+  let usageRecorded = false
+
   // CSRF Protection
   const headerToken = request.headers.get("X-CSRF-Token")
   const cookieToken = getCsrfTokenFromRequest(request)
@@ -160,11 +164,15 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const grant = await requestAiAccess({
+    // The Claim is taken before the provider is called, so a concurrent turn
+    // counts it. Released below if this turn produces nothing.
+    const grant = await claimAllowanceSlot({
       userId: currentUser.id,
       requestType: "chat",
+      conversationId: conversationId,
     })
     if (!grant.ok) return grant.response
+    claim = grant.claim
 
     if (moderationResult?.shouldReview) {
       await prisma.contentReport.create({
@@ -237,7 +245,9 @@ export async function POST(request: NextRequest) {
       outputTokens: response.usage.output_tokens,
       requestType: "chat",
       latencyMs,
+      claimId: claim?.id,
     })
+    usageRecorded = true
 
     // Create AI message
     const aiMessage = await prisma.message.create({
@@ -310,6 +320,12 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     aiLogger.error({ err: error }, "AI Chat error")
+    // The Claim is only released when the turn produced nothing. Once
+    // `trackAiUsage` has filled it in there is real usage on the row, so
+    // releasing would hand back an Allowance slot that was actually spent.
+    if (claim && !usageRecorded) {
+      await releaseAllowanceClaim(claim)
+    }
     return new NextResponse("Internal Error", { status: 500 })
   }
 }

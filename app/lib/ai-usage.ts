@@ -110,6 +110,7 @@ export async function trackAiUsage({
   requestType,
   latencyMs,
   costOverrideCents,
+  claimId,
 }: {
   userId: string
   conversationId: string
@@ -123,6 +124,13 @@ export async function trackAiUsage({
    * When provided, token-based cost calculation is skipped.
    */
   costOverrideCents?: number
+  /**
+   * The Claim this turn reserved before calling the provider. When present the
+   * reserved row is filled in rather than a second row written — the Claim is
+   * already counted against the month, so creating another would double-count
+   * the turn. See `claimAllowanceSlot`.
+   */
+  claimId?: string
 }) {
   const safeInputTokens = Math.max(0, Math.trunc(inputTokens))
   const safeOutputTokens = Math.max(0, Math.trunc(outputTokens))
@@ -138,22 +146,24 @@ export async function trackAiUsage({
       ? calculateTokenCost(model, safeInputTokens, safeOutputTokens)
       : { inputCost: 0, outputCost: 0, totalCost: Math.round(safeCostOverride * 100) / 100 }
 
+  const row = {
+    userId,
+    conversationId,
+    model,
+    inputTokens: safeInputTokens,
+    outputTokens: safeOutputTokens,
+    totalTokens,
+    inputCost: costs.inputCost,
+    outputCost: costs.outputCost,
+    totalCost: costs.totalCost,
+    requestType,
+    latencyMs,
+  }
+
   try {
-    const usage = await prisma.aiUsage.create({
-      data: {
-        userId,
-        conversationId,
-        model,
-        inputTokens: safeInputTokens,
-        outputTokens: safeOutputTokens,
-        totalTokens,
-        inputCost: costs.inputCost,
-        outputCost: costs.outputCost,
-        totalCost: costs.totalCost,
-        requestType,
-        latencyMs,
-      },
-    })
+    const usage = claimId
+      ? await prisma.aiUsage.update({ where: { id: claimId }, data: row })
+      : await prisma.aiUsage.create({ data: row })
 
     return usage
   } catch (error) {

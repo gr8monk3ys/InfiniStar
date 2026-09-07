@@ -1,7 +1,14 @@
 /**
  * @jest-environment node
  */
-import { getAiAccessDecision, monthlySnapshot, requestAiAccess } from "@/app/lib/ai-access"
+import {
+  claimAllowanceSlot,
+  getAiAccessDecision,
+  monthlySnapshot,
+  PENDING_CLAIM_MODEL,
+  releaseAllowanceClaim,
+  requestAiAccess,
+} from "@/app/lib/ai-access"
 import prisma from "@/app/lib/prismadb"
 import { getUserSubscriptionPlan } from "@/app/lib/subscription"
 
@@ -11,13 +18,27 @@ jest.mock("@/app/lib/analytics", () => ({
   captureServerEvent: (...args: unknown[]) => captureMock(...args),
 }))
 
+const mockUsageCreate = jest.fn()
+const mockUsageDelete = jest.fn()
+const mockExecuteRaw = jest.fn()
+
 jest.mock("@/app/lib/prismadb", () => ({
   __esModule: true,
   default: {
     aiUsage: {
       count: jest.fn(),
       aggregate: jest.fn(),
+      create: (...a: unknown[]) => mockUsageCreate(...a),
+      delete: (...a: unknown[]) => mockUsageDelete(...a),
     },
+    $executeRaw: (...a: unknown[]) => mockExecuteRaw(...a),
+    // The transaction runs its callback against a client exposing the same
+    // surface, which is what the claim uses.
+    $transaction: (fn: (tx: unknown) => unknown) =>
+      fn({
+        aiUsage: { create: (...a: unknown[]) => mockUsageCreate(...a) },
+        $executeRaw: (...a: unknown[]) => mockExecuteRaw(...a),
+      }),
   },
 }))
 
@@ -212,5 +233,111 @@ describe("requestAiAccess", () => {
       const body = await grant.response.json()
       expect(body.code).toBe("AI_ACCESS_CHECK_FAILED")
     }
+  })
+})
+
+// ---------------------------------------------------------------------------
+// The Claim
+// ---------------------------------------------------------------------------
+
+describe("claimAllowanceSlot", () => {
+  beforeEach(() => {
+    mockUsageCreate.mockReset().mockResolvedValue({ id: "claim-1" })
+    mockUsageDelete.mockReset().mockResolvedValue({})
+    mockExecuteRaw.mockReset().mockResolvedValue(1)
+    ;(prisma.aiUsage.count as jest.Mock).mockResolvedValue(0)
+    ;(prisma.aiUsage.aggregate as jest.Mock).mockResolvedValue({
+      _sum: { totalTokens: 0, totalCost: 0 },
+    })
+    ;(getUserSubscriptionPlan as jest.Mock).mockResolvedValue({ isPro: false })
+  })
+
+  /**
+   * The gap this closes. `getAiAccessDecision` counted and `trackAiUsage` wrote,
+   * and nothing reserved anything in between — so two turns at 49 of 50 both
+   * counted 49 and both proceeded. The advisory lock is what makes the second
+   * turn wait for the first one's row.
+   */
+  it("takes a per-chatter advisory lock before counting", async () => {
+    await claimAllowanceSlot({ userId: USER_ID, conversationId: "conv-1" })
+
+    expect(mockExecuteRaw).toHaveBeenCalled()
+    const sql = mockExecuteRaw.mock.calls[0][0]
+    expect(sql.join("?")).toContain("pg_advisory_xact_lock")
+  })
+
+  it("writes the claim before the provider is called, so a concurrent turn counts it", async () => {
+    const grant = await claimAllowanceSlot({ userId: USER_ID, conversationId: "conv-1" })
+
+    expect(grant.ok).toBe(true)
+    if (grant.ok) expect(grant.claim).toEqual({ id: "claim-1" })
+
+    const row = mockUsageCreate.mock.calls[0][0].data
+    expect(row).toMatchObject({
+      userId: USER_ID,
+      conversationId: "conv-1",
+      totalTokens: 0,
+      totalCost: 0,
+      requestType: "chat",
+      model: PENDING_CLAIM_MODEL,
+    })
+  })
+
+  it("writes no claim when the Allowance is exhausted", async () => {
+    ;(prisma.aiUsage.count as jest.Mock).mockResolvedValue(9999)
+
+    const grant = await claimAllowanceSlot({ userId: USER_ID, conversationId: "conv-1" })
+
+    expect(grant.ok).toBe(false)
+    expect(mockUsageCreate).not.toHaveBeenCalled()
+  })
+
+  /**
+   * Failing to take the Claim is failing to verify the Allowance, and the
+   * fail-safe answer to that is the same as any other: deny.
+   */
+  it("denies rather than proceeding unclaimed when the claim cannot be written", async () => {
+    mockUsageCreate.mockRejectedValue(new Error("deadlock detected"))
+
+    const grant = await claimAllowanceSlot({ userId: USER_ID, conversationId: "conv-1" })
+
+    expect(grant.ok).toBe(false)
+    if (!grant.ok) {
+      const body = await grant.response.json()
+      expect(body.code).toBe("AI_ACCESS_CHECK_FAILED")
+    }
+  })
+
+  it("records the claim under the request type the decision was made under", async () => {
+    await claimAllowanceSlot({
+      userId: USER_ID,
+      conversationId: "conv-1",
+      requestType: "chat-stream",
+    })
+
+    expect(mockUsageCreate.mock.calls[0][0].data.requestType).toBe("chat-stream")
+  })
+})
+
+describe("releaseAllowanceClaim", () => {
+  beforeEach(() => {
+    mockUsageDelete.mockReset().mockResolvedValue({})
+  })
+
+  it("gives the slot back", async () => {
+    await releaseAllowanceClaim({ id: "claim-1" })
+
+    expect(mockUsageDelete).toHaveBeenCalledWith({ where: { id: "claim-1" } })
+  })
+
+  /**
+   * A Claim that outlives its turn costs the chatter one message. Throwing here
+   * would turn that into a failed request on top, so it is swallowed — the safe
+   * direction to fail in.
+   */
+  it("does not throw when the release itself fails", async () => {
+    mockUsageDelete.mockRejectedValue(new Error("connection lost"))
+
+    await expect(releaseAllowanceClaim({ id: "claim-1" })).resolves.toBeUndefined()
   })
 })

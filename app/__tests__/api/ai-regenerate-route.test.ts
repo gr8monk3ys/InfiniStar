@@ -19,7 +19,8 @@ const mockConversationUpdate = jest.fn()
 const mockPusherTrigger = jest.fn()
 const mockVerifyCsrfToken = jest.fn()
 const mockAiChatLimiterCheck = jest.fn()
-const mockRequestAiAccess = jest.fn()
+const mockClaimAllowanceSlot = jest.fn()
+const mockReleaseAllowanceClaim = jest.fn()
 const mockTrackAiUsage = jest.fn()
 const mockAnthropicStream = jest.fn()
 const mockBuildAiConversationHistory = jest.fn()
@@ -73,7 +74,8 @@ jest.mock("@/app/lib/rate-limit", () => ({
 }))
 
 jest.mock("@/app/lib/ai-access", () => ({
-  requestAiAccess: (...args: unknown[]) => mockRequestAiAccess(...args),
+  claimAllowanceSlot: (...args: unknown[]) => mockClaimAllowanceSlot(...args),
+  releaseAllowanceClaim: (...args: unknown[]) => mockReleaseAllowanceClaim(...args),
 }))
 
 jest.mock("@/app/lib/ai-usage", () => ({
@@ -213,7 +215,13 @@ beforeEach(() => {
   mockTxConversationUpdate.mockResolvedValue({ id: "conv-1" })
   mockConversationUpdate.mockResolvedValue({ id: "conv-1" })
   mockPusherTrigger.mockResolvedValue(undefined)
-  mockRequestAiAccess.mockResolvedValue({ ok: true, isPro: false, limits: {} })
+  mockClaimAllowanceSlot.mockResolvedValue({
+    ok: true,
+    isPro: false,
+    limits: {},
+    claim: { id: "claim-1" },
+  })
+  mockReleaseAllowanceClaim.mockResolvedValue(undefined)
   mockTrackAiUsage.mockResolvedValue(undefined)
   mockAnthropicStream.mockReturnValue(
     buildFakeStream([
@@ -320,7 +328,7 @@ describe("POST /api/ai/regenerate", () => {
   })
 
   it("returns 402 when free tier message limit is exceeded", async () => {
-    mockRequestAiAccess.mockResolvedValue({
+    mockClaimAllowanceSlot.mockResolvedValue({
       ok: false,
       response: NextResponse.json(
         { error: "Limit reached", code: "FREE_TIER_MESSAGE_LIMIT_REACHED", limits: {} },
