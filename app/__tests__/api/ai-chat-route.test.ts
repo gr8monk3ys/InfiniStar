@@ -99,14 +99,14 @@ jest.mock("@/app/lib/ai-usage", () => ({
 }))
 
 jest.mock("@/app/lib/moderation", () => ({
-  moderateTextModelAssisted: (text: string) => mockModerateText(text),
+  moderateTextModelAssisted: (...args: unknown[]) => mockModerateText(...args),
   buildModerationDetails: () => "details",
   moderationReasonFromCategories: () => "SPAM",
 }))
 
-jest.mock("@/app/lib/nsfw", () => ({
-  canAccessNsfw: () => true,
-}))
+// `matureAccess` is pure, so the real gate runs here rather than a constant
+// stub. Stubbing it to `true` is why the mature-content gate was never exercised
+// by a route test.
 
 jest.mock("@/app/lib/ai-message-content", () => ({
   buildAiMessageContent: (...args: unknown[]) => mockBuildAiMessageContent(...args),
@@ -151,7 +151,13 @@ function createRequest(body: object): NextRequest {
   })
 }
 
-const testUser = { id: "user-1", email: "test@example.com" }
+const testUser = {
+  id: "user-1",
+  email: "test@example.com",
+  isAdult: true,
+  nsfwEnabled: true,
+  adultConfirmedAt: new Date("2026-01-01"),
+}
 
 const testConversation = {
   id: "conv-1",
@@ -546,6 +552,89 @@ describe("what this route asks the Turn for", () => {
     await POST(request)
 
     expect(mockAssembleTurn).toHaveBeenCalledWith(expect.objectContaining({ isPro: false }))
+  })
+})
+
+/**
+ * The mature-content posture.
+ *
+ * `canAccessNsfw` was computed and then thrown away: moderation ran on the same
+ * Turn with no knowledge of it, so a chatter who had confirmed adulthood and
+ * opted in, talking to a mature Character, filed an OPEN ContentReport against
+ * their own conversation every time a turn tripped a sexual review rule. The
+ * queue filled in proportion to exactly the traffic the age gate exists to
+ * permit.
+ */
+describe("moderation knows whether this is a mature conversation", () => {
+  const MATURE_CONVERSATION = {
+    ...testConversation,
+    character: {
+      name: "Elara",
+      isNsfw: true,
+      systemPrompt: "p",
+      scenario: null,
+      exampleDialogues: null,
+    },
+  }
+
+  it("does not file a report on a consenting adult in a mature conversation", async () => {
+    mockConversationFindFirst.mockResolvedValue(MATURE_CONVERSATION)
+    mockModerateText.mockResolvedValue({ shouldBlock: false, shouldReview: false, categories: [] })
+
+    await POST(createRequest({ message: "nsfw please", conversationId: "conv-1" }))
+
+    expect(mockModerateText).toHaveBeenCalledWith(expect.any(String), "mature")
+    expect(mockContentReportCreate).not.toHaveBeenCalled()
+  })
+
+  it("keeps the standard posture when the character is not mature", async () => {
+    mockConversationFindFirst.mockResolvedValue(testConversation)
+
+    await POST(createRequest({ message: "hello", conversationId: "conv-1" }))
+
+    expect(mockModerateText).toHaveBeenCalledWith(expect.any(String), "standard")
+  })
+
+  /**
+   * The gate, not the posture, is what keeps a non-consenting account out. An
+   * account that has not opted in never reaches a mature conversation at all,
+   * so it can never acquire the mature posture.
+   */
+  it("keeps the standard posture for an account that has not opted in", async () => {
+    mockGetCurrentUser.mockResolvedValue({ ...testUser, nsfwEnabled: false })
+    mockConversationFindFirst.mockResolvedValue(MATURE_CONVERSATION)
+
+    const response = await POST(createRequest({ message: "hello", conversationId: "conv-1" }))
+
+    expect(response.status).toBe(403)
+    expect(mockModerateText).not.toHaveBeenCalledWith(expect.any(String), "mature")
+  })
+
+  it("still files a report for a non-sexual review signal in a mature conversation", async () => {
+    mockConversationFindFirst.mockResolvedValue(MATURE_CONVERSATION)
+    mockModerateText.mockResolvedValue({
+      shouldBlock: false,
+      shouldReview: true,
+      categories: ["harassment"],
+    })
+
+    await POST(createRequest({ message: "you are worthless", conversationId: "conv-1" }))
+
+    expect(mockContentReportCreate).toHaveBeenCalled()
+  })
+
+  it("still blocks in a mature conversation", async () => {
+    mockConversationFindFirst.mockResolvedValue(MATURE_CONVERSATION)
+    mockModerateText.mockResolvedValue({
+      shouldBlock: true,
+      shouldReview: false,
+      categories: ["sexual"],
+    })
+
+    const response = await POST(createRequest({ message: "blocked", conversationId: "conv-1" }))
+
+    expect(response.status).toBe(400)
+    expect(mockMessageCreate).not.toHaveBeenCalled()
   })
 })
 

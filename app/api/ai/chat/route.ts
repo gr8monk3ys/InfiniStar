@@ -16,7 +16,7 @@ import {
   moderateTextModelAssisted,
   moderationReasonFromCategories,
 } from "@/app/lib/moderation"
-import { canAccessNsfw } from "@/app/lib/nsfw"
+import { matureAccess } from "@/app/lib/nsfw"
 import prisma from "@/app/lib/prismadb"
 import { aiChatLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 import { sanitizeUrl } from "@/app/lib/sanitize"
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
     if (!currentUser?.id || !currentUser?.email) {
       return new NextResponse("Unauthorized", { status: 401 })
     }
-    const allowNsfw = canAccessNsfw(currentUser)
+    const access = matureAccess(currentUser)
 
     const body = await request.json()
 
@@ -105,23 +105,6 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    const moderationResult = sanitizedMessage
-      ? await moderateTextModelAssisted(sanitizedMessage)
-      : null
-    if (moderationResult?.shouldBlock) {
-      return new NextResponse(
-        JSON.stringify({
-          error: "Message was blocked by safety filters.",
-          code: "CONTENT_BLOCKED",
-          categories: moderationResult.categories,
-        }),
-        {
-          status: 400,
-          headers: { "Content-Type": "application/json" },
-        }
-      )
-    }
-
     // Verify the conversation exists and is an AI conversation
     const conversation = await prisma.conversation.findFirst({
       where: {
@@ -142,11 +125,39 @@ export async function POST(request: NextRequest) {
       return new NextResponse("Not an AI conversation", { status: 400 })
     }
 
-    if (conversation.character?.isNsfw && !allowNsfw) {
+    if (conversation.character?.isNsfw && !access.canView) {
       return new NextResponse(JSON.stringify({ error: "NSFW content is not enabled." }), {
         status: 403,
         headers: { "Content-Type": "application/json" },
       })
+    }
+
+    // Moderation runs after the gates, because it needs to know whether this is
+    // a mature conversation — and because a request that is about to 403 should
+    // not pay for a model-moderation call.
+    //
+    // A consenting adult talking to a mature Character used to file an OPEN
+    // ContentReport against their own conversation every time a turn tripped a
+    // sexual review rule. The posture suppresses that signal and only that one:
+    // every block rule still blocks, and non-sexual review signals still flag.
+    const moderationPosture =
+      conversation.character?.isNsfw && access.canView ? access.moderationPosture : "standard"
+
+    const moderationResult = sanitizedMessage
+      ? await moderateTextModelAssisted(sanitizedMessage, moderationPosture)
+      : null
+    if (moderationResult?.shouldBlock) {
+      return new NextResponse(
+        JSON.stringify({
+          error: "Message was blocked by safety filters.",
+          code: "CONTENT_BLOCKED",
+          categories: moderationResult.categories,
+        }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        }
+      )
     }
 
     const accessDecision = await getAiAccessDecision(currentUser.id)

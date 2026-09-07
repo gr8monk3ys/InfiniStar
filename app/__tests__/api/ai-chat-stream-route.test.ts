@@ -92,14 +92,14 @@ jest.mock("@/app/lib/ai-usage", () => ({
 }))
 
 jest.mock("@/app/lib/moderation", () => ({
-  moderateTextModelAssisted: (text: string) => mockModerateText(text),
+  moderateTextModelAssisted: (...args: unknown[]) => mockModerateText(...args),
   buildModerationDetails: () => "details",
   moderationReasonFromCategories: () => "SPAM",
 }))
 
-jest.mock("@/app/lib/nsfw", () => ({
-  canAccessNsfw: () => true,
-}))
+// `matureAccess` is pure, so the real gate runs here rather than a constant
+// stub. Stubbing it to `true` is why the mature-content gate was never exercised
+// by a route test.
 
 jest.mock("@/app/lib/ai-message-content", () => ({
   buildAiMessageContent: (...args: unknown[]) => mockBuildAiMessageContent(...args),
@@ -177,7 +177,13 @@ function buildFakeStream(chunks: unknown[]) {
   }
 }
 
-const testUser = { id: "user-1", email: "test@example.com" }
+const testUser = {
+  id: "user-1",
+  email: "test@example.com",
+  isAdult: true,
+  nsfwEnabled: true,
+  adultConfirmedAt: new Date("2026-01-01"),
+}
 
 const testConversation = {
   id: "conv-1",

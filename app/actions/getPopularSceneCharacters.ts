@@ -1,4 +1,4 @@
-import { canAccessNsfw } from "@/app/lib/nsfw"
+import { matureAccess } from "@/app/lib/nsfw"
 import prisma from "@/app/lib/prismadb"
 import type { SceneCharacterOption } from "@/app/(dashboard)/dashboard/conversations/types"
 
@@ -11,12 +11,12 @@ interface SceneCharactersUser {
 export default async function getPopularSceneCharacters(
   currentUser?: SceneCharactersUser | null
 ): Promise<SceneCharacterOption[]> {
-  const allowNsfw = canAccessNsfw(currentUser)
+  const access = matureAccess(currentUser)
 
   return prisma.character.findMany({
     where: {
       isPublic: true,
-      ...(allowNsfw ? {} : { isNsfw: false }),
+      ...access.visibilityFilter,
     },
     orderBy: [{ featured: "desc" }, { usageCount: "desc" }, { createdAt: "desc" }],
     take: 50,
