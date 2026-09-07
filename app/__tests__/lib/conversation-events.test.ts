@@ -1,3 +1,7 @@
+/**
+ * @jest-environment node
+ */
+
 import {
   publishMessageDeleted,
   publishMessageReaction,
@@ -7,10 +11,6 @@ import {
   publishParticipantJoined,
 } from "@/app/lib/conversation-events"
 import { type FullMessageType } from "@/app/types"
-
-/**
- * @jest-environment node
- */
 
 /**
  * The publisher's contract.
