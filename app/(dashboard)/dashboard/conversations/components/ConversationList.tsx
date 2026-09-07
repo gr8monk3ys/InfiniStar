@@ -53,7 +53,6 @@ interface ConversationListProps {
   initialItems: FullConversationType[]
   user: UserSummary[]
   currentUserId: string | null
-  currentUserEmail: string | null
   title?: string
   initialNotificationPrefs: NotificationPreferences | null
   sceneCharacters: SceneCharacterOption[]
@@ -310,7 +309,6 @@ interface ConversationItemsSectionProps {
   selectedConversationIndex: number
   indexOffset?: number
   currentUserId: string | null
-  currentUserEmail: string | null
   icon?: React.ReactNode
   counter?: React.ReactNode
 }
@@ -322,7 +320,6 @@ function ConversationItemsSection({
   selectedConversationIndex,
   indexOffset = 0,
   currentUserId,
-  currentUserEmail,
   icon,
   counter,
 }: ConversationItemsSectionProps) {
@@ -344,7 +341,6 @@ function ConversationItemsSection({
           selected={selectedConversationId === item.id}
           keyboardSelected={selectedConversationIndex === indexOffset + index}
           currentUserId={currentUserId}
-          currentUserEmail={currentUserEmail}
         />
       ))}
     </div>
@@ -355,7 +351,6 @@ const ConversationList: React.FC<ConversationListProps> = ({
   initialItems,
   user,
   currentUserId,
-  currentUserEmail,
   title = "Conversations",
   initialNotificationPrefs,
   sceneCharacters,
@@ -534,7 +529,6 @@ const ConversationList: React.FC<ConversationListProps> = ({
                 selectedConversationId={conversationId}
                 selectedConversationIndex={selectedConversationIndex}
                 currentUserId={currentUserId}
-                currentUserEmail={currentUserEmail}
                 icon={<BsPinAngleFill size={12} className="text-primary" />}
                 counter={
                   <span className="text-xs text-muted-foreground">({pinnedItems.length}/5)</span>
@@ -555,7 +549,6 @@ const ConversationList: React.FC<ConversationListProps> = ({
                       selected={conversationId === item.id}
                       keyboardSelected={selectedConversationIndex === pinnedItems.length + index}
                       currentUserId={currentUserId}
-                      currentUserEmail={currentUserEmail}
                     />
                   ))}
                 </div>

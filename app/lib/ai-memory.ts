@@ -2,7 +2,8 @@
  * AI Memory Service
  *
  * Provides functions for managing AI memory/context persistence.
- * Allows the AI to remember important information across conversations.
+ * Memories belong to the chatter and are recalled in every conversation they
+ * have — see `docs/adr/0004-memory-is-scoped-to-the-chatter.md`.
  */
 
 import { MemoryCategory, type AIMemory } from "@prisma/client"
@@ -289,10 +290,13 @@ export async function cleanupExpiredMemories(): Promise<number> {
 }
 
 /**
- * Get memories relevant to the current conversation context
- * Returns high-importance and recently updated memories
+ * The Memories a Turn recalls, highest-importance first.
+ *
+ * Scoped to the chatter, not to the Character or the conversation. That is
+ * deliberate and is recorded in `docs/adr/0004-memory-is-scoped-to-the-chatter.md`;
+ * this used to take an unused `_context` parameter that implied otherwise.
  */
-export async function getRelevantMemories(userId: string, _context?: string): Promise<AIMemory[]> {
+export async function getRelevantMemories(userId: string): Promise<AIMemory[]> {
   const now = new Date()
 
   // Get all non-expired memories sorted by importance
@@ -304,10 +308,6 @@ export async function getRelevantMemories(userId: string, _context?: string): Pr
     orderBy: [{ importance: "desc" }, { updatedAt: "desc" }],
     take: MAX_MEMORIES_IN_CONTEXT,
   })
-
-  // If context is provided, we could do semantic matching here
-  // For now, just return top memories by importance
-  // Future enhancement: Use embeddings for semantic similarity
 
   // Re-sort the selected set deterministically (by key) so the rendered prompt
   // text is byte-stable between turns — selection order churn (updatedAt) would

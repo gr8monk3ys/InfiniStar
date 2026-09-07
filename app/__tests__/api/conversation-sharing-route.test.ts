@@ -475,7 +475,17 @@ describe("POST /api/share/[token]/join", () => {
     expect(data.success).toBe(true)
   })
 
-  it("triggers Pusher conversation:update for other members after joining", async () => {
+  /**
+   * This previously asserted `conversation:update`, and passed — but that
+   * event's only handler returns `{ ...current, messages: conversation.messages }`
+   * and discards `users`, so the join reached the wire and was dropped on
+   * arrival. Everyone already in the conversation saw the new Participant only
+   * after a full reload.
+   *
+   * A new Participant is not a new message, so it has its own event name and a
+   * payload shaped for the handler that reads it.
+   */
+  it("announces a new participant on its own event, carrying the users the handler reads", async () => {
     // Conversation has two users; the current user and another
     const otherUser = { id: "user-other", name: "Other" }
     mockConversationFindUnique.mockResolvedValue({
@@ -487,12 +497,18 @@ describe("POST /api/share/[token]/join", () => {
 
     expect(mockPusherTrigger).toHaveBeenCalledWith(
       `private-user-${otherUser.id}`,
-      "conversation:update",
-      expect.anything()
+      "conversation:participants",
+      { id: JOINED_CONV.id, users: [CURRENT_USER, otherUser] }
     )
     // Should NOT notify the joining user themselves
     expect(mockPusherTrigger).not.toHaveBeenCalledWith(
       `private-user-${CURRENT_USER.id}`,
+      "conversation:participants",
+      expect.anything()
+    )
+    // And must not reuse the event whose handler would drop `users`.
+    expect(mockPusherTrigger).not.toHaveBeenCalledWith(
+      expect.anything(),
       "conversation:update",
       expect.anything()
     )

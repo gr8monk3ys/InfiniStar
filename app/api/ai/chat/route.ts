@@ -1,22 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { z } from "zod"
 
-import { getAiAccessDecision } from "@/app/lib/ai-access"
-import { buildAiConversationHistory, buildAiMessageContent } from "@/app/lib/ai-message-content"
-import { getModelForUser } from "@/app/lib/ai-model-routing"
-import {
-  getDefaultPersonality,
-  getSystemPrompt,
-  isValidPersonality,
-} from "@/app/lib/ai-personalities"
-import { buildChatSystemBlocks } from "@/app/lib/ai-system-prompt"
+import { claimAllowanceSlot, releaseAllowanceClaim, type AllowanceClaim } from "@/app/lib/ai-access"
+import { buildAiMessageContent } from "@/app/lib/ai-message-content"
 import { trackAiUsage } from "@/app/lib/ai-usage"
 import anthropic from "@/app/lib/anthropic"
 import { maybeAutoExtractMemories } from "@/app/lib/auto-memory"
 import { maybeAutoSummarize } from "@/app/lib/auto-summary"
-import { buildCharacterSystemPrompt } from "@/app/lib/character-prompt"
-import { PARTICIPANT_SELECT } from "@/app/lib/conversation-select"
-import { renderSummaryForPrompt } from "@/app/lib/conversation-summary"
+import { publishNewMessage } from "@/app/lib/conversation-events"
+import { MESSAGE_INCLUDE, PARTICIPANT_SELECT } from "@/app/lib/conversation-select"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import { aiLogger } from "@/app/lib/logger"
 import {
@@ -24,12 +16,11 @@ import {
   moderateTextModelAssisted,
   moderationReasonFromCategories,
 } from "@/app/lib/moderation"
-import { canAccessNsfw } from "@/app/lib/nsfw"
+import { matureAccess } from "@/app/lib/nsfw"
 import prisma from "@/app/lib/prismadb"
-import { getPusherConversationChannel, getPusherUserChannel } from "@/app/lib/pusher-channels"
-import { pusherServer } from "@/app/lib/pusher-server"
 import { aiChatLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 import { sanitizeUrl } from "@/app/lib/sanitize"
+import { assembleTurn, TURN_CONVERSATION_INCLUDE } from "@/app/lib/turn"
 import { sendWebPushToUser } from "@/app/lib/web-push"
 import getCurrentUser from "@/app/actions/getCurrentUser"
 
@@ -47,6 +38,10 @@ const chatSchema = z.object({
 })
 
 export async function POST(request: NextRequest) {
+  // Declared outside the try so the catch can release a Claim whose turn died.
+  let claim: AllowanceClaim | undefined
+  let usageRecorded = false
+
   // CSRF Protection
   const headerToken = request.headers.get("X-CSRF-Token")
   const cookieToken = getCsrfTokenFromRequest(request)
@@ -87,7 +82,7 @@ export async function POST(request: NextRequest) {
     if (!currentUser?.id || !currentUser?.email) {
       return new NextResponse("Unauthorized", { status: 401 })
     }
-    const allowNsfw = canAccessNsfw(currentUser)
+    const access = matureAccess(currentUser)
 
     const body = await request.json()
 
@@ -114,8 +109,46 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    // Verify the conversation exists and is an AI conversation
+    const conversation = await prisma.conversation.findFirst({
+      where: {
+        id: conversationId,
+        users: { some: { id: currentUser.id } },
+      },
+      include: TURN_CONVERSATION_INCLUDE,
+    })
+
+    if (!conversation) {
+      return new NextResponse(JSON.stringify({ error: "Not authorized for this conversation" }), {
+        status: 403,
+        headers: { "Content-Type": "application/json" },
+      })
+    }
+
+    if (!conversation.isAI) {
+      return new NextResponse("Not an AI conversation", { status: 400 })
+    }
+
+    if (conversation.character?.isNsfw && !access.canView) {
+      return new NextResponse(JSON.stringify({ error: "NSFW content is not enabled." }), {
+        status: 403,
+        headers: { "Content-Type": "application/json" },
+      })
+    }
+
+    // Moderation runs after the gates, because it needs to know whether this is
+    // a mature conversation — and because a request that is about to 403 should
+    // not pay for a model-moderation call.
+    //
+    // A consenting adult talking to a mature Character used to file an OPEN
+    // ContentReport against their own conversation every time a turn tripped a
+    // sexual review rule. The posture suppresses that signal and only that one:
+    // every block rule still blocks, and non-sexual review signals still flag.
+    const moderationPosture =
+      conversation.character?.isNsfw && access.canView ? access.moderationPosture : "standard"
+
     const moderationResult = sanitizedMessage
-      ? await moderateTextModelAssisted(sanitizedMessage)
+      ? await moderateTextModelAssisted(sanitizedMessage, moderationPosture)
       : null
     if (moderationResult?.shouldBlock) {
       return new NextResponse(
@@ -131,71 +164,15 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Verify the conversation exists and is an AI conversation
-    const conversation = await prisma.conversation.findFirst({
-      where: {
-        id: conversationId,
-        users: { some: { id: currentUser.id } },
-      },
-      include: {
-        character: {
-          select: {
-            name: true,
-            isNsfw: true,
-            systemPrompt: true,
-            scenario: true,
-            exampleDialogues: true,
-          },
-        },
-        persona: {
-          select: {
-            name: true,
-            description: true,
-            appearance: true,
-            personalityTraits: true,
-          },
-        },
-        messages: {
-          orderBy: { createdAt: "desc" },
-          take: 20, // Get last 20 messages for context
-        },
-      },
+    // The Claim is taken before the provider is called, so a concurrent turn
+    // counts it. Released below if this turn produces nothing.
+    const grant = await claimAllowanceSlot({
+      userId: currentUser.id,
+      requestType: "chat",
+      conversationId: conversationId,
     })
-
-    if (!conversation) {
-      return new NextResponse(JSON.stringify({ error: "Not authorized for this conversation" }), {
-        status: 403,
-        headers: { "Content-Type": "application/json" },
-      })
-    }
-
-    if (!conversation.isAI) {
-      return new NextResponse("Not an AI conversation", { status: 400 })
-    }
-
-    if (conversation.character?.isNsfw && !allowNsfw) {
-      return new NextResponse(JSON.stringify({ error: "NSFW content is not enabled." }), {
-        status: 403,
-        headers: { "Content-Type": "application/json" },
-      })
-    }
-
-    const accessDecision = await getAiAccessDecision(currentUser.id)
-    if (!accessDecision.allowed) {
-      return new NextResponse(
-        JSON.stringify({
-          error:
-            accessDecision.message ??
-            "AI access is unavailable for this account right now. Please try again.",
-          code: accessDecision.code,
-          limits: accessDecision.limits,
-        }),
-        {
-          status: 402,
-          headers: { "Content-Type": "application/json" },
-        }
-      )
-    }
+    if (!grant.ok) return grant.response
+    claim = grant.claim
 
     if (moderationResult?.shouldReview) {
       await prisma.contentReport.create({
@@ -228,68 +205,31 @@ export async function POST(request: NextRequest) {
         },
         isAI: false,
       },
-      include: {
-        seen: { select: PARTICIPANT_SELECT },
-        sender: { select: PARTICIPANT_SELECT },
-      },
+      include: MESSAGE_INCLUDE,
     })
 
-    // Trigger Pusher event for user message
-    await pusherServer.trigger(
-      getPusherConversationChannel(conversationId),
-      "messages:new",
-      userMessage
-    )
-
-    // Build conversation history for Claude
-    // Reverse because messages were fetched desc (newest-first) to get the last 20; restore chronological order
-    const conversationHistory = buildAiConversationHistory(conversation.messages.slice().reverse())
-
-    // Add the new user message to history
-    conversationHistory.push({
-      role: "user" as const,
-      content: builtUserContent.content,
+    await publishNewMessage({
+      conversationId,
+      message: userMessage,
+      notify: [currentUser.id],
     })
 
-    // Track request start time for latency measurement
     const startTime = Date.now()
-    const modelToUse = getModelForUser({
-      isPro: accessDecision.limits?.isPro ?? false,
-      requestedModelId: conversation.aiModel,
+    const turn = await assembleTurn({
+      conversation,
+      userId: currentUser.id,
+      isPro: grant.isPro,
+      input: builtUserContent.content,
+      // Anchored on the row just written, so history stops short of it.
+      asOf: userMessage.createdAt,
     })
+    const modelToUse = turn.model
 
-    // Get system prompt based on personality with proper type validation
-    const personalityType =
-      conversation.aiPersonality && isValidPersonality(conversation.aiPersonality)
-        ? conversation.aiPersonality
-        : getDefaultPersonality()
-    let personaContext = ""
-    if (conversation.persona) {
-      const p = conversation.persona
-      const parts = [`\n\n[User Persona]\nThe user is roleplaying as: ${p.name}`]
-      if (p.description) parts.push(`Description: ${p.description}`)
-      if (p.appearance) parts.push(`Appearance: ${p.appearance}`)
-      if (p.personalityTraits) parts.push(`Personality: ${p.personalityTraits}`)
-      parts.push("Address the user as this persona and react to their described traits naturally.")
-      personaContext = parts.join("\n")
-    }
-
-    // Character conversations rebuild the prompt fresh from the character row so
-    // edits to a character (and roleplay guardrails) apply to existing chats.
-    const basePrompt = conversation.character?.systemPrompt
-      ? buildCharacterSystemPrompt(conversation.character)
-      : getSystemPrompt(personalityType, conversation.aiSystemPrompt || undefined)
-    const summaryContext = renderSummaryForPrompt(conversation.summary)
-
-    // The character + persona prefix is stable across turns and carries the cache
-    // breakpoint (~90% input-token savings in roleplay); the volatile summary is a
-    // separate trailing block so regenerating it never busts the cached prefix.
-    const stablePrompt = basePrompt + personaContext
     const response = await anthropic.messages.create({
       model: modelToUse,
       max_tokens: 2048,
-      system: buildChatSystemBlocks(stablePrompt, summaryContext),
-      messages: conversationHistory,
+      system: turn.system,
+      messages: turn.messages,
     })
 
     // Calculate latency
@@ -307,7 +247,9 @@ export async function POST(request: NextRequest) {
       outputTokens: response.usage.output_tokens,
       requestType: "chat",
       latencyMs,
+      claimId: claim?.id,
     })
+    usageRecorded = true
 
     // Create AI message
     const aiMessage = await prisma.message.create({
@@ -324,10 +266,7 @@ export async function POST(request: NextRequest) {
         },
         isAI: true,
       },
-      include: {
-        seen: { select: PARTICIPANT_SELECT },
-        sender: { select: PARTICIPANT_SELECT },
-      },
+      include: MESSAGE_INCLUDE,
     })
 
     // Update conversation lastMessageAt
@@ -336,17 +275,10 @@ export async function POST(request: NextRequest) {
       data: { lastMessageAt: new Date() },
     })
 
-    // Trigger Pusher event for AI response
-    await pusherServer.trigger(
-      getPusherConversationChannel(conversationId),
-      "messages:new",
-      aiMessage
-    )
-
-    // Notify user of conversation update
-    await pusherServer.trigger(getPusherUserChannel(currentUser.id), "conversation:update", {
-      id: conversationId,
-      messages: [aiMessage],
+    await publishNewMessage({
+      conversationId,
+      message: aiMessage,
+      notify: [currentUser.id],
     })
 
     // Best-effort background memory extraction
@@ -390,6 +322,12 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     aiLogger.error({ err: error }, "AI Chat error")
+    // The Claim is only released when the turn produced nothing. Once
+    // `trackAiUsage` has filled it in there is real usage on the row, so
+    // releasing would hand back an Allowance slot that was actually spent.
+    if (claim && !usageRecorded) {
+      await releaseAllowanceClaim(claim)
+    }
     return new NextResponse("Internal Error", { status: 500 })
   }
 }

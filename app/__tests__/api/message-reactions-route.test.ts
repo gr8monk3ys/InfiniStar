@@ -322,6 +322,26 @@ describe("POST /api/messages/[messageId]/react", () => {
       await callReact("msg-1", { emoji: "👍" })
       expect(mockPusherTrigger).not.toHaveBeenCalled()
     })
+
+    /**
+     * Regression: reacting to a message that quoted another used to erase the
+     * quote for every subscriber. This route read a narrower include than
+     * `getMessages` did, and the client reducer replaces the whole message
+     * object rather than merging into it, so the missing `replyTo` was not just
+     * absent from the event — it was removed from state until a full reload.
+     *
+     * The broadcast payload is whatever this read returns, so asserting the
+     * read asks for `replyTo` is asserting the quote survives the round trip.
+     */
+    it("reads the quoted parent, so a reaction does not erase it for subscribers", async () => {
+      mockMessageUpdate.mockResolvedValue({ ...TEST_MESSAGE, reactions: { "👍": ["user-1"] } })
+
+      await callReact("msg-1", { emoji: "👍" })
+
+      const include = mockMessageUpdate.mock.calls[0][0].include as Record<string, unknown>
+      expect(include).toHaveProperty("replyTo")
+      expect(include.replyTo).toBeTruthy()
+    })
   })
 
   // ------------------------------------------------------------------

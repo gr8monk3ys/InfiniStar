@@ -68,9 +68,11 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
   const menuRef = useRef<HTMLDivElement>(null)
 
   const isOwn = Boolean(currentUserId && currentUserId === data?.sender?.id)
+  // Matched by id: email is nullable, so two participants without one used to
+  // compare equal and drop out of the seen list together.
   const seenList = (data.seen || [])
-    .filter((user: { email?: string | null }) => user.email !== data?.sender?.email)
-    .map((user: { name?: string | null }) => user.name)
+    .filter((user) => user.id !== data?.sender?.id)
+    .map((user) => user.name)
     .join(", ")
 
   const container = clsx("group flex gap-3 p-4", isOwn && "justify-end")

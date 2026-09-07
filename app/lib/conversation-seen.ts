@@ -1,7 +1,6 @@
-import { MESSAGE_INCLUDE_FLAT } from "@/app/lib/conversation-select"
+import { publishMessageSeen } from "@/app/lib/conversation-events"
+import { MESSAGE_INCLUDE } from "@/app/lib/conversation-select"
 import prisma from "@/app/lib/prismadb"
-import { getPusherConversationChannel, getPusherUserChannel } from "@/app/lib/pusher-channels"
-import { pusherServer } from "@/app/lib/pusher-server"
 
 export async function markConversationSeenByUserId({
   conversationId,
@@ -47,7 +46,7 @@ export async function markConversationSeenByUserId({
     where: {
       id: lastMessage.id,
     },
-    include: MESSAGE_INCLUDE_FLAT,
+    include: MESSAGE_INCLUDE,
     data: {
       seen: {
         connect: {
@@ -57,16 +56,11 @@ export async function markConversationSeenByUserId({
     },
   })
 
-  await pusherServer.trigger(getPusherUserChannel(currentUserId), "conversation:update", {
-    id: conversationId,
-    messages: [updatedMessage],
+  await publishMessageSeen({
+    conversationId,
+    message: updatedMessage,
+    viewerId: currentUserId,
   })
-
-  await pusherServer.trigger(
-    getPusherConversationChannel(conversationId),
-    "message:update",
-    updatedMessage
-  )
 
   return { foundConversation: true, updated: true }
 }

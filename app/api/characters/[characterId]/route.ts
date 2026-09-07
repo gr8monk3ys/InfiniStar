@@ -7,7 +7,7 @@ import {
   moderateTextModelAssisted,
   moderationReasonFromCategories,
 } from "@/app/lib/moderation"
-import { canAccessNsfw } from "@/app/lib/nsfw"
+import { canAccessNsfw, matureAccess } from "@/app/lib/nsfw"
 import prisma from "@/app/lib/prismadb"
 import { apiLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 import { sanitizePlainText } from "@/app/lib/sanitize"
@@ -140,7 +140,11 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     )
   }
 
-  if (data.isNsfw && !currentUser.isAdult) {
+  // CONTEXT.md: "the two are separate facts and both are required". This
+  // checked `isAdult` alone, so an account holding `isAdult: true,
+  // nsfwEnabled: false` could publish a Character it was itself filtered out of
+  // seeing — and never checked `adultConfirmedAt` at all.
+  if (data.isNsfw && !matureAccess(currentUser).canAuthor) {
     return NextResponse.json(
       { error: "You must confirm you are 18+ to mark NSFW." },
       { status: 403 }

@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { z } from "zod"
 
-import { getAiAccessDecision } from "@/app/lib/ai-access"
+import { requestAiAccess } from "@/app/lib/ai-access"
 import { AI_TRANSCRIBE_COST_CENTS_PER_REQUEST } from "@/app/lib/ai-limits"
 import { trackAiUsage } from "@/app/lib/ai-usage"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
@@ -123,19 +123,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const accessDecision = await getAiAccessDecision(currentUser.id, { requestType: "transcribe" })
-    if (!accessDecision.allowed) {
-      return NextResponse.json(
-        {
-          error:
-            accessDecision.message ??
-            "AI access is unavailable for this account right now. Please try again.",
-          code: accessDecision.code,
-          limits: accessDecision.limits,
-        },
-        { status: 402 }
-      )
-    }
+    const grant = await requestAiAccess({
+      userId: currentUser.id,
+      requestType: "transcribe",
+      estimatedCostCents: AI_TRANSCRIBE_COST_CENTS_PER_REQUEST,
+    })
+    if (!grant.ok) return grant.response
 
     const openAiKey = process.env.OPENAI_API_KEY
     if (!openAiKey) {
@@ -167,23 +160,6 @@ export async function POST(request: NextRequest) {
 
     if (conversation.isAI && conversation.character?.isNsfw && !allowNsfw) {
       return NextResponse.json({ error: "NSFW content is not enabled." }, { status: 403 })
-    }
-
-    const proCostCapCents = accessDecision.limits?.monthlyCostQuotaCents ?? null
-    const proCostUsageCents = accessDecision.limits?.monthlyCostUsageCents ?? 0
-    if (accessDecision.limits?.isPro && proCostCapCents !== null) {
-      if (proCostUsageCents + AI_TRANSCRIBE_COST_CENTS_PER_REQUEST > proCostCapCents) {
-        return NextResponse.json(
-          {
-            error:
-              accessDecision.message ??
-              "You have reached this month's AI fair-use cap. Please contact support to increase limits.",
-            code: "PRO_TIER_COST_CAP_REACHED",
-            limits: accessDecision.limits,
-          },
-          { status: 402 }
-        )
-      }
     }
 
     const sanitizedAudioUrl = sanitizeUrl(validation.data.audioUrl)

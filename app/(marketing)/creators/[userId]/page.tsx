@@ -7,7 +7,7 @@ import { HiCalendar, HiChatBubbleLeftRight, HiGlobeAlt } from "react-icons/hi2"
 
 import { siteConfig } from "@/config/site"
 import { toMonthlyRecurringCents } from "@/app/lib/creator-monetization"
-import { canAccessNsfw } from "@/app/lib/nsfw"
+import { matureAccess } from "@/app/lib/nsfw"
 import prisma from "@/app/lib/prismadb"
 import { buildCreatorJsonLd } from "@/app/lib/structured-data"
 import getCurrentUser from "@/app/actions/getCurrentUser"
@@ -66,8 +66,8 @@ export default async function CreatorProfilePage({ params }: CreatorProfilePageP
   const { userId } = await params
 
   const viewerUser = await getCurrentUser()
-  const allowNsfw = canAccessNsfw(viewerUser)
-  const publicCharacterWhere = allowNsfw ? { isPublic: true } : { isPublic: true, isNsfw: false }
+  const access = matureAccess(viewerUser)
+  const publicCharacterWhere = { isPublic: true, ...access.visibilityFilter }
 
   const user = await prisma.user.findUnique({
     where: { id: userId },

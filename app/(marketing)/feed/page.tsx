@@ -3,7 +3,7 @@ import Link from "next/link"
 import { HiArrowTrendingUp, HiChatBubbleLeftRight, HiSparkles, HiUserGroup } from "react-icons/hi2"
 
 import { CHARACTER_SELECT } from "@/app/lib/character-select"
-import { canAccessNsfw } from "@/app/lib/nsfw"
+import { matureAccess } from "@/app/lib/nsfw"
 import prisma from "@/app/lib/prismadb"
 import { getRecommendationSignalsForUser, rankCharactersForUser } from "@/app/lib/recommendations"
 import { cn } from "@/app/lib/utils"
@@ -70,8 +70,8 @@ interface FeedCreatorRow {
 
 export default async function FeedPage() {
   const currentUser = await getCurrentUser()
-  const allowNsfw = canAccessNsfw(currentUser)
-  const publicCharacterWhere = allowNsfw ? { isPublic: true } : { isPublic: true, isNsfw: false }
+  const access = matureAccess(currentUser)
+  const publicCharacterWhere = { isPublic: true, ...access.visibilityFilter }
 
   let trendingRaw: FeedCharacter[] = []
   let freshRaw: FeedCharacter[] = []

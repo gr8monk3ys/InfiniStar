@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { z } from "zod"
 
-import { MESSAGE_INCLUDE_FLAT, PARTICIPANT_SELECT } from "@/app/lib/conversation-select"
+import { MESSAGE_INCLUDE, PARTICIPANT_SELECT } from "@/app/lib/conversation-select"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import { apiLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
@@ -189,7 +189,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         },
         users: { select: PARTICIPANT_SELECT },
         messages: {
-          include: MESSAGE_INCLUDE_FLAT,
+          include: MESSAGE_INCLUDE,
         },
       },
     })
