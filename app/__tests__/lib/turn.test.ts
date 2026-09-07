@@ -44,6 +44,8 @@ jest.mock("@/app/lib/logger", () => ({
   dbLogger: { warn: jest.fn(), error: jest.fn(), info: jest.fn() },
 }))
 
+const NOW = new Date("2026-02-01T12:00:00Z")
+
 const CHARACTER_CONVERSATION: TurnConversation = {
   id: "conv-1",
   aiModel: null,
@@ -74,7 +76,12 @@ describe("the recent-history window", () => {
    * conversation rather than from where it actually was.
    */
   it("selects the newest messages, not the oldest", async () => {
-    await assembleTurn({ conversation: CHARACTER_CONVERSATION, userId: "user-1", isPro: false })
+    await assembleTurn({
+      conversation: CHARACTER_CONVERSATION,
+      userId: "user-1",
+      isPro: false,
+      asOf: NOW,
+    })
 
     const query = mockMessageFindMany.mock.calls[0][0]
     expect(query.orderBy).toEqual({ createdAt: "desc" })
@@ -93,13 +100,19 @@ describe("the recent-history window", () => {
       conversation: CHARACTER_CONVERSATION,
       userId: "user-1",
       isPro: false,
+      asOf: NOW,
     })
 
     expect(turn.messages.map((m) => m.content)).toEqual(["first", "second", "third"])
   })
 
   it("excludes soft-deleted messages", async () => {
-    await assembleTurn({ conversation: CHARACTER_CONVERSATION, userId: "user-1", isPro: false })
+    await assembleTurn({
+      conversation: CHARACTER_CONVERSATION,
+      userId: "user-1",
+      isPro: false,
+      asOf: NOW,
+    })
 
     expect(mockMessageFindMany.mock.calls[0][0].where).toMatchObject({ isDeleted: false })
   })
@@ -116,7 +129,7 @@ describe("the recent-history window", () => {
       conversation: CHARACTER_CONVERSATION,
       userId: "user-1",
       isPro: false,
-      before: replyTime,
+      asOf: replyTime,
     })
 
     expect(mockMessageFindMany.mock.calls[0][0].where).toMatchObject({
@@ -124,10 +137,44 @@ describe("the recent-history window", () => {
     })
   })
 
-  it("does not cut history off for an ordinary turn", async () => {
-    await assembleTurn({ conversation: CHARACTER_CONVERSATION, userId: "user-1", isPro: false })
+  /**
+   * Both send routes persist the chatter's message *before* assembling, so an
+   * unanchored history window picks that row up — and then `input` appends the
+   * same content again. The model gets the newest message twice, one real
+   * exchange falls out of the window, and the duplicate is billed as input.
+   * Nothing errors, which is why `asOf` is required rather than optional.
+   */
+  it("never sends the anchored message twice, even though it is already persisted", async () => {
+    const userMessageAt = new Date("2026-02-01T12:00:00Z")
+    // What the database returns when the row has already been written: Prisma
+    // would include it if the window were not anchored.
+    mockMessageFindMany.mockResolvedValue([{ isAI: false, body: "earlier", image: null }])
 
-    expect(mockMessageFindMany.mock.calls[0][0].where).not.toHaveProperty("createdAt")
+    const turn = await assembleTurn({
+      conversation: CHARACTER_CONVERSATION,
+      userId: "user-1",
+      isPro: false,
+      asOf: userMessageAt,
+      input: "the new thing",
+    })
+
+    expect(mockMessageFindMany.mock.calls[0][0].where.createdAt).toEqual({ lt: userMessageAt })
+    expect(turn.messages).toEqual([
+      { role: "user", content: "earlier" },
+      { role: "user", content: "the new thing" },
+    ])
+    expect(turn.messages.filter((m) => m.content === "the new thing")).toHaveLength(1)
+  })
+
+  it("always anchors, so history is never taken as of an unspecified moment", async () => {
+    await assembleTurn({
+      conversation: CHARACTER_CONVERSATION,
+      userId: "user-1",
+      isPro: false,
+      asOf: NOW,
+    })
+
+    expect(mockMessageFindMany.mock.calls[0][0].where.createdAt).toEqual({ lt: NOW })
   })
 })
 
@@ -139,6 +186,7 @@ describe("the new input", () => {
       conversation: CHARACTER_CONVERSATION,
       userId: "user-1",
       isPro: false,
+      asOf: NOW,
       input: "and now this",
     })
 
@@ -156,7 +204,7 @@ describe("the new input", () => {
       conversation: CHARACTER_CONVERSATION,
       userId: "user-1",
       isPro: false,
-      before: new Date(),
+      asOf: new Date(),
     })
 
     expect(turn.messages).toHaveLength(1)
@@ -172,12 +220,13 @@ describe("memories", () => {
   it("recalls the chatter's memories on every turn, however it was triggered", async () => {
     mockGetRelevantMemories.mockResolvedValue([{ key: "name", content: "goes by Sam" }])
 
-    for (const args of [{ input: "hello" }, { before: new Date() }]) {
+    for (const args of [{ input: "hello" }, {}]) {
       mockGetRelevantMemories.mockClear()
       const turn = await assembleTurn({
         conversation: CHARACTER_CONVERSATION,
         userId: "user-1",
         isPro: false,
+        asOf: NOW,
         ...args,
       })
 
@@ -193,6 +242,7 @@ describe("memories", () => {
       conversation: CHARACTER_CONVERSATION,
       userId: "user-1",
       isPro: false,
+      asOf: NOW,
       input: "hello",
     })
 
@@ -225,6 +275,7 @@ describe("the prompt-cache split", () => {
       },
       userId: "user-1",
       isPro: false,
+      asOf: NOW,
       input: "hello",
     })
 
@@ -244,6 +295,7 @@ describe("the prompt-cache split", () => {
       conversation: CHARACTER_CONVERSATION,
       userId: "user-1",
       isPro: false,
+      asOf: NOW,
       input: "hello",
     })
 
@@ -260,6 +312,7 @@ describe("the prompt-cache split", () => {
       conversation: CHARACTER_CONVERSATION,
       userId: "user-1",
       isPro: false,
+      asOf: NOW,
       input: "hello",
     }
 

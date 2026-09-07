@@ -481,15 +481,40 @@ export interface AllowanceClaim {
 }
 
 /**
- * Serialises a chatter's Allowance decisions against each other.
+ * How many times to try for the lock before giving up, and how long to wait
+ * between attempts.
  *
- * A transaction-scoped Postgres advisory lock, keyed on the chatter. Two turns
- * from the same account queue; turns from different accounts never contend.
- * The lock is released when the transaction ends, including on rollback, so
- * there is nothing to leak.
+ * Five attempts at 40ms is at most ~200ms of waiting. A single account with
+ * more than five genuinely simultaneous turns is already pathological — the UI
+ * sends one at a time — so exhausting these means something is wrong, and
+ * answering "try again" is better than queueing indefinitely.
  */
-async function lockAllowance(tx: Prisma.TransactionClient, userId: string): Promise<void> {
-  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${userId}))`
+const CLAIM_LOCK_ATTEMPTS = 5
+const CLAIM_LOCK_BACKOFF_MS = 40
+
+/**
+ * How long a claim transaction may run. Prisma's default is 5s, which is
+ * generous for two indexed reads and an insert; naming it keeps a slow claim
+ * from silently becoming a request that hangs.
+ */
+const CLAIM_TRANSACTION_TIMEOUT_MS = 5_000
+
+/**
+ * Tries for the chatter's Allowance lock without waiting on it.
+ *
+ * `pg_advisory_xact_lock` would block, and a transaction blocked on a lock
+ * still occupies its pool connection. `pg` defaults to ten connections and this
+ * app does not configure it, so a queue of turns from one account would tie up
+ * connections that unrelated queries need. The non-blocking form returns
+ * immediately, the transaction ends, the connection goes back, and the caller
+ * waits outside the pool before trying again.
+ */
+async function tryLockAllowance(tx: Prisma.TransactionClient, userId: string): Promise<boolean> {
+  const rows = await tx.$queryRaw<
+    { locked: boolean }[]
+  >`SELECT pg_try_advisory_xact_lock(hashtext(${userId})) AS locked`
+
+  return rows[0]?.locked === true
 }
 
 /**
@@ -521,38 +546,71 @@ export async function claimAllowanceSlot({
   AiAccessGrant & { claim?: AllowanceClaim }
 > {
   try {
-    return await prisma.$transaction(async (tx) => {
-      await lockAllowance(tx, userId)
+    for (let attempt = 0; attempt < CLAIM_LOCK_ATTEMPTS; attempt++) {
+      const result = await prisma.$transaction(
+        async (tx) => {
+          // Not held while waiting: a failed attempt ends the transaction and
+          // gives the connection back before we sleep.
+          if (!(await tryLockAllowance(tx, userId))) {
+            return null
+          }
 
-      // Read on `tx`, not the global client. Reading on the pool would hold a
-      // second connection for the life of this transaction, and `pg` defaults
-      // to a pool of ten — roughly six concurrent turns would then deadlock,
-      // every transaction waiting for a connection none of them will release.
-      const grant = await requestAiAccess({ userId, requestType, estimatedCostCents, client: tx })
-      if (!grant.ok) {
-        return grant
+          // Read on `tx`, not the global client. Reading on the pool would hold
+          // a second connection for the life of this transaction, and `pg`
+          // defaults to a pool of ten — roughly six concurrent turns would then
+          // deadlock, every transaction waiting for a connection none of them
+          // will release.
+          const grant = await requestAiAccess({
+            userId,
+            requestType,
+            estimatedCostCents,
+            client: tx,
+          })
+          if (!grant.ok) {
+            return grant
+          }
+
+          const claim = await tx.aiUsage.create({
+            data: {
+              userId,
+              conversationId,
+              // Filled in by `trackAiUsage` when the reply lands. A row still
+              // carrying this was claimed by a turn that never finished.
+              model: PENDING_CLAIM_MODEL,
+              inputTokens: 0,
+              outputTokens: 0,
+              totalTokens: 0,
+              inputCost: 0,
+              outputCost: 0,
+              totalCost: 0,
+              requestType,
+            },
+            select: { id: true },
+          })
+
+          return { ...grant, claim }
+        },
+        { timeout: CLAIM_TRANSACTION_TIMEOUT_MS }
+      )
+
+      if (result) {
+        return result
       }
 
-      const claim = await tx.aiUsage.create({
-        data: {
-          userId,
-          conversationId,
-          // Filled in by `trackAiUsage` when the reply lands. A row still
-          // carrying this was claimed by a turn that never finished.
-          model: PENDING_CLAIM_MODEL,
-          inputTokens: 0,
-          outputTokens: 0,
-          totalTokens: 0,
-          inputCost: 0,
-          outputCost: 0,
-          totalCost: 0,
-          requestType,
-        },
-        select: { id: true },
-      })
+      await new Promise((resolve) => setTimeout(resolve, CLAIM_LOCK_BACKOFF_MS))
+    }
 
-      return { ...grant, claim }
-    })
+    // Never proceed unclaimed: not getting the lock means not knowing whether
+    // there is Allowance left, and the fail-safe answer to that is to deny.
+    aiAccessLogger.warn({ userId, requestType }, "ALLOWANCE_CLAIM_LOCK_CONTENDED")
+    return {
+      ok: false,
+      response: accessDenied({
+        allowed: false,
+        code: "AI_ACCESS_CHECK_FAILED",
+        message: "Too many messages in flight for this account. Please try again.",
+      }),
+    }
   } catch (error) {
     // A failure to take the Claim is a failure to verify the Allowance, and the
     // fail-safe answer to that is the same as any other: deny.

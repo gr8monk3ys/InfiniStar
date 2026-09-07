@@ -18,9 +18,16 @@ export type ConversationDetail = Conversation & {
  * One conversation, with the participants, the viewer's tags, and the character
  * and persona it is being played with.
  *
- * `null` means the conversation does not exist or the viewer is not signed in —
- * and only that. A database failure throws, and the dashboard's error boundary
- * renders it as an error.
+ * `null` means the conversation does not exist, the viewer is not signed in, or
+ * the viewer is not a participant — and only those. A database failure throws,
+ * and the dashboard's error boundary renders it as an error.
+ *
+ * The membership filter is load-bearing. Without it this was `findUnique` on the
+ * id alone, and the page renders whatever it returns, so any signed-in account
+ * holding a conversation UUID could read another account's participants,
+ * character, persona and — through `getMessages`, which filtered the same way —
+ * the whole message history. Joining through a share link connects the joiner
+ * into `conversation.users`, so shared conversations still resolve.
  *
  * That distinction is the point of this function's shape. It used to close with
  * a bare `catch { return null }` and no logging, so an outage was indistinguishable
@@ -36,8 +43,11 @@ const getConversationById = async (conversationId: string): Promise<Conversation
   }
 
   try {
-    return await prisma.conversation.findUnique({
-      where: { id: conversationId },
+    return await prisma.conversation.findFirst({
+      where: {
+        id: conversationId,
+        users: { some: { id: currentUser.id } },
+      },
       include: {
         users: { select: PARTICIPANT_SELECT },
         // Only the viewer's own tags.

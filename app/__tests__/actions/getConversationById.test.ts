@@ -10,13 +10,13 @@ import getConversationById from "@/app/actions/getConversationById"
  * is unreachable".
  */
 
-const mockFindUnique = jest.fn()
+const mockFindFirst = jest.fn()
 const mockGetCurrentUser = jest.fn()
 const mockLoggerError = jest.fn()
 
 jest.mock("@/app/lib/prismadb", () => ({
   __esModule: true,
-  default: { conversation: { findUnique: (...a: unknown[]) => mockFindUnique(...a) } },
+  default: { conversation: { findFirst: (...a: unknown[]) => mockFindFirst(...a) } },
 }))
 
 jest.mock("@/app/actions/getCurrentUser", () => ({
@@ -42,13 +42,13 @@ beforeEach(() => {
 
 describe("getConversationById", () => {
   it("returns the conversation when it exists", async () => {
-    mockFindUnique.mockResolvedValue({ id: "conv-1" })
+    mockFindFirst.mockResolvedValue({ id: "conv-1" })
 
     await expect(getConversationById("conv-1")).resolves.toEqual({ id: "conv-1" })
   })
 
   it("returns null when the conversation does not exist", async () => {
-    mockFindUnique.mockResolvedValue(null)
+    mockFindFirst.mockResolvedValue(null)
 
     await expect(getConversationById("conv-1")).resolves.toBeNull()
   })
@@ -57,7 +57,7 @@ describe("getConversationById", () => {
     mockGetCurrentUser.mockResolvedValue(null)
 
     await expect(getConversationById("conv-1")).resolves.toBeNull()
-    expect(mockFindUnique).not.toHaveBeenCalled()
+    expect(mockFindFirst).not.toHaveBeenCalled()
   })
 
   /**
@@ -67,17 +67,34 @@ describe("getConversationById", () => {
    * exist while the database was down, and nothing was logged.
    */
   it("throws rather than reporting a missing conversation when the database fails", async () => {
-    mockFindUnique.mockRejectedValue(new Error("connection terminated"))
+    mockFindFirst.mockRejectedValue(new Error("connection terminated"))
 
     await expect(getConversationById("conv-1")).rejects.toThrow("connection terminated")
     expect(mockLoggerError).toHaveBeenCalled()
   })
 
-  it("scopes tags to the viewer", async () => {
-    mockFindUnique.mockResolvedValue({ id: "conv-1" })
+  /**
+   * The read used to filter on the id alone, and the page renders whatever it
+   * returns — so any signed-in account holding a conversation UUID could read
+   * another account's participants, character, persona and, through
+   * `getMessages`, the whole message history.
+   */
+  it("only resolves a conversation the viewer is a participant of", async () => {
+    mockFindFirst.mockResolvedValue({ id: "conv-1" })
 
     await getConversationById("conv-1")
 
-    expect(mockFindUnique.mock.calls[0][0].include.tags).toEqual({ where: { userId: USER.id } })
+    expect(mockFindFirst.mock.calls[0][0].where).toEqual({
+      id: "conv-1",
+      users: { some: { id: USER.id } },
+    })
+  })
+
+  it("scopes tags to the viewer", async () => {
+    mockFindFirst.mockResolvedValue({ id: "conv-1" })
+
+    await getConversationById("conv-1")
+
+    expect(mockFindFirst.mock.calls[0][0].include.tags).toEqual({ where: { userId: USER.id } })
   })
 })

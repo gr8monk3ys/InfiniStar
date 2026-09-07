@@ -220,6 +220,8 @@ export async function POST(request: NextRequest) {
       userId: currentUser.id,
       isPro: grant.isPro,
       input: builtUserContent.content,
+      // Anchored on the row just written, so history stops short of it.
+      asOf: userMessage.createdAt,
     })
     const modelToUse = turn.model
 

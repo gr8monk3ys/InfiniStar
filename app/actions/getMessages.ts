@@ -22,6 +22,13 @@ interface GetMessagesOptions {
  */
 const getMessages = async (
   conversationId: string,
+  /**
+   * The account asking. Required, and scoped on rather than trusted: this read
+   * used to filter on `conversationId` alone, so any signed-in account holding a
+   * conversation UUID could read the whole history of a conversation it was
+   * never part of.
+   */
+  viewerId: string,
   options: GetMessagesOptions = {}
 ): Promise<FullMessageType[]> => {
   const { limit = 50, cursor } = options
@@ -29,7 +36,8 @@ const getMessages = async (
   try {
     const messages = await prisma.message.findMany({
       where: {
-        conversationId: conversationId,
+        conversationId,
+        conversation: { users: { some: { id: viewerId } } },
       },
       include: MESSAGE_INCLUDE,
       orderBy: {

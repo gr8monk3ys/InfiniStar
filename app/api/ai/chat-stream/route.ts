@@ -1,7 +1,7 @@
 import { type NextRequest } from "next/server"
 import { z } from "zod"
 
-import { claimAllowanceSlot, releaseAllowanceClaim } from "@/app/lib/ai-access"
+import { claimAllowanceSlot, releaseAllowanceClaim, type AllowanceClaim } from "@/app/lib/ai-access"
 import { buildAiMessageContent } from "@/app/lib/ai-message-content"
 import { trackAiUsage } from "@/app/lib/ai-usage"
 import { captureServerEvent } from "@/app/lib/analytics"
@@ -48,6 +48,13 @@ const chatStreamSchema = z.object({
  * Provides better UX by showing responses as they're generated
  */
 export async function POST(request: NextRequest) {
+  // Declared outside the try so the outer catch can release a Claim taken for a
+  // turn that then failed before it ever reached the stream — a content-report
+  // write or the message insert throwing would otherwise leave the row counting
+  // against the chatter's month for a turn that never happened.
+  let claim: AllowanceClaim | undefined
+  let usageRecorded = false
+
   // CSRF Protection
   const headerToken = request.headers.get("X-CSRF-Token")
   const cookieToken = getCsrfTokenFromRequest(request)
@@ -182,6 +189,7 @@ export async function POST(request: NextRequest) {
       conversationId: conversationId,
     })
     if (!grant.ok) return grant.response
+    claim = grant.claim
 
     if (moderationResult?.shouldReview) {
       await prisma.contentReport.create({
@@ -248,25 +256,28 @@ export async function POST(request: NextRequest) {
     const timeoutId = setTimeout(() => abortController.abort(), 60_000)
     request.signal.addEventListener("abort", () => abortController.abort())
 
-    let usageRecorded = false
-
     // Create a ReadableStream for streaming response
     const stream = new ReadableStream({
       async start(controller) {
         const encoder = new TextEncoder()
         let fullResponse = ""
         const startTime = Date.now()
-        const turn = await assembleTurn({
-          conversation,
-          userId: currentUser.id,
-          isPro: grant.isPro,
-          input: turnInput,
-        })
-        const modelToUse = turn.model
-
+        let modelToUse = ""
         try {
-          // The Turn is assembled by `app/lib/turn.ts`, identically to how the
-          // non-streaming and regeneration routes assemble theirs.
+          // Assembled inside the try: `loadRecentHistory` is a live query, and
+          // a failure out here would reject `start()` — no error frame for the
+          // client, an unclosed controller, the abort timeout left running and
+          // the Claim never released.
+          const turn = await assembleTurn({
+            conversation,
+            userId: currentUser.id,
+            isPro: grant.isPro,
+            input: turnInput,
+            // Anchored on the row just written, so history stops short of it.
+            asOf: userMessage.createdAt,
+          })
+          modelToUse = turn.model
+
           const stream = await anthropic.messages.stream(
             {
               model: modelToUse,
@@ -307,7 +318,7 @@ export async function POST(request: NextRequest) {
             outputTokens: finalMessage.usage.output_tokens,
             requestType: "chat-stream",
             latencyMs,
-            claimId: grant.claim?.id,
+            claimId: claim?.id,
           })
           usageRecorded = true
 
@@ -398,8 +409,8 @@ export async function POST(request: NextRequest) {
           aiLogger.error({ err: error }, "Streaming error")
           // Released only when the turn produced nothing; once usage is
           // recorded the Allowance slot was genuinely spent.
-          if (grant.claim && !usageRecorded) {
-            await releaseAllowanceClaim(grant.claim)
+          if (claim && !usageRecorded) {
+            await releaseAllowanceClaim(claim)
           }
 
           // Send error to client
@@ -425,6 +436,11 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     aiLogger.error({ err: error }, "AI Chat Stream error")
+    // The turn failed before the stream ever started, so nothing was produced
+    // and the Claim must go back.
+    if (claim && !usageRecorded) {
+      await releaseAllowanceClaim(claim)
+    }
     return new Response("Internal Error", { status: 500 })
   }
 }

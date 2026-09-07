@@ -1,7 +1,7 @@
 import { type NextRequest } from "next/server"
 import { z } from "zod"
 
-import { claimAllowanceSlot, releaseAllowanceClaim } from "@/app/lib/ai-access"
+import { claimAllowanceSlot, releaseAllowanceClaim, type AllowanceClaim } from "@/app/lib/ai-access"
 import { trackAiUsage } from "@/app/lib/ai-usage"
 import anthropic from "@/app/lib/anthropic"
 import { publishMessageUpdated } from "@/app/lib/conversation-events"
@@ -30,6 +30,13 @@ const regenerateSchema = z.object({
  * Streams the new response back using Server-Sent Events (SSE).
  */
 export async function POST(request: NextRequest) {
+  // Declared outside the try so the outer catch can release a Claim taken for a
+  // turn that then failed before it ever reached the stream — a content-report
+  // write or the message insert throwing would otherwise leave the row counting
+  // against the chatter's month for a turn that never happened.
+  let claim: AllowanceClaim | undefined
+  let usageRecorded = false
+
   // CSRF Protection
   const headerToken = request.headers.get("X-CSRF-Token")
   const cookieToken = getCsrfTokenFromRequest(request)
@@ -170,8 +177,7 @@ export async function POST(request: NextRequest) {
       conversationId: message.conversationId,
     })
     if (!grant.ok) return grant.response
-
-    let usageRecorded = false
+    claim = grant.claim
 
     // Create a ReadableStream for streaming response
     const stream = new ReadableStream({
@@ -179,19 +185,21 @@ export async function POST(request: NextRequest) {
         const encoder = new TextEncoder()
         let fullResponse = ""
         const startTime = Date.now()
-        // A Regeneration replaces the most recent reply of an existing Turn: no
-        // new input, and history as it stood immediately before that reply, so
-        // the model is asked the same question again rather than a different
-        // one. This route used to read the *oldest* twenty messages.
-        const turn = await assembleTurn({
-          conversation: message.conversation,
-          userId: currentUser.id,
-          isPro: grant.isPro,
-          before: message.createdAt,
-        })
-        const modelToUse = turn.model
-
+        let modelToUse = ""
         try {
+          // A Regeneration replaces the most recent reply of an existing Turn:
+          // no new input, and history as it stood immediately before that
+          // reply, so the model is asked the same question again rather than a
+          // different one. Assembled inside the try so a failure produces an
+          // error frame and releases the Claim, rather than rejecting start().
+          const turn = await assembleTurn({
+            conversation: message.conversation,
+            userId: currentUser.id,
+            isPro: grant.isPro,
+            asOf: message.createdAt,
+          })
+          modelToUse = turn.model
+
           const aiStream = await anthropic.messages.stream({
             model: modelToUse,
             max_tokens: 2048,
@@ -237,7 +245,7 @@ export async function POST(request: NextRequest) {
             // /api/ai/chat-stream send endpoint, which this is not.
             requestType: "chat",
             latencyMs,
-            claimId: grant.claim?.id,
+            claimId: claim?.id,
           })
           usageRecorded = true
 
@@ -296,8 +304,8 @@ export async function POST(request: NextRequest) {
           aiLogger.error({ err: error }, "Regeneration streaming error")
           // Released only when the turn produced nothing; once usage is
           // recorded the Allowance slot was genuinely spent.
-          if (grant.claim && !usageRecorded) {
-            await releaseAllowanceClaim(grant.claim)
+          if (claim && !usageRecorded) {
+            await releaseAllowanceClaim(claim)
           }
 
           // Send error to client
@@ -323,6 +331,11 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     aiLogger.error({ err: error }, "AI Regenerate error")
+    // The turn failed before the stream ever started, so nothing was produced
+    // and the Claim must go back.
+    if (claim && !usageRecorded) {
+      await releaseAllowanceClaim(claim)
+    }
     return new Response(JSON.stringify({ error: "Internal server error" }), {
       status: 500,
       headers: { "Content-Type": "application/json" },

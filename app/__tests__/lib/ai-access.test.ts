@@ -26,6 +26,7 @@ const mockTxAggregate = jest.fn()
 const mockTxUserFindFirst = jest.fn()
 const mockUsageDelete = jest.fn()
 const mockExecuteRaw = jest.fn()
+const mockQueryRaw = jest.fn()
 
 jest.mock("@/app/lib/prismadb", () => ({
   __esModule: true,
@@ -39,7 +40,7 @@ jest.mock("@/app/lib/prismadb", () => ({
     $executeRaw: (...a: unknown[]) => mockExecuteRaw(...a),
     // The transaction runs its callback against a client exposing the same
     // surface, which is what the claim uses.
-    $transaction: (fn: (tx: unknown) => unknown) =>
+    $transaction: (fn: (tx: unknown) => unknown, _opts?: unknown) =>
       fn({
         aiUsage: {
           create: (...a: unknown[]) => mockUsageCreate(...a),
@@ -48,6 +49,7 @@ jest.mock("@/app/lib/prismadb", () => ({
         },
         user: { findFirst: (...a: unknown[]) => mockTxUserFindFirst(...a) },
         $executeRaw: (...a: unknown[]) => mockExecuteRaw(...a),
+        $queryRaw: (...a: unknown[]) => mockQueryRaw(...a),
       }),
   },
 }))
@@ -255,6 +257,7 @@ describe("claimAllowanceSlot", () => {
     mockUsageCreate.mockReset().mockResolvedValue({ id: "claim-1" })
     mockUsageDelete.mockReset().mockResolvedValue({})
     mockExecuteRaw.mockReset().mockResolvedValue(1)
+    mockQueryRaw.mockReset().mockResolvedValue([{ locked: true }])
     // The claim reads on the transaction client, so these are the spies that
     // drive it. The global ones stay untouched, which is itself asserted below.
     mockTxCount.mockReset().mockResolvedValue(0)
@@ -311,9 +314,36 @@ describe("claimAllowanceSlot", () => {
   it("takes a per-chatter advisory lock before counting", async () => {
     await claimAllowanceSlot({ userId: USER_ID, conversationId: "conv-1" })
 
-    expect(mockExecuteRaw).toHaveBeenCalled()
-    const sql = mockExecuteRaw.mock.calls[0][0]
-    expect(sql.join("?")).toContain("pg_advisory_xact_lock")
+    expect(mockQueryRaw).toHaveBeenCalled()
+    expect(mockQueryRaw.mock.calls[0][0].join("?")).toContain("pg_try_advisory_xact_lock")
+  })
+
+  /**
+   * The blocking form would hold a pool connection for the whole queue, and
+   * `pg` defaults to ten. The non-blocking form ends the transaction, gives the
+   * connection back, and waits outside the pool.
+   */
+  it("does not wait on the lock while holding a connection", async () => {
+    mockQueryRaw.mockResolvedValueOnce([{ locked: false }]).mockResolvedValue([{ locked: true }])
+
+    const grant = await claimAllowanceSlot({ userId: USER_ID, conversationId: "conv-1" })
+
+    expect(grant.ok).toBe(true)
+    // Two transactions: the contended attempt, then the successful retry.
+    expect(mockQueryRaw).toHaveBeenCalledTimes(2)
+  })
+
+  it("denies rather than proceeding unclaimed when the lock stays contended", async () => {
+    mockQueryRaw.mockResolvedValue([{ locked: false }])
+
+    const grant = await claimAllowanceSlot({ userId: USER_ID, conversationId: "conv-1" })
+
+    expect(grant.ok).toBe(false)
+    expect(mockUsageCreate).not.toHaveBeenCalled()
+    if (!grant.ok) {
+      const body = await grant.response.json()
+      expect(body.code).toBe("AI_ACCESS_CHECK_FAILED")
+    }
   })
 
   it("writes the claim before the provider is called, so a concurrent turn counts it", async () => {

@@ -123,11 +123,21 @@ export interface AssembleTurnArgs {
    */
   input?: Anthropic.Messages.MessageParam["content"]
   /**
-   * For a Regeneration: assemble history as it stood immediately before this
-   * reply, so the model is asked the same question again rather than a
-   * different one.
+   * The moment this Turn is being assembled as of. History is everything
+   * strictly *before* it.
+   *
+   * Required, and that is the point. Both send routes persist the chatter's
+   * message before assembling, so a history window that is not anchored picks
+   * that row up — and then `input` appends the same content again, sending the
+   * newest message to the model twice and pushing one real exchange out of the
+   * window. Anchoring on the row's own `createdAt` excludes it by construction,
+   * so a caller cannot reintroduce the duplicate by forgetting a flag.
+   *
+   * For a new Turn this is the user message's `createdAt`; for a Regeneration
+   * it is the `createdAt` of the reply being replaced, which is what makes the
+   * model get asked the same question again rather than a different one.
    */
-  before?: Date
+  asOf: Date
 }
 
 /**
@@ -162,13 +172,13 @@ export function buildPersonaContext(persona: TurnConversation["persona"]): strin
  */
 async function loadRecentHistory(
   conversationId: string,
-  before?: Date
+  asOf: Date
 ): Promise<Anthropic.Messages.MessageParam[]> {
   const messages = await prisma.message.findMany({
     where: {
       conversationId,
       isDeleted: false,
-      ...(before ? { createdAt: { lt: before } } : {}),
+      createdAt: { lt: asOf },
     },
     orderBy: { createdAt: "desc" },
     take: TURN_HISTORY_LIMIT,
@@ -193,7 +203,7 @@ export async function assembleTurn({
   userId,
   isPro,
   input,
-  before,
+  asOf,
 }: AssembleTurnArgs): Promise<AssembledTurn> {
   const model = getModelForUser({
     isPro,
@@ -227,7 +237,7 @@ export async function assembleTurn({
     aiLogger.warn({ err: error, conversationId: conversation.id }, "Failed to fetch memories")
   }
 
-  const messages = await loadRecentHistory(conversation.id, before)
+  const messages = await loadRecentHistory(conversation.id, asOf)
   if (input) {
     messages.push({ role: "user", content: input })
   }
