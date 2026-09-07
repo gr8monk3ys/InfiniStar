@@ -67,28 +67,31 @@ afterAll(() => {
   process.env = originalEnv
 })
 
+/** Next always passes a context; a static route has nothing in it. */
+const ROUTE_CTX = { params: Promise.resolve({}) }
+
 describe("GET /api/cron/process-deletions", () => {
   it("returns 401 when Authorization header is missing", async () => {
-    const response = await GET(makeCronRequest())
+    const response = await GET(makeCronRequest(), ROUTE_CTX)
     expect(response.status).toBe(401)
     const data = await response.json()
     expect(data.error).toMatch(/unauthorized/i)
   })
 
   it("returns 401 when Authorization header has wrong secret", async () => {
-    const response = await GET(makeCronRequest("Bearer wrong-secret"))
+    const response = await GET(makeCronRequest("Bearer wrong-secret"), ROUTE_CTX)
     expect(response.status).toBe(401)
   })
 
   it("returns 401 when CRON_SECRET env var is not set", async () => {
     delete process.env.CRON_SECRET
 
-    const response = await GET(makeCronRequest(`Bearer ${CRON_SECRET}`))
+    const response = await GET(makeCronRequest(`Bearer ${CRON_SECRET}`), ROUTE_CTX)
     expect(response.status).toBe(401)
   })
 
   it("returns 401 when Authorization is not Bearer type", async () => {
-    const response = await GET(makeCronRequest(`Basic ${CRON_SECRET}`))
+    const response = await GET(makeCronRequest(`Basic ${CRON_SECRET}`), ROUTE_CTX)
     expect(response.status).toBe(401)
   })
 
@@ -102,7 +105,7 @@ describe("GET /api/cron/process-deletions", () => {
       .mockResolvedValueOnce({ pendingDeletions: 5, overdueForDeletion: 3, cancelledDeletions: 1 })
       .mockResolvedValueOnce({ pendingDeletions: 2, overdueForDeletion: 0, cancelledDeletions: 1 })
 
-    const response = await GET(makeCronRequest(`Bearer ${CRON_SECRET}`))
+    const response = await GET(makeCronRequest(`Bearer ${CRON_SECRET}`), ROUTE_CTX)
     expect(response.status).toBe(200)
 
     const data = await response.json()
@@ -112,7 +115,7 @@ describe("GET /api/cron/process-deletions", () => {
   })
 
   it("returns stats both before and after processing", async () => {
-    const response = await GET(makeCronRequest(`Bearer ${CRON_SECRET}`))
+    const response = await GET(makeCronRequest(`Bearer ${CRON_SECRET}`), ROUTE_CTX)
     expect(response.status).toBe(200)
 
     const data = await response.json()
@@ -130,7 +133,7 @@ describe("GET /api/cron/process-deletions", () => {
       .mockResolvedValueOnce({ pendingDeletions: 0, overdueForDeletion: 0, cancelledDeletions: 0 })
       .mockResolvedValueOnce({ pendingDeletions: 0, overdueForDeletion: 0, cancelledDeletions: 0 })
 
-    const response = await GET(makeCronRequest(`Bearer ${CRON_SECRET}`))
+    const response = await GET(makeCronRequest(`Bearer ${CRON_SECRET}`), ROUTE_CTX)
     expect(response.status).toBe(200)
 
     const data = await response.json()
@@ -149,7 +152,7 @@ describe("GET /api/cron/process-deletions", () => {
       .mockResolvedValueOnce({ pendingDeletions: 3, overdueForDeletion: 3, cancelledDeletions: 0 })
       .mockResolvedValueOnce({ pendingDeletions: 0, overdueForDeletion: 1, cancelledDeletions: 0 })
 
-    const response = await GET(makeCronRequest(`Bearer ${CRON_SECRET}`))
+    const response = await GET(makeCronRequest(`Bearer ${CRON_SECRET}`), ROUTE_CTX)
     expect(response.status).toBe(200) // Batch continues despite one failure
 
     const data = await response.json()
@@ -164,14 +167,14 @@ describe("GET /api/cron/process-deletions", () => {
       new Error("Database connection failed")
     )
 
-    const response = await GET(makeCronRequest(`Bearer ${CRON_SECRET}`))
+    const response = await GET(makeCronRequest(`Bearer ${CRON_SECRET}`), ROUTE_CTX)
     expect(response.status).toBe(500)
     const data = await response.json()
     expect(data.error).toMatch(/internal server error/i)
   })
 
   it("calls getDeletionStats twice (before and after processing)", async () => {
-    await GET(makeCronRequest(`Bearer ${CRON_SECRET}`))
+    await GET(makeCronRequest(`Bearer ${CRON_SECRET}`), ROUTE_CTX)
 
     expect(getDeletionStats).toHaveBeenCalledTimes(2)
     expect(processScheduledDeletions).toHaveBeenCalledTimes(1)
@@ -184,7 +187,7 @@ describe("GET /api/cron/process-deletions", () => {
       errors: [],
     })
 
-    const response = await GET(makeCronRequest(`Bearer ${CRON_SECRET}`))
+    const response = await GET(makeCronRequest(`Bearer ${CRON_SECRET}`), ROUTE_CTX)
     const data = await response.json()
 
     // Route only includes errors when array is non-empty

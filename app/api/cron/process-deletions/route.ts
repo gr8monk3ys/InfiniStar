@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server"
 
 import { getDeletionStats, processScheduledDeletions } from "@/app/lib/account-deletion"
-import { isAuthorizedCronRequest } from "@/app/lib/cron-auth"
+import { guard } from "@/app/lib/guarded-route"
 import { apiLogger } from "@/app/lib/logger"
 
 /**
@@ -20,18 +20,8 @@ import { apiLogger } from "@/app/lib/logger"
  *   }]
  * }
  */
-export async function GET(request: NextRequest) {
+export const GET = guard({ auth: "cron" }, async () => {
   try {
-    // Verify the request is from our cron job
-    const authHeader = request.headers.get("authorization")
-    const cronSecret = process.env.CRON_SECRET
-
-    // CRON_SECRET must always be set. Unauthenticated access is never permitted.
-    if (!isAuthorizedCronRequest(authHeader, cronSecret)) {
-      apiLogger.warn("Unauthorized cron request attempt on /api/cron/process-deletions")
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
     // Get current stats before processing
     const statsBefore = await getDeletionStats()
 
@@ -65,4 +55,4 @@ export async function GET(request: NextRequest) {
     apiLogger.error({ err: error }, "Account deletion cron failed")
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
-}
+})

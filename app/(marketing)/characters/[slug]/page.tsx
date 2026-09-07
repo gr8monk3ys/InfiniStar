@@ -12,7 +12,7 @@ import {
 
 import { siteConfig } from "@/config/site"
 import { getCategoryById } from "@/app/lib/character-categories"
-import { canAccessNsfw } from "@/app/lib/nsfw"
+import { matureAccess } from "@/app/lib/nsfw"
 import prisma from "@/app/lib/prismadb"
 import { buildCharacterJsonLd } from "@/app/lib/structured-data"
 import { cn } from "@/app/lib/utils"
@@ -409,9 +409,9 @@ export default async function CharacterPage({ params }: CharacterPageProps) {
   }
 
   const currentUser = await getCurrentUser()
-  const allowNsfw = canAccessNsfw(currentUser)
+  const access = matureAccess(currentUser)
 
-  if (character.isNsfw && !allowNsfw) {
+  if (character.isNsfw && !access.canView) {
     return <CharacterNsfwGate userId={currentUser?.id ?? null} />
   }
 
@@ -439,7 +439,7 @@ export default async function CharacterPage({ params }: CharacterPageProps) {
       isPublic: true,
       category: character.category,
       id: { not: character.id },
-      ...(allowNsfw ? {} : { isNsfw: false }),
+      ...access.visibilityFilter,
     },
     orderBy: [{ usageCount: "desc" }, { createdAt: "desc" }],
     take: 4,

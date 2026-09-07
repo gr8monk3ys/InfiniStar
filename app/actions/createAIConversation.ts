@@ -9,6 +9,7 @@ import {
 import { PARTICIPANT_SELECT } from "@/app/lib/conversation-select"
 import { aiLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
+import { isProSubscription } from "@/app/lib/subscription"
 
 import getCurrentUser from "./getCurrentUser"
 
@@ -26,11 +27,7 @@ export default async function createAIConversation(
   try {
     const personalityType = personality || getDefaultPersonality()
     const personalityConfig = getPersonality(personalityType)
-    const isPro = Boolean(
-      currentUser.stripePriceId &&
-      currentUser.stripeCurrentPeriodEnd &&
-      currentUser.stripeCurrentPeriodEnd.getTime() + 86_400_000 > Date.now()
-    )
+    const isPro = isProSubscription(currentUser)
     const routedModel = getModelForUser({
       isPro,
       requestedModelId: aiModel,

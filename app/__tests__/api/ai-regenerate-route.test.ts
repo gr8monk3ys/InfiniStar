@@ -8,7 +8,7 @@
  * Tests POST /api/ai/regenerate
  */
 
-import { NextRequest } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 
 import { POST } from "@/app/api/ai/regenerate/route"
 
@@ -19,7 +19,8 @@ const mockConversationUpdate = jest.fn()
 const mockPusherTrigger = jest.fn()
 const mockVerifyCsrfToken = jest.fn()
 const mockAiChatLimiterCheck = jest.fn()
-const mockGetAiAccessDecision = jest.fn()
+const mockClaimAllowanceSlot = jest.fn()
+const mockReleaseAllowanceClaim = jest.fn()
 const mockTrackAiUsage = jest.fn()
 const mockAnthropicStream = jest.fn()
 const mockBuildAiConversationHistory = jest.fn()
@@ -73,7 +74,8 @@ jest.mock("@/app/lib/rate-limit", () => ({
 }))
 
 jest.mock("@/app/lib/ai-access", () => ({
-  getAiAccessDecision: (userId: string) => mockGetAiAccessDecision(userId),
+  claimAllowanceSlot: (...args: unknown[]) => mockClaimAllowanceSlot(...args),
+  releaseAllowanceClaim: (...args: unknown[]) => mockReleaseAllowanceClaim(...args),
 }))
 
 jest.mock("@/app/lib/ai-usage", () => ({
@@ -213,10 +215,13 @@ beforeEach(() => {
   mockTxConversationUpdate.mockResolvedValue({ id: "conv-1" })
   mockConversationUpdate.mockResolvedValue({ id: "conv-1" })
   mockPusherTrigger.mockResolvedValue(undefined)
-  mockGetAiAccessDecision.mockResolvedValue({
-    allowed: true,
-    limits: { isPro: false, monthlyMessageCount: 1, monthlyMessageLimit: 10 },
+  mockClaimAllowanceSlot.mockResolvedValue({
+    ok: true,
+    isPro: false,
+    limits: {},
+    claim: { id: "claim-1" },
   })
+  mockReleaseAllowanceClaim.mockResolvedValue(undefined)
   mockTrackAiUsage.mockResolvedValue(undefined)
   mockAnthropicStream.mockReturnValue(
     buildFakeStream([
@@ -323,11 +328,12 @@ describe("POST /api/ai/regenerate", () => {
   })
 
   it("returns 402 when free tier message limit is exceeded", async () => {
-    mockGetAiAccessDecision.mockResolvedValue({
-      allowed: false,
-      code: "FREE_TIER_MESSAGE_LIMIT_REACHED",
-      message: "Limit reached",
-      limits: { isPro: false, monthlyMessageCount: 10, monthlyMessageLimit: 10 },
+    mockClaimAllowanceSlot.mockResolvedValue({
+      ok: false,
+      response: NextResponse.json(
+        { error: "Limit reached", code: "FREE_TIER_MESSAGE_LIMIT_REACHED", limits: {} },
+        { status: 402 }
+      ),
     })
     const response = await POST(createRequest({ messageId: "msg-ai-1" }))
     expect(response.status).toBe(402)
@@ -550,6 +556,30 @@ describe("POST /api/ai/regenerate", () => {
       // Volatile context must sit AFTER the breakpoint so it never busts the cache.
       expect(blocks[1].cache_control).toBeUndefined()
       expect(blocks[1].text).toContain("[Earlier Conversation Summary]")
+    })
+
+    /**
+     * The defect this route carried. `createdAt < message.createdAt` with
+     * `orderBy: asc` and `take: 20` selects the *oldest* twenty messages of the
+     * conversation, not the twenty immediately before the reply. Past twenty
+     * messages, every Regeneration was assembled from the opening of the chat
+     * while the chatter watched it reply to something said hours ago.
+     *
+     * The old test mocked `findMany` and never asserted its arguments, so
+     * nothing saw it.
+     */
+    it("assembles from the newest messages before the reply, not the oldest of the conversation", async () => {
+      mockMessageFindUnique.mockResolvedValue(characterMessage)
+
+      const response = await POST(createRequest({ messageId: "msg-ai-1" }))
+      await readStreamToString(response)
+
+      const query = mockMessageFindMany.mock.calls[0][0]
+      expect(query.orderBy).toEqual({ createdAt: "desc" })
+      expect(query.where).toMatchObject({
+        createdAt: { lt: testAiMessage.createdAt },
+        isDeleted: false,
+      })
     })
 
     it("still streams when memory lookup fails", async () => {

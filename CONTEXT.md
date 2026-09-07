@@ -46,9 +46,10 @@ _Avoid_: profile, alter, personality
 The situation a conversation opens in, authored on the character.
 
 **Memory**:
-A fact extracted from a conversation and kept against the character, so a later
+A fact extracted from a conversation and kept against the _chatter_, so a later
 turn can refer back to it. What makes a relationship accumulate rather than
-reset.
+reset — across every character they talk to, not one. Scoping deliberately, see
+`docs/adr/0004-memory-is-scoped-to-the-chatter.md`.
 _Avoid_: note, fact, context
 
 **Scene**:
