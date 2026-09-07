@@ -1,10 +1,3 @@
-import {
-  assembleTurn,
-  buildPersonaContext,
-  TURN_HISTORY_LIMIT,
-  type TurnConversation,
-} from "@/app/lib/turn"
-
 /**
  * @jest-environment node
  */
@@ -16,6 +9,13 @@ import {
  * was triggered". These tests are that sentence, made checkable. Every one of
  * them covers a way the four trigger sites previously disagreed.
  */
+
+import {
+  assembleTurn,
+  buildPersonaContext,
+  TURN_HISTORY_LIMIT,
+  type TurnConversation,
+} from "@/app/lib/turn"
 
 const mockMessageFindMany = jest.fn()
 const mockGetRelevantMemories = jest.fn()
