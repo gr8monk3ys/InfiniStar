@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 
 import { getPusherUserChannel } from "@/app/lib/pusher-channels"
 import { pusherClient } from "@/app/lib/pusher-client"
-import { type FullConversationType } from "@/app/types"
+import { type FullConversationType, type UserSummary } from "@/app/types"
 
 interface NotificationPreferences {
   browserNotifications: boolean
@@ -180,6 +180,21 @@ export function usePusherConversationSync({
       })
     }
 
+    /**
+     * Someone joined through a share link. This arrives on its own event rather
+     * than as `conversation:update`, because that handler keeps only `messages`
+     * and would silently drop the new participant.
+     */
+    const participantsHandler = (payload: { id: string; users: UserSummary[] }) => {
+      setItems((current) =>
+        current.map((currentConversation) =>
+          currentConversation.id === payload.id
+            ? { ...currentConversation, users: payload.users }
+            : currentConversation
+        )
+      )
+    }
+
     const removeHandler = (conversation: FullConversationType) => {
       setItems((current) => {
         return [...current.filter((convo) => convo.id !== conversation.id)]
@@ -235,6 +250,7 @@ export function usePusherConversationSync({
     }
 
     channel.bind("conversation:update", updateHandler)
+    channel.bind("conversation:participants", participantsHandler)
     channel.bind("conversation:new", newHandler)
     channel.bind("conversation:remove", removeHandler)
     channel.bind("conversation:archive", archiveHandler)
@@ -246,6 +262,7 @@ export function usePusherConversationSync({
 
     return () => {
       channel.unbind("conversation:update", updateHandler)
+      channel.unbind("conversation:participants", participantsHandler)
       channel.unbind("conversation:new", newHandler)
       channel.unbind("conversation:remove", removeHandler)
       channel.unbind("conversation:archive", archiveHandler)

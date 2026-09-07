@@ -110,6 +110,7 @@ export async function trackAiUsage({
   requestType,
   latencyMs,
   costOverrideCents,
+  claimId,
 }: {
   userId: string
   conversationId: string
@@ -123,6 +124,13 @@ export async function trackAiUsage({
    * When provided, token-based cost calculation is skipped.
    */
   costOverrideCents?: number
+  /**
+   * The Claim this turn reserved before calling the provider. When present the
+   * reserved row is filled in rather than a second row written — the Claim is
+   * already counted against the month, so creating another would double-count
+   * the turn. See `claimAllowanceSlot`.
+   */
+  claimId?: string
 }) {
   const safeInputTokens = Math.max(0, Math.trunc(inputTokens))
   const safeOutputTokens = Math.max(0, Math.trunc(outputTokens))
@@ -138,22 +146,24 @@ export async function trackAiUsage({
       ? calculateTokenCost(model, safeInputTokens, safeOutputTokens)
       : { inputCost: 0, outputCost: 0, totalCost: Math.round(safeCostOverride * 100) / 100 }
 
+  const row = {
+    userId,
+    conversationId,
+    model,
+    inputTokens: safeInputTokens,
+    outputTokens: safeOutputTokens,
+    totalTokens,
+    inputCost: costs.inputCost,
+    outputCost: costs.outputCost,
+    totalCost: costs.totalCost,
+    requestType,
+    latencyMs,
+  }
+
   try {
-    const usage = await prisma.aiUsage.create({
-      data: {
-        userId,
-        conversationId,
-        model,
-        inputTokens: safeInputTokens,
-        outputTokens: safeOutputTokens,
-        totalTokens,
-        inputCost: costs.inputCost,
-        outputCost: costs.outputCost,
-        totalCost: costs.totalCost,
-        requestType,
-        latencyMs,
-      },
-    })
+    const usage = claimId
+      ? await prisma.aiUsage.update({ where: { id: claimId }, data: row })
+      : await prisma.aiUsage.create({ data: row })
 
     return usage
   } catch (error) {
@@ -301,34 +311,4 @@ export async function getUsageByDateRange(userId: string, startDate: Date, endDa
     ...day,
     cost: Math.round(day.cost * 100) / 100,
   }))
-}
-
-/**
- * Check if user has exceeded usage quota (for free tier limits)
- */
-export async function checkUsageQuota(
-  userId: string,
-  quotaTokens: number,
-  periodDays: number = 30
-): Promise<{
-  withinQuota: boolean
-  used: number
-  remaining: number
-  percentage: number
-}> {
-  const startDate = new Date()
-  startDate.setDate(startDate.getDate() - periodDays)
-
-  const { stats } = await getUserUsageStats(userId, { startDate })
-
-  const used = stats.totalTokens
-  const remaining = Math.max(0, quotaTokens - used)
-  const percentage = Math.min(100, (used / quotaTokens) * 100)
-
-  return {
-    withinQuota: used < quotaTokens,
-    used,
-    remaining,
-    percentage: Math.round(percentage * 100) / 100,
-  }
 }

@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server"
 
-import { isAuthorizedCronRequest } from "@/app/lib/cron-auth"
+import { guard } from "@/app/lib/guarded-route"
 import { dbLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
 
@@ -11,21 +11,8 @@ import prisma from "@/app/lib/prismadb"
  *
  * Security: Protected by CRON_SECRET environment variable.
  */
-export async function GET(request: NextRequest) {
+export const GET = guard({ auth: "cron" }, async () => {
   try {
-    const authHeader = request.headers.get("authorization")
-    const cronSecret = process.env.CRON_SECRET
-
-    if (!cronSecret) {
-      dbLogger.error("CRON_SECRET environment variable not set")
-      return NextResponse.json({ error: "Server configuration error" }, { status: 500 })
-    }
-
-    if (!isAuthorizedCronRequest(authHeader, cronSecret)) {
-      dbLogger.warn("Unauthorized cron request attempt")
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
     const updatedRows = await prisma.$executeRaw`
       UPDATE "characters" AS c
       SET "commentCount" = (
@@ -40,4 +27,4 @@ export async function GET(request: NextRequest) {
     dbLogger.error({ err: error }, "Error reconciling character comment counts")
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
-}
+})

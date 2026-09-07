@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { z } from "zod"
 
-import { getAiAccessDecision } from "@/app/lib/ai-access"
+import { requestAiAccess } from "@/app/lib/ai-access"
 import {
   AI_IMAGE_GENERATION_COST_CENTS_512,
   AI_IMAGE_GENERATION_COST_CENTS_1024,
@@ -9,14 +9,13 @@ import {
   AI_IMAGE_GENERATION_COST_CENTS_1792x1024,
 } from "@/app/lib/ai-limits"
 import { trackAiUsage } from "@/app/lib/ai-usage"
-import { PARTICIPANT_SELECT } from "@/app/lib/conversation-select"
+import { publishNewMessage } from "@/app/lib/conversation-events"
+import { MESSAGE_INCLUDE, PARTICIPANT_SELECT } from "@/app/lib/conversation-select"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import { aiLogger } from "@/app/lib/logger"
 import { moderateTextModelAssisted } from "@/app/lib/moderation"
 import { canAccessNsfw } from "@/app/lib/nsfw"
 import prisma from "@/app/lib/prismadb"
-import { getPusherConversationChannel, getPusherUserChannel } from "@/app/lib/pusher-channels"
-import { pusherServer } from "@/app/lib/pusher-server"
 import { aiChatLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 import { sanitizePlainText } from "@/app/lib/sanitize"
 import getCurrentUser from "@/app/actions/getCurrentUser"
@@ -112,22 +111,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "NSFW content is not enabled." }, { status: 403 })
     }
 
-    const accessDecision = await getAiAccessDecision(currentUser.id, {
-      requestType: "image-generate",
-    })
-    if (!accessDecision.allowed) {
-      return NextResponse.json(
-        {
-          error:
-            accessDecision.message ??
-            "AI access is unavailable for this account right now. Please try again.",
-          code: accessDecision.code,
-          limits: accessDecision.limits,
-        },
-        { status: 402 }
-      )
-    }
-
     const openAiKey = process.env.OPENAI_API_KEY
     const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
     const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET
@@ -142,23 +125,16 @@ export async function POST(request: NextRequest) {
     const openAiModel = process.env.OPENAI_IMAGE_MODEL || "dall-e-3"
     const size = validation.data.size || "1024x1024"
 
+    // The access check runs here rather than earlier because the PRO cost cap
+    // is applied to usage *plus* this request's estimate, and the estimate
+    // depends on the size the caller asked for.
     const estimatedCostCents = estimateImageCostCents(size)
-    const proCostCapCents = accessDecision.limits?.monthlyCostQuotaCents ?? null
-    const proCostUsageCents = accessDecision.limits?.monthlyCostUsageCents ?? 0
-    if (accessDecision.limits?.isPro && proCostCapCents !== null) {
-      if (proCostUsageCents + estimatedCostCents > proCostCapCents) {
-        return NextResponse.json(
-          {
-            error:
-              accessDecision.message ??
-              "You have reached this month's AI fair-use cap. Please contact support to increase limits.",
-            code: "PRO_TIER_COST_CAP_REACHED",
-            limits: accessDecision.limits,
-          },
-          { status: 402 }
-        )
-      }
-    }
+    const grant = await requestAiAccess({
+      userId: currentUser.id,
+      requestType: "image-generate",
+      estimatedCostCents,
+    })
+    if (!grant.ok) return grant.response
 
     const startTime = Date.now()
     const imageRes = await fetch("https://api.openai.com/v1/images/generations", {
@@ -235,7 +211,7 @@ export async function POST(request: NextRequest) {
         seen: { connect: { id: currentUser.id } },
         isAI: true,
       },
-      include: { seen: { select: PARTICIPANT_SELECT }, sender: { select: PARTICIPANT_SELECT } },
+      include: MESSAGE_INCLUDE,
     })
 
     await prisma.conversation.update({
@@ -243,14 +219,10 @@ export async function POST(request: NextRequest) {
       data: { lastMessageAt: new Date() },
     })
 
-    await pusherServer.trigger(
-      getPusherConversationChannel(conversation.id),
-      "messages:new",
-      aiMessage
-    )
-    await pusherServer.trigger(getPusherUserChannel(currentUser.id), "conversation:update", {
-      id: conversation.id,
-      messages: [aiMessage],
+    await publishNewMessage({
+      conversationId: conversation.id,
+      message: aiMessage,
+      notify: [currentUser.id],
     })
 
     return NextResponse.json({ aiMessage })

@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server"
 
-import { getAiAccessDecision } from "@/app/lib/ai-access"
+import { requestAiAccess } from "@/app/lib/ai-access"
 import { getFreeTierModel } from "@/app/lib/ai-model-routing"
 import { PARTICIPANT_SELECT } from "@/app/lib/conversation-select"
 import {
@@ -122,19 +122,11 @@ export async function POST(
       })
     }
 
-    const accessDecision = await getAiAccessDecision(currentUser.id)
-    if (!accessDecision.allowed) {
-      return NextResponse.json(
-        {
-          error:
-            accessDecision.message ??
-            "AI access is unavailable for this account right now. Please try again.",
-          code: accessDecision.code,
-          limits: accessDecision.limits,
-        },
-        { status: 402 }
-      )
-    }
+    const grant = await requestAiAccess({
+      userId: currentUser.id,
+      requestType: "summary",
+    })
+    if (!grant.ok) return grant.response
 
     const result = await generateConversationSummary({
       conversationId,

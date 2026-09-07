@@ -14,11 +14,7 @@ interface AvatarProps {
 const Avatar: FC<AvatarProps> = ({ user, className, showPresence = true }) => {
   const { members, getPresence } = useActiveList()
 
-  const altText = user?.name
-    ? `${user.name}'s profile picture`
-    : user?.email
-      ? `${user.email}'s profile picture`
-      : "User profile picture"
+  const altText = user?.name ? `${user.name}'s profile picture` : "User profile picture"
 
   // Get presence status
   const presence = user?.id ? getPresence(user.id) : null

@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server"
 
 import {
   CONVERSATION_INCLUDE,
-  MESSAGE_INCLUDE_FLAT,
+  MESSAGE_INCLUDE,
   PARTICIPANT_SELECT,
 } from "@/app/lib/conversation-select"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
@@ -93,7 +93,7 @@ export async function POST(
           include: {
             users: { select: PARTICIPANT_SELECT },
             messages: {
-              include: MESSAGE_INCLUDE_FLAT,
+              include: MESSAGE_INCLUDE,
               orderBy: {
                 createdAt: "desc",
               },
@@ -215,7 +215,7 @@ export async function DELETE(
           include: {
             users: { select: PARTICIPANT_SELECT },
             messages: {
-              include: MESSAGE_INCLUDE_FLAT,
+              include: MESSAGE_INCLUDE,
               orderBy: {
                 createdAt: "desc",
               },

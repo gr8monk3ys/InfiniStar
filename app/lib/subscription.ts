@@ -1,3 +1,5 @@
+import { type Prisma } from "@prisma/client"
+
 import { freePlan, proPlan } from "@/config/subscriptions"
 import prisma from "@/app/lib/prismadb"
 import { type UserSubscriptionPlan } from "@/app/types"
@@ -5,8 +7,39 @@ import { type UserSubscriptionPlan } from "@/app/types"
 /** 24-hour buffer so users aren't cut off while Stripe processes renewal payments. */
 const PRO_GRACE_PERIOD_MS = 24 * 60 * 60 * 1000
 
-export async function getUserSubscriptionPlan(userId: string): Promise<UserSubscriptionPlan> {
-  const user = await prisma.user.findFirst({
+/** The Stripe columns the PRO predicate reads. */
+export interface ProSubscriptionFields {
+  stripePriceId?: string | null
+  stripeCurrentPeriodEnd?: Date | null
+}
+
+/**
+ * Whether these Stripe columns describe an active PRO subscription.
+ *
+ * The one place the grace period is applied. Two callers that already held the
+ * user row re-derived this inline and spelled the buffer as a bare
+ * `86_400_000`, which is three copies of one predicate and two chances for the
+ * grace period to be changed in one place and not the others. They take this
+ * instead of a database round-trip they do not need.
+ */
+export function isProSubscription(user: ProSubscriptionFields | null | undefined): boolean {
+  return Boolean(
+    user?.stripePriceId &&
+    user.stripeCurrentPeriodEnd &&
+    user.stripeCurrentPeriodEnd.getTime() + PRO_GRACE_PERIOD_MS > Date.now()
+  )
+}
+
+export async function getUserSubscriptionPlan(
+  userId: string,
+  /**
+   * The client to read on. Pass a transaction client to keep the read on the
+   * caller's existing connection — see `claimAllowanceSlot`, which would
+   * otherwise hold two connections at once.
+   */
+  client: Prisma.TransactionClient = prisma
+): Promise<UserSubscriptionPlan> {
+  const user = await client.user.findFirst({
     where: {
       id: userId,
     },
@@ -22,12 +55,7 @@ export async function getUserSubscriptionPlan(userId: string): Promise<UserSubsc
     throw new Error("User not found")
   }
 
-  // Check if user is on a pro plan.
-  const isPro = Boolean(
-    user.stripePriceId &&
-    user.stripeCurrentPeriodEnd &&
-    user.stripeCurrentPeriodEnd.getTime() + PRO_GRACE_PERIOD_MS > Date.now()
-  )
+  const isPro = isProSubscription(user)
 
   const plan = isPro ? proPlan : freePlan
 

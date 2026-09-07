@@ -7,10 +7,14 @@ import ConversationList from "@/app/(dashboard)/dashboard/conversations/componen
  * Regression guard for the "seen" indicator in the default config.
  *
  * When group chat is disabled (the default), the layout ships an EMPTY user
- * directory to the client. The current-user email must therefore come from the
- * authenticated session (a prop), not be derived from that empty array — else
- * every conversation renders as permanently unread. This asserts ConversationList
- * hands the session email down to ConversationBox even when `user` is empty.
+ * directory to the client. The current user's identity must therefore come from
+ * the authenticated session (a prop), not be derived from that empty array —
+ * else every conversation renders as permanently unread. This asserts
+ * ConversationList hands it down to ConversationBox even when `user` is empty.
+ *
+ * The identity is the account id. It used to be the email, which is why the safe
+ * participant projection had to carry every account's address onto every
+ * conversation channel; `email` is now an asserted absence from that projection.
  */
 
 // Group chat off (the default) — the user directory is empty.
@@ -45,21 +49,21 @@ jest.mock("@/app/(dashboard)/dashboard/hooks/usePusherConversationSync", () => (
   usePusherConversationSync: jest.fn(),
 }))
 
-// Mock the leaf so we can read exactly what email ConversationList passes down.
+// Mock the leaf so we can read exactly what identity ConversationList passes down.
 jest.mock("@/app/(dashboard)/dashboard/conversations/components/ConversationBox", () => {
   const ReactLib = require("react")
   return {
     __esModule: true,
-    default: (props: { currentUserEmail?: string | null }) =>
+    default: (props: { currentUserId?: string | null }) =>
       ReactLib.createElement("div", {
         "data-testid": "conversation-box",
-        "data-email": props.currentUserEmail ?? "NULL",
+        "data-user-id": props.currentUserId ?? "NULL",
       }),
   }
 })
 
 describe("ConversationList seen-indicator wiring", () => {
-  it("passes the session email to ConversationBox even when the user directory is empty", () => {
+  it("passes the session identity to ConversationBox even when the user directory is empty", () => {
     const item = {
       id: "c1",
       archivedBy: [],
@@ -77,12 +81,11 @@ describe("ConversationList seen-indicator wiring", () => {
         initialItems: [item],
         user: [], // group chat off → empty directory
         currentUserId: "u1",
-        currentUserEmail: "me@example.com",
         initialNotificationPrefs: null,
         sceneCharacters: [],
       })
     )
 
-    expect(screen.getByTestId("conversation-box")).toHaveAttribute("data-email", "me@example.com")
+    expect(screen.getByTestId("conversation-box")).toHaveAttribute("data-user-id", "u1")
   })
 })

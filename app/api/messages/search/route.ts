@@ -3,6 +3,7 @@ import { z } from "zod"
 
 import { apiLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
+import { apiLimiter } from "@/app/lib/rate-limit"
 import getCurrentUser from "@/app/actions/getCurrentUser"
 
 // Validation schema
@@ -18,6 +19,16 @@ export async function GET(request: NextRequest) {
 
     if (!currentUser?.id || !currentUser?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    // Keyed on the account rather than the client, because this runs after auth.
+    // ADR-0003: an omitted limiter is not detectable while routes hand-roll the
+    // preamble, and this route had none at all.
+    if (!(await Promise.resolve(apiLimiter.check(currentUser.id)))) {
+      return NextResponse.json(
+        { error: "Too many requests. Please try again later." },
+        { status: 429, headers: { "Retry-After": "60" } }
+      )
     }
 
     // Get search params from URL

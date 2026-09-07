@@ -460,28 +460,6 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = memo(function ProfileDrawer(
                           )}
                           <div className="w-full py-5 sm:px-0 sm:pt-0">
                             <dl className="space-y-8 px-4 sm:space-y-6 sm:px-6">
-                              {data.isGroup && (
-                                <div>
-                                  <dt className="text-sm font-medium text-muted-foreground sm:w-40 sm:shrink-0">
-                                    Emails
-                                  </dt>
-                                  <dd className="mt-1 text-sm text-foreground sm:col-span-2">
-                                    {data.users
-                                      .map((user: { email?: string | null }) => user.email)
-                                      .join(", ")}
-                                  </dd>
-                                </div>
-                              )}
-                              {!data.isGroup && (
-                                <div>
-                                  <dt className="text-sm font-medium text-muted-foreground sm:w-40 sm:shrink-0">
-                                    Email
-                                  </dt>
-                                  <dd className="mt-1 text-sm text-foreground sm:col-span-2">
-                                    {otherUser?.email ?? ""}
-                                  </dd>
-                                </div>
-                              )}
                               {!data.isGroup && joinedDate && (
                                 <>
                                   <hr className="border-border" />

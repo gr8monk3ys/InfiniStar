@@ -22,10 +22,22 @@ export default async function ChatPage({
   params: Promise<{ conversationId: string }>
 }) {
   const { conversationId } = await params
-  const [conversation, messages, currentUser] = await Promise.all([
+  // The viewer is resolved first because both reads are scoped to them; neither
+  // may be issued on a conversation id alone.
+  const currentUser = await getCurrentUser()
+  if (!currentUser?.id) {
+    return (
+      <div className="h-full lg:pl-80">
+        <div className="flex h-full flex-col">
+          <EmptyState />
+        </div>
+      </div>
+    )
+  }
+
+  const [conversation, messages] = await Promise.all([
     getConversationById(conversationId),
-    getMessages(conversationId),
-    getCurrentUser(),
+    getMessages(conversationId, currentUser.id),
   ])
 
   if (!conversation) {
