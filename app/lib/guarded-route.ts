@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server"
 import type { ZodType } from "zod"
 
+import { isAuthorizedCronRequest } from "@/app/lib/cron-auth"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import { apiLogger } from "@/app/lib/logger"
 import { getClientIdentifier, type IRateLimiter } from "@/app/lib/rate-limit"
@@ -42,15 +43,17 @@ import getCurrentUser from "@/app/actions/getCurrentUser"
 /** The user shape routes receive. Mirrors `getCurrentUser`, sans password hash. */
 export type GuardedUser = NonNullable<Awaited<ReturnType<typeof getCurrentUser>>>
 
-export interface RoutePolicy<TBody> {
+export interface RoutePolicy<TBody, TQuery = undefined> {
   /**
    * `"required"` (the default) resolves the user and 401s when absent.
    * `"optional"` resolves the user and passes `null` through, for routes that
    * serve both signed-in and anonymous callers.
    * `"none"` skips the lookup entirely — use it for webhooks and other
    * signature-verified entry points, never as a shortcut.
+   * `"cron"` verifies the `Authorization` header against `CRON_SECRET` with a
+   * timing-safe compare and answers 401 otherwise. There is no user.
    */
-  auth?: "required" | "optional" | "none"
+  auth?: "required" | "optional" | "none" | "cron"
   /**
    * Verify the double-submit CSRF token. Defaults to `true` for POST, PUT,
    * PATCH and DELETE and `false` otherwise, which is the rule the inline code
@@ -62,14 +65,46 @@ export interface RoutePolicy<TBody> {
   limiter?: IRateLimiter
   /** Zod schema for the JSON body. When present, the parsed value reaches the handler. */
   body?: ZodType<TBody>
+  /**
+   * Zod schema for the query string, parsed from `searchParams`. The sibling
+   * `body` never had: roughly twenty GETs hand-parse `new URL(request.url)`,
+   * including `moderation/reports`, which does it *inside* an already-migrated
+   * guard because there was no slot for it.
+   */
+  query?: ZodType<TQuery>
+  /**
+   * Hand the handler the raw request text instead of parsing JSON.
+   *
+   * Signature-verified entry points need the exact bytes: Stripe verifies
+   * against `request.text()` and svix against the raw payload. `auth: "none"`
+   * is offered for precisely these, and the body slot then made them unusable,
+   * so every webhook stayed hand-rolled.
+   */
+  rawBody?: boolean
+  /**
+   * A second limiter, keyed on the authenticated user rather than the client
+   * identifier, run after auth.
+   *
+   * The fixed order below runs the endpoint limiter first, and that ordering is
+   * a security property, not an accident — an unauthenticated flood is rejected
+   * before it costs a database round trip. But an identity-keyed limit cannot
+   * run before the identity is known, so it gets its own stage rather than
+   * displacing the first. `transcribe` and `profile` both reach past the guard
+   * today for exactly this.
+   */
+  userLimiter?: IRateLimiter
 }
 
-export interface GuardedContext<TBody, TParams> {
+export interface GuardedContext<TBody, TParams, TQuery = undefined> {
   request: NextRequest
   /** Non-null unless `auth` is `"optional"` or `"none"`. */
   user: GuardedUser
   /** The parsed body when a schema was declared, else `undefined`. */
   body: TBody
+  /** The parsed query string when a schema was declared, else `undefined`. */
+  query: TQuery
+  /** The raw request text when `rawBody` was declared, else `undefined`. */
+  rawBody: string
   /** Route params, already awaited. `{}` for static routes. */
   params: TParams
 }
@@ -116,11 +151,12 @@ export function guard<
     string,
     string | string[] | undefined
   >,
+  TQuery = undefined,
 >(
-  policy: RoutePolicy<TBody>,
-  handler: (context: GuardedContext<TBody, TParams>) => Promise<NextResponse>
-): (request: NextRequest, context: RouteContext<TParams>) => Promise<NextResponse> {
-  return async (request: NextRequest, context: RouteContext<TParams>): Promise<NextResponse> => {
+  policy: RoutePolicy<TBody, TQuery>,
+  handler: (context: GuardedContext<TBody, TParams, TQuery>) => Promise<Response>
+): (request: NextRequest, context: RouteContext<TParams>) => Promise<Response> {
+  return async (request: NextRequest, context: RouteContext<TParams>): Promise<Response> => {
     try {
       if (policy.limiter) {
         const allowed = await policy.limiter.check(getClientIdentifier(request))
@@ -135,10 +171,50 @@ export function guard<
       }
 
       const authMode = policy.auth ?? "required"
+
+      // Four cron routes respelled this, and the fourth diverged: it answered
+      // 500 when CRON_SECRET was unset where the others fell through to 401,
+      // telling an unauthenticated caller something about the configuration.
+      // `cron-auth.ts` keeps the timing-safe compare; this owns the response.
+      if (authMode === "cron") {
+        if (
+          !isAuthorizedCronRequest(request.headers.get("authorization"), process.env.CRON_SECRET)
+        ) {
+          apiLogger.warn(
+            { path: new URL(request.url).pathname },
+            "Unauthorized cron request attempt"
+          )
+          return unauthorized()
+        }
+      }
+
       let user: GuardedUser | null = null
-      if (authMode !== "none") {
+      if (authMode !== "none" && authMode !== "cron") {
         user = await getCurrentUser()
         if (!user && authMode === "required") return unauthorized()
+      }
+
+      // Second stage, keyed on the identity rather than the client. It cannot
+      // run before auth, which is why it is a separate stage rather than a
+      // replacement for the first.
+      if (policy.userLimiter && user) {
+        const allowed = await policy.userLimiter.check(user.id)
+        if (!allowed) return tooManyRequests()
+      }
+
+      let rawBody = undefined as unknown as string
+      if (policy.rawBody) {
+        rawBody = await request.text()
+      }
+
+      let query = undefined as TQuery
+      if (policy.query) {
+        const searchParams = Object.fromEntries(new URL(request.url).searchParams.entries())
+        const parsed = policy.query.safeParse(searchParams)
+        if (!parsed.success) {
+          return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 })
+        }
+        query = parsed.data
       }
 
       let body = undefined as TBody
@@ -167,6 +243,8 @@ export function guard<
         // common case free of `user!` at every call site.
         user: user as GuardedUser,
         body,
+        query,
+        rawBody,
         params,
       })
     } catch (error: unknown) {

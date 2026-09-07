@@ -8,14 +8,14 @@
  * Tests POST /api/ai/suggestions
  */
 
-import { NextRequest } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 
 import { POST } from "@/app/api/ai/suggestions/route"
 
 const mockGetCurrentUser = jest.fn()
 const mockConversationFindFirst = jest.fn()
 const mockVerifyCsrfToken = jest.fn()
-const mockGetAiAccessDecision = jest.fn()
+const mockRequestAiAccess = jest.fn()
 const mockGenerateSuggestions = jest.fn()
 const mockGetCachedSuggestions = jest.fn()
 const mockRateLimitCheckFn = jest.fn()
@@ -45,7 +45,7 @@ jest.mock("@/app/lib/rate-limit", () => ({
 }))
 
 jest.mock("@/app/lib/ai-access", () => ({
-  getAiAccessDecision: (userId: string) => mockGetAiAccessDecision(userId),
+  requestAiAccess: (...args: unknown[]) => mockRequestAiAccess(...args),
 }))
 
 jest.mock("@/app/lib/suggestions", () => ({
@@ -86,10 +86,7 @@ beforeEach(() => {
   mockRateLimitCheckFn.mockReturnValue(true)
   mockGetCurrentUser.mockResolvedValue(testUser)
   mockConversationFindFirst.mockResolvedValue(testConversation)
-  mockGetAiAccessDecision.mockResolvedValue({
-    allowed: true,
-    limits: { isPro: false, monthlyMessageCount: 1, monthlyMessageLimit: 10 },
-  })
+  mockRequestAiAccess.mockResolvedValue({ ok: true, isPro: false, limits: {} })
   mockGetCachedSuggestions.mockReturnValue(null)
   mockGenerateSuggestions.mockResolvedValue({
     suggestions: testSuggestions,
@@ -165,11 +162,12 @@ describe("POST /api/ai/suggestions", () => {
   })
 
   it("returns 402 when AI access is denied (free tier limit)", async () => {
-    mockGetAiAccessDecision.mockResolvedValue({
-      allowed: false,
-      code: "FREE_TIER_MESSAGE_LIMIT_REACHED",
-      message: "Limit reached",
-      limits: { isPro: false, monthlyMessageCount: 10, monthlyMessageLimit: 10 },
+    mockRequestAiAccess.mockResolvedValue({
+      ok: false,
+      response: NextResponse.json(
+        { error: "Limit reached", code: "FREE_TIER_MESSAGE_LIMIT_REACHED", limits: {} },
+        { status: 402 }
+      ),
     })
     const response = await POST(createRequest({ conversationId: "conv-1", type: "continue" }))
     expect(response.status).toBe(402)

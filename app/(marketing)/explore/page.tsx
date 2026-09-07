@@ -1,7 +1,7 @@
 import Link from "next/link"
 
 import { CHARACTER_SELECT } from "@/app/lib/character-select"
-import { canAccessNsfw } from "@/app/lib/nsfw"
+import { matureAccess } from "@/app/lib/nsfw"
 import prisma from "@/app/lib/prismadb"
 import { getRecommendationSignalsForUser, rankCharactersForUser } from "@/app/lib/recommendations"
 import { cn } from "@/app/lib/utils"
@@ -61,8 +61,8 @@ function getFirstSearchParam(value: string | string[] | undefined) {
 export default async function ExplorePage({ searchParams }: ExplorePageProps) {
   const resolvedSearchParams = (await searchParams) ?? {}
   const currentUser = await getCurrentUser()
-  const allowNsfw = canAccessNsfw(currentUser)
-  const publicCharacterWhere = allowNsfw ? { isPublic: true } : { isPublic: true, isNsfw: false }
+  const access = matureAccess(currentUser)
+  const publicCharacterWhere = { isPublic: true, ...access.visibilityFilter }
 
   let featuredRaw: ExploreCharacter[] = []
   let trendingRaw: ExploreCharacter[] = []

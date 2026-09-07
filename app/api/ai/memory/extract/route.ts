@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { z } from "zod"
 
-import { getAiAccessDecision } from "@/app/lib/ai-access"
+import { requestAiAccess } from "@/app/lib/ai-access"
 import {
   canCreateMemory,
   extractMemoriesFromMessages,
@@ -111,19 +111,11 @@ export async function POST(request: NextRequest) {
     // Get existing memories for context
     const existingMemories = await getUserMemories(currentUser.id)
 
-    const accessDecision = await getAiAccessDecision(currentUser.id)
-    if (!accessDecision.allowed) {
-      return NextResponse.json(
-        {
-          error:
-            accessDecision.message ??
-            "AI access is unavailable for this account right now. Please try again.",
-          code: accessDecision.code,
-          limits: accessDecision.limits,
-        },
-        { status: 402 }
-      )
-    }
+    const grant = await requestAiAccess({
+      userId: currentUser.id,
+      requestType: "memory-extract",
+    })
+    if (!grant.ok) return grant.response
 
     // Extract memories using AI
     const extractedMemories = await extractMemoriesFromMessages(

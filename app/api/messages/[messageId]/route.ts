@@ -1,7 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { z } from "zod"
 
-import { MESSAGE_INCLUDE_FLAT, PARTICIPANT_SELECT } from "@/app/lib/conversation-select"
+import { publishMessageDeleted, publishMessageUpdated } from "@/app/lib/conversation-events"
+import { MESSAGE_INCLUDE, PARTICIPANT_SELECT } from "@/app/lib/conversation-select"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import { apiLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
@@ -88,15 +89,13 @@ export async function PATCH(
         body: sanitizedBody,
         editedAt: new Date(),
       },
-      include: MESSAGE_INCLUDE_FLAT,
+      include: MESSAGE_INCLUDE,
     })
 
-    // Trigger Pusher event for real-time update
-    await pusherServer.trigger(
-      getPusherConversationChannel(message.conversationId),
-      "message:update",
-      updatedMessage
-    )
+    await publishMessageUpdated({
+      conversationId: message.conversationId,
+      message: updatedMessage,
+    })
 
     return NextResponse.json(updatedMessage)
   } catch (error: unknown) {
@@ -156,15 +155,13 @@ export async function DELETE(
         body: null, // Clear the message content
         image: null, // Clear any image
       },
-      include: MESSAGE_INCLUDE_FLAT,
+      include: MESSAGE_INCLUDE,
     })
 
-    // Trigger Pusher event for real-time update
-    await pusherServer.trigger(
-      getPusherConversationChannel(message.conversationId),
-      "message:delete",
-      deletedMessage
-    )
+    await publishMessageDeleted({
+      conversationId: message.conversationId,
+      message: deletedMessage,
+    })
 
     return NextResponse.json(deletedMessage)
   } catch (error: unknown) {

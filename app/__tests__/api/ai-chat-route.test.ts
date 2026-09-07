@@ -8,7 +8,7 @@
  * Tests POST /api/ai/chat
  */
 
-import { NextRequest } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 
 // Import AFTER all mocks are set up
 import { POST } from "@/app/api/ai/chat/route"
@@ -24,7 +24,8 @@ const mockContentReportCreate = jest.fn()
 const mockPusherTrigger = jest.fn()
 const mockVerifyCsrfToken = jest.fn()
 const mockAiChatLimiterCheck = jest.fn()
-const mockGetAiAccessDecision = jest.fn()
+const mockClaimAllowanceSlot = jest.fn()
+const mockReleaseAllowanceClaim = jest.fn()
 const mockTrackAiUsage = jest.fn()
 const mockModerateText = jest.fn()
 const mockAnthropicCreate = jest.fn()
@@ -36,6 +37,8 @@ jest.mock("@/app/actions/getCurrentUser", () => ({
   __esModule: true,
   default: () => mockGetCurrentUser(),
 }))
+
+const mockAssembleTurn = jest.fn()
 
 jest.mock("@/app/lib/prismadb", () => ({
   __esModule: true,
@@ -54,6 +57,18 @@ jest.mock("@/app/lib/prismadb", () => ({
       create: (args: unknown) => mockContentReportCreate(args),
     },
   },
+}))
+
+/**
+ * The Turn's assembly is this route's dependency, not its responsibility — it is
+ * covered end to end in `app/__tests__/lib/turn.test.ts`. What this route owns is
+ * *what it asks for*: the conversation it authorised, the chatter whose memories
+ * the Turn recalls, the Tier that decides model reachability, and the new input.
+ * Those arguments are asserted below.
+ */
+jest.mock("@/app/lib/turn", () => ({
+  ...jest.requireActual("@/app/lib/turn"),
+  assembleTurn: (...args: unknown[]) => mockAssembleTurn(...args),
 }))
 
 jest.mock("@/app/lib/pusher-server", () => ({
@@ -77,7 +92,8 @@ jest.mock("@/app/lib/rate-limit", () => ({
 }))
 
 jest.mock("@/app/lib/ai-access", () => ({
-  getAiAccessDecision: (userId: string) => mockGetAiAccessDecision(userId),
+  claimAllowanceSlot: (...args: unknown[]) => mockClaimAllowanceSlot(...args),
+  releaseAllowanceClaim: (...args: unknown[]) => mockReleaseAllowanceClaim(...args),
 }))
 
 jest.mock("@/app/lib/ai-usage", () => ({
@@ -85,14 +101,14 @@ jest.mock("@/app/lib/ai-usage", () => ({
 }))
 
 jest.mock("@/app/lib/moderation", () => ({
-  moderateTextModelAssisted: (text: string) => mockModerateText(text),
+  moderateTextModelAssisted: (...args: unknown[]) => mockModerateText(...args),
   buildModerationDetails: () => "details",
   moderationReasonFromCategories: () => "SPAM",
 }))
 
-jest.mock("@/app/lib/nsfw", () => ({
-  canAccessNsfw: () => true,
-}))
+// `matureAccess` is pure, so the real gate runs here rather than a constant
+// stub. Stubbing it to `true` is why the mature-content gate was never exercised
+// by a route test.
 
 jest.mock("@/app/lib/ai-message-content", () => ({
   buildAiMessageContent: (...args: unknown[]) => mockBuildAiMessageContent(...args),
@@ -137,7 +153,13 @@ function createRequest(body: object): NextRequest {
   })
 }
 
-const testUser = { id: "user-1", email: "test@example.com" }
+const testUser = {
+  id: "user-1",
+  email: "test@example.com",
+  isAdult: true,
+  nsfwEnabled: true,
+  adultConfirmedAt: new Date("2026-01-01"),
+}
 
 const testConversation = {
   id: "conv-1",
@@ -188,10 +210,13 @@ beforeEach(() => {
   mockConversationUpdate.mockResolvedValue({ id: "conv-1" })
   mockUserFindUnique.mockResolvedValue({ browserNotifications: false, notifyOnAIComplete: false })
   mockPusherTrigger.mockResolvedValue(undefined)
-  mockGetAiAccessDecision.mockResolvedValue({
-    allowed: true,
-    limits: { isPro: false, monthlyMessageCount: 1, monthlyMessageLimit: 10 },
+  mockClaimAllowanceSlot.mockResolvedValue({
+    ok: true,
+    isPro: false,
+    limits: {},
+    claim: { id: "claim-1" },
   })
+  mockReleaseAllowanceClaim.mockResolvedValue(undefined)
   mockTrackAiUsage.mockResolvedValue(undefined)
   mockModerateText.mockResolvedValue({ shouldBlock: false, shouldReview: false, categories: [] })
   mockAnthropicCreate.mockResolvedValue(testAnthropicResponse)
@@ -202,6 +227,13 @@ beforeEach(() => {
   })
   mockBuildAiConversationHistory.mockReturnValue([])
   mockSendWebPush.mockResolvedValue(undefined)
+  mockAssembleTurn.mockResolvedValue({
+    model: "claude-sonnet-4-5-20250929",
+    system: [
+      { type: "text", text: "You are a helpful assistant.", cache_control: { type: "ephemeral" } },
+    ],
+    messages: [{ role: "user", content: "Hello AI" }],
+  })
   mockContentReportCreate.mockResolvedValue({})
 })
 
@@ -314,11 +346,12 @@ describe("POST /api/ai/chat", () => {
   })
 
   it("returns 402 when free tier message limit is exceeded", async () => {
-    mockGetAiAccessDecision.mockResolvedValue({
-      allowed: false,
-      code: "FREE_TIER_MESSAGE_LIMIT_REACHED",
-      message: "You have reached the free-tier monthly AI message limit.",
-      limits: { isPro: false, monthlyMessageCount: 10, monthlyMessageLimit: 10 },
+    mockClaimAllowanceSlot.mockResolvedValue({
+      ok: false,
+      response: NextResponse.json(
+        { error: "Limit reached", code: "FREE_TIER_MESSAGE_LIMIT_REACHED", limits: {} },
+        { status: 402 }
+      ),
     })
 
     const request = createRequest({ message: "Hello", conversationId: "conv-1" })
@@ -381,22 +414,32 @@ describe("POST /api/ai/chat", () => {
     )
   })
 
-  it("triggers Pusher events for both user message and AI message", async () => {
+  /**
+   * Both messages go out through `publishNewMessage`, which emits the pairing:
+   * the conversation channel so an open thread appends the message, and the
+   * chatter's user channel so the sidebar re-sorts and shows the new preview.
+   *
+   * This asserted three triggers when only the AI message carried the sidebar
+   * half; sending a message is as much a reason to re-sort the sidebar as
+   * receiving a reply is, so both halves now fire for both messages.
+   */
+  it("publishes both halves of the pairing for the user message and the AI message", async () => {
     const request = createRequest({ message: "Hello AI", conversationId: "conv-1" })
     await POST(request)
 
-    // user message event + AI message event + conversation:update event
-    expect(mockPusherTrigger).toHaveBeenCalledTimes(3)
-    expect(mockPusherTrigger).toHaveBeenCalledWith(
-      "private-conversation-conv-1",
-      "messages:new",
-      testUserMessage
-    )
-    expect(mockPusherTrigger).toHaveBeenCalledWith(
-      "private-conversation-conv-1",
-      "messages:new",
-      testAiMessage
-    )
+    expect(mockPusherTrigger).toHaveBeenCalledTimes(4)
+
+    for (const message of [testUserMessage, testAiMessage]) {
+      expect(mockPusherTrigger).toHaveBeenCalledWith(
+        "private-conversation-conv-1",
+        "messages:new",
+        message
+      )
+      expect(mockPusherTrigger).toHaveBeenCalledWith("private-user-user-1", "conversation:update", {
+        id: "conv-1",
+        messages: [message],
+      })
+    }
   })
 
   it("updates conversation lastMessageAt after AI response", async () => {
@@ -471,6 +514,194 @@ describe("POST /api/ai/chat", () => {
     const response = await POST(request)
 
     expect(response.status).toBe(500)
+  })
+})
+
+/**
+ * The Turn is assembled identically however it was triggered. What differs
+ * between the four trigger sites is only what they *ask* for, so that is what
+ * each route's test asserts. The assembly itself is covered in
+ * `app/__tests__/lib/turn.test.ts`.
+ */
+describe("what this route asks the Turn for", () => {
+  it("passes the authorised conversation, the chatter, the tier and the new input", async () => {
+    const request = createRequest({ message: "Hello AI", conversationId: "conv-1" })
+    await POST(request)
+
+    expect(mockAssembleTurn).toHaveBeenCalledTimes(1)
+    expect(mockAssembleTurn).toHaveBeenCalledWith({
+      conversation: testConversation,
+      userId: "user-1",
+      isPro: false,
+      input: "Hello AI",
+    })
+  })
+
+  /**
+   * The Tier comes off the grant as a field. It used to be read back out of the
+   * decision's optional `limits` bag as `limits?.isPro ?? false`, so a decision
+   * that allowed without limits served a PRO chatter the free-tier model with
+   * no error anywhere. There is no longer a shape that can express that.
+   */
+  it("routes a PRO chatter using the tier the grant carries", async () => {
+    mockClaimAllowanceSlot.mockResolvedValue({ ok: true, isPro: true, limits: {} })
+
+    const request = createRequest({ message: "Hello AI", conversationId: "conv-1" })
+    await POST(request)
+
+    expect(mockAssembleTurn).toHaveBeenCalledWith(expect.objectContaining({ isPro: true }))
+  })
+
+  it("returns the grant's own response when access is denied, and assembles nothing", async () => {
+    mockClaimAllowanceSlot.mockResolvedValue({
+      ok: false,
+      response: NextResponse.json({ code: "FREE_TIER_MESSAGE_LIMIT_REACHED" }, { status: 402 }),
+    })
+
+    const request = createRequest({ message: "Hello AI", conversationId: "conv-1" })
+    const response = await POST(request)
+
+    expect(response.status).toBe(402)
+    expect(mockAssembleTurn).not.toHaveBeenCalled()
+  })
+})
+
+/**
+ * The mature-content posture.
+ *
+ * `canAccessNsfw` was computed and then thrown away: moderation ran on the same
+ * Turn with no knowledge of it, so a chatter who had confirmed adulthood and
+ * opted in, talking to a mature Character, filed an OPEN ContentReport against
+ * their own conversation every time a turn tripped a sexual review rule. The
+ * queue filled in proportion to exactly the traffic the age gate exists to
+ * permit.
+ */
+describe("moderation knows whether this is a mature conversation", () => {
+  const MATURE_CONVERSATION = {
+    ...testConversation,
+    character: {
+      name: "Elara",
+      isNsfw: true,
+      systemPrompt: "p",
+      scenario: null,
+      exampleDialogues: null,
+    },
+  }
+
+  it("does not file a report on a consenting adult in a mature conversation", async () => {
+    mockConversationFindFirst.mockResolvedValue(MATURE_CONVERSATION)
+    mockModerateText.mockResolvedValue({ shouldBlock: false, shouldReview: false, categories: [] })
+
+    await POST(createRequest({ message: "nsfw please", conversationId: "conv-1" }))
+
+    expect(mockModerateText).toHaveBeenCalledWith(expect.any(String), "mature")
+    expect(mockContentReportCreate).not.toHaveBeenCalled()
+  })
+
+  it("keeps the standard posture when the character is not mature", async () => {
+    mockConversationFindFirst.mockResolvedValue(testConversation)
+
+    await POST(createRequest({ message: "hello", conversationId: "conv-1" }))
+
+    expect(mockModerateText).toHaveBeenCalledWith(expect.any(String), "standard")
+  })
+
+  /**
+   * The gate, not the posture, is what keeps a non-consenting account out. An
+   * account that has not opted in never reaches a mature conversation at all,
+   * so it can never acquire the mature posture.
+   */
+  it("keeps the standard posture for an account that has not opted in", async () => {
+    mockGetCurrentUser.mockResolvedValue({ ...testUser, nsfwEnabled: false })
+    mockConversationFindFirst.mockResolvedValue(MATURE_CONVERSATION)
+
+    const response = await POST(createRequest({ message: "hello", conversationId: "conv-1" }))
+
+    expect(response.status).toBe(403)
+    expect(mockModerateText).not.toHaveBeenCalledWith(expect.any(String), "mature")
+  })
+
+  it("still files a report for a non-sexual review signal in a mature conversation", async () => {
+    mockConversationFindFirst.mockResolvedValue(MATURE_CONVERSATION)
+    mockModerateText.mockResolvedValue({
+      shouldBlock: false,
+      shouldReview: true,
+      categories: ["harassment"],
+    })
+
+    await POST(createRequest({ message: "you are worthless", conversationId: "conv-1" }))
+
+    expect(mockContentReportCreate).toHaveBeenCalled()
+  })
+
+  it("still blocks in a mature conversation", async () => {
+    mockConversationFindFirst.mockResolvedValue(MATURE_CONVERSATION)
+    mockModerateText.mockResolvedValue({
+      shouldBlock: true,
+      shouldReview: false,
+      categories: ["sexual"],
+    })
+
+    const response = await POST(createRequest({ message: "blocked", conversationId: "conv-1" }))
+
+    expect(response.status).toBe(400)
+    expect(mockMessageCreate).not.toHaveBeenCalled()
+  })
+})
+
+/**
+ * The Claim's release rule.
+ *
+ * Releasing too eagerly is worse than not releasing: it hands back an Allowance
+ * slot that was genuinely spent, which is a free message. Releasing too little
+ * costs the chatter one message, which is the safe direction.
+ */
+describe("the allowance claim", () => {
+  it("passes the claim to trackAiUsage so the reserved row is filled in, not duplicated", async () => {
+    await POST(createRequest({ message: "Hello AI", conversationId: "conv-1" }))
+
+    expect(mockTrackAiUsage).toHaveBeenCalledWith(expect.objectContaining({ claimId: "claim-1" }))
+  })
+
+  it("does not release a claim for a turn that produced a reply", async () => {
+    await POST(createRequest({ message: "Hello AI", conversationId: "conv-1" }))
+
+    expect(mockReleaseAllowanceClaim).not.toHaveBeenCalled()
+  })
+
+  it("releases the claim when the provider call fails", async () => {
+    mockAnthropicCreate.mockRejectedValue(new Error("anthropic is down"))
+
+    const response = await POST(createRequest({ message: "Hello AI", conversationId: "conv-1" }))
+
+    expect(response.status).toBe(500)
+    expect(mockReleaseAllowanceClaim).toHaveBeenCalledWith({ id: "claim-1" })
+  })
+
+  it("does not release when the turn was denied and never claimed", async () => {
+    mockClaimAllowanceSlot.mockResolvedValue({
+      ok: false,
+      response: NextResponse.json({ code: "FREE_TIER_MESSAGE_LIMIT_REACHED" }, { status: 402 }),
+    })
+
+    await POST(createRequest({ message: "Hello AI", conversationId: "conv-1" }))
+
+    expect(mockReleaseAllowanceClaim).not.toHaveBeenCalled()
+  })
+
+  /**
+   * The failure that would give away a free message: the reply landed and was
+   * recorded, then something later in the request threw. The slot was spent.
+   */
+  it("keeps the claim when usage was already recorded and a later step throws", async () => {
+    mockMessageCreate.mockResolvedValueOnce(testUserMessage).mockResolvedValueOnce(testAiMessage)
+    mockConversationUpdate.mockRejectedValue(new Error("write failed after the reply"))
+
+    const response = await POST(createRequest({ message: "Hello AI", conversationId: "conv-1" }))
+
+    expect(response.status).toBe(500)
+    expect(mockTrackAiUsage).toHaveBeenCalled()
+    expect(mockReleaseAllowanceClaim).not.toHaveBeenCalled()
   })
 })
 

@@ -43,7 +43,6 @@ export default async function ConversationsLayout({ children }: { children: Reac
                 title="Conversations"
                 initialItems={conversations}
                 currentUserId={currentUser?.id ?? null}
-                currentUserEmail={currentUser?.email ?? null}
                 initialNotificationPrefs={initialNotificationPrefs}
                 sceneCharacters={sceneCharacters}
               />

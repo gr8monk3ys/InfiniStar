@@ -8,7 +8,7 @@
  * Tests POST /api/ai/chat-stream
  */
 
-import { NextRequest } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 
 import { POST } from "@/app/api/ai/chat-stream/route"
 
@@ -21,7 +21,8 @@ const mockContentReportCreate = jest.fn()
 const mockPusherTrigger = jest.fn()
 const mockVerifyCsrfToken = jest.fn()
 const mockAiChatLimiterCheck = jest.fn()
-const mockGetAiAccessDecision = jest.fn()
+const mockClaimAllowanceSlot = jest.fn()
+const mockReleaseAllowanceClaim = jest.fn()
 const mockTrackAiUsage = jest.fn()
 const mockModerateText = jest.fn()
 const mockAnthropicStream = jest.fn()
@@ -36,6 +37,8 @@ jest.mock("@/app/actions/getCurrentUser", () => ({
   default: () => mockGetCurrentUser(),
 }))
 
+const mockAssembleTurn = jest.fn()
+
 jest.mock("@/app/lib/prismadb", () => ({
   __esModule: true,
   default: {
@@ -47,6 +50,18 @@ jest.mock("@/app/lib/prismadb", () => ({
     user: { findUnique: (args: unknown) => mockUserFindUnique(args) },
     contentReport: { create: (args: unknown) => mockContentReportCreate(args) },
   },
+}))
+
+/**
+ * The Turn's assembly is this route's dependency, not its responsibility — it is
+ * covered end to end in `app/__tests__/lib/turn.test.ts`. What this route owns is
+ * *what it asks for*: the conversation it authorised, the chatter whose memories
+ * the Turn recalls, the Tier that decides model reachability, and the new input.
+ * Those arguments are asserted below.
+ */
+jest.mock("@/app/lib/turn", () => ({
+  ...jest.requireActual("@/app/lib/turn"),
+  assembleTurn: (...args: unknown[]) => mockAssembleTurn(...args),
 }))
 
 jest.mock("@/app/lib/pusher-server", () => ({
@@ -70,7 +85,8 @@ jest.mock("@/app/lib/rate-limit", () => ({
 }))
 
 jest.mock("@/app/lib/ai-access", () => ({
-  getAiAccessDecision: (userId: string) => mockGetAiAccessDecision(userId),
+  claimAllowanceSlot: (...args: unknown[]) => mockClaimAllowanceSlot(...args),
+  releaseAllowanceClaim: (...args: unknown[]) => mockReleaseAllowanceClaim(...args),
 }))
 
 jest.mock("@/app/lib/ai-usage", () => ({
@@ -78,14 +94,14 @@ jest.mock("@/app/lib/ai-usage", () => ({
 }))
 
 jest.mock("@/app/lib/moderation", () => ({
-  moderateTextModelAssisted: (text: string) => mockModerateText(text),
+  moderateTextModelAssisted: (...args: unknown[]) => mockModerateText(...args),
   buildModerationDetails: () => "details",
   moderationReasonFromCategories: () => "SPAM",
 }))
 
-jest.mock("@/app/lib/nsfw", () => ({
-  canAccessNsfw: () => true,
-}))
+// `matureAccess` is pure, so the real gate runs here rather than a constant
+// stub. Stubbing it to `true` is why the mature-content gate was never exercised
+// by a route test.
 
 jest.mock("@/app/lib/ai-message-content", () => ({
   buildAiMessageContent: (...args: unknown[]) => mockBuildAiMessageContent(...args),
@@ -163,7 +179,13 @@ function buildFakeStream(chunks: unknown[]) {
   }
 }
 
-const testUser = { id: "user-1", email: "test@example.com" }
+const testUser = {
+  id: "user-1",
+  email: "test@example.com",
+  isAdult: true,
+  nsfwEnabled: true,
+  adultConfirmedAt: new Date("2026-01-01"),
+}
 
 const testConversation = {
   id: "conv-1",
@@ -208,10 +230,13 @@ beforeEach(() => {
   mockConversationUpdate.mockResolvedValue({ id: "conv-1" })
   mockUserFindUnique.mockResolvedValue({ browserNotifications: false, notifyOnAIComplete: false })
   mockPusherTrigger.mockResolvedValue(undefined)
-  mockGetAiAccessDecision.mockResolvedValue({
-    allowed: true,
-    limits: { isPro: false, monthlyMessageCount: 1, monthlyMessageLimit: 10 },
+  mockClaimAllowanceSlot.mockResolvedValue({
+    ok: true,
+    isPro: false,
+    limits: {},
+    claim: { id: "claim-1" },
   })
+  mockReleaseAllowanceClaim.mockResolvedValue(undefined)
   mockTrackAiUsage.mockResolvedValue(undefined)
   mockModerateText.mockResolvedValue({ shouldBlock: false, shouldReview: false, categories: [] })
   mockAnthropicStream.mockReturnValue(
@@ -227,6 +252,13 @@ beforeEach(() => {
   })
   mockBuildAiConversationHistory.mockReturnValue([])
   mockSendWebPush.mockResolvedValue(undefined)
+  mockAssembleTurn.mockResolvedValue({
+    model: "claude-sonnet-4-5-20250929",
+    system: [
+      { type: "text", text: "You are a helpful assistant.", cache_control: { type: "ephemeral" } },
+    ],
+    messages: [{ role: "user", content: "Hello AI" }],
+  })
   mockContentReportCreate.mockResolvedValue({})
   mockGetRelevantMemories.mockResolvedValue([])
   mockBuildMemoryContext.mockReturnValue("")
@@ -309,11 +341,12 @@ describe("POST /api/ai/chat-stream", () => {
   })
 
   it("returns 402 when free tier message limit is exceeded", async () => {
-    mockGetAiAccessDecision.mockResolvedValue({
-      allowed: false,
-      code: "FREE_TIER_MESSAGE_LIMIT_REACHED",
-      message: "Limit reached",
-      limits: { isPro: false, monthlyMessageCount: 10, monthlyMessageLimit: 10 },
+    mockClaimAllowanceSlot.mockResolvedValue({
+      ok: false,
+      response: NextResponse.json(
+        { error: "Limit reached", code: "FREE_TIER_MESSAGE_LIMIT_REACHED", limits: {} },
+        { status: 402 }
+      ),
     })
     const response = await POST(createRequest({ message: "Hello", conversationId: "conv-1" }))
     expect(response.status).toBe(402)
@@ -439,6 +472,55 @@ describe("POST /api/ai/chat-stream", () => {
     mockConversationFindFirst.mockRejectedValue(new Error("DB exploded"))
     const response = await POST(createRequest({ message: "Hello AI", conversationId: "conv-1" }))
     expect(response.status).toBe(500)
+  })
+})
+
+/**
+ * The Turn is assembled identically however it was triggered. What differs
+ * between the four trigger sites is only what they *ask* for, so that is what
+ * each route's test asserts. The assembly itself is covered in
+ * `app/__tests__/lib/turn.test.ts`.
+ */
+describe("what this route asks the Turn for", () => {
+  it("passes the authorised conversation, the chatter, the tier and the new input", async () => {
+    const request = createRequest({ message: "Hello AI", conversationId: "conv-1" })
+    await POST(request)
+
+    expect(mockAssembleTurn).toHaveBeenCalledTimes(1)
+    expect(mockAssembleTurn).toHaveBeenCalledWith({
+      conversation: testConversation,
+      userId: "user-1",
+      isPro: false,
+      input: "Hello AI",
+    })
+  })
+
+  /**
+   * The Tier comes off the grant as a field. It used to be read back out of the
+   * decision's optional `limits` bag as `limits?.isPro ?? false`, so a decision
+   * that allowed without limits served a PRO chatter the free-tier model with
+   * no error anywhere. There is no longer a shape that can express that.
+   */
+  it("routes a PRO chatter using the tier the grant carries", async () => {
+    mockClaimAllowanceSlot.mockResolvedValue({ ok: true, isPro: true, limits: {} })
+
+    const request = createRequest({ message: "Hello AI", conversationId: "conv-1" })
+    await POST(request)
+
+    expect(mockAssembleTurn).toHaveBeenCalledWith(expect.objectContaining({ isPro: true }))
+  })
+
+  it("returns the grant's own response when access is denied, and assembles nothing", async () => {
+    mockClaimAllowanceSlot.mockResolvedValue({
+      ok: false,
+      response: NextResponse.json({ code: "FREE_TIER_MESSAGE_LIMIT_REACHED" }, { status: 402 }),
+    })
+
+    const request = createRequest({ message: "Hello AI", conversationId: "conv-1" })
+    const response = await POST(request)
+
+    expect(response.status).toBe(402)
+    expect(mockAssembleTurn).not.toHaveBeenCalled()
   })
 })
 

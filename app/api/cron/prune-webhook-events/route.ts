@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server"
 
-import { isAuthorizedCronRequest } from "@/app/lib/cron-auth"
+import { guard } from "@/app/lib/guarded-route"
 import { apiLogger } from "@/app/lib/logger"
 import { pruneProcessedWebhookEvents, WEBHOOK_EVENT_RETENTION_DAYS } from "@/app/lib/webhook-events"
 
@@ -18,16 +18,8 @@ const CRON_TIMEOUT_MS = 55_000
  *
  * Scheduled in vercel.json at 05:00 daily, after the other three crons.
  */
-export async function GET(request: NextRequest) {
+export const GET = guard({ auth: "cron" }, async () => {
   try {
-    const authHeader = request.headers.get("authorization")
-    const cronSecret = process.env.CRON_SECRET
-
-    if (!isAuthorizedCronRequest(authHeader, cronSecret)) {
-      apiLogger.warn("Unauthorized cron request attempt on /api/cron/prune-webhook-events")
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
     const timeoutPromise = new Promise<never>((_, reject) =>
       setTimeout(() => reject(new Error("Cron timeout after 55s")), CRON_TIMEOUT_MS)
     )
@@ -59,4 +51,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+})

@@ -11,6 +11,39 @@ export type ModerationCategory =
 
 export type ModerationSeverity = "safe" | "review" | "block"
 
+/**
+ * How to moderate content, given who wrote it.
+ *
+ * `mature` is for an account that has confirmed adulthood *and* opted in, in a
+ * conversation with a mature Character. It suppresses the consenting-adults
+ * *review* signal — and only that.
+ *
+ * It does not touch BLOCK_RULES. `child sexual abuse`, `rape fantasy` and
+ * `sexual assault fantasy` block under every posture, as does everything in the
+ * hate, violence, self-harm and scam families. Nor does it touch the model
+ * moderator's block escalation: `minors`, `threatening`, `graphic` and
+ * `instructions` still block. The age gate permits adults to write explicit
+ * fiction with each other; it permits nothing else, and this type is not a way
+ * to widen that.
+ */
+export type ModerationPosture = "standard" | "mature"
+
+/**
+ * Review categories that a mature posture suppresses.
+ *
+ * Only `sexual`. A mature conversation is not a licence for harassment, hate,
+ * threats or self-harm content, so those keep flagging for review regardless.
+ */
+const MATURE_SUPPRESSED_REVIEW_CATEGORIES: ReadonlySet<ModerationCategory> = new Set(["sexual"])
+
+const SAFE_RESULT: ModerationResult = {
+  severity: "safe",
+  shouldBlock: false,
+  shouldReview: false,
+  categories: [],
+  matches: [],
+}
+
 export interface ModerationMatch {
   category: ModerationCategory
   label: string
@@ -110,15 +143,12 @@ function collectMatches(content: string, rules: ModerationRule[]): ModerationMat
     }))
 }
 
-export function moderateText(content: string | null | undefined): ModerationResult {
+export function moderateText(
+  content: string | null | undefined,
+  posture: ModerationPosture = "standard"
+): ModerationResult {
   if (!content || content.trim().length === 0) {
-    return {
-      severity: "safe",
-      shouldBlock: false,
-      shouldReview: false,
-      categories: [],
-      matches: [],
-    }
+    return { ...SAFE_RESULT }
   }
 
   const normalized = content.trim()
@@ -134,7 +164,7 @@ export function moderateText(content: string | null | undefined): ModerationResu
     }
   }
 
-  const reviewMatches = collectMatches(normalized, REVIEW_RULES)
+  const reviewMatches = applyPosture(collectMatches(normalized, REVIEW_RULES), posture)
   if (reviewMatches.length > 0) {
     const categories = [...new Set(reviewMatches.map((match) => match.category))]
     return {
@@ -146,13 +176,18 @@ export function moderateText(content: string | null | undefined): ModerationResu
     }
   }
 
-  return {
-    severity: "safe",
-    shouldBlock: false,
-    shouldReview: false,
-    categories: [],
-    matches: [],
+  return { ...SAFE_RESULT }
+}
+
+/**
+ * Drops the review signals a mature posture consents to. Applied to review
+ * matches only — the caller has already returned for anything that blocks.
+ */
+function applyPosture(matches: ModerationMatch[], posture: ModerationPosture): ModerationMatch[] {
+  if (posture !== "mature") {
+    return matches
   }
+  return matches.filter((match) => !MATURE_SUPPRESSED_REVIEW_CATEGORIES.has(match.category))
 }
 
 export function moderationReasonFromCategories(
@@ -214,9 +249,10 @@ function mergeModerationResults(a: ModerationResult, b: ModerationResult): Moder
 }
 
 export async function moderateTextModelAssisted(
-  content: string | null | undefined
+  content: string | null | undefined,
+  posture: ModerationPosture = "standard"
 ): Promise<ModerationResult> {
-  const baseline = moderateText(content)
+  const baseline = moderateText(content, posture)
   if (!content || content.trim().length === 0) {
     return baseline
   }
@@ -226,8 +262,28 @@ export async function moderateTextModelAssisted(
     if (!modelResult) {
       return baseline
     }
-    return mergeModerationResults(baseline, modelResult)
+    // The model moderator escalates minors/threatening/graphic/instructions to
+    // `block`; everything else it flags arrives as `review`. A mature posture
+    // consents to the sexual half of that, and to nothing that blocks.
+    const postured =
+      modelResult.severity === "review"
+        ? withMatches(modelResult, applyPosture(modelResult.matches, posture))
+        : modelResult
+
+    return mergeModerationResults(baseline, postured)
   } catch {
     return baseline
+  }
+}
+
+/** Rebuilds a result around a filtered match list, recomputing its severity. */
+function withMatches(result: ModerationResult, matches: ModerationMatch[]): ModerationResult {
+  if (matches.length === 0) {
+    return { ...SAFE_RESULT }
+  }
+  return {
+    ...result,
+    categories: [...new Set(matches.map((match) => match.category))],
+    matches,
   }
 }

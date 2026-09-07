@@ -48,38 +48,35 @@ function canUserReviewAllReports(email: string | null | undefined): boolean {
   return reviewerEmails.includes(email.toLowerCase())
 }
 
-export const GET = guard({ limiter: apiLimiter }, async ({ user, request }) => {
-  const { searchParams } = new URL(request.url)
-  const queryValidation = reportQuerySchema.safeParse(Object.fromEntries(searchParams.entries()))
-  if (!queryValidation.success) {
-    return NextResponse.json({ error: queryValidation.error.issues[0].message }, { status: 400 })
-  }
+export const GET = guard(
+  { limiter: apiLimiter, query: reportQuerySchema },
+  async ({ user, query }) => {
+    const canReviewAll = canUserReviewAllReports(user.email)
 
-  const canReviewAll = canUserReviewAllReports(user.email)
+    const { status, targetType, limit } = query
 
-  const { status, targetType, limit } = queryValidation.data
-
-  const reports = await prisma.contentReport.findMany({
-    where: {
-      ...(canReviewAll ? {} : { reporterId: user.id }),
-      ...(status ? { status } : {}),
-      ...(targetType ? { targetType } : {}),
-    },
-    orderBy: { createdAt: "desc" },
-    take: limit || 100,
-    include: {
-      reporter: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
+    const reports = await prisma.contentReport.findMany({
+      where: {
+        ...(canReviewAll ? {} : { reporterId: user.id }),
+        ...(status ? { status } : {}),
+        ...(targetType ? { targetType } : {}),
+      },
+      orderBy: { createdAt: "desc" },
+      take: limit || 100,
+      include: {
+        reporter: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
         },
       },
-    },
-  })
+    })
 
-  return NextResponse.json({ reports, canReviewAll })
-})
+    return NextResponse.json({ reports, canReviewAll })
+  }
+)
 
 export const POST = guard({ limiter: apiLimiter, body: reportSchema }, async ({ user, body }) => {
   const report = await prisma.contentReport.create({
