@@ -128,6 +128,7 @@
     "@typescript-eslint/parser": "^8.56.0",
     "@vercel/edge": "^1.2.2",
     "autoprefixer": "^10.4.24",
+    "dotenv": "^16.6.1",
     "eslint": "^9.39.2",
     "eslint-config-next": "16.1.6",
     "eslint-config-prettier": "^10.1.8",
