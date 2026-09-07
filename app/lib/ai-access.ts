@@ -90,18 +90,21 @@ export const UNCOUNTED_REQUEST_TYPES = ["summary-auto"] as const
  */
 export const PENDING_CLAIM_MODEL = "pending"
 
-export async function monthlySnapshot(userId: string): Promise<MonthlySnapshot> {
+export async function monthlySnapshot(
+  userId: string,
+  client: Prisma.TransactionClient = prisma
+): Promise<MonthlySnapshot> {
   const monthStart = getMonthStartUtc()
 
   const [monthlyMessageCount, aggregates] = await Promise.all([
-    prisma.aiUsage.count({
+    client.aiUsage.count({
       where: {
         userId,
         createdAt: { gte: monthStart },
         requestType: { in: [...COUNTED_MESSAGE_REQUEST_TYPES] },
       },
     }),
-    prisma.aiUsage.aggregate({
+    client.aiUsage.aggregate({
       where: {
         userId,
         createdAt: { gte: monthStart },
@@ -130,10 +133,11 @@ export type AiAccessRequestType =
 
 export async function getAiAccessDecision(
   userId: string,
-  options?: { requestType?: AiAccessRequestType }
+  options?: { requestType?: AiAccessRequestType; client?: Prisma.TransactionClient }
 ): Promise<AiAccessDecision> {
+  const client = options?.client ?? prisma
   try {
-    const subscriptionPlan = await getUserSubscriptionPlan(userId)
+    const subscriptionPlan = await getUserSubscriptionPlan(userId, client)
     const proCostCapCents = AI_PRO_MONTHLY_COST_CAP_CENTS
     const requestType = options?.requestType ?? "chat"
 
@@ -164,11 +168,11 @@ export async function getAiAccessDecision(
 
     // One read point for the month, shared with /api/ai/usage so the displayed
     // Allowance and the enforced Allowance cannot drift apart again.
-    const snapshot = await monthlySnapshot(userId)
+    const snapshot = await monthlySnapshot(userId, client)
     const { monthStart, monthlyMessageCount, monthlyTokenUsage, monthlyCostUsageCents } = snapshot
 
     const monthlyFeatureCount = shouldCountFeatureRequests
-      ? await prisma.aiUsage.count({
+      ? await client.aiUsage.count({
           where: {
             userId,
             createdAt: { gte: monthStart },
@@ -406,6 +410,8 @@ export type AiAccessGrant =
 export interface RequestAiAccessArgs {
   userId: string
   requestType?: AiAccessRequestType
+  /** Read on this client, so a caller inside a transaction stays on one connection. */
+  client?: Prisma.TransactionClient
   /**
    * What this request is about to cost, in cents, for request types that can
    * estimate it up front. The PRO cost cap is applied to usage *plus* this, so
@@ -431,8 +437,9 @@ export async function requestAiAccess({
   userId,
   requestType,
   estimatedCostCents = 0,
+  client,
 }: RequestAiAccessArgs): Promise<AiAccessGrant> {
-  const decision = await getAiAccessDecision(userId, { requestType })
+  const decision = await getAiAccessDecision(userId, { requestType, client })
 
   // Every `allowed: true` path returns limits; the failure path returns
   // `allowed: false` with none. A grant with neither is a bug, and denying is
@@ -517,7 +524,11 @@ export async function claimAllowanceSlot({
     return await prisma.$transaction(async (tx) => {
       await lockAllowance(tx, userId)
 
-      const grant = await requestAiAccess({ userId, requestType, estimatedCostCents })
+      // Read on `tx`, not the global client. Reading on the pool would hold a
+      // second connection for the life of this transaction, and `pg` defaults
+      // to a pool of ten — roughly six concurrent turns would then deadlock,
+      // every transaction waiting for a connection none of them will release.
+      const grant = await requestAiAccess({ userId, requestType, estimatedCostCents, client: tx })
       if (!grant.ok) {
         return grant
       }

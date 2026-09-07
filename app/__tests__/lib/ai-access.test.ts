@@ -19,6 +19,11 @@ jest.mock("@/app/lib/analytics", () => ({
 }))
 
 const mockUsageCreate = jest.fn()
+// Spies belonging to the transaction client only. If the claim reads on the
+// global client instead, these stay untouched and the test below fails.
+const mockTxCount = jest.fn()
+const mockTxAggregate = jest.fn()
+const mockTxUserFindFirst = jest.fn()
 const mockUsageDelete = jest.fn()
 const mockExecuteRaw = jest.fn()
 
@@ -36,7 +41,12 @@ jest.mock("@/app/lib/prismadb", () => ({
     // surface, which is what the claim uses.
     $transaction: (fn: (tx: unknown) => unknown) =>
       fn({
-        aiUsage: { create: (...a: unknown[]) => mockUsageCreate(...a) },
+        aiUsage: {
+          create: (...a: unknown[]) => mockUsageCreate(...a),
+          count: (...a: unknown[]) => mockTxCount(...a),
+          aggregate: (...a: unknown[]) => mockTxAggregate(...a),
+        },
+        user: { findFirst: (...a: unknown[]) => mockTxUserFindFirst(...a) },
         $executeRaw: (...a: unknown[]) => mockExecuteRaw(...a),
       }),
   },
@@ -245,11 +255,51 @@ describe("claimAllowanceSlot", () => {
     mockUsageCreate.mockReset().mockResolvedValue({ id: "claim-1" })
     mockUsageDelete.mockReset().mockResolvedValue({})
     mockExecuteRaw.mockReset().mockResolvedValue(1)
-    ;(prisma.aiUsage.count as jest.Mock).mockResolvedValue(0)
-    ;(prisma.aiUsage.aggregate as jest.Mock).mockResolvedValue({
+    // The claim reads on the transaction client, so these are the spies that
+    // drive it. The global ones stay untouched, which is itself asserted below.
+    mockTxCount.mockReset().mockResolvedValue(0)
+    mockTxAggregate.mockReset().mockResolvedValue({ _sum: { totalTokens: 0, totalCost: 0 } })
+    mockTxUserFindFirst.mockReset().mockResolvedValue({
+      stripePriceId: null,
+      stripeCurrentPeriodEnd: null,
+      stripeCustomerId: null,
+      stripeSubscriptionId: null,
+    })
+    ;(prisma.aiUsage.count as jest.Mock).mockClear().mockResolvedValue(0)
+    ;(prisma.aiUsage.aggregate as jest.Mock).mockClear().mockResolvedValue({
       _sum: { totalTokens: 0, totalCost: 0 },
     })
     ;(getUserSubscriptionPlan as jest.Mock).mockResolvedValue({ isPro: false })
+  })
+
+  /**
+   * Every read in the claim must happen on the transaction client.
+   *
+   * Reading on the global client instead holds a second pool connection for the
+   * life of the transaction, and `pg` defaults to a pool of ten — roughly six
+   * concurrent turns would deadlock, each transaction waiting for a connection
+   * that none of them will release until they get one. That is a load-dependent
+   * outage, so it is pinned rather than left to review.
+   */
+  it("does every read on the transaction client, never a second connection", async () => {
+    mockTxCount.mockResolvedValue(0)
+    mockTxAggregate.mockResolvedValue({ _sum: { totalTokens: 0, totalCost: 0 } })
+    mockTxUserFindFirst.mockResolvedValue({
+      stripePriceId: null,
+      stripeCurrentPeriodEnd: null,
+      stripeCustomerId: null,
+      stripeSubscriptionId: null,
+    })
+    ;(prisma.aiUsage.count as jest.Mock).mockClear()
+    ;(prisma.aiUsage.aggregate as jest.Mock).mockClear()
+
+    const grant = await claimAllowanceSlot({ userId: USER_ID, conversationId: "conv-1" })
+
+    expect(grant.ok).toBe(true)
+    expect(mockTxCount).toHaveBeenCalled()
+    expect(mockTxAggregate).toHaveBeenCalled()
+    expect(prisma.aiUsage.count).not.toHaveBeenCalled()
+    expect(prisma.aiUsage.aggregate).not.toHaveBeenCalled()
   })
 
   /**
@@ -284,7 +334,7 @@ describe("claimAllowanceSlot", () => {
   })
 
   it("writes no claim when the Allowance is exhausted", async () => {
-    ;(prisma.aiUsage.count as jest.Mock).mockResolvedValue(9999)
+    mockTxCount.mockResolvedValue(9999)
 
     const grant = await claimAllowanceSlot({ userId: USER_ID, conversationId: "conv-1" })
 

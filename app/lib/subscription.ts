@@ -1,3 +1,5 @@
+import { type Prisma } from "@prisma/client"
+
 import { freePlan, proPlan } from "@/config/subscriptions"
 import prisma from "@/app/lib/prismadb"
 import { type UserSubscriptionPlan } from "@/app/types"
@@ -28,8 +30,16 @@ export function isProSubscription(user: ProSubscriptionFields | null | undefined
   )
 }
 
-export async function getUserSubscriptionPlan(userId: string): Promise<UserSubscriptionPlan> {
-  const user = await prisma.user.findFirst({
+export async function getUserSubscriptionPlan(
+  userId: string,
+  /**
+   * The client to read on. Pass a transaction client to keep the read on the
+   * caller's existing connection — see `claimAllowanceSlot`, which would
+   * otherwise hold two connections at once.
+   */
+  client: Prisma.TransactionClient = prisma
+): Promise<UserSubscriptionPlan> {
+  const user = await client.user.findFirst({
     where: {
       id: userId,
     },
