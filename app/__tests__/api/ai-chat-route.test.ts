@@ -37,6 +37,8 @@ jest.mock("@/app/actions/getCurrentUser", () => ({
   default: () => mockGetCurrentUser(),
 }))
 
+const mockAssembleTurn = jest.fn()
+
 jest.mock("@/app/lib/prismadb", () => ({
   __esModule: true,
   default: {
@@ -54,6 +56,18 @@ jest.mock("@/app/lib/prismadb", () => ({
       create: (args: unknown) => mockContentReportCreate(args),
     },
   },
+}))
+
+/**
+ * The Turn's assembly is this route's dependency, not its responsibility — it is
+ * covered end to end in `app/__tests__/lib/turn.test.ts`. What this route owns is
+ * *what it asks for*: the conversation it authorised, the chatter whose memories
+ * the Turn recalls, the Tier that decides model reachability, and the new input.
+ * Those arguments are asserted below.
+ */
+jest.mock("@/app/lib/turn", () => ({
+  ...jest.requireActual("@/app/lib/turn"),
+  assembleTurn: (...args: unknown[]) => mockAssembleTurn(...args),
 }))
 
 jest.mock("@/app/lib/pusher-server", () => ({
@@ -202,6 +216,13 @@ beforeEach(() => {
   })
   mockBuildAiConversationHistory.mockReturnValue([])
   mockSendWebPush.mockResolvedValue(undefined)
+  mockAssembleTurn.mockResolvedValue({
+    model: "claude-sonnet-4-5-20250929",
+    system: [
+      { type: "text", text: "You are a helpful assistant.", cache_control: { type: "ephemeral" } },
+    ],
+    messages: [{ role: "user", content: "Hello AI" }],
+  })
   mockContentReportCreate.mockResolvedValue({})
 })
 
@@ -481,6 +502,50 @@ describe("POST /api/ai/chat", () => {
     const response = await POST(request)
 
     expect(response.status).toBe(500)
+  })
+})
+
+/**
+ * The Turn is assembled identically however it was triggered. What differs
+ * between the four trigger sites is only what they *ask* for, so that is what
+ * each route's test asserts. The assembly itself is covered in
+ * `app/__tests__/lib/turn.test.ts`.
+ */
+describe("what this route asks the Turn for", () => {
+  it("passes the authorised conversation, the chatter, the tier and the new input", async () => {
+    const request = createRequest({ message: "Hello AI", conversationId: "conv-1" })
+    await POST(request)
+
+    expect(mockAssembleTurn).toHaveBeenCalledTimes(1)
+    expect(mockAssembleTurn).toHaveBeenCalledWith({
+      conversation: testConversation,
+      userId: "user-1",
+      isPro: false,
+      input: "Hello AI",
+    })
+  })
+
+  it("routes a PRO chatter using the tier the access decision returned", async () => {
+    mockGetAiAccessDecision.mockResolvedValue({ allowed: true, limits: { isPro: true } })
+
+    const request = createRequest({ message: "Hello AI", conversationId: "conv-1" })
+    await POST(request)
+
+    expect(mockAssembleTurn).toHaveBeenCalledWith(expect.objectContaining({ isPro: true }))
+  })
+
+  /**
+   * `limits` is optional on the access decision, and reading `isPro` out of it
+   * is how a PRO chatter silently drops to the free-tier model. The route must
+   * not crash on a decision that omits it.
+   */
+  it("treats a missing limits payload as the free tier rather than failing", async () => {
+    mockGetAiAccessDecision.mockResolvedValue({ allowed: true })
+
+    const request = createRequest({ message: "Hello AI", conversationId: "conv-1" })
+    await POST(request)
+
+    expect(mockAssembleTurn).toHaveBeenCalledWith(expect.objectContaining({ isPro: false }))
   })
 })
 

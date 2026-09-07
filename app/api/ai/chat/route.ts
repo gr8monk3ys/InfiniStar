@@ -2,22 +2,13 @@ import { NextResponse, type NextRequest } from "next/server"
 import { z } from "zod"
 
 import { getAiAccessDecision } from "@/app/lib/ai-access"
-import { buildAiConversationHistory, buildAiMessageContent } from "@/app/lib/ai-message-content"
-import { getModelForUser } from "@/app/lib/ai-model-routing"
-import {
-  getDefaultPersonality,
-  getSystemPrompt,
-  isValidPersonality,
-} from "@/app/lib/ai-personalities"
-import { buildChatSystemBlocks } from "@/app/lib/ai-system-prompt"
+import { buildAiMessageContent } from "@/app/lib/ai-message-content"
 import { trackAiUsage } from "@/app/lib/ai-usage"
 import anthropic from "@/app/lib/anthropic"
 import { maybeAutoExtractMemories } from "@/app/lib/auto-memory"
 import { maybeAutoSummarize } from "@/app/lib/auto-summary"
-import { buildCharacterSystemPrompt } from "@/app/lib/character-prompt"
 import { publishNewMessage } from "@/app/lib/conversation-events"
 import { MESSAGE_INCLUDE, PARTICIPANT_SELECT } from "@/app/lib/conversation-select"
-import { renderSummaryForPrompt } from "@/app/lib/conversation-summary"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import { aiLogger } from "@/app/lib/logger"
 import {
@@ -29,6 +20,7 @@ import { canAccessNsfw } from "@/app/lib/nsfw"
 import prisma from "@/app/lib/prismadb"
 import { aiChatLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 import { sanitizeUrl } from "@/app/lib/sanitize"
+import { assembleTurn, TURN_CONVERSATION_INCLUDE } from "@/app/lib/turn"
 import { sendWebPushToUser } from "@/app/lib/web-push"
 import getCurrentUser from "@/app/actions/getCurrentUser"
 
@@ -136,29 +128,7 @@ export async function POST(request: NextRequest) {
         id: conversationId,
         users: { some: { id: currentUser.id } },
       },
-      include: {
-        character: {
-          select: {
-            name: true,
-            isNsfw: true,
-            systemPrompt: true,
-            scenario: true,
-            exampleDialogues: true,
-          },
-        },
-        persona: {
-          select: {
-            name: true,
-            description: true,
-            appearance: true,
-            personalityTraits: true,
-          },
-        },
-        messages: {
-          orderBy: { createdAt: "desc" },
-          take: 20, // Get last 20 messages for context
-        },
-      },
+      include: TURN_CONVERSATION_INCLUDE,
     })
 
     if (!conversation) {
@@ -236,55 +206,20 @@ export async function POST(request: NextRequest) {
       notify: [currentUser.id],
     })
 
-    // Build conversation history for Claude
-    // Reverse because messages were fetched desc (newest-first) to get the last 20; restore chronological order
-    const conversationHistory = buildAiConversationHistory(conversation.messages.slice().reverse())
-
-    // Add the new user message to history
-    conversationHistory.push({
-      role: "user" as const,
-      content: builtUserContent.content,
-    })
-
-    // Track request start time for latency measurement
     const startTime = Date.now()
-    const modelToUse = getModelForUser({
+    const turn = await assembleTurn({
+      conversation,
+      userId: currentUser.id,
       isPro: accessDecision.limits?.isPro ?? false,
-      requestedModelId: conversation.aiModel,
+      input: builtUserContent.content,
     })
+    const modelToUse = turn.model
 
-    // Get system prompt based on personality with proper type validation
-    const personalityType =
-      conversation.aiPersonality && isValidPersonality(conversation.aiPersonality)
-        ? conversation.aiPersonality
-        : getDefaultPersonality()
-    let personaContext = ""
-    if (conversation.persona) {
-      const p = conversation.persona
-      const parts = [`\n\n[User Persona]\nThe user is roleplaying as: ${p.name}`]
-      if (p.description) parts.push(`Description: ${p.description}`)
-      if (p.appearance) parts.push(`Appearance: ${p.appearance}`)
-      if (p.personalityTraits) parts.push(`Personality: ${p.personalityTraits}`)
-      parts.push("Address the user as this persona and react to their described traits naturally.")
-      personaContext = parts.join("\n")
-    }
-
-    // Character conversations rebuild the prompt fresh from the character row so
-    // edits to a character (and roleplay guardrails) apply to existing chats.
-    const basePrompt = conversation.character?.systemPrompt
-      ? buildCharacterSystemPrompt(conversation.character)
-      : getSystemPrompt(personalityType, conversation.aiSystemPrompt || undefined)
-    const summaryContext = renderSummaryForPrompt(conversation.summary)
-
-    // The character + persona prefix is stable across turns and carries the cache
-    // breakpoint (~90% input-token savings in roleplay); the volatile summary is a
-    // separate trailing block so regenerating it never busts the cached prefix.
-    const stablePrompt = basePrompt + personaContext
     const response = await anthropic.messages.create({
       model: modelToUse,
       max_tokens: 2048,
-      system: buildChatSystemBlocks(stablePrompt, summaryContext),
-      messages: conversationHistory,
+      system: turn.system,
+      messages: turn.messages,
     })
 
     // Calculate latency

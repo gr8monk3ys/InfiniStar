@@ -552,6 +552,30 @@ describe("POST /api/ai/regenerate", () => {
       expect(blocks[1].text).toContain("[Earlier Conversation Summary]")
     })
 
+    /**
+     * The defect this route carried. `createdAt < message.createdAt` with
+     * `orderBy: asc` and `take: 20` selects the *oldest* twenty messages of the
+     * conversation, not the twenty immediately before the reply. Past twenty
+     * messages, every Regeneration was assembled from the opening of the chat
+     * while the chatter watched it reply to something said hours ago.
+     *
+     * The old test mocked `findMany` and never asserted its arguments, so
+     * nothing saw it.
+     */
+    it("assembles from the newest messages before the reply, not the oldest of the conversation", async () => {
+      mockMessageFindUnique.mockResolvedValue(characterMessage)
+
+      const response = await POST(createRequest({ messageId: "msg-ai-1" }))
+      await readStreamToString(response)
+
+      const query = mockMessageFindMany.mock.calls[0][0]
+      expect(query.orderBy).toEqual({ createdAt: "desc" })
+      expect(query.where).toMatchObject({
+        createdAt: { lt: testAiMessage.createdAt },
+        isDeleted: false,
+      })
+    })
+
     it("still streams when memory lookup fails", async () => {
       mockMessageFindUnique.mockResolvedValue(characterMessage)
       mockGetRelevantMemories.mockRejectedValue(new Error("memory store down"))
