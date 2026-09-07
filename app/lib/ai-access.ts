@@ -1,3 +1,5 @@
+import { NextResponse } from "next/server"
+
 import {
   AI_FREE_MONTHLY_IMAGE_LIMIT,
   AI_FREE_MONTHLY_MESSAGE_LIMIT,
@@ -41,9 +43,72 @@ export interface AiAccessDecision {
   }
 }
 
-function getMonthStartUtc(): Date {
+export function getMonthStartUtc(): Date {
   const now = new Date()
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0))
+}
+
+/**
+ * What a chatter has used this calendar month.
+ *
+ * This is the one place the month is counted. `/api/ai/usage` used to run its
+ * own copy of these aggregates, with its own copy of `getMonthStartUtc` — and
+ * the two had already drifted: the enforced aggregate excludes `summary-auto`
+ * rows and the displayed one did not, so the dashboard showed a chatter a
+ * larger number than the one actually gating them. `auto-summary.ts` writes a
+ * `summary-auto` row per conversation, so the gap grows with use.
+ */
+export interface MonthlySnapshot {
+  monthStart: Date
+  monthlyMessageCount: number
+  monthlyTokenUsage: number
+  monthlyCostUsageCents: number
+}
+
+/**
+ * Request types that count as a chatter's own AI messages.
+ *
+ * Load-bearing for billing rather than descriptive — see ADR-0002. A
+ * Regeneration is logged as `chat` so that it stays inside this pair.
+ */
+export const COUNTED_MESSAGE_REQUEST_TYPES = ["chat", "chat-stream"] as const
+
+/**
+ * Request types excluded from a chatter's usage totals.
+ *
+ * Background, system-initiated generation (automatic conversation summaries)
+ * must never count against a quota or cost cap — the chatter did not ask for
+ * it. It is still tracked as an AiUsage row for analytics.
+ */
+export const UNCOUNTED_REQUEST_TYPES = ["summary-auto"] as const
+
+export async function monthlySnapshot(userId: string): Promise<MonthlySnapshot> {
+  const monthStart = getMonthStartUtc()
+
+  const [monthlyMessageCount, aggregates] = await Promise.all([
+    prisma.aiUsage.count({
+      where: {
+        userId,
+        createdAt: { gte: monthStart },
+        requestType: { in: [...COUNTED_MESSAGE_REQUEST_TYPES] },
+      },
+    }),
+    prisma.aiUsage.aggregate({
+      where: {
+        userId,
+        createdAt: { gte: monthStart },
+        requestType: { notIn: [...UNCOUNTED_REQUEST_TYPES] },
+      },
+      _sum: { totalTokens: true, totalCost: true },
+    }),
+  ])
+
+  return {
+    monthStart,
+    monthlyMessageCount,
+    monthlyTokenUsage: aggregates._sum.totalTokens ?? 0,
+    monthlyCostUsageCents: aggregates._sum.totalCost ?? 0,
+  }
 }
 
 export type AiAccessRequestType =
@@ -73,7 +138,6 @@ export async function getAiAccessDecision(
       return decision
     }
 
-    const monthStart = getMonthStartUtc()
     const featureLimit =
       requestType === "image-generate"
         ? subscriptionPlan.isPro
@@ -90,41 +154,20 @@ export async function getAiAccessDecision(
       featureLimit !== null &&
       featureLimit > 0
 
-    const [monthlyMessageCount, monthlyAggregates, monthlyFeatureCount] = await Promise.all([
-      prisma.aiUsage.count({
-        where: {
-          userId,
-          createdAt: { gte: monthStart },
-          requestType: { in: ["chat", "chat-stream"] },
-        },
-      }),
-      prisma.aiUsage.aggregate({
-        where: {
-          userId,
-          createdAt: { gte: monthStart },
-          // Background, system-initiated generation (e.g. automatic conversation
-          // summaries) must never count against a user's quota or cost cap — they
-          // did not request it. It is still tracked as an AiUsage row for analytics.
-          requestType: { notIn: ["summary-auto"] },
-        },
-        _sum: {
-          totalTokens: true,
-          totalCost: true,
-        },
-      }),
-      shouldCountFeatureRequests
-        ? prisma.aiUsage.count({
-            where: {
-              userId,
-              createdAt: { gte: monthStart },
-              requestType,
-            },
-          })
-        : Promise.resolve(0),
-    ])
+    // One read point for the month, shared with /api/ai/usage so the displayed
+    // Allowance and the enforced Allowance cannot drift apart again.
+    const snapshot = await monthlySnapshot(userId)
+    const { monthStart, monthlyMessageCount, monthlyTokenUsage, monthlyCostUsageCents } = snapshot
 
-    const monthlyTokenUsage = monthlyAggregates._sum.totalTokens ?? 0
-    const monthlyCostUsageCents = monthlyAggregates._sum.totalCost ?? 0
+    const monthlyFeatureCount = shouldCountFeatureRequests
+      ? await prisma.aiUsage.count({
+          where: {
+            userId,
+            createdAt: { gte: monthStart },
+            requestType,
+          },
+        })
+      : 0
 
     if (subscriptionPlan.isPro) {
       if (proCostCapCents !== null && monthlyCostUsageCents >= proCostCapCents) {
@@ -321,4 +364,92 @@ export async function getAiAccessDecision(
       message: "Unable to verify AI usage limits right now. Please try again.",
     }
   }
+}
+
+/**
+ * The Allowance decision, finished.
+ *
+ * `getAiAccessDecision` returned a decision it did not enforce, and callers
+ * finished it themselves. Three things were being re-derived at ten call sites:
+ *
+ *  - **The 402.** Eight routes spelled the same denial response — same message
+ *    fallback, same body shape, same status.
+ *  - **The PRO cost cap with a pre-charge estimate.** `image/generate` and
+ *    `transcribe` pulled `monthlyCostQuotaCents` and `monthlyCostUsageCents`
+ *    back out of `limits` and re-ran a check the module already knows how to do.
+ *  - **The Tier.** Model routing read `limits?.isPro ?? false`. `limits` is
+ *    typed optional, so the day an `allowed: true` path returns without it,
+ *    every PRO chatter silently drops to the free-tier model with no error
+ *    anywhere — and `ai-image-generate-route.test.ts` already returns exactly
+ *    that shape. Tier is a first-class field on the grant instead of a value
+ *    read back out of a usage-display bag.
+ *
+ * Callers now read: `if (!grant.ok) return grant.response`.
+ */
+export type AiAccessGrant =
+  | {
+      ok: true
+      /** The Tier this request is served at. */
+      isPro: boolean
+      limits: NonNullable<AiAccessDecision["limits"]>
+    }
+  | { ok: false; response: NextResponse }
+
+export interface RequestAiAccessArgs {
+  userId: string
+  requestType?: AiAccessRequestType
+  /**
+   * What this request is about to cost, in cents, for request types that can
+   * estimate it up front. The PRO cost cap is applied to usage *plus* this, so
+   * a single expensive request cannot step over the cap.
+   */
+  estimatedCostCents?: number
+}
+
+function accessDenied(decision: AiAccessDecision): NextResponse {
+  return NextResponse.json(
+    {
+      error:
+        decision.message ??
+        "AI access is unavailable for this account right now. Please try again.",
+      code: decision.code,
+      limits: decision.limits,
+    },
+    { status: 402 }
+  )
+}
+
+export async function requestAiAccess({
+  userId,
+  requestType,
+  estimatedCostCents = 0,
+}: RequestAiAccessArgs): Promise<AiAccessGrant> {
+  const decision = await getAiAccessDecision(userId, { requestType })
+
+  // Every `allowed: true` path returns limits; the failure path returns
+  // `allowed: false` with none. A grant with neither is a bug, and denying is
+  // the fail-safe answer — the alternative is serving a PRO chatter the
+  // free-tier model and charging them for PRO.
+  if (!decision.allowed || !decision.limits) {
+    return { ok: false, response: accessDenied(decision) }
+  }
+
+  const { isPro, monthlyCostQuotaCents, monthlyCostUsageCents } = decision.limits
+
+  if (isPro && monthlyCostQuotaCents !== null && estimatedCostCents > 0) {
+    if (monthlyCostUsageCents + estimatedCostCents > monthlyCostQuotaCents) {
+      return {
+        ok: false,
+        response: accessDenied({
+          allowed: false,
+          code: "PRO_TIER_COST_CAP_REACHED",
+          message:
+            "You have reached this month's AI fair-use cap. Please contact support to increase limits.",
+          limits: decision.limits,
+        }),
+      }
+    }
+  }
+
+  return { ok: true, isPro, limits: decision.limits }
 }

@@ -1,7 +1,7 @@
 import { type NextRequest } from "next/server"
 import { z } from "zod"
 
-import { getAiAccessDecision } from "@/app/lib/ai-access"
+import { requestAiAccess } from "@/app/lib/ai-access"
 import { trackAiUsage } from "@/app/lib/ai-usage"
 import anthropic from "@/app/lib/anthropic"
 import { publishMessageUpdated } from "@/app/lib/conversation-events"
@@ -162,22 +162,11 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    const accessDecision = await getAiAccessDecision(currentUser.id)
-    if (!accessDecision.allowed) {
-      return new Response(
-        JSON.stringify({
-          error:
-            accessDecision.message ??
-            "AI access is unavailable for this account right now. Please try again.",
-          code: accessDecision.code,
-          limits: accessDecision.limits,
-        }),
-        {
-          status: 402,
-          headers: { "Content-Type": "application/json" },
-        }
-      )
-    }
+    const grant = await requestAiAccess({
+      userId: currentUser.id,
+      requestType: "chat",
+    })
+    if (!grant.ok) return grant.response
 
     // Create a ReadableStream for streaming response
     const stream = new ReadableStream({
@@ -192,7 +181,7 @@ export async function POST(request: NextRequest) {
         const turn = await assembleTurn({
           conversation: message.conversation,
           userId: currentUser.id,
-          isPro: accessDecision.limits?.isPro ?? false,
+          isPro: grant.isPro,
           before: message.createdAt,
         })
         const modelToUse = turn.model

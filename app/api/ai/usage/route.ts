@@ -1,6 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server"
 
-import { FREE_TIER_MONTHLY_MESSAGE_LIMIT, FREE_TIER_MONTHLY_TOKEN_QUOTA } from "@/app/lib/ai-access"
+import {
+  FREE_TIER_MONTHLY_MESSAGE_LIMIT,
+  FREE_TIER_MONTHLY_TOKEN_QUOTA,
+  monthlySnapshot,
+} from "@/app/lib/ai-access"
 import { AI_PRO_MONTHLY_COST_CAP_CENTS } from "@/app/lib/ai-limits"
 import { normalizeModelId } from "@/app/lib/ai-model-routing"
 import { getUsageByDateRange, getUserUsageStats } from "@/app/lib/ai-usage"
@@ -21,11 +25,6 @@ const MODEL_CONTEXT_WINDOWS: Record<string, number> = {
   "claude-3-opus-20240229": 200_000,
   "claude-3-5-haiku-20241022": 200_000,
   "claude-3-haiku-20240307": 200_000,
-}
-
-function getMonthStartUtc(): Date {
-  const now = new Date()
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0))
 }
 
 /**
@@ -115,31 +114,15 @@ export async function GET(request: NextRequest) {
       // User might not have subscription data
     }
 
-    // Calculate monthly message count for free tier limits
-    const monthStart = getMonthStartUtc()
-
-    const [monthlyMessageCount, monthlyAggregates] = await Promise.all([
-      prisma.aiUsage.count({
-        where: {
-          userId: currentUser.id,
-          createdAt: { gte: monthStart },
-          requestType: { in: ["chat", "chat-stream"] },
-        },
-      }),
-      prisma.aiUsage.aggregate({
-        where: {
-          userId: currentUser.id,
-          createdAt: { gte: monthStart },
-        },
-        _sum: {
-          totalTokens: true,
-          totalCost: true,
-        },
-      }),
-    ])
-
-    const monthlyTokenUsage = monthlyAggregates._sum.totalTokens ?? 0
-    const monthlyCostUsageCents = monthlyAggregates._sum.totalCost ?? 0
+    // The month is counted in one place, shared with the check that actually
+    // gates the chatter. This route used to run its own copy of these
+    // aggregates with its own copy of `getMonthStartUtc`, and the two had
+    // already drifted: the enforced aggregate excludes `summary-auto` rows and
+    // this one did not, so the dashboard showed a number strictly larger than
+    // the one gating them — and `auto-summary.ts` writes a `summary-auto` row
+    // per conversation, so the gap grew with use.
+    const { monthStart, monthlyMessageCount, monthlyTokenUsage, monthlyCostUsageCents } =
+      await monthlySnapshot(currentUser.id)
 
     // Get conversation token usage if conversationId provided
     let conversationTokens = null

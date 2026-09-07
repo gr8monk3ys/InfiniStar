@@ -302,33 +302,3 @@ export async function getUsageByDateRange(userId: string, startDate: Date, endDa
     cost: Math.round(day.cost * 100) / 100,
   }))
 }
-
-/**
- * Check if user has exceeded usage quota (for free tier limits)
- */
-export async function checkUsageQuota(
-  userId: string,
-  quotaTokens: number,
-  periodDays: number = 30
-): Promise<{
-  withinQuota: boolean
-  used: number
-  remaining: number
-  percentage: number
-}> {
-  const startDate = new Date()
-  startDate.setDate(startDate.getDate() - periodDays)
-
-  const { stats } = await getUserUsageStats(userId, { startDate })
-
-  const used = stats.totalTokens
-  const remaining = Math.max(0, quotaTokens - used)
-  const percentage = Math.min(100, (used / quotaTokens) * 100)
-
-  return {
-    withinQuota: used < quotaTokens,
-    used,
-    remaining,
-    percentage: Math.round(percentage * 100) / 100,
-  }
-}

@@ -8,7 +8,7 @@
  * Tests POST /api/ai/chat
  */
 
-import { NextRequest } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 
 // Import AFTER all mocks are set up
 import { POST } from "@/app/api/ai/chat/route"
@@ -24,7 +24,7 @@ const mockContentReportCreate = jest.fn()
 const mockPusherTrigger = jest.fn()
 const mockVerifyCsrfToken = jest.fn()
 const mockAiChatLimiterCheck = jest.fn()
-const mockGetAiAccessDecision = jest.fn()
+const mockRequestAiAccess = jest.fn()
 const mockTrackAiUsage = jest.fn()
 const mockModerateText = jest.fn()
 const mockAnthropicCreate = jest.fn()
@@ -91,7 +91,7 @@ jest.mock("@/app/lib/rate-limit", () => ({
 }))
 
 jest.mock("@/app/lib/ai-access", () => ({
-  getAiAccessDecision: (userId: string) => mockGetAiAccessDecision(userId),
+  requestAiAccess: (...args: unknown[]) => mockRequestAiAccess(...args),
 }))
 
 jest.mock("@/app/lib/ai-usage", () => ({
@@ -208,10 +208,7 @@ beforeEach(() => {
   mockConversationUpdate.mockResolvedValue({ id: "conv-1" })
   mockUserFindUnique.mockResolvedValue({ browserNotifications: false, notifyOnAIComplete: false })
   mockPusherTrigger.mockResolvedValue(undefined)
-  mockGetAiAccessDecision.mockResolvedValue({
-    allowed: true,
-    limits: { isPro: false, monthlyMessageCount: 1, monthlyMessageLimit: 10 },
-  })
+  mockRequestAiAccess.mockResolvedValue({ ok: true, isPro: false, limits: {} })
   mockTrackAiUsage.mockResolvedValue(undefined)
   mockModerateText.mockResolvedValue({ shouldBlock: false, shouldReview: false, categories: [] })
   mockAnthropicCreate.mockResolvedValue(testAnthropicResponse)
@@ -341,11 +338,12 @@ describe("POST /api/ai/chat", () => {
   })
 
   it("returns 402 when free tier message limit is exceeded", async () => {
-    mockGetAiAccessDecision.mockResolvedValue({
-      allowed: false,
-      code: "FREE_TIER_MESSAGE_LIMIT_REACHED",
-      message: "You have reached the free-tier monthly AI message limit.",
-      limits: { isPro: false, monthlyMessageCount: 10, monthlyMessageLimit: 10 },
+    mockRequestAiAccess.mockResolvedValue({
+      ok: false,
+      response: NextResponse.json(
+        { error: "Limit reached", code: "FREE_TIER_MESSAGE_LIMIT_REACHED", limits: {} },
+        { status: 402 }
+      ),
     })
 
     const request = createRequest({ message: "Hello", conversationId: "conv-1" })
@@ -531,8 +529,14 @@ describe("what this route asks the Turn for", () => {
     })
   })
 
-  it("routes a PRO chatter using the tier the access decision returned", async () => {
-    mockGetAiAccessDecision.mockResolvedValue({ allowed: true, limits: { isPro: true } })
+  /**
+   * The Tier comes off the grant as a field. It used to be read back out of the
+   * decision's optional `limits` bag as `limits?.isPro ?? false`, so a decision
+   * that allowed without limits served a PRO chatter the free-tier model with
+   * no error anywhere. There is no longer a shape that can express that.
+   */
+  it("routes a PRO chatter using the tier the grant carries", async () => {
+    mockRequestAiAccess.mockResolvedValue({ ok: true, isPro: true, limits: {} })
 
     const request = createRequest({ message: "Hello AI", conversationId: "conv-1" })
     await POST(request)
@@ -540,18 +544,17 @@ describe("what this route asks the Turn for", () => {
     expect(mockAssembleTurn).toHaveBeenCalledWith(expect.objectContaining({ isPro: true }))
   })
 
-  /**
-   * `limits` is optional on the access decision, and reading `isPro` out of it
-   * is how a PRO chatter silently drops to the free-tier model. The route must
-   * not crash on a decision that omits it.
-   */
-  it("treats a missing limits payload as the free tier rather than failing", async () => {
-    mockGetAiAccessDecision.mockResolvedValue({ allowed: true })
+  it("returns the grant's own response when access is denied, and assembles nothing", async () => {
+    mockRequestAiAccess.mockResolvedValue({
+      ok: false,
+      response: NextResponse.json({ code: "FREE_TIER_MESSAGE_LIMIT_REACHED" }, { status: 402 }),
+    })
 
     const request = createRequest({ message: "Hello AI", conversationId: "conv-1" })
-    await POST(request)
+    const response = await POST(request)
 
-    expect(mockAssembleTurn).toHaveBeenCalledWith(expect.objectContaining({ isPro: false }))
+    expect(response.status).toBe(402)
+    expect(mockAssembleTurn).not.toHaveBeenCalled()
   })
 })
 

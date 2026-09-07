@@ -13,7 +13,10 @@ jest.mock("@/app/actions/getCurrentUser", () => ({
 }))
 
 jest.mock("@/app/lib/ai-access", () => ({
-  getAiAccessDecision: async () => ({ allowed: true }),
+  // The grant carries the Tier as a field. This used to stub `{ allowed: true }`
+  // with no `limits`, which is exactly the shape that made model routing read
+  // `limits?.isPro ?? false` and serve a PRO chatter the free-tier model.
+  requestAiAccess: async () => ({ ok: true, isPro: false, limits: {} }),
 }))
 
 jest.mock("@/app/lib/prismadb", () => ({

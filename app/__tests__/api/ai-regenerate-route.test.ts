@@ -8,7 +8,7 @@
  * Tests POST /api/ai/regenerate
  */
 
-import { NextRequest } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 
 import { POST } from "@/app/api/ai/regenerate/route"
 
@@ -19,7 +19,7 @@ const mockConversationUpdate = jest.fn()
 const mockPusherTrigger = jest.fn()
 const mockVerifyCsrfToken = jest.fn()
 const mockAiChatLimiterCheck = jest.fn()
-const mockGetAiAccessDecision = jest.fn()
+const mockRequestAiAccess = jest.fn()
 const mockTrackAiUsage = jest.fn()
 const mockAnthropicStream = jest.fn()
 const mockBuildAiConversationHistory = jest.fn()
@@ -73,7 +73,7 @@ jest.mock("@/app/lib/rate-limit", () => ({
 }))
 
 jest.mock("@/app/lib/ai-access", () => ({
-  getAiAccessDecision: (userId: string) => mockGetAiAccessDecision(userId),
+  requestAiAccess: (...args: unknown[]) => mockRequestAiAccess(...args),
 }))
 
 jest.mock("@/app/lib/ai-usage", () => ({
@@ -213,10 +213,7 @@ beforeEach(() => {
   mockTxConversationUpdate.mockResolvedValue({ id: "conv-1" })
   mockConversationUpdate.mockResolvedValue({ id: "conv-1" })
   mockPusherTrigger.mockResolvedValue(undefined)
-  mockGetAiAccessDecision.mockResolvedValue({
-    allowed: true,
-    limits: { isPro: false, monthlyMessageCount: 1, monthlyMessageLimit: 10 },
-  })
+  mockRequestAiAccess.mockResolvedValue({ ok: true, isPro: false, limits: {} })
   mockTrackAiUsage.mockResolvedValue(undefined)
   mockAnthropicStream.mockReturnValue(
     buildFakeStream([
@@ -323,11 +320,12 @@ describe("POST /api/ai/regenerate", () => {
   })
 
   it("returns 402 when free tier message limit is exceeded", async () => {
-    mockGetAiAccessDecision.mockResolvedValue({
-      allowed: false,
-      code: "FREE_TIER_MESSAGE_LIMIT_REACHED",
-      message: "Limit reached",
-      limits: { isPro: false, monthlyMessageCount: 10, monthlyMessageLimit: 10 },
+    mockRequestAiAccess.mockResolvedValue({
+      ok: false,
+      response: NextResponse.json(
+        { error: "Limit reached", code: "FREE_TIER_MESSAGE_LIMIT_REACHED", limits: {} },
+        { status: 402 }
+      ),
     })
     const response = await POST(createRequest({ messageId: "msg-ai-1" }))
     expect(response.status).toBe(402)

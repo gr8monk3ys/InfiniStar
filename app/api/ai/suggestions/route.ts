@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { z } from "zod"
 
-import { getAiAccessDecision } from "@/app/lib/ai-access"
+import { requestAiAccess } from "@/app/lib/ai-access"
 import { MESSAGE_INCLUDE } from "@/app/lib/conversation-select"
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import { aiLogger } from "@/app/lib/logger"
@@ -126,19 +126,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const accessDecision = await getAiAccessDecision(currentUser.id)
-    if (!accessDecision.allowed) {
-      return NextResponse.json(
-        {
-          error:
-            accessDecision.message ??
-            "AI access is unavailable for this account right now. Please try again.",
-          code: accessDecision.code,
-          limits: accessDecision.limits,
-        },
-        { status: 402 }
-      )
-    }
+    const grant = await requestAiAccess({
+      userId: currentUser.id,
+      requestType: "suggestions",
+    })
+    if (!grant.ok) return grant.response
 
     // Build suggestion context
     // Reverse messages to get chronological order

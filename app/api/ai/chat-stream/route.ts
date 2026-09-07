@@ -1,7 +1,7 @@
 import { type NextRequest } from "next/server"
 import { z } from "zod"
 
-import { getAiAccessDecision } from "@/app/lib/ai-access"
+import { requestAiAccess } from "@/app/lib/ai-access"
 import { buildAiMessageContent } from "@/app/lib/ai-message-content"
 import { trackAiUsage } from "@/app/lib/ai-usage"
 import { captureServerEvent } from "@/app/lib/analytics"
@@ -174,22 +174,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const accessDecision = await getAiAccessDecision(currentUser.id)
-    if (!accessDecision.allowed) {
-      return new Response(
-        JSON.stringify({
-          error:
-            accessDecision.message ??
-            "AI access is unavailable for this account right now. Please try again.",
-          code: accessDecision.code,
-          limits: accessDecision.limits,
-        }),
-        {
-          status: 402,
-          headers: { "Content-Type": "application/json" },
-        }
-      )
-    }
+    const grant = await requestAiAccess({
+      userId: currentUser.id,
+      requestType: "chat-stream",
+    })
+    if (!grant.ok) return grant.response
 
     if (moderationResult?.shouldReview) {
       await prisma.contentReport.create({
@@ -265,7 +254,7 @@ export async function POST(request: NextRequest) {
         const turn = await assembleTurn({
           conversation,
           userId: currentUser.id,
-          isPro: accessDecision.limits?.isPro ?? false,
+          isPro: grant.isPro,
           input: turnInput,
         })
         const modelToUse = turn.model

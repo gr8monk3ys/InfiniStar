@@ -20,6 +20,7 @@ import prisma from "@/app/lib/prismadb"
 import { getPusherConversationChannel, getPusherUserChannel } from "@/app/lib/pusher-channels"
 import { pusherServer } from "@/app/lib/pusher-server"
 import { sanitizePlainText } from "@/app/lib/sanitize"
+import { isProSubscription } from "@/app/lib/subscription"
 import getCurrentUser from "@/app/actions/getCurrentUser"
 
 // Validation schema for creating conversations
@@ -132,11 +133,7 @@ export async function POST(request: NextRequest) {
 
     // Handle AI conversation creation
     if (isAI) {
-      const isPro = Boolean(
-        currentUser.stripePriceId &&
-        currentUser.stripeCurrentPeriodEnd &&
-        currentUser.stripeCurrentPeriodEnd.getTime() + 86_400_000 > Date.now()
-      )
+      const isPro = isProSubscription(currentUser)
       const routedModel = getModelForUser({
         isPro,
         requestedModelId: aiModel,
