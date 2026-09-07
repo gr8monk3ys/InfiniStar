@@ -13,10 +13,14 @@ import {
 
 import { type Icons } from "@/app/components/icons"
 
+/**
+ * The safe projection of a participant. Deliberately has no `email`: this shape
+ * is broadcast to every subscriber on a conversation channel, and nothing
+ * renders an address. See `app/lib/conversation-select.ts`.
+ */
 export interface UserSummary {
   id: string
   name: string | null
-  email: string | null
   image: string | null
   createdAt: Date
 }

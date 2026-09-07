@@ -46,6 +46,10 @@ const getConversations = async (): Promise<FullConversationType[]> => {
 
     return conversations
   } catch (error) {
+    // The sidebar keeps its empty fallback: it renders alongside whatever page
+    // the chatter is actually on, and taking the whole dashboard down because
+    // the list failed would be worse than showing it empty. The conversation
+    // itself is the read that must not lie, and it throws.
     dbLogger.error({ err: error }, "Failed to fetch conversations")
     return []
   }

@@ -8,6 +8,18 @@ interface GetMessagesOptions {
   cursor?: string
 }
 
+/**
+ * A page of a conversation's messages, **oldest first**.
+ *
+ * The ordering is stated here because it is not obvious from the query: the
+ * newest `limit` messages are selected by ordering descending, then reversed for
+ * display. Four reads in this codebase order this same field, and they do not
+ * agree with each other, so each one says which end it means.
+ *
+ * A database failure throws rather than returning `[]`, because an empty
+ * conversation and an unreachable database are not the same thing and the
+ * caller cannot tell them apart from the return value.
+ */
 const getMessages = async (
   conversationId: string,
   options: GetMessagesOptions = {}
@@ -35,8 +47,8 @@ const getMessages = async (
     // Reverse to return in ascending order (oldest first)
     return messages.reverse()
   } catch (error) {
-    dbLogger.error({ err: error }, "GET_MESSAGES_ERROR")
-    return []
+    dbLogger.error({ err: error, conversationId }, "GET_MESSAGES_ERROR")
+    throw error
   }
 }
 

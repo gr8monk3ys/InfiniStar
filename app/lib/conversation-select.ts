@@ -17,14 +17,17 @@ import type { Prisma } from "@prisma/client"
  *
  * Matches the `UserSummary` type in `app/types`.
  *
- * Note: `email` is still here because the seen-indicator matches participants
- * by email rather than by id. Matching on id and dropping email from this
- * projection is a follow-up; it is a behaviour change, not a leak fix.
+ * `email` used to be here, because the seen-indicator matched participants by
+ * email rather than by id — which put every account's address on every
+ * conversation channel and in every message response, and compared two
+ * `string | null` values, so two participants without an email compared equal.
+ * The three comparisons (MessageBox, ConversationBox, useOtherUser) match on id
+ * now, and `email` is an asserted absence in the test rather than a documented
+ * exception.
  */
 export const PARTICIPANT_SELECT = {
   id: true,
   name: true,
-  email: true,
   image: true,
   createdAt: true,
 } satisfies Prisma.UserSelect

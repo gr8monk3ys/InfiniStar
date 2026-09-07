@@ -10,14 +10,16 @@ const useOtherUser = (
   const { user } = useAppAuth()
 
   const otherUser = useMemo(() => {
-    const currentUserEmail = user?.email
+    // Matched by id, not email. Email is nullable on a participant, so two
+    // accounts without one compared equal — and matching on it is why the safe
+    // projection had to carry every account's address onto every conversation
+    // channel.
+    const currentUserId = user?.id
 
-    const filtered = conversation.users.filter(
-      (u: { email?: string | null }) => u.email !== currentUserEmail
-    )
+    const filtered = conversation.users.filter((u) => u.id !== currentUserId)
 
     return filtered[0] ?? null
-  }, [conversation.users, user?.email])
+  }, [conversation.users, user?.id])
 
   return otherUser
 }

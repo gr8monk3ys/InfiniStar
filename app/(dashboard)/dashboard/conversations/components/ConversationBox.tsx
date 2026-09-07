@@ -30,9 +30,8 @@ interface ConversationBoxProps {
   selected?: boolean
   /** Whether this conversation is selected via keyboard navigation */
   keyboardSelected?: boolean
+  /** Passed from ConversationList to avoid a per-item Clerk subscription. */
   currentUserId?: string | null
-  /** Current user's email address, passed from ConversationList to avoid per-item Clerk subscriptions */
-  currentUserEmail?: string | null
 }
 
 const ConversationBox: React.FC<ConversationBoxProps> = ({
@@ -40,7 +39,6 @@ const ConversationBox: React.FC<ConversationBoxProps> = ({
   selected,
   keyboardSelected,
   currentUserId,
-  currentUserEmail,
 }) => {
   const otherUser = useOtherUser(data)
   const router = useRouter()
@@ -62,15 +60,12 @@ const ConversationBox: React.FC<ConversationBoxProps> = ({
 
     const seenArray = lastMessage.seen || []
 
-    if (!currentUserEmail) {
+    if (!currentUserId) {
       return false
     }
 
-    return (
-      seenArray.filter((user: { email?: string | null }) => user.email === currentUserEmail)
-        .length !== 0
-    )
-  }, [currentUserEmail, lastMessage])
+    return seenArray.some((user) => user.id === currentUserId)
+  }, [currentUserId, lastMessage])
 
   const lastMessageText = useMemo(() => {
     if (lastMessage?.image) {

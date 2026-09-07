@@ -34,16 +34,14 @@ describe("participant projection", () => {
     "twoFactorSecret",
     "nsfwEnabled",
     "adultConfirmedAt",
+    // Not a credential, but it has no business on a conversation channel and
+    // nothing renders it. It was only ever here because the seen-indicator
+    // matched participants by email.
+    "email",
   ]
 
   it("selects only the fields the client actually renders", () => {
-    expect(Object.keys(PARTICIPANT_SELECT).sort()).toEqual([
-      "createdAt",
-      "email",
-      "id",
-      "image",
-      "name",
-    ])
+    expect(Object.keys(PARTICIPANT_SELECT).sort()).toEqual(["createdAt", "id", "image", "name"])
   })
 
   it("carries no credential, billing or attribution column", () => {
