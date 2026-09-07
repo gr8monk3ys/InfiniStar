@@ -10,6 +10,7 @@ import { normalizeModelId } from "@/app/lib/ai-model-routing"
 import { getUsageByDateRange, getUserUsageStats } from "@/app/lib/ai-usage"
 import { aiLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
+import { apiLimiter } from "@/app/lib/rate-limit"
 import { getUserSubscriptionPlan } from "@/app/lib/subscription"
 import getCurrentUser from "@/app/actions/getCurrentUser"
 
@@ -44,6 +45,16 @@ export async function GET(request: NextRequest) {
 
     if (!currentUser?.id) {
       return new NextResponse("Unauthorized", { status: 401 })
+    }
+
+    // Keyed on the account rather than the client, because this runs after auth.
+    // ADR-0003: an omitted limiter is not detectable while routes hand-roll the
+    // preamble, and this route had none at all.
+    if (!(await Promise.resolve(apiLimiter.check(currentUser.id)))) {
+      return NextResponse.json(
+        { error: "Too many requests. Please try again later." },
+        { status: 429, headers: { "Retry-After": "60" } }
+      )
     }
 
     const { searchParams } = new URL(request.url)

@@ -19,6 +19,7 @@ import { canAccessNsfw } from "@/app/lib/nsfw"
 import prisma from "@/app/lib/prismadb"
 import { getPusherConversationChannel, getPusherUserChannel } from "@/app/lib/pusher-channels"
 import { pusherServer } from "@/app/lib/pusher-server"
+import { apiLimiter } from "@/app/lib/rate-limit"
 import { sanitizePlainText } from "@/app/lib/sanitize"
 import { isProSubscription } from "@/app/lib/subscription"
 import getCurrentUser from "@/app/actions/getCurrentUser"
@@ -103,6 +104,16 @@ export async function POST(request: NextRequest) {
     const currentUser = await getCurrentUser()
     if (!currentUser) {
       return NextResponse.json({ error: "User not found" }, { status: 401 })
+    }
+
+    // Keyed on the account rather than the client, because this runs after auth.
+    // ADR-0003: an omitted limiter is not detectable while routes hand-roll the
+    // preamble, and this route had none at all.
+    if (!(await Promise.resolve(apiLimiter.check(currentUser.id)))) {
+      return NextResponse.json(
+        { error: "Too many requests. Please try again later." },
+        { status: 429, headers: { "Retry-After": "60" } }
+      )
     }
     const allowNsfw = canAccessNsfw(currentUser)
 
