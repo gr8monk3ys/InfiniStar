@@ -1,5 +1,7 @@
 import type { MetadataRoute } from "next"
+import { captureException } from "@sentry/nextjs"
 
+import { dbLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
 import { buildSitemap, type SitemapCharacterRow } from "@/app/lib/sitemap-data"
 
@@ -41,7 +43,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     characters = characterRows
     creatorIds = creatorRows.map((row) => row.createdById)
   } catch (error) {
-    console.error("Failed to load dynamic sitemap data", error)
+    dbLogger.error({ err: error }, "SITEMAP_DATA_LOAD_FAILED")
+    captureException(error, { tags: { surface: "SITEMAP_DATA_LOAD_FAILED" } })
   }
 
   return buildSitemap(characters, creatorIds)

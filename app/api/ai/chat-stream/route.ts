@@ -153,9 +153,26 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Moderation runs after the gates, because it needs to know whether this is
-    // a mature conversation — and because a request that is about to 403 should
-    // not pay for a model-moderation call.
+    // The Claim is taken before the provider is called, so a concurrent turn
+    // counts it. Released below if this turn produces nothing.
+    const grant = await claimAllowanceSlot({
+      userId: currentUser.id,
+      requestType: "chat-stream",
+      conversationId: conversationId,
+    })
+    if (!grant.ok) return grant.response
+    claim = grant.claim
+
+    // Moderation runs after the Claim, not before it.
+    //
+    // It needs the mature posture, so it cannot run before the gates. It also
+    // must not run before the Allowance is claimed: a chatter who has spent
+    // their monthly messages would otherwise still drive a provider call on
+    // every further attempt, bounded only by a rate limiter that is
+    // per-instance whenever Redis is absent.
+    //
+    // A blocked message releases the Claim below — nothing was generated, so it
+    // must not cost the chatter one of their messages.
     //
     // A consenting adult talking to a mature Character used to file an OPEN
     // ContentReport against their own conversation every time a turn tripped a
@@ -168,6 +185,9 @@ export async function POST(request: NextRequest) {
       ? await moderateTextModelAssisted(sanitizedMessage, moderationPosture)
       : null
     if (moderationResult?.shouldBlock) {
+      if (claim) {
+        await releaseAllowanceClaim(claim)
+      }
       return new Response(
         JSON.stringify({
           error: "Message was blocked by safety filters.",
@@ -180,16 +200,6 @@ export async function POST(request: NextRequest) {
         }
       )
     }
-
-    // The Claim is taken before the provider is called, so a concurrent turn
-    // counts it. Released below if this turn produces nothing.
-    const grant = await claimAllowanceSlot({
-      userId: currentUser.id,
-      requestType: "chat-stream",
-      conversationId: conversationId,
-    })
-    if (!grant.ok) return grant.response
-    claim = grant.claim
 
     if (moderationResult?.shouldReview) {
       await prisma.contentReport.create({

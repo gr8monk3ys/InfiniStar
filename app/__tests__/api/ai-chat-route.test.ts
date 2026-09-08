@@ -705,4 +705,49 @@ describe("the allowance claim", () => {
   })
 })
 
+/**
+ * Moderation is a paid provider call, so it sits below the Allowance claim.
+ *
+ * It used to run first, which meant a chatter who had spent all fifty of their
+ * monthly messages still drove one moderation call per attempt — bounded only
+ * by a rate limiter that is per-instance whenever Redis is absent.
+ */
+describe("moderation sits behind the allowance", () => {
+  it("does not moderate for a chatter whose allowance is spent", async () => {
+    mockClaimAllowanceSlot.mockResolvedValue({
+      ok: false,
+      response: NextResponse.json({ code: "FREE_TIER_MESSAGE_LIMIT_REACHED" }, { status: 402 }),
+    })
+
+    const response = await POST(createRequest({ message: "hello", conversationId: "conv-1" }))
+
+    expect(response.status).toBe(402)
+    expect(mockModerateText).not.toHaveBeenCalled()
+  })
+
+  it("still moderates a chatter who has allowance left", async () => {
+    await POST(createRequest({ message: "hello", conversationId: "conv-1" }))
+
+    expect(mockModerateText).toHaveBeenCalled()
+  })
+
+  /**
+   * Nothing was generated, so a blocked message must not cost a message. The
+   * Claim is written before moderation runs, so it has to be given back.
+   */
+  it("releases the claim when the message is blocked", async () => {
+    mockModerateText.mockResolvedValue({
+      shouldBlock: true,
+      shouldReview: false,
+      categories: ["sexual"],
+    })
+
+    const response = await POST(createRequest({ message: "blocked", conversationId: "conv-1" }))
+
+    expect(response.status).toBe(400)
+    expect(mockReleaseAllowanceClaim).toHaveBeenCalledWith({ id: "claim-1" })
+    expect(mockAnthropicCreate).not.toHaveBeenCalled()
+  })
+})
+
 export {}

@@ -119,10 +119,16 @@ type RouteContext<TParams> = { params: Promise<TParams> }
 
 const MUTATING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"])
 
-function tooManyRequests(): NextResponse {
+/**
+ * `Retry-After` is taken from the limiter that actually rejected the request.
+ * A fixed 60 told a client to retry a five-minute auth limit twelve times too
+ * early, and an hourly limit sixty times too early — turning polite backoff
+ * into a retry storm against a limit that was already exhausted.
+ */
+function tooManyRequests(limiter: IRateLimiter): NextResponse {
   return NextResponse.json(
     { error: "Too many requests. Please try again later." },
-    { status: 429, headers: { "Retry-After": "60" } }
+    { status: 429, headers: { "Retry-After": String(limiter.retryAfterSeconds) } }
   )
 }
 
@@ -160,7 +166,7 @@ export function guard<
     try {
       if (policy.limiter) {
         const allowed = await policy.limiter.check(getClientIdentifier(request))
-        if (!allowed) return tooManyRequests()
+        if (!allowed) return tooManyRequests(policy.limiter)
       }
 
       const csrfRequired = policy.csrf ?? MUTATING_METHODS.has(request.method)
@@ -199,7 +205,7 @@ export function guard<
       // replacement for the first.
       if (policy.userLimiter && user) {
         const allowed = await policy.userLimiter.check(user.id)
-        if (!allowed) return tooManyRequests()
+        if (!allowed) return tooManyRequests(policy.userLimiter)
       }
 
       let rawBody = undefined as unknown as string

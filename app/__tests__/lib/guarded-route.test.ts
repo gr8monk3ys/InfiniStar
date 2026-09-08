@@ -62,7 +62,11 @@ function req(
   } as unknown as NextRequest
 }
 
-const allow: { check: jest.Mock } = { check: jest.fn() }
+const allow: { check: jest.Mock; retryAfterSeconds: number } = {
+  check: jest.fn(),
+  // Stubs model the real interface: a limiter knows its own window.
+  retryAfterSeconds: 60,
+}
 
 /** Next always passes a context; only dynamic segments put anything in it. */
 const routeCtx = <T extends Record<string, string | string[] | undefined>>(params?: T) => ({
@@ -337,7 +341,10 @@ describe("guard: raw bodies", () => {
 })
 
 describe("guard: the identity-keyed limiter", () => {
-  const userLimiter: { check: jest.Mock } = { check: jest.fn() }
+  const userLimiter: { check: jest.Mock; retryAfterSeconds: number } = {
+    check: jest.fn(),
+    retryAfterSeconds: 60,
+  }
   const asLimiter = userLimiter as never
 
   beforeEach(() => userLimiter.check.mockResolvedValue(true))

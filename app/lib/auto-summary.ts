@@ -13,6 +13,7 @@
  * excluded from quota/cost enforcement — a user is never blocked or charged for
  * a summary they did not request.
  */
+import { canSpendInBackground } from "@/app/lib/ai-access"
 import { getFreeTierModel } from "@/app/lib/ai-model-routing"
 import { generateConversationSummary } from "@/app/lib/conversation-summary"
 import { aiLogger } from "@/app/lib/logger"
@@ -63,6 +64,13 @@ export async function maybeAutoSummarize(conversationId: string, userId: string)
     messageCount < AUTO_SUMMARY_MIN_MESSAGES ||
     messageCount - lastSummaryCount < AUTO_SUMMARY_INTERVAL
   ) {
+    return
+  }
+
+  // Summaries are excluded from the counted totals because the chatter never
+  // asked for one; that exclusion is what left them with no ceiling at all.
+  if (!(await canSpendInBackground(userId))) {
+    aiLogger.info({ conversationId }, "Auto-summary skipped: spend ceiling reached")
     return
   }
 

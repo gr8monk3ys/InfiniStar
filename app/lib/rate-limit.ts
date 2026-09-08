@@ -25,6 +25,16 @@ export interface IRateLimiter {
   check(identifier: string): Promise<boolean>
   reset(identifier: string): Promise<void>
   cleanup(): Promise<void>
+  /**
+   * The limiter's window, in seconds, for a `Retry-After` header.
+   *
+   * Every 429 in this codebase said 60 regardless of the limiter behind it, so
+   * a polite client retried a five-minute auth limit twelve times too early and
+   * an hourly account-deletion limit sixty times too early — each retry a fresh
+   * 429. A header that lies is worse than no header: it turns backoff into a
+   * retry storm.
+   */
+  readonly retryAfterSeconds: number
 }
 
 /**
@@ -32,7 +42,10 @@ export interface IRateLimiter {
  * boolean this app's routes expect.
  */
 class KitRateLimiter implements IRateLimiter {
-  constructor(private readonly limiter: RateLimiter) {}
+  constructor(
+    private readonly limiter: RateLimiter,
+    readonly retryAfterSeconds: number
+  ) {}
 
   async check(identifier: string): Promise<boolean> {
     return (await this.limiter.check(identifier)).ok
@@ -65,7 +78,7 @@ function build(store: RateLimitStore, limit: number, windowMs: number): RateLimi
  */
 export class InMemoryRateLimiter extends KitRateLimiter {
   constructor(limit: number = 10, windowMs: number = 60000) {
-    super(build(new MemoryStore(), limit, windowMs))
+    super(build(new MemoryStore(), limit, windowMs), Math.ceil(windowMs / 1000))
   }
 }
 
@@ -109,7 +122,7 @@ export function createRateLimiter(name: string, limit: number, windowMs: number)
       },
     })
 
-    return new KitRateLimiter(build(store, limit, windowMs))
+    return new KitRateLimiter(build(store, limit, windowMs), Math.ceil(windowMs / 1000))
   }
 
   if (!rateLimiterBackendLogged) {
@@ -125,7 +138,6 @@ export const authLimiter = createRateLimiter("auth", 5, 300000) // 5 requests pe
 export const aiChatLimiter = createRateLimiter("aiChat", 20, 60000) // 20 AI requests per minute
 export const aiTranscribeLimiter = createRateLimiter("aiTranscribe", 10, 60000) // 10 transcription requests per minute
 export const accountDeletionLimiter = createRateLimiter("accountDeletion", 3, 3600000) // 3 requests per hour
-export const twoFactorLimiter = createRateLimiter("twoFactor", 5, 300000) // 5 attempts per 5 minutes for 2FA verification
 export const tagLimiter = createRateLimiter("tag", 30, 60000) // 30 tag operations per minute
 export const memoryLimiter = createRateLimiter("memory", 30, 60000) // 30 memory operations per minute
 export const memoryExtractLimiter = createRateLimiter("memoryExtract", 5, 60000) // 5 AI extraction requests per minute
@@ -143,7 +155,6 @@ const allLimiters: IRateLimiter[] = [
   aiChatLimiter,
   aiTranscribeLimiter,
   accountDeletionLimiter,
-  twoFactorLimiter,
   tagLimiter,
   memoryLimiter,
   memoryExtractLimiter,
@@ -210,7 +221,7 @@ export function withRateLimit(
           status: 429,
           headers: {
             "Content-Type": "application/json",
-            "Retry-After": "60",
+            "Retry-After": String(limiter.retryAfterSeconds),
           },
         }
       )

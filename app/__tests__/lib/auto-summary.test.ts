@@ -16,6 +16,7 @@ const mockGenerate = jest.fn().mockResolvedValue({
   generatedAt: new Date(),
 })
 const mockFindUnique = jest.fn()
+const mockCanSpendInBackground = jest.fn()
 
 jest.mock("@/app/lib/conversation-summary", () => ({
   generateConversationSummary: (...args: unknown[]) => mockGenerate(...args),
@@ -26,6 +27,12 @@ jest.mock("@/app/lib/prismadb", () => ({
 }))
 jest.mock("@/app/lib/ai-model-routing", () => ({
   getFreeTierModel: () => "claude-haiku-4-5",
+}))
+// Mocked rather than imported: the real module pulls in `next/server`, and this
+// suite is about the cadence gate. The ceiling itself is covered in
+// `ai-access.test.ts`.
+jest.mock("@/app/lib/ai-access", () => ({
+  canSpendInBackground: (...args: unknown[]) => mockCanSpendInBackground(...args),
 }))
 
 /** Set the live non-deleted message count and the last summarized count. */
@@ -40,6 +47,25 @@ describe("maybeAutoSummarize", () => {
   beforeEach(() => {
     jest.clearAllMocks()
     delete process.env.AI_AUTO_SUMMARY_ENABLED
+    mockCanSpendInBackground.mockResolvedValue(true)
+  })
+
+  /**
+   * Summaries are excluded from the counted totals because the chatter never
+   * asked for one — and that exclusion is exactly what left them unbounded: a
+   * PRO chatter past their fair-use cap kept generating them, because the only
+   * thing that reads the cap is the Allowance check they no longer run.
+   */
+  it("does not summarize once the chatter is past their spend ceiling", async () => {
+    mockCanSpendInBackground.mockResolvedValue(false)
+    mockFindUnique.mockResolvedValue({
+      summaryMessageCount: 0,
+      _count: { messages: 40 },
+    })
+
+    await maybeAutoSummarize("conv-1", "user-1")
+
+    expect(mockGenerate).not.toHaveBeenCalled()
   })
 
   it("does not summarize below the minimum message count", async () => {
