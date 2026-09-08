@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
   if (!(await Promise.resolve(authLimiter.check(getClientIdentifier(request))))) {
     return NextResponse.json(
       { error: "Too many requests. Please try again later." },
-      { status: 429, headers: { "Retry-After": "60" } }
+      { status: 429, headers: { "Retry-After": String(authLimiter.retryAfterSeconds) } }
     )
   }
 

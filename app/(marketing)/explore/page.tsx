@@ -1,6 +1,8 @@
 import Link from "next/link"
+import { captureException } from "@sentry/nextjs"
 
 import { CHARACTER_SELECT } from "@/app/lib/character-select"
+import { dbLogger } from "@/app/lib/logger"
 import { matureAccess } from "@/app/lib/nsfw"
 import prisma from "@/app/lib/prismadb"
 import { getRecommendationSignalsForUser, rankCharactersForUser } from "@/app/lib/recommendations"
@@ -105,7 +107,8 @@ export default async function ExplorePage({ searchParams }: ExplorePageProps) {
   } catch (error) {
     // Same rule as the feed: a failed query must not render as an empty catalog.
     catalogError = true
-    console.error("Failed to load explore page data", error)
+    dbLogger.error({ err: error }, "EXPLORE_DATA_LOAD_FAILED")
+    captureException(error, { tags: { surface: "EXPLORE_DATA_LOAD_FAILED" } })
   }
 
   const featured = recommendationSignals

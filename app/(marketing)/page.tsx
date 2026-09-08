@@ -1,3 +1,6 @@
+import { captureException } from "@sentry/nextjs"
+
+import { dbLogger } from "@/app/lib/logger"
 import prisma from "@/app/lib/prismadb"
 
 import { HeroSection } from "./_components/HeroSection"
@@ -56,7 +59,8 @@ export default async function IndexPage() {
       }),
     ])
   } catch (error) {
-    console.error("Failed to load homepage marketplace data", error)
+    dbLogger.error({ err: error }, "HOMEPAGE_DATA_LOAD_FAILED")
+    captureException(error, { tags: { surface: "HOMEPAGE_DATA_LOAD_FAILED" } })
   }
 
   const creatorSpotlights = creatorRows

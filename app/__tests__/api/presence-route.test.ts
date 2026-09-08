@@ -24,7 +24,7 @@ jest.mock("@/app/lib/prismadb", () => ({
 }))
 
 jest.mock("@/app/lib/rate-limit", () => ({
-  apiLimiter: { check: (...args: unknown[]) => mockLimiterCheck(...args) },
+  apiLimiter: { check: (...args: unknown[]) => mockLimiterCheck(...args), retryAfterSeconds: 60 },
   getClientIdentifier: () => "127.0.0.1",
 }))
 

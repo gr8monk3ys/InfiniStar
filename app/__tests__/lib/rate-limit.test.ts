@@ -210,3 +210,28 @@ describe("pre-built limiter instances", () => {
 })
 
 export {}
+
+// ---------------------------------------------------------------------------
+// Retry-After honesty
+//
+// Every 429 in this codebase said 60 regardless of the limiter behind it, so a
+// polite client retried a five-minute auth limit twelve times too early and an
+// hourly account-deletion limit sixty times too early — each retry a fresh 429.
+// A header that lies turns backoff into a retry storm.
+// ---------------------------------------------------------------------------
+
+describe("retryAfterSeconds", () => {
+  it("reports the limiter's own window, not a fixed minute", () => {
+    expect(new InMemoryRateLimiter(5, 300_000).retryAfterSeconds).toBe(300)
+    expect(new InMemoryRateLimiter(3, 3_600_000).retryAfterSeconds).toBe(3600)
+    expect(new InMemoryRateLimiter(5, 600_000).retryAfterSeconds).toBe(600)
+  })
+
+  it("still reports 60 for the per-minute limiters", () => {
+    expect(new InMemoryRateLimiter(20, 60_000).retryAfterSeconds).toBe(60)
+  })
+
+  it("rounds a partial second up, so it never advises retrying too early", () => {
+    expect(new InMemoryRateLimiter(1, 1_500).retryAfterSeconds).toBe(2)
+  })
+})

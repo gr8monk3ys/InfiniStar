@@ -6,6 +6,7 @@
  * blocking chat responses.
  */
 
+import { canSpendInBackground } from "@/app/lib/ai-access"
 import {
   canCreateMemory,
   extractMemoriesFromMessages,
@@ -42,6 +43,14 @@ export async function maybeAutoExtractMemories(
 
   const capacityInfo = await canCreateMemory(userId)
   if (!capacityInfo.allowed) {
+    return
+  }
+
+  // Extraction records against the quota, so it cannot run away — but it never
+  // checked before spending, so it could push a chatter past their ceiling
+  // rather than being refused at it.
+  if (!(await canSpendInBackground(userId))) {
+    aiLogger.info({ conversationId }, "Auto-extract skipped: spend ceiling reached")
     return
   }
 

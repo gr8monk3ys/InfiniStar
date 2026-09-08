@@ -640,3 +640,44 @@ export async function releaseAllowanceClaim(claim: AllowanceClaim): Promise<void
     aiAccessLogger.warn({ err: error, claimId: claim.id }, "ALLOWANCE_CLAIM_RELEASE_FAILED")
   }
 }
+
+/**
+ * Whether background, system-initiated generation may still spend on a
+ * chatter's behalf.
+ *
+ * Deliberately not the Allowance. A Turn is something the chatter asked for, so
+ * it counts against their monthly messages. An automatic summary or a memory
+ * extraction is not — they never asked for it, which is exactly why
+ * `summary-auto` sits in `UNCOUNTED_REQUEST_TYPES` and why charging a message
+ * for one would be wrong.
+ *
+ * But "not counted" quietly became "not bounded". The only thing that reads the
+ * PRO fair-use cost cap is the Allowance check, and background work does not run
+ * it — so a PRO chatter past their cap kept generating summaries indefinitely,
+ * and a free chatter past their token quota kept extracting memories. Neither is
+ * a blowout on its own; both are leaks with no ceiling above them.
+ *
+ * This is that ceiling: the spend limits only, ignoring the message count.
+ */
+export async function canSpendInBackground(userId: string): Promise<boolean> {
+  try {
+    const [subscriptionPlan, snapshot] = await Promise.all([
+      getUserSubscriptionPlan(userId),
+      monthlySnapshot(userId),
+    ])
+
+    if (subscriptionPlan.isPro) {
+      return (
+        AI_PRO_MONTHLY_COST_CAP_CENTS === null ||
+        snapshot.monthlyCostUsageCents < AI_PRO_MONTHLY_COST_CAP_CENTS
+      )
+    }
+
+    return snapshot.monthlyTokenUsage < FREE_TIER_MONTHLY_TOKEN_QUOTA
+  } catch (error) {
+    // Background work is best-effort and nobody is waiting on it, so a failure
+    // to read the ceiling means skip rather than spend.
+    aiAccessLogger.warn({ err: error, userId }, "BACKGROUND_SPEND_CHECK_FAILED")
+    return false
+  }
+}

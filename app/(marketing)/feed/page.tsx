@@ -1,8 +1,10 @@
 import Image from "next/image"
 import Link from "next/link"
+import { captureException } from "@sentry/nextjs"
 import { HiArrowTrendingUp, HiChatBubbleLeftRight, HiSparkles, HiUserGroup } from "react-icons/hi2"
 
 import { CHARACTER_SELECT } from "@/app/lib/character-select"
+import { dbLogger } from "@/app/lib/logger"
 import { matureAccess } from "@/app/lib/nsfw"
 import prisma from "@/app/lib/prismadb"
 import { getRecommendationSignalsForUser, rankCharactersForUser } from "@/app/lib/recommendations"
@@ -145,7 +147,8 @@ export default async function FeedPage() {
     // A failed query is not an empty community. Flag it so the page can say so
     // instead of rendering "nothing here yet" over what is actually an outage.
     feedError = true
-    console.error("Failed to load feed page data", error)
+    dbLogger.error({ err: error }, "FEED_DATA_LOAD_FAILED")
+    captureException(error, { tags: { surface: "FEED_DATA_LOAD_FAILED" } })
   }
 
   const trendingCharacters = recommendationSignals

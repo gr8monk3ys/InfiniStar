@@ -65,7 +65,6 @@ jest.mock("@/app/lib/rate-limit", () => {
     aiChatLimiter: limiter,
     aiTranscribeLimiter: limiter,
     accountDeletionLimiter: limiter,
-    twoFactorLimiter: limiter,
     tagLimiter: limiter,
     memoryLimiter: limiter,
     memoryExtractLimiter: limiter,

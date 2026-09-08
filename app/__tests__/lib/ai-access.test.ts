@@ -2,6 +2,7 @@
  * @jest-environment node
  */
 import {
+  canSpendInBackground,
   claimAllowanceSlot,
   getAiAccessDecision,
   monthlySnapshot,
@@ -419,5 +420,65 @@ describe("releaseAllowanceClaim", () => {
     mockUsageDelete.mockRejectedValue(new Error("connection lost"))
 
     await expect(releaseAllowanceClaim({ id: "claim-1" })).resolves.toBeUndefined()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// The background spend ceiling
+// ---------------------------------------------------------------------------
+
+describe("canSpendInBackground", () => {
+  beforeEach(() => {
+    ;(prisma.aiUsage.count as jest.Mock).mockResolvedValue(0)
+    ;(prisma.aiUsage.aggregate as jest.Mock).mockResolvedValue({
+      _sum: { totalTokens: 0, totalCost: 0 },
+    })
+  })
+
+  it("allows a PRO chatter under the fair-use cost cap", async () => {
+    ;(getUserSubscriptionPlan as jest.Mock).mockResolvedValue({ isPro: true })
+
+    await expect(canSpendInBackground(USER_ID)).resolves.toBe(true)
+  })
+
+  /**
+   * The leak this closes: the only thing that reads the cost cap is the
+   * Allowance check, and background work does not run it — so a PRO chatter
+   * past their cap kept generating summaries indefinitely.
+   */
+  it("stops background spend for a PRO chatter past the cost cap", async () => {
+    ;(getUserSubscriptionPlan as jest.Mock).mockResolvedValue({ isPro: true })
+    ;(prisma.aiUsage.aggregate as jest.Mock).mockResolvedValue({
+      _sum: { totalTokens: 0, totalCost: 999_999 },
+    })
+
+    await expect(canSpendInBackground(USER_ID)).resolves.toBe(false)
+  })
+
+  it("stops background spend for a free chatter past the token quota", async () => {
+    ;(getUserSubscriptionPlan as jest.Mock).mockResolvedValue({ isPro: false })
+    ;(prisma.aiUsage.aggregate as jest.Mock).mockResolvedValue({
+      _sum: { totalTokens: 999_999_999, totalCost: 0 },
+    })
+
+    await expect(canSpendInBackground(USER_ID)).resolves.toBe(false)
+  })
+
+  /**
+   * Ignoring the message count is the point: a summary is not a message the
+   * chatter asked for, so it must not be refused merely because they have used
+   * their fifty — only because they are over a spend ceiling.
+   */
+  it("ignores the monthly message count", async () => {
+    ;(getUserSubscriptionPlan as jest.Mock).mockResolvedValue({ isPro: false })
+    ;(prisma.aiUsage.count as jest.Mock).mockResolvedValue(9999)
+
+    await expect(canSpendInBackground(USER_ID)).resolves.toBe(true)
+  })
+
+  it("skips rather than spends when the ceiling cannot be read", async () => {
+    ;(getUserSubscriptionPlan as jest.Mock).mockRejectedValue(new Error("stripe is down"))
+
+    await expect(canSpendInBackground(USER_ID)).resolves.toBe(false)
   })
 })
