@@ -18,6 +18,8 @@ beforeEach(() => {
   process.env = { ...originalEnv }
   delete process.env.UPSTASH_REDIS_REST_URL
   delete process.env.UPSTASH_REDIS_REST_TOKEN
+  delete process.env.KV_REST_API_URL
+  delete process.env.KV_REST_API_TOKEN
 })
 
 afterAll(() => {
@@ -25,7 +27,6 @@ afterAll(() => {
 })
 
 describe("getRedisClient", () => {
-
   it("returns null when Upstash is not configured", async () => {
     const { getRedisClient } = await import("@/app/lib/redis")
     expect(getRedisClient()).toBeNull()
@@ -74,7 +75,6 @@ describe("getRedisClient", () => {
  * nothing reported it anywhere a person would look.
  */
 describe("production fallback reporting", () => {
-
   it("reports to Sentry when it falls back in production", async () => {
     const captureMessage = jest.fn()
     jest.doMock("@sentry/nextjs", () => ({ captureMessage }))
@@ -111,5 +111,43 @@ describe("production fallback reporting", () => {
     getRedisClient()
 
     expect(captureMessage).toHaveBeenCalledTimes(1)
+  })
+})
+
+/**
+ * Vercel KV is Upstash, and its integration injects the same REST credentials
+ * under its own names. This project had `KV_REST_API_URL` and
+ * `KV_REST_API_TOKEN` set for months while `/api/health` reported Redis as
+ * unconfigured and rate limiting silently ran per-instance — the store was
+ * provisioned the whole time, under a different pair of names.
+ */
+describe("Vercel KV credentials", () => {
+  it("uses the KV integration's variables when the Upstash pair is absent", async () => {
+    process.env.KV_REST_API_URL = "https://example.kv.vercel-storage.com"
+    process.env.KV_REST_API_TOKEN = "kv-token"
+
+    const { getRedisClient } = await import("@/app/lib/redis")
+    expect(getRedisClient()).not.toBeNull()
+  })
+
+  it("prefers an explicit Upstash url, so a store outside Vercel still wins", async () => {
+    process.env.UPSTASH_REDIS_REST_URL = "https://explicit.upstash.io"
+    process.env.UPSTASH_REDIS_REST_TOKEN = "explicit-token"
+    process.env.KV_REST_API_URL = "https://example.kv.vercel-storage.com"
+    process.env.KV_REST_API_TOKEN = "kv-token"
+
+    const { resolveRedisCredentials } = await import("@/app/lib/redis")
+
+    expect(resolveRedisCredentials()).toEqual({
+      url: "https://explicit.upstash.io",
+      token: "explicit-token",
+    })
+  })
+
+  it("still treats a KV url without its token as unconfigured", async () => {
+    process.env.KV_REST_API_URL = "https://example.kv.vercel-storage.com"
+
+    const { getRedisClient } = await import("@/app/lib/redis")
+    expect(getRedisClient()).toBeNull()
   })
 })
