@@ -2,6 +2,7 @@ import "@testing-library/jest-dom"
 
 import { fireEvent, render, screen } from "@testing-library/react"
 
+import { config } from "@/app/lib/config"
 import UpgradeModal from "@/app/components/modals/UpgradeModal"
 
 describe("UpgradeModal", () => {
@@ -50,7 +51,10 @@ describe("UpgradeModal", () => {
 
     expect(screen.getByText("You've reached this month's fair-use cap")).toBeInTheDocument()
     const supportLink = screen.getByRole("link", { name: /contact support/i })
-    expect(supportLink).toHaveAttribute("href", "mailto:support@infinistar.app")
+    // Read from config rather than pinned to a literal: the address is now one
+    // environment variable, and hardcoding it here is what let fourteen copies
+    // of a dead address drift apart in the first place.
+    expect(supportLink).toHaveAttribute("href", `mailto:${config.supportEmail}`)
     expect(screen.queryByRole("link", { name: /upgrade to pro/i })).not.toBeInTheDocument()
   })
 

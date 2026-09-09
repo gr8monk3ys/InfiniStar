@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useAuth } from "@clerk/nextjs"
 import { HiArrowPath } from "react-icons/hi2"
 
+import { config } from "@/app/lib/config"
 import { cn } from "@/app/lib/utils"
 import { buttonVariants } from "@/app/components/ui/button"
 import { EmptySection } from "@/app/components/EmptySection"
@@ -28,8 +29,6 @@ const POLL_INTERVAL_MS = 250
  */
 const MOUNTED_FORM_SELECTOR = ".cl-rootBox, .cl-card, [data-clerk-component]"
 
-const SUPPORT_EMAIL = "support@infinistar.app"
-
 function formNoun(mode: AuthMode) {
   return mode === "sign-in" ? "sign-in" : "sign-up"
 }
@@ -37,10 +36,10 @@ function formNoun(mode: AuthMode) {
 function SupportEmailLink() {
   return (
     <a
-      href={`mailto:${SUPPORT_EMAIL}`}
+      href={`mailto:${config.supportEmail}`}
       className="font-medium text-primary-accent underline underline-offset-4 hover:text-primary-accent/80"
     >
-      {SUPPORT_EMAIL}
+      {config.supportEmail}
     </a>
   )
 }

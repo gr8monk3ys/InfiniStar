@@ -18,6 +18,18 @@
 
 const DEV_APP_URL = "http://localhost:3000"
 
+/**
+ * Where support mail goes when the variable is unset.
+ *
+ * On a domain the project controls, so a misconfiguration is one Cloudflare
+ * Email Routing rule away from working rather than a dead end. It was
+ * `support@infinistar.app` — a domain that has never been registered, so every
+ * one of the fourteen places that printed it was inviting users to write into
+ * nothing, including the GDPR contact in the privacy policy and the DMCA
+ * contact in the terms.
+ */
+const FALLBACK_SUPPORT_EMAIL = "support@lscaturchio.xyz"
+
 function warnIfMissingInProduction(name: string, value: string | undefined, fallback: string) {
   if (value) return value
   if (process.env.NODE_ENV === "production") {
@@ -48,6 +60,40 @@ export const config = {
       "NEXT_PUBLIC_APP_URL",
       process.env.NEXT_PUBLIC_APP_URL,
       DEV_APP_URL
+    )
+  },
+
+  /**
+   * The address transactional mail is sent from.
+   *
+   * Postmark refuses to send from an unverified domain, so this and the domain
+   * in `appUrl` have to agree with what is verified there — a mismatch is not a
+   * bounce the user sees, it is five emails that silently never arrive:
+   * the welcome on every signup, three account-deletion notices that are a GDPR
+   * commitment, and the payment-failure notice.
+   */
+  get fromEmail(): string {
+    return warnIfMissingInProduction("SMTP_FROM", process.env.SMTP_FROM, FALLBACK_SUPPORT_EMAIL)
+  },
+
+  /**
+   * The address users are told to write to.
+   *
+   * Previously hardcoded at fourteen sites — the privacy policy's GDPR contact,
+   * the terms' DMCA and disputes contact, the auth error boundary, the upgrade
+   * modal, the account-deletion tab and the email templates. Changing it meant
+   * a deploy and finding all fourteen; missing one meant printing two different
+   * addresses on the same site.
+   *
+   * Legally load-bearing in two of those places, which is why it warns in
+   * production rather than failing quietly: an unreachable contact in a privacy
+   * policy is a promise the product cannot keep.
+   */
+  get supportEmail(): string {
+    return warnIfMissingInProduction(
+      "NEXT_PUBLIC_SUPPORT_EMAIL",
+      process.env.NEXT_PUBLIC_SUPPORT_EMAIL,
+      FALLBACK_SUPPORT_EMAIL
     )
   },
 

@@ -1,3 +1,5 @@
+import { config } from "@/app/lib/config"
+
 export const metadata = {
   title: "Privacy Policy | InfiniStar",
   description: "InfiniStar privacy policy — how we collect and use your data.",
@@ -217,7 +219,7 @@ export default function PrivacyPage() {
             </li>
           </ul>
           <p className="text-muted-foreground">
-            To exercise any other rights, or if you need help, contact us at support@infinistar.app.
+            To exercise any other rights, or if you need help, contact us at {config.supportEmail}.
             We may need to verify your identity before acting on a request.
           </p>
         </section>
@@ -252,8 +254,8 @@ export default function PrivacyPage() {
             restricted to users who are at least 18 years old and who have explicitly confirmed
             their age and enabled mature content in their safety settings. We do not knowingly
             collect personal information from children under 13. If you believe a child under 13 has
-            provided us personal information, please contact us at support@infinistar.app and we
-            will investigate and delete it as appropriate.
+            provided us personal information, please contact us at {config.supportEmail} and we will
+            investigate and delete it as appropriate.
           </p>
         </section>
 
@@ -282,7 +284,7 @@ export default function PrivacyPage() {
           <h2 className="text-2xl font-bold">13. Contact Us</h2>
           <p className="text-muted-foreground">
             If you have questions about this Privacy Policy or our data practices, contact us at
-            support@infinistar.app.
+            {config.supportEmail}.
           </p>
         </section>
       </div>

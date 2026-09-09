@@ -1,3 +1,5 @@
+import { config } from "@/app/lib/config"
+
 /**
  * Email Templates
  *
@@ -416,7 +418,7 @@ export function getPaymentFailedEmailTemplate(params: PaymentFailedEmailParams) 
   ${createButton("Update Payment Method", billingUrl)}
 
   <p style="${STYLES.muted}">
-    If you have any questions, reply to this email or contact us at support@infinistar.app.
+    If you have any questions, reply to this email or contact us at ${config.supportEmail}.
   </p>
 
   <p style="${STYLES.veryMuted}">
@@ -434,7 +436,7 @@ We were unable to process your InfiniStar PRO subscription payment. Your card ma
 To keep your PRO benefits, please update your payment method:
 ${billingUrl}
 
-If you have any questions, reply to this email or contact us at support@infinistar.app.
+If you have any questions, reply to this email or contact us at ${config.supportEmail}.
 
 © ${getCurrentYear()} InfiniStar. All rights reserved.`
 

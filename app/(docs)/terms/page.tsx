@@ -1,3 +1,5 @@
+import { config } from "@/app/lib/config"
+
 export const metadata = {
   title: "Terms of Service | InfiniStar",
   description: "InfiniStar terms of service — the rules for using our platform.",
@@ -42,9 +44,9 @@ export default function TermsPage() {
             Clerk, and a backup email-and-password sign-in may be available as a fallback. You are
             responsible for the accuracy of your account information, for keeping your credentials
             confidential, and for all activity that occurs under your account. Notify us promptly at
-            support@infinistar.app if you suspect unauthorized use of your account. We are not
-            liable for losses caused by unauthorized use that results from your failure to protect
-            your credentials.
+            {config.supportEmail} if you suspect unauthorized use of your account. We are not liable
+            for losses caused by unauthorized use that results from your failure to protect your
+            credentials.
           </p>
         </section>
 
@@ -218,7 +220,7 @@ export default function TermsPage() {
             intellectual-property laws. Except for the rights expressly granted to you in these
             Terms, we reserve all rights. If you send us feedback, suggestions, or ideas about the
             Service, you grant us the right to use them without restriction or compensation. If you
-            believe content on the Service infringes your copyright, email support@infinistar.app
+            believe content on the Service infringes your copyright, email {config.supportEmail}
             with a description of the work, the location of the allegedly infringing material, your
             contact information, and a statement that you believe in good faith the use is
             unauthorized; we will review and respond appropriately.
@@ -286,7 +288,7 @@ export default function TermsPage() {
             be resolved informally will be subject to the exclusive jurisdiction of the courts
             located in [Jurisdiction], except where applicable law gives you the right to bring
             claims in your local courts. Before filing a claim, please contact us at
-            support@infinistar.app — most concerns can be resolved quickly and informally.
+            {config.supportEmail} — most concerns can be resolved quickly and informally.
           </p>
         </section>
 
@@ -307,7 +309,7 @@ export default function TermsPage() {
           <h2 className="text-2xl font-bold">17. Contact Us</h2>
           <p className="text-muted-foreground">
             Questions about these Terms, or reports of violations, can be sent to
-            support@infinistar.app.
+            {config.supportEmail}.
           </p>
         </section>
       </div>

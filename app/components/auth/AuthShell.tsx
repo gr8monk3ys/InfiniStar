@@ -6,6 +6,7 @@ import {
   HiOutlineShieldCheck,
 } from "react-icons/hi2"
 
+import { config } from "@/app/lib/config"
 import { cn } from "@/app/lib/utils"
 import { buttonVariants } from "@/app/components/ui/button"
 
@@ -139,10 +140,10 @@ export function AuthShell({ title, description, cardEyebrow, children }: AuthShe
                 <p className="mt-1 leading-relaxed">
                   If the secure form does not load, refresh once or email{" "}
                   <a
-                    href="mailto:support@infinistar.app"
+                    href={`mailto:${config.supportEmail}`}
                     className="font-medium text-primary-accent underline underline-offset-4 hover:text-primary-accent/80"
                   >
-                    support@infinistar.app
+                    {config.supportEmail}
                   </a>
                   .
                 </p>

@@ -26,7 +26,7 @@ const POSTMARK_API_URL = "https://api.postmarkapp.com/email"
 function getEmailConfig() {
   return {
     apiToken: process.env.POSTMARK_API_TOKEN,
-    fromAddress: process.env.SMTP_FROM || "noreply@infinistar.app",
+    fromAddress: config.fromEmail,
     appUrl: config.appUrl,
     isDevelopment: process.env.NODE_ENV === "development",
   }
