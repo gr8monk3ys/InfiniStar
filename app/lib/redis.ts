@@ -21,6 +21,30 @@ import { dbLogger } from "@/app/lib/logger"
  * where it makes rate limiting per-instance — `/api/health` reports degraded
  * when it happens there.
  */
+/**
+ * Where the REST credentials come from, in order of precedence.
+ *
+ * Vercel KV is Upstash, and its integration injects the same REST credentials
+ * under its own names. This project has had `KV_REST_API_URL` and
+ * `KV_REST_API_TOKEN` set since the KV store was created, so `/api/health`
+ * reported Redis as unconfigured and rate limiting silently ran per-instance
+ * for months — while the backing store sat there already provisioned. The only
+ * thing missing was a second pair of variables duplicating credentials the
+ * platform had already supplied.
+ *
+ * Explicit `UPSTASH_*` still wins, so pointing at a store outside Vercel stays
+ * a matter of setting two variables.
+ *
+ * Exported because the precedence is the whole point and deserves a test that
+ * does not have to construct a client to check it.
+ */
+export function resolveRedisCredentials(): { url?: string; token?: string } {
+  return {
+    url: process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL,
+    token: process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN,
+  }
+}
+
 let redisClient: Redis | null = null
 let connectionAttempted = false
 
@@ -31,14 +55,13 @@ export function getRedisClient(): Redis | null {
 
   connectionAttempted = true
 
-  const url = process.env.UPSTASH_REDIS_REST_URL
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN
+  const { url, token } = resolveRedisCredentials()
 
   if (!url || !token) {
     const message =
-      "Upstash is not configured. Falling back to in-memory storage. " +
-      "Set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN for " +
-      "distributed rate limiting and 2FA token storage."
+      "Redis is not configured. Falling back to in-memory storage. " +
+      "Set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN, or attach a " +
+      "Vercel KV store, for distributed rate limiting."
 
     dbLogger.warn(message)
 
