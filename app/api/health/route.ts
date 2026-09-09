@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 
 import prisma from "@/app/lib/prismadb"
-import { isRedisAvailable } from "@/app/lib/redis"
+import { isRedisAvailable, resolveRedisCredentials } from "@/app/lib/redis"
 
 export async function GET(): Promise<NextResponse> {
   const timestamp = new Date().toISOString()
@@ -9,9 +9,13 @@ export async function GET(): Promise<NextResponse> {
   try {
     await prisma.$queryRaw`SELECT 1`
 
-    const redisConfigured = Boolean(
-      process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
-    )
+    // Asked, not re-derived. This route had its own copy of the rule and read
+    // only the `UPSTASH_*` pair, so when `getRedisClient` learned to accept the
+    // Vercel KV credentials the platform already supplies, rate limiting started
+    // working and this endpoint went on reporting `not_configured` — the health
+    // check disagreeing with the thing whose health it reports.
+    const { url, token } = resolveRedisCredentials()
+    const redisConfigured = Boolean(url && token)
     const redisAvailable = redisConfigured ? await isRedisAvailable() : false
     const shouldRequireRedisInProd = process.env.NODE_ENV === "production"
 
