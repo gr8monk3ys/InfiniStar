@@ -1,8 +1,8 @@
-import { GET } from "@/app/api/health/route"
-
 /**
  * @jest-environment node
  */
+
+import { GET } from "@/app/api/health/route"
 
 /**
  * The health check must agree with the module whose health it reports.
