@@ -21,12 +21,20 @@ describe("characterPortrait", () => {
     expect(a.backgroundImage).toBe(b.backgroundImage)
   })
 
+  /**
+   * Asserts the invariant, not the composition: every colour is a token, so a
+   * theme change or a token edit carries without touching this module. The
+   * shape of the gradient stack is free to change; a literal colour is not.
+   */
   it("draws only from the aurora tokens, never a hardcoded colour", () => {
     for (const c of STARTER_CHARACTERS) {
       const { backgroundImage } = characterPortrait(c)
-      expect(backgroundImage).toMatch(
-        /^linear-gradient\(\d+deg, hsl\(var\(--[\w-]+\)\), hsl\(var\(--[\w-]+\)\)\)$/
-      )
+
+      const colours = [...backgroundImage.matchAll(/hsl\(([^)]*\)?[^)]*)\)/g)]
+      expect(colours.length).toBeGreaterThan(0)
+      for (const [, colour] of colours) {
+        expect(colour).toMatch(/^var\(--[\w-]+\)/)
+      }
       expect(backgroundImage).not.toMatch(/#[0-9a-f]{3,8}|rgb\(/i)
     }
   })
@@ -43,5 +51,53 @@ describe("characterPortrait", () => {
 
   it("survives a nameless character rather than throwing", () => {
     expect(characterPortrait({ slug: "x", name: "" }).initial).toBe("?")
+  })
+})
+
+describe("the aurora field", () => {
+  /**
+   * Two stops on a diagonal is a swatch, and a swatch with a letter on it still
+   * reads as a placeholder. Each portrait composes a wash plus three lights, so
+   * the card reads as a treatment somebody chose.
+   */
+  it("layers three lights over the wash", () => {
+    const { backgroundImage } = characterPortrait({ slug: "elara-the-storyteller", name: "Elara" })
+
+    expect(backgroundImage.match(/radial-gradient/g)).toHaveLength(3)
+    expect(backgroundImage).toContain("linear-gradient")
+  })
+
+  it("paints the wash last, so the lights sit over it", () => {
+    const { backgroundImage } = characterPortrait({ slug: "captain-vega", name: "Vega" })
+
+    expect(backgroundImage.indexOf("radial-gradient")).toBeLessThan(
+      backgroundImage.indexOf("linear-gradient")
+    )
+  })
+
+  /**
+   * A light dead-centre sits behind the initial and one at the bottom edge
+   * fights the caption scrim, so the arrangements avoid both.
+   */
+  it("keeps every light clear of the centre and the bottom edge", () => {
+    for (const character of STARTER_CHARACTERS) {
+      const { backgroundImage } = characterPortrait(character)
+      const positions = [...backgroundImage.matchAll(/at (\d+)% (\d+)%/g)]
+
+      expect(positions).toHaveLength(3)
+      for (const [, x, y] of positions) {
+        expect(Number(y)).toBeLessThanOrEqual(85)
+        const isDeadCentre = Math.abs(Number(x) - 50) < 12 && Math.abs(Number(y) - 50) < 12
+        expect(isDeadCentre).toBe(false)
+      }
+    }
+  })
+
+  it("gives no two catalog characters the same composition", () => {
+    const compositions = new Set(
+      STARTER_CHARACTERS.map((c) => characterPortrait(c).backgroundImage)
+    )
+
+    expect(compositions.size).toBe(STARTER_CHARACTERS.length)
   })
 })
