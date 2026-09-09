@@ -1,4 +1,4 @@
-import { moderateTextWithOpenAi } from "@/app/lib/model-moderation"
+import { moderateTextWithModel } from "@/app/lib/model-moderation"
 
 export type ModerationCategory =
   | "harassment"
@@ -258,7 +258,7 @@ export async function moderateTextModelAssisted(
   }
 
   try {
-    const modelResult = await moderateTextWithOpenAi(content.trim())
+    const modelResult = await moderateTextWithModel(content.trim())
     if (!modelResult) {
       return baseline
     }
