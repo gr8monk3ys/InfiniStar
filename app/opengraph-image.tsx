@@ -1,5 +1,7 @@
 import { ImageResponse } from "next/og"
 
+import { config } from "@/app/lib/config"
+
 export const runtime = "edge"
 export const alt = "InfiniStar — Chat with AI Characters"
 export const size = { width: 1200, height: 630 }
@@ -69,7 +71,15 @@ export default async function Image() {
         Characters worth coming back to — roleplay, romance, tutoring, and worldbuilding, powered by
         Claude.
       </div>
-      <div style={{ marginTop: 48, fontSize: 26, color: "#a78bfa" }}>infinistar.app</div>
+      {/*
+        The wordmark line. It printed a literal `infinistar.app` — a domain
+        that was never registered — on every card ever shared, which is the
+        single most-seen place the dead domain appeared. Derived from `appUrl`
+        now, so it moves with the deployment.
+      */}
+      <div style={{ marginTop: 48, fontSize: 26, color: "#a78bfa" }}>
+        {config.appUrl.replace(/^https?:\/\//, "")}
+      </div>
     </div>,
     {
       ...size,

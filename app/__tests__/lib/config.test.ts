@@ -2,6 +2,7 @@
  * @jest-environment node
  */
 
+import { siteConfig } from "@/config/site"
 import { config } from "@/app/lib/config"
 
 /**
@@ -120,5 +121,31 @@ describe("posthog hosts", () => {
 
     expect(config.posthog.ingestHost).toBe("https://ingest.example.com")
     expect(config.posthog.uiHost).toBe("https://analytics.example.com")
+  })
+})
+
+/**
+ * `config/site.ts` was the fifteenth place that answered "what is our URL" and
+ * the sixteenth that answered "what is our support address", and it answered
+ * both with the dead `infinistar.app`. It feeds the canonical URL and the
+ * support link on every page, so it has to move with `config` and not with a
+ * literal.
+ */
+describe("siteConfig", () => {
+  it("takes its URL from config, not a second read of the environment", () => {
+    setEnv({ NEXT_PUBLIC_APP_URL: "https://example.test" })
+    expect(siteConfig.url).toBe("https://example.test")
+
+    setEnv({ NEXT_PUBLIC_APP_URL: "https://moved.test" })
+    expect(siteConfig.url).toBe("https://moved.test")
+  })
+
+  it("builds the support link from config", () => {
+    setEnv({ NEXT_PUBLIC_SUPPORT_EMAIL: "help@example.test" })
+    expect(siteConfig.links.support).toBe("mailto:help@example.test")
+  })
+
+  it("names no dead domain of its own", () => {
+    expect(JSON.stringify(siteConfig)).not.toContain("infinistar.app")
   })
 })
