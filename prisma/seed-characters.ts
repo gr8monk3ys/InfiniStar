@@ -30,7 +30,7 @@ if (!connectionString) {
 const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString }) })
 
 const HOUSE_CREATOR = {
-  email: "characters@infinistar.app",
+  email: "characters@lscaturchio.xyz",
   clerkId: "infinistar_house_characters",
   name: "InfiniStar",
 } as const
