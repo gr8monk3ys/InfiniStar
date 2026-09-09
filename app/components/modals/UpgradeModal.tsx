@@ -5,6 +5,7 @@ import Link from "next/link"
 import posthog from "posthog-js"
 import { HiCheck, HiOutlineSparkles } from "react-icons/hi2"
 
+import { config } from "@/app/lib/config"
 import { cn } from "@/app/lib/utils"
 import { Button, buttonVariants } from "@/app/components/ui/button"
 import {
@@ -31,8 +32,6 @@ export const PRO_HIGHLIGHTS = [
   "Claude Sonnet 4.6 + Haiku 4.5",
   "Priority support",
 ]
-
-const SUPPORT_EMAIL = "support@infinistar.app"
 
 interface UpgradeModalProps {
   isOpen: boolean
@@ -121,9 +120,9 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({
           </Button>
           {isCostCap ? (
             <a
-              href={`mailto:${SUPPORT_EMAIL}`}
+              href={`mailto:${config.supportEmail}`}
               className={cn(buttonVariants())}
-              aria-label={`Contact support at ${SUPPORT_EMAIL}`}
+              aria-label={`Contact support at ${config.supportEmail}`}
               onClick={() =>
                 posthog.capture("upgrade_cta_clicked", { reason, cta: "contact_support" })
               }

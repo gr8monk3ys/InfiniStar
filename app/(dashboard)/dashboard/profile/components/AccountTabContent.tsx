@@ -5,6 +5,7 @@ import dynamic from "next/dynamic"
 import { HiExclamationTriangle, HiTrash } from "react-icons/hi2"
 
 import { api, ApiError, createLoadingToast } from "@/app/lib/api-client"
+import { config } from "@/app/lib/config"
 
 const DeleteAccountModal = dynamic(() => import("@/app/components/modals/DeleteAccountModal"), {
   ssr: false,
@@ -165,7 +166,7 @@ export function AccountTabContent() {
                 not need to delete your account to resolve most problems.
               </p>
               <a
-                href="mailto:support@infinistar.app"
+                href={`mailto:${config.supportEmail}`}
                 className="mt-3 inline-block text-sm font-medium text-primary-accent hover:text-primary/80"
               >
                 Contact Support
