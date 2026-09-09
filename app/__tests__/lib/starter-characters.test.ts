@@ -1,6 +1,6 @@
 import { STARTER_CHARACTERS } from "@/prisma/starter-characters"
 
-import { getCategoryById } from "@/app/lib/character-categories"
+import { CHARACTER_CATEGORIES, getCategoryById } from "@/app/lib/character-categories"
 
 /**
  * The launch catalog is the only content a first visitor sees, and it is the
@@ -18,9 +18,26 @@ const published = STARTER_CHARACTERS.filter((c) => c.isPublic)
 const unpublished = STARTER_CHARACTERS.filter((c) => !c.isPublic)
 
 describe("the launch catalog", () => {
-  it("publishes a short shelf rather than a long one", () => {
+  /**
+   * This used to cap the shelf at eight, on the reasoning that depth beats
+   * count. The reasoning was right and the cap was the wrong way to hold it:
+   * with six characters, three of the nine category filters on /explore
+   * returned nothing at all, and a discovery surface with nothing to discover
+   * argues against the product as loudly as a thin character would.
+   *
+   * The cap is replaced by the rule it was standing in for — every published
+   * character carries a scenario and example dialogue, asserted below, one by
+   * one, by name. Count is now free to grow; depth is not free to drop.
+   */
+  it("publishes enough to fill the categories it offers", () => {
     expect(published.length).toBeGreaterThanOrEqual(5)
-    expect(published.length).toBeLessThanOrEqual(8)
+  })
+
+  it("leaves no category filter empty", () => {
+    const offered = CHARACTER_CATEGORIES.map((c) => c.id).filter((id) => id !== "general")
+    const covered = new Set(published.map((c) => c.category))
+
+    expect([...offered].filter((id) => !covered.has(id))).toEqual([])
   })
 
   it("keeps every slug unique", () => {
