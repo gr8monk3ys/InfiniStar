@@ -30,7 +30,9 @@
     "seed:characters": "ts-node --compiler-options {\\\"module\\\":\\\"CommonJS\\\"} prisma/seed-characters.ts",
     "migrate:deploy": "prisma migrate deploy",
     "postinstall": "prisma generate",
-    "prepare": "node scripts/prepare.mjs"
+    "prepare": "node scripts/prepare.mjs",
+    "model:check": "bun scripts/check-model-provider.ts",
+    "portraits": "node scripts/generate-character-portraits.mjs"
   },
   "lint-staged": {
     "*.{ts,tsx}": [

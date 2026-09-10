@@ -6,7 +6,7 @@
  * impression, so it is written to argue one thing: that the conversations here
  * are good.
  *
- * Depth over count. Six published characters, each carrying a `scenario` and
+ * Depth over count. Eighteen published characters, each carrying a `scenario` and
  * `exampleDialogues` — the two fields `buildCharacterSystemPrompt` turns into
  * the `[Scenario]` and `[Example Dialogue]` blocks that give the model a
  * concrete opening situation and a voice to match. Without them a character is
@@ -22,14 +22,19 @@
  * No engagement counters are seeded. PRODUCT.md forbids inventing social
  * proof, and the character card already hides stat pills that would read zero.
  *
- * Portraits: `avatarUrl` is deliberately absent. Until real artwork exists the
- * card renders its own treatment derived from the character's name, which
- * reads as designed rather than missing. Add a URL here when art is ready.
+ * Portraits: every entry carries an `avatarUrl` pointing at a committed file
+ * under `public/characters/`. They are generated once by
+ * `scripts/generate-character-portraits.mjs` and checked in — no key, no quota,
+ * no provider to go down, and the same picture forever. The slug-derived
+ * treatment in `character-portrait.ts` is still the fallback for user-created
+ * characters with no art.
  */
 
 export interface StarterCharacter {
   slug: string
   name: string
+  /** Committed portrait under `public/characters/`. See the note above. */
+  avatarUrl: string
   tagline: string
   description: string
   greeting: string
@@ -51,6 +56,7 @@ export interface StarterCharacter {
 export const STARTER_CHARACTERS: StarterCharacter[] = [
   {
     slug: "elara-the-storyteller",
+    avatarUrl: "/characters/elara-the-storyteller.webp",
     name: "Elara the Storyteller",
     tagline: "Every story begins with a single choice. Make yours.",
     description:
@@ -83,6 +89,7 @@ Do you go for the vault, or the coat?`,
   },
   {
     slug: "yuki-hoshino",
+    avatarUrl: "/characters/yuki-hoshino.webp",
     name: "Yuki Hoshino",
     tagline: "Class 1-B's most stubborn spirit-channeler wants a training partner.",
     description:
@@ -113,6 +120,7 @@ Yuki: *already sinking into a stance, eyes shut* It's ninety percent reassuring!
   },
   {
     slug: "luna-late-night",
+    avatarUrl: "/characters/luna-late-night.webp",
     name: "Luna",
     tagline: "The kettle's on. Tell me about your day.",
     description:
@@ -142,6 +150,7 @@ Okay, here's mine: I made proper dinner and then ate it standing at the counter 
   },
   {
     slug: "captain-vega",
+    avatarUrl: "/characters/captain-vega.webp",
     name: "Captain Vega",
     tagline: "The Starwind needs a first officer. You're it.",
     description:
@@ -170,6 +179,7 @@ Good. As long as we both understand it. Take the sensor station.`,
   },
   {
     slug: "bram-the-tavern-keeper",
+    avatarUrl: "/characters/bram-the-tavern-keeper.webp",
     name: "Bram Emberhall",
     tagline: "Pull up a stool at the Gilded Griffin. First one's on the house.",
     description:
@@ -202,6 +212,7 @@ Two nights ago the light in the eastern tower came back on. Same hour, same colo
   },
   {
     slug: "detective-ash-harlow",
+    avatarUrl: "/characters/detective-ash-harlow.webp",
     name: "Detective Ash Harlow",
     tagline: "Every case needs a partner. Grab your coat.",
     description:
@@ -238,6 +249,7 @@ Ash: *already moving toward the stairs* Good. Lobby'll keep — the rain's got e
 
   {
     slug: "sable-the-fixer",
+    avatarUrl: "/characters/sable-the-fixer.webp",
     name: "Sable",
     tagline: "You bring the crew. I bring the floor plan.",
     description:
@@ -268,6 +280,7 @@ I can get you eleven minutes on the second floor. What do you need them for?`,
   },
   {
     slug: "rei-tachibana",
+    avatarUrl: "/characters/rei-tachibana.webp",
     name: "Rei Tachibana",
     tagline: "Second place is just first place with an excuse attached.",
     description:
@@ -296,6 +309,7 @@ That is not concern. That is scheduling.`,
   },
   {
     slug: "august-rell",
+    avatarUrl: "/characters/august-rell.webp",
     name: "August Rell",
     tagline: "The shop closed an hour ago. The light's still on.",
     description:
@@ -322,6 +336,7 @@ Here. Now — the ending. Was it that he left, or that the book let him?`,
   },
   {
     slug: "kesh-salvage-runner",
+    avatarUrl: "/characters/kesh-salvage-runner.webp",
     name: "Kesh",
     tagline: "Everything out here belonged to someone. Mind where you step.",
     description:
@@ -348,6 +363,7 @@ Then they've been alive for forty years without calling anyone, and that's a dec
   },
   {
     slug: "wren-ashdown",
+    avatarUrl: "/characters/wren-ashdown.webp",
     name: "Wren Ashdown",
     tagline: "The valley moved again. Fetch your boots.",
     description:
@@ -374,6 +390,7 @@ Wren: *inks it, blows on the line, and sits back on her heels* Then it's a lake,
   },
   {
     slug: "marisol-quintero",
+    avatarUrl: "/characters/marisol-quintero.webp",
     name: "Marisol Quintero",
     tagline: "The mountain isn't dangerous. Schedules are.",
     description:
@@ -400,6 +417,7 @@ Marisol: *almost smiles* Thursday is boring. Cold, clear, slow. You'd summit tir
   },
   {
     slug: "silas-barrow",
+    avatarUrl: "/characters/silas-barrow.webp",
     name: "Silas Barrow",
     tagline: "Night guard. Forty years. Ask me about anything in here.",
     description:
@@ -426,6 +444,7 @@ Silas: Because an axe is a problem being solved. A bead is a person deciding the
   },
   {
     slug: "keeper-aoife",
+    avatarUrl: "/characters/keeper-aoife.webp",
     name: "Keeper Aoife",
     tagline: "Sky's clear. Bring a coat and I'll show you how to find north.",
     description:
@@ -454,6 +473,7 @@ Everything else in the sky moves round that one. Which means you're facing north
   },
   {
     slug: "ines-call-sheet",
+    avatarUrl: "/characters/ines-call-sheet.webp",
     name: "Ines Marchetti",
     tagline: "Thirty years of stage management. Your day is not complicated.",
     description:
@@ -480,6 +500,7 @@ Two cues. We'll place them either side of lunch so neither is fighting your wors
   },
   {
     slug: "toma-bicycle-shop",
+    avatarUrl: "/characters/toma-bicycle-shop.webp",
     name: "Toma",
     tagline: "Bring it in. We'll see what it's actually doing.",
     description:
@@ -506,6 +527,7 @@ Toma: *tightens something, spins it again — silence* Chainring bolt. Two minut
   },
   {
     slug: "marguerite-vane",
+    avatarUrl: "/characters/marguerite-vane.webp",
     name: "Marguerite Vane",
     tagline: "Critic at large. Nothing is too small to be judged properly.",
     description:
@@ -536,6 +558,7 @@ The stapler took a risk. The stapler is worse, and I respect it more.`,
   },
   {
     slug: "dot-front-desk",
+    avatarUrl: "/characters/dot-front-desk.webp",
     name: "Dot",
     tagline: "Front desk, Cryptid Veterinary. Take a number.",
     description:
@@ -569,6 +592,7 @@ Four ahead of you. The tea machine is broken, there's a note.`,
 
   {
     slug: "quinn-study-coach",
+    avatarUrl: "/characters/quinn-study-coach.webp",
     name: "Quinn the Study Coach",
     tagline: "Big exams, broken down into small wins.",
     description:
@@ -584,6 +608,7 @@ Four ahead of you. The tea machine is broken, there's a note.`,
   },
   {
     slug: "coach-rio",
+    avatarUrl: "/characters/coach-rio.webp",
     name: "Coach Rio",
     tagline: "Show up for ten minutes. I'll take it from there.",
     description:
@@ -599,6 +624,7 @@ Four ahead of you. The tea machine is broken, there's a note.`,
   },
   {
     slug: "sofia-the-polyglot",
+    avatarUrl: "/characters/sofia-the-polyglot.webp",
     name: "Sofía the Polyglot",
     tagline: "Practice any language without the fear of feeling silly.",
     description:
@@ -614,6 +640,7 @@ Four ahead of you. The tea machine is broken, there's a note.`,
   },
   {
     slug: "ziggy-yes-and",
+    avatarUrl: "/characters/ziggy-yes-and.webp",
     name: "Ziggy",
     tagline: "Improv partner. Zero scripts, infinite bits.",
     description:
@@ -629,6 +656,7 @@ Four ahead of you. The tea machine is broken, there's a note.`,
   },
   {
     slug: "nova-thinking-partner",
+    avatarUrl: "/characters/nova-thinking-partner.webp",
     name: "Nova",
     tagline: "A sharp, honest thinking partner for whatever's on your mind.",
     description:

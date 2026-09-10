@@ -3,6 +3,8 @@
 // loaded nothing and failed on a missing DATABASE_URL even with .env present.
 import "dotenv/config"
 
+import { existsSync } from "node:fs"
+import { join } from "node:path"
 import { PrismaPg } from "@prisma/adapter-pg"
 import { PrismaClient } from "@prisma/client"
 
@@ -42,6 +44,16 @@ async function main(): Promise<void> {
   for (const character of STARTER_CHARACTERS) {
     if (!getCategoryById(character.category)) {
       throw new Error(`Invalid category "${character.category}" on character "${character.slug}"`)
+    }
+    // `avatarUrl` points at a committed file. Seeding a path that does not
+    // exist would put a broken image on every card for that character and the
+    // seed would report success, so this is checked before anything is written.
+    const portrait = join(process.cwd(), "public", character.avatarUrl.replace(/^\//, ""))
+    if (!existsSync(portrait)) {
+      throw new Error(
+        `Missing portrait for "${character.slug}" at ${character.avatarUrl}. ` +
+          `Run: node scripts/generate-character-portraits.mjs`
+      )
     }
   }
 
