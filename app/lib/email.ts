@@ -1,13 +1,13 @@
 /**
  * Email Sending Utilities
  *
- * Provides email sending functionality for account management notifications
- * using Postmark as the email service provider.
- *
- * Note: Verification, password reset, and 2FA emails are now handled by Clerk.
+ * The five account-management notifications, and the one seam they all go
+ * through. Which provider carries them lives in `email-delivery.ts`;
+ * verification, password reset and 2FA are Clerk's.
  */
 
 import { config } from "@/app/lib/config"
+import { deliver } from "@/app/lib/email-delivery"
 import logger from "@/app/lib/logger"
 
 import {
@@ -18,14 +18,11 @@ import {
   getWelcomeEmailTemplate,
 } from "./email-templates"
 
-const POSTMARK_API_URL = "https://api.postmarkapp.com/email"
-
 /**
  * Email configuration from environment
  */
 function getEmailConfig() {
   return {
-    apiToken: process.env.POSTMARK_API_TOKEN,
     fromAddress: config.fromEmail,
     appUrl: config.appUrl,
     isDevelopment: process.env.NODE_ENV === "development",
@@ -33,7 +30,7 @@ function getEmailConfig() {
 }
 
 /**
- * Generic email sending function via Postmark
+ * The one place a notification leaves the app.
  */
 async function sendEmail({
   to,
@@ -46,60 +43,29 @@ async function sendEmail({
   htmlBody: string
   textBody: string
 }): Promise<boolean> {
-  const config = getEmailConfig()
+  const emailConfig = getEmailConfig()
 
   // In development, log email details
-  if (config.isDevelopment) {
+  if (emailConfig.isDevelopment) {
     logger.info({ to, subject, textBody }, "Development email (not sent)")
     return true
   }
 
-  // Check for API token
-  if (!config.apiToken) {
-    logger.error("POSTMARK_API_TOKEN is not configured")
-    return false
-  }
-
-  try {
-    const response = await fetch(POSTMARK_API_URL, {
-      method: "POST",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-        "X-Postmark-Server-Token": config.apiToken,
-      },
-      body: JSON.stringify({
-        From: config.fromAddress,
-        To: to,
-        Subject: subject,
-        HtmlBody: htmlBody,
-        TextBody: textBody,
-        MessageStream: "outbound",
-      }),
-    })
-
-    if (!response.ok) {
-      const error = await response.json()
-      logger.error({ err: error }, "Postmark API error")
-      return false
-    }
-
-    return true
-  } catch (error) {
-    logger.error(
-      { err: error instanceof Error ? error : new Error(String(error)) },
-      "Failed to send email"
-    )
-    return false
-  }
+  return deliver({
+    to,
+    from: emailConfig.fromAddress,
+    subject,
+    htmlBody,
+    textBody,
+  })
 }
 
 /**
  * Send welcome email (after verification)
  */
 export async function sendWelcomeEmail(email: string, name: string): Promise<boolean> {
-  const config = getEmailConfig()
-  const dashboardUrl = `${config.appUrl}/dashboard/conversations`
+  const emailConfig = getEmailConfig()
+  const dashboardUrl = `${emailConfig.appUrl}/dashboard/conversations`
   const template = getWelcomeEmailTemplate({ name, dashboardUrl })
 
   return sendEmail({
@@ -118,14 +84,14 @@ export async function sendAccountDeletionPendingEmail(
   name: string,
   deletionDate: Date
 ): Promise<boolean> {
-  const config = getEmailConfig()
+  const emailConfig = getEmailConfig()
   const formattedDate = deletionDate.toLocaleDateString("en-US", {
     weekday: "long",
     year: "numeric",
     month: "long",
     day: "numeric",
   })
-  const cancelUrl = `${config.appUrl}/dashboard/profile`
+  const cancelUrl = `${emailConfig.appUrl}/dashboard/profile`
   const template = getAccountDeletionPendingEmailTemplate({
     name,
     deletionDate: formattedDate,
@@ -147,8 +113,8 @@ export async function sendAccountDeletionCancelledEmail(
   email: string,
   name: string
 ): Promise<boolean> {
-  const config = getEmailConfig()
-  const dashboardUrl = `${config.appUrl}/dashboard/conversations`
+  const emailConfig = getEmailConfig()
+  const dashboardUrl = `${emailConfig.appUrl}/dashboard/conversations`
   const template = getAccountDeletionCancelledEmailTemplate({ name, dashboardUrl })
 
   return sendEmail({
@@ -163,8 +129,8 @@ export async function sendAccountDeletionCancelledEmail(
  * Send payment failed notification email
  */
 export async function sendPaymentFailedEmail(email: string, name: string): Promise<boolean> {
-  const config = getEmailConfig()
-  const billingUrl = `${config.appUrl}/api/stripe/portal`
+  const emailConfig = getEmailConfig()
+  const billingUrl = `${emailConfig.appUrl}/api/stripe/portal`
   const template = getPaymentFailedEmailTemplate({ name, billingUrl })
 
   return sendEmail({

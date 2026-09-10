@@ -16,6 +16,8 @@
  * qualified labels are the ones that must never be missed.
  */
 
+/* eslint-disable no-console -- this is a CLI script; its output is the point. */
+
 import { moderateTextWithAnthropic } from "@/app/lib/model-moderation"
 
 const SAMPLES: Array<{ name: string; expect: string; text: string }> = [

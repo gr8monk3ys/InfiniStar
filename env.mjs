@@ -12,9 +12,13 @@ export const env = createEnv({
     DATABASE_URL: z.string().min(1),
     DIRECT_URL: z.string().min(1).optional(),
     SMTP_FROM: z.string().min(1),
-    POSTMARK_API_TOKEN: z.string().min(1),
-    POSTMARK_SIGN_IN_TEMPLATE: z.string().min(1),
-    POSTMARK_ACTIVATION_TEMPLATE: z.string().min(1),
+    // The outbound sender. Resend is the default and Postmark the fallback, so
+    // neither is individually required — but a deploy with both unset sends no
+    // welcome mail and, more to the point, no account-deletion notice.
+    RESEND_API_KEY: z.string().min(1).optional(),
+    POSTMARK_API_TOKEN: z.string().min(1).optional(),
+    POSTMARK_SIGN_IN_TEMPLATE: z.string().min(1).optional(),
+    POSTMARK_ACTIVATION_TEMPLATE: z.string().min(1).optional(),
     STRIPE_API_KEY: z.string().min(1),
     STRIPE_WEBHOOK_SECRET: z.string().min(1).optional(),
     STRIPE_PRO_MONTHLY_PLAN_ID: z.string().min(1),
@@ -63,6 +67,7 @@ export const env = createEnv({
     DATABASE_URL: process.env.DATABASE_URL,
     DIRECT_URL: process.env.DIRECT_URL,
     SMTP_FROM: process.env.SMTP_FROM,
+    RESEND_API_KEY: process.env.RESEND_API_KEY,
     POSTMARK_API_TOKEN: process.env.POSTMARK_API_TOKEN,
     POSTMARK_SIGN_IN_TEMPLATE: process.env.POSTMARK_SIGN_IN_TEMPLATE,
     POSTMARK_ACTIVATION_TEMPLATE: process.env.POSTMARK_ACTIVATION_TEMPLATE,
