@@ -23,6 +23,7 @@ function setEnv(env: Record<string, string | undefined>) {
 /** A clean slate — the ambient environment may carry any of these. */
 function noProviders(extra: Record<string, string | undefined> = {}) {
   setEnv({
+    AI_PROVIDER: undefined,
     ANTHROPIC_API_KEY: undefined,
     AI_GATEWAY_API_KEY: undefined,
     VERCEL_OIDC_TOKEN: undefined,
@@ -117,5 +118,52 @@ describe("translating model ids", () => {
     expect(resolveModelProvider().resolveModel("claude-sonnet-4-6")).toBe(
       "anthropic/claude-sonnet-4.6"
     )
+  })
+})
+
+/**
+ * The bug this closes: precedence is by *presence*, not by *health*. Production
+ * held an `ANTHROPIC_API_KEY` that returned 401 on every call, and because it
+ * was set it won every time — the gateway sat there unused and no amount of
+ * `AI_GATEWAY_MODEL_*` configuration could reach it.
+ */
+describe("pinning a provider", () => {
+  it("uses the gateway even though an Anthropic key is present", () => {
+    noProviders({ ANTHROPIC_API_KEY: "sk-ant-but-rejected", VERCEL_OIDC_TOKEN: "oidc" })
+    expect(resolveModelProvider().kind).toBe("anthropic")
+
+    noProviders({
+      AI_PROVIDER: "gateway",
+      ANTHROPIC_API_KEY: "sk-ant-but-rejected",
+      VERCEL_OIDC_TOKEN: "oidc",
+    })
+
+    const provider = resolveModelProvider()
+    expect(provider.kind).toBe("gateway")
+    expect(provider.label).toContain("[pinned]")
+  })
+
+  it("stays on Anthropic when pinned there, even with a gateway token around", () => {
+    noProviders({
+      AI_PROVIDER: "anthropic",
+      ANTHROPIC_API_KEY: "sk-ant",
+      AI_GATEWAY_API_KEY: "gw",
+    })
+
+    expect(resolveModelProvider().kind).toBe("anthropic")
+  })
+
+  it("reports none rather than falling through when pinned to a provider it cannot build", () => {
+    // Pinning to the gateway with no token must not silently use Anthropic —
+    // that would put the operator back in the state they pinned to escape.
+    noProviders({ AI_PROVIDER: "gateway", ANTHROPIC_API_KEY: "sk-ant" })
+
+    expect(resolveModelProvider().kind).toBe("none")
+  })
+
+  it("ignores casing and stray whitespace on the pin", () => {
+    noProviders({ AI_PROVIDER: "  GATEWAY  ", ANTHROPIC_API_KEY: "sk", VERCEL_OIDC_TOKEN: "oidc" })
+
+    expect(resolveModelProvider().kind).toBe("gateway")
   })
 })

@@ -15,6 +15,13 @@ export const env = createEnv({
     // The outbound sender. Resend is the default and Postmark the fallback, so
     // neither is individually required — but a deploy with both unset sends no
     // welcome mail and, more to the point, no account-deletion notice.
+    // Pins which service answers a model call: "anthropic" or "gateway".
+    // Unset means precedence by presence, which is wrong when a key is set but
+    // rejected — see model-provider.ts.
+    AI_PROVIDER: z.enum(["anthropic", "gateway"]).optional(),
+    AI_GATEWAY_API_KEY: z.string().min(1).optional(),
+    AI_GATEWAY_MODEL_SONNET: z.string().min(1).optional(),
+    AI_GATEWAY_MODEL_HAIKU: z.string().min(1).optional(),
     RESEND_API_KEY: z.string().min(1).optional(),
     POSTMARK_API_TOKEN: z.string().min(1).optional(),
     POSTMARK_SIGN_IN_TEMPLATE: z.string().min(1).optional(),
@@ -67,6 +74,10 @@ export const env = createEnv({
     DATABASE_URL: process.env.DATABASE_URL,
     DIRECT_URL: process.env.DIRECT_URL,
     SMTP_FROM: process.env.SMTP_FROM,
+    AI_PROVIDER: process.env.AI_PROVIDER,
+    AI_GATEWAY_API_KEY: process.env.AI_GATEWAY_API_KEY,
+    AI_GATEWAY_MODEL_SONNET: process.env.AI_GATEWAY_MODEL_SONNET,
+    AI_GATEWAY_MODEL_HAIKU: process.env.AI_GATEWAY_MODEL_HAIKU,
     RESEND_API_KEY: process.env.RESEND_API_KEY,
     POSTMARK_API_TOKEN: process.env.POSTMARK_API_TOKEN,
     POSTMARK_SIGN_IN_TEMPLATE: process.env.POSTMARK_SIGN_IN_TEMPLATE,

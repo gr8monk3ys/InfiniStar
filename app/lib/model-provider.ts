@@ -21,6 +21,13 @@
  *
  * ## The order, and why
  *
+ * 0. `AI_PROVIDER` — an explicit pin, and the reason it exists is the failure
+ *    below. The order is by *presence*, not by *health*, so a key that is set
+ *    but rejected wins forever and no fallback ever engages. That is exactly
+ *    the state production was in: a 401 on every call with a working gateway
+ *    sitting unused behind it. Deleting the credential would also have worked
+ *    and would have thrown away the thing you want back once it is renewed.
+ *
  * 1. `ANTHROPIC_API_KEY` — direct to Anthropic. Fastest path, no intermediary,
  *    and prompt caching (which the roleplay prompts depend on) behaves exactly
  *    as documented.
@@ -89,8 +96,10 @@ function gatewayOverrideFor(modelId: string): string | undefined {
 }
 
 export function resolveModelProvider(): ModelProvider {
+  const pinned = process.env.AI_PROVIDER?.trim().toLowerCase()
+
   const anthropicKey = process.env.ANTHROPIC_API_KEY
-  if (anthropicKey) {
+  if (anthropicKey && pinned !== "gateway") {
     return {
       kind: "anthropic",
       apiKey: anthropicKey,
@@ -100,13 +109,15 @@ export function resolveModelProvider(): ModelProvider {
   }
 
   const gatewayToken = process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN
-  if (gatewayToken) {
+  if (gatewayToken && pinned !== "anthropic") {
     return {
       kind: "gateway",
       baseURL: GATEWAY_BASE_URL,
       authToken: gatewayToken,
       resolveModel: (modelId) => gatewayOverrideFor(modelId) ?? toGatewayModelId(modelId),
-      label: process.env.AI_GATEWAY_API_KEY ? "vercel-ai-gateway" : "vercel-ai-gateway (oidc)",
+      label:
+        (process.env.AI_GATEWAY_API_KEY ? "vercel-ai-gateway" : "vercel-ai-gateway (oidc)") +
+        (pinned === "gateway" ? " [pinned]" : ""),
     }
   }
 
