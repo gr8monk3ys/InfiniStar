@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 
+import { resolveModelProvider } from "@/app/lib/model-provider"
 import prisma from "@/app/lib/prismadb"
 import { isRedisAvailable, resolveRedisCredentials } from "@/app/lib/redis"
 
@@ -19,8 +20,19 @@ export async function GET(): Promise<NextResponse> {
     const redisAvailable = redisConfigured ? await isRedisAvailable() : false
     const shouldRequireRedisInProd = process.env.NODE_ENV === "production"
 
+    // Which service would answer a model call. Deliberately not a live call:
+    // that costs money and latency on every uptime poll. It reports
+    // *configuration*, which is not the same as *working* — production once
+    // held an ANTHROPIC_API_KEY that returned 401 on every request, and this
+    // line would have said "anthropic" throughout. `bun run model:check`
+    // is the one that actually asks.
+    const provider = resolveModelProvider()
+
     const status =
-      shouldRequireRedisInProd && (!redisConfigured || !redisAvailable) ? "degraded" : "ok"
+      (shouldRequireRedisInProd && (!redisConfigured || !redisAvailable)) ||
+      provider.kind === "none"
+        ? "degraded"
+        : "ok"
 
     return NextResponse.json(
       {
@@ -28,6 +40,7 @@ export async function GET(): Promise<NextResponse> {
         timestamp,
         database: "connected",
         redis: redisConfigured ? (redisAvailable ? "connected" : "disconnected") : "not_configured",
+        model: provider.kind === "none" ? "not_configured" : provider.label,
       },
       { status: status === "ok" ? 200 : 503 }
     )
