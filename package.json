@@ -32,7 +32,8 @@
     "postinstall": "prisma generate",
     "prepare": "node scripts/prepare.mjs",
     "model:check": "bun scripts/check-model-provider.ts",
-    "portraits": "node scripts/generate-character-portraits.mjs"
+    "portraits": "node scripts/generate-character-portraits.mjs",
+    "env:check": "bun scripts/check-production-env.ts"
   },
   "lint-staged": {
     "*.{ts,tsx}": [
