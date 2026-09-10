@@ -57,9 +57,17 @@ async function main(): Promise<void> {
     }
   }
 
+  // Keyed on `clerkId`, not `email`, because the clerk id is the house
+  // account's identity and the address is an attribute of it. Upserting by
+  // email made the seed non-idempotent the moment the address changed: #92
+  // moved it off the dead `infinistar.app` domain, so the lookup found
+  // nothing, the create ran, and it collided with the existing row on
+  // `clerkId` — P2002, every run, with no way to recover but editing the
+  // database. The email is now carried in `update`, so renaming it again just
+  // works.
   const creator = await prisma.user.upsert({
-    where: { email: HOUSE_CREATOR.email },
-    update: {},
+    where: { clerkId: HOUSE_CREATOR.clerkId },
+    update: { email: HOUSE_CREATOR.email, name: HOUSE_CREATOR.name },
     create: {
       email: HOUSE_CREATOR.email,
       clerkId: HOUSE_CREATOR.clerkId,
