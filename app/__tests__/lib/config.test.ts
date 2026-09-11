@@ -149,3 +149,52 @@ describe("siteConfig", () => {
     expect(JSON.stringify(siteConfig)).not.toContain("infinistar.app")
   })
 })
+
+/**
+ * The warning is the only signal a missing variable gives, and it used to say
+ * the same thing for all three: "almost certainly wrong for absolute URLs
+ * (share links, emails, robots.txt)". Someone chasing a real `SMTP_FROM`
+ * warning in production was pointed at robots.txt.
+ */
+describe("what a missing variable warns about", () => {
+  function warningFor(env: Record<string, string | undefined>, read: () => unknown): string {
+    const spy = jest.spyOn(console, "error").mockImplementation(() => undefined)
+    setEnv({ NODE_ENV: "production", ...env })
+    read()
+    const message = spy.mock.calls.map((call) => String(call[0])).join(" ")
+    spy.mockRestore()
+    return message
+  }
+
+  it("tells the app-URL case that links will point at localhost", () => {
+    const message = warningFor({ NEXT_PUBLIC_APP_URL: undefined }, () => config.appUrl)
+
+    expect(message).toContain("localhost")
+    expect(message).toContain("robots.txt")
+  })
+
+  it("tells the sender case that an unverified sender is rejected", () => {
+    const message = warningFor({ SMTP_FROM: undefined }, () => config.fromEmail)
+
+    expect(message).toContain("unverified sender")
+    expect(message).not.toContain("robots.txt")
+  })
+
+  it("tells the support-address case which legal pages print it", () => {
+    const message = warningFor(
+      { NEXT_PUBLIC_SUPPORT_EMAIL: undefined },
+      () => config.supportEmail
+    )
+
+    expect(message).toContain("GDPR")
+    expect(message).not.toContain("robots.txt")
+  })
+
+  it("says nothing when the variable is set", () => {
+    const message = warningFor({ NEXT_PUBLIC_SUPPORT_EMAIL: "help@example.test" }, () =>
+      config.supportEmail
+    )
+
+    expect(message).toBe("")
+  })
+})

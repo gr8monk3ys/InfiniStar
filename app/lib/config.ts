@@ -30,17 +30,32 @@ const DEV_APP_URL = "http://localhost:3000"
  */
 const FALLBACK_SUPPORT_EMAIL = "support@lscaturchio.xyz"
 
-function warnIfMissingInProduction(name: string, value: string | undefined, fallback: string) {
+/**
+ * @param consequence what goes wrong when the fallback is used, in the
+ *   caller's own terms. This used to be one hardcoded sentence about "absolute
+ *   URLs (share links, emails, robots.txt)", which is true of `appUrl` and
+ *   nonsense for the two address variables — a reader chasing a real warning
+ *   about `SMTP_FROM` was told to go and look at robots.txt.
+ */
+function warnIfMissingInProduction(
+  name: string,
+  value: string | undefined,
+  fallback: string,
+  consequence: string
+) {
   if (value) return value
   if (process.env.NODE_ENV === "production") {
     // Loud rather than silent. The previous behaviour hid this: robots.ts
     // hardcoded the production domain while getShareUrl handed users a
     // localhost link, so a missing variable looked fine from one angle and
     // broke sharing from another.
-    console.error(
-      `[config] ${name} is not set in production. Falling back to ${fallback}, ` +
-        `which is almost certainly wrong for absolute URLs (share links, emails, robots.txt).`
-    )
+    //
+    // Note that preview deployments also run with NODE_ENV=production, so a
+    // variable scoped to Production alone fires this on every preview. That is
+    // not a false alarm worth silencing: previews share the production
+    // database, so a preview showing the fallback is showing real users' data
+    // next to the wrong contact address.
+    console.error(`[config] ${name} is not set in production. Using ${fallback} — ${consequence}`)
   }
   return fallback
 }
@@ -59,7 +74,9 @@ export const config = {
     return warnIfMissingInProduction(
       "NEXT_PUBLIC_APP_URL",
       process.env.NEXT_PUBLIC_APP_URL,
-      DEV_APP_URL
+      DEV_APP_URL,
+      "every absolute URL this deployment builds will point at localhost: share links, " +
+        "email links, web-push claims and robots.txt."
     )
   },
 
@@ -73,7 +90,13 @@ export const config = {
    * commitment, and the payment-failure notice.
    */
   get fromEmail(): string {
-    return warnIfMissingInProduction("SMTP_FROM", process.env.SMTP_FROM, FALLBACK_SUPPORT_EMAIL)
+    return warnIfMissingInProduction(
+      "SMTP_FROM",
+      process.env.SMTP_FROM,
+      FALLBACK_SUPPORT_EMAIL,
+      "mail will be sent from an address the provider may not have verified, and an " +
+        "unverified sender is rejected rather than delivered."
+    )
   },
 
   /**
@@ -93,7 +116,9 @@ export const config = {
     return warnIfMissingInProduction(
       "NEXT_PUBLIC_SUPPORT_EMAIL",
       process.env.NEXT_PUBLIC_SUPPORT_EMAIL,
-      FALLBACK_SUPPORT_EMAIL
+      FALLBACK_SUPPORT_EMAIL,
+      "the privacy policy's GDPR contact and the terms' DMCA contact will print an " +
+        "address nobody chose."
     )
   },
 
