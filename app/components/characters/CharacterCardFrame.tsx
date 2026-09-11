@@ -106,7 +106,7 @@ export function CharacterCardFrame({
           ) : (
             category && (
               <span className="rounded-full bg-black/50 px-2 py-0.5 text-xs font-medium text-white/90 backdrop-blur-sm">
-                {category.emoji} {category.name}
+                {category.name}
               </span>
             )
           )}
@@ -129,7 +129,7 @@ export function CharacterCardFrame({
         {category && hasEngagement && (
           <div className="mt-auto pt-2">
             <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium", category.color)}>
-              {category.emoji} {category.name}
+              {category.name}
             </span>
           </div>
         )}

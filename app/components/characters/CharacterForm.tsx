@@ -430,7 +430,7 @@ export function CharacterForm({ initial, mode }: CharacterFormProps) {
                   <SelectContent>
                     {CHARACTER_CATEGORIES.map((category) => (
                       <SelectItem key={category.id} value={category.id}>
-                        {category.emoji} {category.name}
+                        {category.name}
                       </SelectItem>
                     ))}
                   </SelectContent>

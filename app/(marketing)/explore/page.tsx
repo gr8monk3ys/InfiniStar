@@ -9,6 +9,9 @@ import { getRecommendationSignalsForUser, rankCharactersForUser } from "@/app/li
 import { cn } from "@/app/lib/utils"
 import { buttonVariants } from "@/app/components/ui/button"
 import getCurrentUser from "@/app/actions/getCurrentUser"
+import getRecentCharacterChats, {
+  type RecentCharacterChat,
+} from "@/app/actions/getRecentCharacterChats"
 import { EmptySection } from "@/app/components/EmptySection"
 import { RetryButton } from "@/app/components/RetryButton"
 
@@ -123,6 +126,17 @@ export default async function ExplorePage({ searchParams }: ExplorePageProps) {
     ? rankCharactersForUser(allRaw, recommendationSignals).slice(0, 24)
     : allRaw.slice(0, 24)
 
+  // Fetched on its own and allowed to fail quietly. The rail is an
+  // improvement to the page, not the page — a returning chatter losing their
+  // shortcut is a worse day, but a catalog that will not render because of it
+  // is a broken product.
+  let recentChats: RecentCharacterChat[] = []
+  try {
+    recentChats = await getRecentCharacterChats(currentUser?.id)
+  } catch (error) {
+    dbLogger.error({ err: error }, "EXPLORE_RECENT_CHATS_FAILED")
+  }
+
   const likedIds = likedRecords.map((r: { characterId: string }) => r.characterId)
   const initialCategory = getFirstSearchParam(resolvedSearchParams.category)
   const initialSearchQuery = getFirstSearchParam(resolvedSearchParams.q)
@@ -154,6 +168,7 @@ export default async function ExplorePage({ searchParams }: ExplorePageProps) {
         trending={trending}
         all={all}
         likedIds={likedIds}
+        recentChats={recentChats}
         initialCategory={initialCategory}
         initialSearchQuery={initialSearchQuery}
       />

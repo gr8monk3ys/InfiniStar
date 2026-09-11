@@ -60,6 +60,7 @@ describe("ExploreClient", () => {
         trending={sampleCharacters}
         all={sampleCharacters}
         likedIds={[]}
+        recentChats={[]}
         initialCategory="roleplay"
         initialSearchQuery="hero"
       />
@@ -81,6 +82,7 @@ describe("ExploreClient", () => {
         trending={sampleCharacters}
         all={sampleCharacters}
         likedIds={[]}
+        recentChats={[]}
       />
     )
 
@@ -107,6 +109,7 @@ describe("ExploreClient", () => {
         trending={sampleCharacters}
         all={sampleCharacters}
         likedIds={[]}
+        recentChats={[]}
       />
     )
 
@@ -133,12 +136,26 @@ describe("ExploreClient", () => {
     const quiet = [{ ...trendingOnly[0], id: "character-4", slug: "quiet", usageCount: 1 }]
 
     const { unmount } = render(
-      <ExploreClient featured={[]} trending={trendingOnly} all={sampleCharacters} likedIds={[]} />
+      <ExploreClient
+        featured={[]}
+        trending={trendingOnly}
+        all={sampleCharacters}
+        likedIds={[]}
+        recentChats={[]}
+      />
     )
     expect(screen.getByRole("heading", { name: /^trending$/i })).toBeInTheDocument()
     unmount()
 
-    render(<ExploreClient featured={[]} trending={quiet} all={sampleCharacters} likedIds={[]} />)
+    render(
+      <ExploreClient
+        featured={[]}
+        trending={quiet}
+        all={sampleCharacters}
+        likedIds={[]}
+        recentChats={[]}
+      />
+    )
     expect(screen.queryByRole("heading", { name: /^trending$/i })).not.toBeInTheDocument()
   })
 
@@ -151,6 +168,7 @@ describe("ExploreClient", () => {
         trending={sampleCharacters}
         all={sampleCharacters}
         likedIds={[]}
+        recentChats={[]}
       />
     )
 
