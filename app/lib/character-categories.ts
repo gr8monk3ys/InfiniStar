@@ -2,6 +2,17 @@ export interface CharacterCategory {
   id: string
   name: string
   description: string
+  /**
+   * Kept, but not rendered anywhere as of the explore rework.
+   *
+   * DESIGN.md's don't-list bans decorative icon pills, and on the category
+   * rail these sat flush against their labels with no gap — "🎭Anime" — which
+   * read as a bug before it read as decoration. The category name carries the
+   * meaning on its own.
+   *
+   * The data stays because the judgement is a taste call, not a fact: putting
+   * them back is one line per render site.
+   */
   emoji: string
   color: string
 }

@@ -203,7 +203,7 @@ function CharacterHero({
               <h1 className="text-2xl font-bold sm:text-3xl">{character.name}</h1>
               {category && (
                 <span className={cn("rounded-full px-3 py-1 text-xs font-medium", category.color)}>
-                  {category.emoji} {category.name}
+                  {category.name}
                 </span>
               )}
             </div>

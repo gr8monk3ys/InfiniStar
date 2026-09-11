@@ -87,7 +87,6 @@ function CategoryMarquee() {
               tabIndex={category.decorative ? -1 : undefined}
               aria-hidden={category.decorative ? "true" : undefined}
             >
-              <span aria-hidden="true">{category.emoji}</span>
               {category.name}
             </Link>
           ))}

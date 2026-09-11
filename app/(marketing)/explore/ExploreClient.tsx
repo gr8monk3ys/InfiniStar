@@ -22,6 +22,8 @@ import { CHARACTER_CATEGORIES } from "@/app/lib/character-categories"
 import { cn } from "@/app/lib/utils"
 import { buttonVariants } from "@/app/components/ui/button"
 import { CharacterCard } from "@/app/components/characters/CharacterCard"
+import { ContinueChattingRail } from "@/app/components/characters/ContinueChattingRail"
+import type { RecentCharacterChat } from "@/app/actions/getRecentCharacterChats"
 import { useCsrfToken, withCsrfHeader } from "@/app/hooks/useCsrfToken"
 
 interface CharacterData {
@@ -46,6 +48,8 @@ interface ExploreClientProps {
   trending: CharacterData[]
   all: CharacterData[]
   likedIds: string[]
+  /** Empty for a logged-out visitor, which is what hides the rail. */
+  recentChats: RecentCharacterChat[]
   initialCategory?: string
   initialSearchQuery?: string
 }
@@ -78,6 +82,7 @@ const STARTER_ARCHETYPES = [
 ]
 
 interface ExploreHeroSectionProps {
+  resultCount: number
   searchQuery: string
   onSearchChange: (value: string) => void
 }
@@ -106,43 +111,54 @@ interface EmptyResultsStateProps {
   onClearFilters: () => void
 }
 
-function ExploreHeroSection({ searchQuery, onSearchChange }: ExploreHeroSectionProps) {
+/**
+ * The page's title row, and the search field that is the actual tool on it.
+ *
+ * This was a 392px panel holding a headline, a paragraph of prose and a
+ * centred search box. On a 1440x812 laptop it filled the first viewport
+ * outright: the first row of characters was cut in half and nothing below it
+ * existed until you scrolled. A browse surface that shows nothing to browse is
+ * a marketing page wearing a product page's URL.
+ *
+ * The heading drops from Display to Headline and shares its row with the
+ * search, which is where a person's hand is going anyway. Roughly 96px of
+ * chrome instead of 392, and two full rows of characters above the fold.
+ */
+function ExploreHeroSection({ searchQuery, onSearchChange, resultCount }: ExploreHeroSectionProps) {
   return (
-    <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5 px-6 py-16 text-center md:px-12 md:py-24">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/10 via-transparent to-transparent" />
-      <div className="relative mx-auto max-w-3xl">
-        <h1 className="font-heading text-3xl font-bold leading-tight tracking-tight [text-wrap:balance] md:text-5xl lg:text-6xl">
-          Discover AI Characters
-        </h1>
-        <p className="mx-auto mt-4 max-w-2xl text-base text-foreground/75 [text-wrap:pretty] md:text-lg">
-          Browse creator-made characters across roleplay, fandom, companionship, tutoring, and
-          stranger niches that feel authored instead of generic.
-        </p>
+    <section className="flex flex-col gap-4 md:flex-row md:items-center md:gap-6">
+      <h1 className="font-heading text-2xl font-bold tracking-tight md:text-3xl">Explore</h1>
 
-        <div className="relative mx-auto mt-8 max-w-xl">
-          <HiMagnifyingGlass
-            className="absolute left-4 top-1/2 size-5 -translate-y-1/2 text-muted-foreground"
-            aria-hidden="true"
-          />
-          <input
-            type="search"
-            name="character-search"
-            placeholder="Search characters…"
-            value={searchQuery}
-            onChange={(event) => onSearchChange(event.target.value)}
-            className={cn(
-              "w-full rounded-full border bg-background py-3 pl-12 pr-4",
-              "text-sm shadow-sm transition-shadow",
-              "placeholder:text-muted-foreground",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-            )}
-            aria-label="Search characters"
-            autoComplete="off"
-            enterKeyHint="search"
-            spellCheck={false}
-          />
-        </div>
+      <div className="relative w-full md:max-w-md">
+        <HiMagnifyingGlass
+          className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+          aria-hidden="true"
+        />
+        <input
+          type="search"
+          name="character-search"
+          placeholder="Search characters…"
+          value={searchQuery}
+          onChange={(event) => onSearchChange(event.target.value)}
+          className={cn(
+            "h-11 w-full rounded-full border bg-background pl-11 pr-4",
+            "text-sm transition-colors",
+            "placeholder:text-muted-foreground",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+          )}
+          aria-label="Search characters"
+          autoComplete="off"
+          enterKeyHint="search"
+          spellCheck={false}
+        />
       </div>
+
+      <p
+        className="text-sm tabular-nums text-muted-foreground md:ml-auto"
+        aria-live="polite"
+      >
+        {resultCount} {resultCount === 1 ? "character" : "characters"}
+      </p>
     </section>
   )
 }
@@ -165,7 +181,7 @@ function ExploreCategoryTabs({ activeCategory, onSelectCategory }: ExploreCatego
             )}
             aria-pressed={activeCategory === tab.id}
           >
-            {"emoji" in tab && tab.emoji ? `${tab.emoji} ${tab.name}` : tab.name}
+            {tab.name}
           </button>
         ))}
       </div>
@@ -383,6 +399,7 @@ export default function ExploreClient({
   trending,
   all,
   likedIds: initialLikedIds,
+  recentChats,
   initialCategory,
   initialSearchQuery,
 }: ExploreClientProps) {
@@ -570,7 +587,19 @@ export default function ExploreClient({
 
   return (
     <div className="flex flex-col gap-10">
-      <ExploreHeroSection searchQuery={searchQuery} onSearchChange={setSearchQuery} />
+      <ExploreHeroSection
+        resultCount={filteredAll.length}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+      />
+
+      {/*
+        Above the filters, because it is not one of them: these are the
+        conversations you are already in, and no category or search term should
+        take them away.
+      */}
+      <ContinueChattingRail chats={recentChats} />
+
       <ExploreCategoryTabs activeCategory={activeCategory} onSelectCategory={setActiveCategory} />
 
       {showFeatured && (
