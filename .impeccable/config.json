@@ -1,0 +1,15 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "gradient-text",
+        "value": "*",
+        "files": ["app/globals.css"],
+        "createdAt": "2026-09-13T23:06:48.144Z",
+        "reason": "DESIGN.md One Gradient Phrase Rule: .gradient-text is the sanctioned hero-phrase/wordmark utility; scripts/check-design-system.mjs enforces the one-per-page cap"
+      }
+    ]
+  }
+}

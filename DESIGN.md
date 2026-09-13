@@ -27,6 +27,7 @@ colors:
   moon: "hsl(0 0% 95%)"
   moon-muted: "hsl(240 5% 55%)"
   signal-red: "hsl(0 84.2% 60.2%)"
+  signal-green: "hsl(142 71% 45%)"
 typography:
   display:
     fontFamily: "Bricolage Grotesque, ui-sans-serif, system-ui, Segoe UI, Arial, sans-serif"
@@ -207,6 +208,7 @@ A near-monochrome zinc canvas, lit by a violet-to-pink aurora with one amber emb
 ### Semantic
 
 - **Signal Red** (`hsl(0 84.2% 60.2%)`, dark `hsl(0 62.8% 30.6%)`): destructive buttons and badges only. The 18+ marker on a character portrait is a separate `red-600` at 80% alpha over the image.
+- **Signal Green** (`hsl(142 71% 45%)`, the `green-500` live dot): online/live indicators, the pricing checkmarks, and success confirmations (the email success alert uses its 97% / 73% / 24% ramp steps). A status hue only; never a fill on a control.
 
 ### Named Rules
 
