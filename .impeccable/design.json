@@ -183,6 +183,21 @@
           "hsl(0 84% 84%)",
           "hsl(0 84% 95%)"
         ]
+      },
+      "signal-green": {
+        "role": "semantic",
+        "displayName": "Signal Green",
+        "canonical": "hsl(142 71% 45%)",
+        "tonalRamp": [
+          "hsl(145 80% 10%)",
+          "hsl(143 64% 24%)",
+          "hsl(142 76% 36%)",
+          "hsl(142 71% 45%)",
+          "hsl(142 69% 58%)",
+          "hsl(142 77% 73%)",
+          "hsl(141 84% 92%)",
+          "hsl(138 76% 97%)"
+        ]
       }
     },
     "typographyMeta": {

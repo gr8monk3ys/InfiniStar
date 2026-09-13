@@ -11,25 +11,25 @@ import { config } from "@/app/lib/config"
  * Common email styles used across all templates
  */
 const STYLES = {
-  body: `font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;`,
+  body: `font-family: ui-sans-serif, system-ui, 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;`,
   header: `text-align: center; margin-bottom: 30px;`,
   logo: `color: #8249df; margin: 0;`,
-  h2Default: `color: #1f2937;`,
+  h2Default: `color: #09090b;`,
   h2Success: `color: #16a34a;`,
-  h2Danger: `color: #dc2626;`,
-  h3: `color: #374151;`,
-  button: `background-color: #8249df; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 500;`,
+  h2Danger: `color: #e42121;`,
+  h3: `color: #09090b;`,
+  button: `background-color: #8249df; color: white; padding: 12px 30px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 500;`,
   buttonContainer: `text-align: center; margin: 30px 0;`,
   link: `word-break: break-all; color: #8249df; font-size: 14px;`,
-  muted: `color: #6b7280; font-size: 14px;`,
-  veryMuted: `color: #9ca3af; font-size: 12px;`,
+  muted: `color: #71717a; font-size: 14px;`,
+  veryMuted: `color: #71717a; font-size: 12px;`,
   hr: `border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;`,
-  list: `color: #4b5563;`,
-  alertSuccess: `background-color: #f0fdf4; border: 1px solid #86efac; border-radius: 6px; padding: 15px; margin: 20px 0;`,
+  list: `color: #333;`,
+  alertSuccess: `background-color: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; padding: 15px; margin: 20px 0;`,
   alertSuccessText: `margin: 0; color: #166534; font-weight: 500;`,
-  alertDanger: `background-color: #fef2f2; border: 1px solid #fca5a5; border-radius: 6px; padding: 15px; margin: 20px 0;`,
-  alertDangerText: `margin: 0; color: #991b1b; font-weight: 500;`,
-  highlight: `font-size: 18px; font-weight: bold; color: #dc2626; text-align: center; padding: 15px; background-color: #fef2f2; border-radius: 6px;`,
+  alertDanger: `background-color: #fde8e8; border: 1px solid #f8b4b4; border-radius: 8px; padding: 15px; margin: 20px 0;`,
+  alertDangerText: `margin: 0; color: #7f1d1d; font-weight: 500;`,
+  highlight: `font-size: 18px; font-weight: bold; color: #e42121; text-align: center; padding: 15px; background-color: #fde8e8; border-radius: 8px;`,
 } as const
 
 /**

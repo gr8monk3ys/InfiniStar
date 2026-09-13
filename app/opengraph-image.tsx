@@ -24,9 +24,9 @@ export default async function Image() {
         padding: "80px",
         backgroundColor: "#0a0710",
         backgroundImage:
-          "radial-gradient(720px 480px at 12% 0%, rgba(124, 58, 237, 0.45), transparent 68%), " +
-          "radial-gradient(640px 420px at 88% 10%, rgba(192, 38, 211, 0.35), transparent 66%), " +
-          "radial-gradient(520px 380px at 70% 100%, rgba(244, 63, 94, 0.22), transparent 70%)",
+          "radial-gradient(720px 480px at 12% 0%, rgba(130, 73, 223, 0.45), transparent 68%), " +
+          "radial-gradient(640px 420px at 88% 10%, rgba(225, 71, 184, 0.35), transparent 66%), " +
+          "radial-gradient(520px 380px at 70% 100%, rgba(245, 91, 119, 0.22), transparent 70%)",
       }}
     >
       <svg
@@ -63,7 +63,7 @@ export default async function Image() {
         style={{
           marginTop: 24,
           fontSize: 34,
-          color: "#d8cdf5",
+          color: "#cdb5f2",
           lineHeight: 1.4,
           maxWidth: 860,
         }}
@@ -77,7 +77,7 @@ export default async function Image() {
         single most-seen place the dead domain appeared. Derived from `appUrl`
         now, so it moves with the deployment.
       */}
-      <div style={{ marginTop: 48, fontSize: 26, color: "#a78bfa" }}>
+      <div style={{ marginTop: 48, fontSize: 26, color: "#b897ed" }}>
         {config.appUrl.replace(/^https?:\/\//, "")}
       </div>
     </div>,

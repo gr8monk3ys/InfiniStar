@@ -454,7 +454,7 @@ export default async function CharacterPage({ params }: CharacterPageProps) {
   const gradientMap: Record<string, string> = {
     general: "from-gray-600 to-gray-800",
     anime: "from-pink-500 to-purple-600",
-    fantasy: "from-purple-500 to-indigo-700",
+    fantasy: "from-primary to-[#371471]",
     romance: "from-rose-400 to-pink-600",
     helper: "from-blue-500 to-cyan-600",
     roleplay: "from-amber-500 to-orange-600",
