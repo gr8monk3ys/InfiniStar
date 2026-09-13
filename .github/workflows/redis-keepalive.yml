@@ -1,0 +1,41 @@
+name: Redis keepalive
+
+# Upstash hibernates a Pay-As-You-Go database after 60 days without a command,
+# and once asleep it answers every command with HTTP 200 and
+# {"error":"Your database has been temporarily rate-limited..."}. That is what
+# `/api/health` reported as `redis: disconnected` from mid-August to 2026-09-13:
+# the store was never over quota, it had simply been ignored long enough to be
+# archived, because this app only learned to read the KV_* credentials in
+# September and nothing else had ever sent it a command.
+#
+# Waking it is a free click in the Upstash console; keeping it awake is this
+# workflow. `/api/health` PINGs Redis on every call, so one request a week is
+# enough. Weekly, not daily: the point is to stay well inside the 60-day
+# window, not to monitor uptime -- if the store is asleep, this run goes red
+# and GitHub's scheduled-workflow-failed email says so.
+#
+# The repo is public, so this costs no Actions minutes.
+
+on:
+  schedule:
+    - cron: '17 9 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ping:
+    name: Touch the Redis store via /api/health
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Call /api/health and require redis connected
+        run: |
+          set -euo pipefail
+          body="$(curl -sS --max-time 30 https://infini-star.vercel.app/api/health)"
+          echo "$body"
+          echo "$body" | grep -q '"redis":"connected"' || {
+            echo "::error::Redis is not connected. If the store hibernated: Vercel -> Storage -> infinistar-redis -> Open in Upstash -> Activate."
+            exit 1
+          }
