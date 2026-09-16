@@ -2,11 +2,7 @@ import Link from "next/link"
 import { HiCheck, HiOutlineBolt, HiOutlineShieldCheck } from "react-icons/hi2"
 
 import { freePlan, proPlan } from "@/config/subscriptions"
-import { getUserSubscriptionPlan } from "@/app/lib/subscription"
-import { cn } from "@/app/lib/utils"
-import { buttonVariants } from "@/app/components/ui/button"
-import { PricingCtaButton } from "@/app/(marketing)/pricing/PricingCtaButton"
-import getCurrentUser from "@/app/actions/getCurrentUser"
+import { FreePlanCta, ProPlanCta } from "@/app/(marketing)/pricing/PricingCta"
 
 export const metadata = {
   title: "Pricing | InfiniStar",
@@ -21,17 +17,11 @@ export const metadata = {
   },
 }
 
-export default async function PricingPage() {
-  const currentUser = await getCurrentUser()
-  const isSignedIn = Boolean(currentUser)
-
-  let isPro = false
-
-  if (currentUser?.id) {
-    const plan = await getUserSubscriptionPlan(currentUser.id)
-    isPro = plan.isPro
-  }
-
+// Prerendered: the page reads nothing per request. The two plan buttons
+// resolve "signed in" and "PRO" on the client (see PricingCta.tsx); the
+// server used to await the user and the subscription row for them, which
+// made every visit a cold render.
+export default function PricingPage() {
   return (
     <section className="container flex flex-col gap-8 py-10 md:max-w-6xl md:py-14 lg:py-20">
       {/* Header */}
@@ -84,12 +74,7 @@ export default async function PricingPage() {
             ))}
           </ul>
 
-          <Link
-            href={isSignedIn ? "/dashboard" : "/sign-up"}
-            className={cn(buttonVariants({ variant: "outline", size: "lg" }), "w-full")}
-          >
-            {isSignedIn ? "Go to Dashboard" : "Create Free Account"}
-          </Link>
+          <FreePlanCta />
         </div>
 
         {/* PRO Plan */}
@@ -121,13 +106,7 @@ export default async function PricingPage() {
             ))}
           </ul>
 
-          <PricingCtaButton
-            isSignedIn={isSignedIn}
-            isPro={isPro}
-            className={cn(
-              "gradient-bg-cta w-full gap-2 border-0 text-white shadow-lg shadow-[color:hsl(var(--glow-color)/0.25)]"
-            )}
-          />
+          <ProPlanCta className="gradient-bg-cta w-full gap-2 border-0 text-white shadow-lg shadow-[color:hsl(var(--glow-color)/0.25)]" />
         </div>
       </div>
 

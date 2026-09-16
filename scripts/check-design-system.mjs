@@ -72,7 +72,7 @@ const PALETTE_PREFIXES = "bg|text|border|from|to|via|ring|shadow|placeholder|div
 const ALLOWLIST = [
   {
     rule: "palette",
-    file: "app/(marketing)/characters/[slug]/page.tsx",
+    file: "app/(marketing)/characters/[slug]/CharacterPageBody.tsx",
     block: "gradientMap",
     // Per-category portrait gradients keyed by character.category — color as DATA, not styling.
     why: "per-category portrait gradient map (color keyed by data, not a style choice)",

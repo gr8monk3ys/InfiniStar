@@ -17,7 +17,7 @@ import { useAppAuth } from "@/app/hooks/useAppAuth"
 
 export function NsfwGateCard() {
   const router = useRouter()
-  const { isSignedIn } = useAppAuth()
+  const { isSignedIn, refresh } = useAppAuth()
   const [dialogOpen, setDialogOpen] = useState(false)
   const [ageConfirmed, setAgeConfirmed] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -42,6 +42,9 @@ export function NsfwGateCard() {
       )
       loader.success("NSFW content enabled")
       setDialogOpen(false)
+      // The character page is cached and carries only the gate; the unlock
+      // comes from the session, so reload that before the route.
+      await refresh()
       router.refresh()
     } catch (error) {
       const message = error instanceof ApiError ? error.message : "Failed to enable NSFW content"

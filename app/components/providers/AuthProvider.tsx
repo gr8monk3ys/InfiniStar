@@ -11,6 +11,8 @@ import {
   isClerkSatellite,
 } from "@/app/lib/clerk-auth"
 import { getClientCsrfToken } from "@/app/lib/csrf-client"
+import { EMPTY_VIEWER, type SessionViewer } from "@/app/lib/session-viewer"
+import { useClerkSessionHint } from "@/app/hooks/useClerkSessionHint"
 
 interface AuthProviderProps {
   children: React.ReactNode
@@ -30,10 +32,24 @@ interface AppAuthContextValue {
   authMode: AppAuthMode
   isLoaded: boolean
   isSignedIn: boolean
+  /**
+   * The best guess before `/api/auth/session` has answered, for prerendered
+   * pages that want to pick the signed-in layout at hydration instead of
+   * flashing the signed-out one: Clerk's `__client_uat` cookie until the
+   * session is loaded, `isSignedIn` after. Never a substitute for `isSignedIn`
+   * where the answer has to be right.
+   */
+  isSignedInHint: boolean
   refresh: () => Promise<void>
   signOut: (options?: { redirectUrl?: string }) => Promise<void>
   user: AppAuthUser | null
   userId: string | null
+  /**
+   * Per-viewer facts the static HTML cannot carry (mature-content access, PRO
+   * plan). `EMPTY_VIEWER` until the session confirms them — a page must show
+   * the gated, free-plan version until then.
+   */
+  viewer: SessionViewer
 }
 
 interface BaseAuthProviderProps extends AuthProviderProps {
@@ -44,12 +60,21 @@ const initialAuthState = {
   authMode: null as AppAuthMode,
   isLoaded: false,
   user: null as AppAuthUser | null,
+  viewer: EMPTY_VIEWER,
+}
+
+function normalizeViewer(viewer: Partial<SessionViewer> | null | undefined): SessionViewer {
+  return {
+    canViewMature: viewer?.canViewMature === true,
+    isPro: viewer?.isPro === true,
+  }
 }
 
 export const AppAuthContext = createContext<AppAuthContextValue | null>(null)
 
 function BaseAuthProvider({ children, clerkSignOut }: BaseAuthProviderProps) {
   const [state, setState] = useState(initialAuthState)
+  const cookieHint = useClerkSessionHint()
 
   const refresh = useCallback(async () => {
     try {
@@ -60,18 +85,21 @@ function BaseAuthProvider({ children, clerkSignOut }: BaseAuthProviderProps) {
       const payload = (await response.json()) as {
         authMode: AppAuthMode
         user: AppAuthUser | null
+        viewer?: Partial<SessionViewer> | null
       }
 
       setState({
         authMode: payload.authMode ?? null,
         isLoaded: true,
         user: payload.user ?? null,
+        viewer: payload.user ? normalizeViewer(payload.viewer) : EMPTY_VIEWER,
       })
     } catch {
       setState({
         authMode: null,
         isLoaded: true,
         user: null,
+        viewer: EMPTY_VIEWER,
       })
     }
   }, [])
@@ -113,6 +141,7 @@ function BaseAuthProvider({ children, clerkSignOut }: BaseAuthProviderProps) {
           authMode: null,
           isLoaded: true,
           user: null,
+          viewer: EMPTY_VIEWER,
         })
 
         window.location.assign(redirectUrl)
@@ -134,12 +163,14 @@ function BaseAuthProvider({ children, clerkSignOut }: BaseAuthProviderProps) {
       authMode: state.authMode,
       isLoaded: state.isLoaded,
       isSignedIn: Boolean(state.user),
+      isSignedInHint: state.isLoaded ? Boolean(state.user) : cookieHint === "signed-in",
       refresh,
       signOut,
       user: state.user,
       userId: state.user?.id ?? null,
+      viewer: state.viewer,
     }),
-    [refresh, signOut, state.authMode, state.isLoaded, state.user]
+    [cookieHint, refresh, signOut, state.authMode, state.isLoaded, state.user, state.viewer]
   )
 
   return <AppAuthContext.Provider value={value}>{children}</AppAuthContext.Provider>

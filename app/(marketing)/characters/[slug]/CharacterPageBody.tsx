@@ -1,0 +1,445 @@
+import Image from "next/image"
+import Link from "next/link"
+import {
+  HiChatBubbleBottomCenterText,
+  HiChatBubbleLeftRight,
+  HiEye,
+  HiHeart,
+  HiUser,
+} from "react-icons/hi2"
+
+import { siteConfig } from "@/config/site"
+import { getCategoryById } from "@/app/lib/character-categories"
+import { type MatureAccess } from "@/app/lib/nsfw"
+import prisma from "@/app/lib/prismadb"
+import { buildCharacterJsonLd } from "@/app/lib/structured-data"
+import { cn } from "@/app/lib/utils"
+import { CharacterExportButton } from "@/app/components/characters/CharacterExportButton"
+import { CharacterLikeButton } from "@/app/components/characters/CharacterLikeButton"
+import { CharacterRemixButton } from "@/app/components/characters/CharacterRemixButton"
+import { CharacterStartChatButton } from "@/app/components/characters/CharacterStartChatButton"
+import { CharacterViewBeacon } from "@/app/components/characters/CharacterViewBeacon"
+import { CharacterViewedTracker } from "@/app/components/characters/CharacterViewedTracker"
+import { PublicCharacterCard } from "@/app/components/characters/PublicCharacterCard"
+
+import CharacterCommentsSection from "./CharacterCommentsSection"
+
+/**
+ * The character page below the fold of "may this visitor see it at all".
+ *
+ * Rendered from two places, on purpose:
+ *
+ * - `page.tsx`, for a SFW character. The route is ISR, so this is the same
+ *   HTML for every visitor; anything per-user (liked state, sign-in) is
+ *   resolved by the client components it contains after hydration.
+ * - `actions.ts`, for a mature character, once `/api/auth/session` has
+ *   confirmed the viewer may see it. The static HTML for a mature character
+ *   is the gate and nothing else; the body arrives as a server-rendered RSC
+ *   payload from the action, which re-checks the gate server-side.
+ *
+ * Keeping one render for both means the two views cannot drift, and the
+ * mature body is never in any cached document.
+ */
+
+export interface CharacterPageCharacter extends CharacterDetails {
+  slug: string
+  category: string
+  isNsfw: boolean
+}
+
+interface SimilarCharacter {
+  id: string
+  slug: string
+  name: string
+  tagline: string | null
+  avatarUrl: string | null
+  category: string
+  usageCount: number
+  likeCount: number
+  isNsfw?: boolean
+  createdBy: {
+    id: string
+    name: string | null
+    image: string | null
+  } | null
+}
+
+interface CharacterDetails {
+  id: string
+  name: string
+  tagline: string | null
+  description: string | null
+  avatarUrl: string | null
+  coverImageUrl: string | null
+  greeting: string | null
+  category: string
+  usageCount: number
+  likeCount: number
+  commentCount: number
+  viewCount: number
+  tags: string[]
+  createdById: string
+  createdBy: {
+    id: string
+    name: string | null
+    image: string | null
+  } | null
+}
+
+function CharacterHero({
+  character,
+  slug,
+  gradient,
+  category,
+}: {
+  character: CharacterDetails
+  slug: string
+  gradient: string
+  category:
+    | {
+        id: string
+        name: string
+        emoji: string
+        color: string
+      }
+    | undefined
+}) {
+  return (
+    <>
+      <div className="relative">
+        <div
+          className={cn(
+            "relative h-48 w-full overflow-hidden sm:h-56 md:h-64",
+            // No cover: the aurora is scenery, not a solid category fill.
+            !character.coverImageUrl && "aurora-backdrop grain"
+          )}
+          role="img"
+          aria-label={`${character.name} cover image`}
+        >
+          {character.coverImageUrl && (
+            <Image
+              src={character.coverImageUrl}
+              alt={`${character.name} cover`}
+              fill
+              sizes="100vw"
+              className="object-cover"
+              priority
+            />
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
+        </div>
+
+        <div className="container relative">
+          <div className="absolute -top-16 left-6 sm:-top-20 sm:left-8">
+            {character.avatarUrl ? (
+              <div className="relative size-28 overflow-hidden rounded-2xl border-4 border-background shadow-xl sm:size-32">
+                <Image
+                  src={character.avatarUrl}
+                  alt={character.name}
+                  fill
+                  sizes="(max-width: 640px) 112px, 128px"
+                  className="object-cover"
+                  priority
+                />
+              </div>
+            ) : (
+              <div
+                className={cn(
+                  "flex size-28 items-center justify-center",
+                  "rounded-2xl border-4 border-background shadow-xl sm:size-32",
+                  "bg-gradient-to-br text-4xl font-bold text-white",
+                  gradient
+                )}
+              >
+                {character.name.slice(0, 1).toUpperCase()}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="container mt-20 sm:mt-16">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex-1 space-y-2">
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold sm:text-3xl">{character.name}</h1>
+              {category && (
+                <span className={cn("rounded-full px-3 py-1 text-xs font-medium", category.color)}>
+                  {category.name}
+                </span>
+              )}
+            </div>
+            {character.tagline && (
+              <p className="max-w-2xl text-lg text-muted-foreground">{character.tagline}</p>
+            )}
+          </div>
+
+          <div className="flex items-center gap-3">
+            <CharacterStartChatButton characterId={character.id} slug={slug} />
+            <CharacterLikeButton characterId={character.id} initialCount={character.likeCount} />
+            <CharacterRemixButton characterId={character.id} slug={slug} />
+            <CharacterExportButton characterId={character.id} />
+          </div>
+        </div>
+      </div>
+    </>
+  )
+}
+
+function CharacterStats({ character }: { character: CharacterDetails }) {
+  /**
+   * A brand-new character has nothing to show, and a row of four zeros reads
+   * as a dead listing rather than a new one. The card already hides its stat
+   * pills for the same reason; show the row only once a number means
+   * something, and show only the counters that do.
+   */
+  const stats = [
+    { key: "chats", value: character.usageCount, noun: "chat", Icon: HiChatBubbleLeftRight },
+    { key: "likes", value: character.likeCount, noun: "like", Icon: HiHeart },
+    {
+      key: "comments",
+      value: character.commentCount,
+      noun: "comment",
+      Icon: HiChatBubbleBottomCenterText,
+    },
+    { key: "views", value: character.viewCount, noun: "view", Icon: HiEye },
+  ].filter((s) => s.value > 0)
+
+  if (stats.length === 0) return null
+
+  return (
+    <div className="flex items-center gap-6 border-y py-4" aria-label="Character statistics">
+      {stats.map(({ key, value, noun, Icon }) => (
+        <div key={key} className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Icon className="size-5" aria-hidden="true" />
+          <span>
+            <span className="font-semibold text-foreground">{value.toLocaleString()}</span>{" "}
+            {value === 1 ? noun : `${noun}s`}
+          </span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function CharacterContent({
+  character,
+  gradient,
+}: {
+  character: CharacterDetails
+  gradient: string
+}) {
+  return (
+    <div className="grid gap-8 lg:grid-cols-3">
+      <div className="flex flex-col gap-6 lg:col-span-2">
+        {character.description && (
+          <div className="rounded-xl border bg-card p-6 shadow-sm">
+            <h2 className="mb-3 text-lg font-semibold">About</h2>
+            <p className="whitespace-pre-wrap leading-relaxed text-muted-foreground">
+              {character.description}
+            </p>
+          </div>
+        )}
+
+        {character.greeting && (
+          <div className="rounded-xl border bg-card p-6 shadow-sm">
+            <h2 className="mb-3 text-lg font-semibold">Greeting Preview</h2>
+            <div className="flex gap-3">
+              {character.avatarUrl ? (
+                <div className="relative size-8 shrink-0 overflow-hidden rounded-full border">
+                  <Image
+                    src={character.avatarUrl}
+                    alt=""
+                    fill
+                    sizes="32px"
+                    className="object-cover"
+                    aria-hidden="true"
+                  />
+                </div>
+              ) : (
+                <div
+                  className={cn(
+                    "flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white",
+                    "bg-gradient-to-br",
+                    gradient
+                  )}
+                  aria-hidden="true"
+                >
+                  {character.name.slice(0, 1).toUpperCase()}
+                </div>
+              )}
+              <div className="rounded-2xl rounded-tl-none border bg-muted/50 px-4 py-3">
+                <p className="text-sm leading-relaxed text-muted-foreground">
+                  {character.greeting}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="flex flex-col gap-6">
+        {character.tags.length > 0 && (
+          <div className="rounded-xl border bg-card p-6 shadow-sm">
+            <h2 className="mb-3 text-lg font-semibold">Tags</h2>
+            <div className="flex flex-wrap gap-2">
+              {character.tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="rounded-full border bg-muted px-3 py-1 text-xs font-medium text-muted-foreground"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="rounded-xl border bg-card p-6 shadow-sm">
+          <h2 className="mb-3 text-lg font-semibold">Creator</h2>
+          <Link
+            href={`/creators/${character.createdById}`}
+            className="flex items-center gap-3 rounded-lg p-2 transition-colors hover:bg-accent"
+          >
+            {character.createdBy?.image ? (
+              <div className="relative size-10 overflow-hidden rounded-full border">
+                <Image
+                  src={character.createdBy.image}
+                  alt={character.createdBy.name || "Creator"}
+                  fill
+                  sizes="40px"
+                  className="object-cover"
+                />
+              </div>
+            ) : (
+              <div className="flex size-10 items-center justify-center rounded-full border bg-primary/10 text-sm font-bold text-primary-accent">
+                <HiUser className="size-5" />
+              </div>
+            )}
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium">
+                {character.createdBy?.name || "Anonymous"}
+              </p>
+              <p className="text-xs text-muted-foreground">View profile</p>
+            </div>
+          </Link>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function SimilarCharactersSection({
+  similarCharacters,
+}: {
+  similarCharacters: SimilarCharacter[]
+}) {
+  if (similarCharacters.length === 0) {
+    return null
+  }
+
+  return (
+    <div className="mt-4">
+      <h2 className="mb-4 text-lg font-semibold">Similar Characters</h2>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {similarCharacters.map((similar) => (
+          <PublicCharacterCard key={similar.id} character={similar} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// Determine gradient colors based on category
+const gradientMap: Record<string, string> = {
+  general: "from-gray-600 to-gray-800",
+  anime: "from-pink-500 to-purple-600",
+  fantasy: "from-primary to-[#371471]",
+  romance: "from-rose-400 to-pink-600",
+  helper: "from-blue-500 to-cyan-600",
+  roleplay: "from-amber-500 to-orange-600",
+  education: "from-green-500 to-emerald-700",
+  comedy: "from-yellow-400 to-amber-600",
+  adventure: "from-orange-500 to-red-600",
+  scifi: "from-cyan-400 to-blue-700",
+}
+
+export async function CharacterPageBody({
+  character,
+  access,
+}: {
+  character: CharacterPageCharacter
+  access: MatureAccess
+}) {
+  const slug = character.slug
+  const category = getCategoryById(character.category)
+
+  // Similar characters: same category, excluding this one. The visibility
+  // filter is the viewer's real one when this renders from the action, and
+  // the SFW one in the cached page.
+  const similarCharacters = await prisma.character.findMany({
+    where: {
+      isPublic: true,
+      category: character.category,
+      id: { not: character.id },
+      ...access.visibilityFilter,
+    },
+    orderBy: [{ usageCount: "desc" }, { createdAt: "desc" }],
+    take: 4,
+    include: {
+      createdBy: {
+        select: { id: true, name: true, image: true },
+      },
+    },
+  })
+
+  const gradient = gradientMap[character.category] || gradientMap.general
+
+  const jsonLd = buildCharacterJsonLd(
+    {
+      name: character.name,
+      slug: character.slug,
+      tagline: character.tagline,
+      description: character.description,
+      avatarUrl: character.avatarUrl,
+      category: character.category,
+      usageCount: character.usageCount,
+      likeCount: character.likeCount,
+      commentCount: character.commentCount,
+      createdById: character.createdById,
+      createdByName: character.createdBy?.name ?? null,
+    },
+    siteConfig.url
+  )
+
+  return (
+    <section className="pb-16">
+      <CharacterViewBeacon characterId={character.id} />
+      <script
+        type="application/ld+json"
+        // Escape `<` to its JSON unicode form so creator-authored values (name,
+        // tagline) can never break out of the <script> tag — the standard safe
+        // JSON-LD serialization. The result is still valid JSON.
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
+      />
+      <CharacterViewedTracker
+        characterId={character.id}
+        slug={slug}
+        category={character.category}
+        isNsfw={character.isNsfw}
+      />
+      <CharacterHero character={character} slug={slug} gradient={gradient} category={category} />
+      <div className="container mt-8 flex flex-col gap-8">
+        <CharacterStats character={character} />
+        <CharacterContent character={character} gradient={gradient} />
+
+        <CharacterCommentsSection
+          characterId={character.id}
+          initialCount={character.commentCount}
+        />
+
+        <SimilarCharactersSection similarCharacters={similarCharacters} />
+      </div>
+    </section>
+  )
+}
