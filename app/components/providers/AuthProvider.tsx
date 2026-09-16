@@ -9,6 +9,7 @@ import {
   getClerkSignUpUrl,
   isClerkClientConfigured,
   isClerkSatellite,
+  resolveClerkScriptProps,
 } from "@/app/lib/clerk-auth"
 import { getClientCsrfToken } from "@/app/lib/csrf-client"
 import { EMPTY_VIEWER, type SessionViewer } from "@/app/lib/session-viewer"
@@ -204,9 +205,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
             domain: (url: URL) => url.host,
             isSatellite: true,
           }
-        : {
-            proxyUrl: process.env.NEXT_PUBLIC_CLERK_PROXY_URL,
-          })}
+        : resolveClerkScriptProps())}
       signInUrl={getClerkSignInUrl()}
       signUpUrl={getClerkSignUpUrl()}
     >
