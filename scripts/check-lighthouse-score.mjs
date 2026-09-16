@@ -31,6 +31,12 @@ const SCORE_FLOORS = {
 // Route-level exceptions, each with its cause. Keep this list short: an entry
 // here is a known defect or a CI-environment artifact, never a convenience.
 const ROUTE_FLOOR_OVERRIDES = {
+  // The home page is the only route with real work above the fold (hero
+  // image, character rail). Locally it measures 95-97; the shared CI runner's
+  // first run of PR #107 scored 88 then 94 with no code change, so the floor
+  // sits 2 below the lowest CI attempt. A regression that matters (losing the
+  // prerender, #104) lands far below this.
+  "/": { performance: 86 },
   // Clerk boots on /pricing (the plan buttons are auth-aware) and, with the
   // dummy CI publishable key, its dev_browser handshake returns 400 -> one
   // "errors-in-console" hit -> best-practices 96. Production, with a real key,
