@@ -29,3 +29,6 @@ log.txt
 
 # Remember plugin local scratch (logs, buffers, tmp)
 .remember/
+
+# Lighthouse CI reports (scripts/check-lighthouse-score.mjs)
+artifacts/

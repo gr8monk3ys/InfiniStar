@@ -128,3 +128,74 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 7
+
+  # Lighthouse score floors against the production build, so the 2026-09-13..16
+  # performance work (#104/#105: prerendered home/pricing pages, inlined route
+  # CSS) cannot silently regress. Same env recipe as e2e: no database, dummy
+  # Clerk keys, SKIP_CLERK_AUTH_HANDSHAKE so the middleware does not redirect.
+  # Floors and the home-document byte cap live in scripts/check-lighthouse-score.mjs.
+  lighthouse:
+    name: Lighthouse (score floors)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.8"
+
+      - name: Load CI environment
+        run: |
+          while IFS='=' read -r key value; do
+            [[ "$key" =~ ^#.*$ || -z "$key" ]] && continue
+            key=$(echo "$key" | xargs)
+            value=$(echo "$value" | xargs)
+            [ -n "$key" ] && echo "$key=$value" >> "$GITHUB_ENV"
+          done < .env.ci.example
+
+      - run: bun install --frozen-lockfile
+
+      - name: Build application
+        run: bun run build
+        env:
+          SKIP_ENV_VALIDATION: "1"
+          SKIP_CLERK_AUTH_HANDSHAKE: "1"
+          NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
+
+      - name: Start application
+        env:
+          SKIP_ENV_VALIDATION: "1"
+          SKIP_CLERK_AUTH_HANDSHAKE: "1"
+          NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
+          PORT: "3000"
+        run: |
+          bun run start > /tmp/infinistar.log 2>&1 &
+          echo $! > /tmp/infinistar.pid
+          for _ in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:3000/ > /dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          cat /tmp/infinistar.log
+          exit 1
+
+      - name: Enforce Lighthouse scores
+        run: bun run lighthouse:ci
+
+      - name: Upload Lighthouse artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-artifacts
+          path: artifacts/lighthouse
+          retention-days: 7
+
+      - name: Stop application
+        if: always()
+        run: |
+          if [ -f /tmp/infinistar.pid ]; then
+            kill "$(cat /tmp/infinistar.pid)" || true
+          fi
+          cat /tmp/infinistar.log || true

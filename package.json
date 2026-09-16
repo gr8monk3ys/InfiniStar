@@ -33,7 +33,8 @@
     "prepare": "node scripts/prepare.mjs",
     "model:check": "bun scripts/check-model-provider.ts",
     "portraits": "node scripts/generate-character-portraits.mjs",
-    "env:check": "bun scripts/check-production-env.ts"
+    "env:check": "bun scripts/check-production-env.ts",
+    "lighthouse:ci": "node scripts/check-lighthouse-score.mjs http://127.0.0.1:3000 / /pricing /privacy /terms"
   },
   "lint-staged": {
     "*.{ts,tsx}": [

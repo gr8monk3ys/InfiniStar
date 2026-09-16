@@ -3,6 +3,9 @@ import { config } from "@/app/lib/config"
 export const metadata = {
   title: "Privacy Policy | InfiniStar",
   description: "InfiniStar privacy policy — how we collect and use your data.",
+  alternates: {
+    canonical: "/privacy",
+  },
 }
 
 export default function PrivacyPage() {
