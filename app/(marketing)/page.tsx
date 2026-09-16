@@ -13,6 +13,11 @@ import {
 } from "./_components/HomeSections"
 import { MarketplaceSection } from "./_components/MarketplaceSection"
 
+// ISR: the landing page has no per-user data (the header resolves sign-in
+// state on the client), so it is prerendered and revalidated hourly. The two
+// queries below run at build and on revalidation, not per request.
+export const revalidate = 3600
+
 export const metadata = {
   title: "InfiniStar — Chat with AI Characters",
   description:
