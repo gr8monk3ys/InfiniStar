@@ -1,6 +1,6 @@
-import { withSentryConfig } from "@sentry/nextjs"
 import path from "path"
 import { fileURLToPath } from "url"
+import { withSentryConfig } from "@sentry/nextjs"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -194,6 +194,15 @@ const nextConfig = {
   turbopack: {
     root: __dirname,
   },
+  experimental: {
+    // Inline the route's CSS into the document instead of linking it. Over
+    // one HTTP/2 connection the 15 KB stylesheet shared bandwidth with two
+    // preloaded fonts and twenty script chunks and did not finish until
+    // ~2.0 s on a throttled mobile profile; first paint waited for it. Inlined,
+    // the styles arrive with the HTML. The CSP's style-src already carries
+    // 'unsafe-inline', so the inlined <style> is permitted.
+    inlineCss: true,
+  },
   async headers() {
     return [
       {
@@ -249,6 +258,4 @@ const sentryPluginOptions = shouldEnableSentry
     }
   : undefined
 
-export default shouldEnableSentry
-  ? withSentryConfig(nextConfig, sentryPluginOptions)
-  : nextConfig
+export default shouldEnableSentry ? withSentryConfig(nextConfig, sentryPluginOptions) : nextConfig

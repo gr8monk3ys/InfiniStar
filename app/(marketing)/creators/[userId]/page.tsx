@@ -7,18 +7,33 @@ import { HiCalendar, HiChatBubbleLeftRight, HiGlobeAlt } from "react-icons/hi2"
 
 import { siteConfig } from "@/config/site"
 import { toMonthlyRecurringCents } from "@/app/lib/creator-monetization"
-import { matureAccess } from "@/app/lib/nsfw"
 import prisma from "@/app/lib/prismadb"
 import { buildCreatorJsonLd } from "@/app/lib/structured-data"
-import getCurrentUser from "@/app/actions/getCurrentUser"
-import { PublicCharacterCard } from "@/app/components/characters/PublicCharacterCard"
 import { CreatorSupportCard } from "@/app/components/monetization/CreatorSupportCard"
 
+import { CreatorCharacterGrid } from "./CreatorCharacterGrid"
 import FollowCreatorButton from "./FollowCreatorButton"
+import { MatureCreatorCharacters } from "./MatureCreatorCharacters"
 
-// ISR: render is read-only, so the creator profile can be cached and revalidated
-// hourly instead of rendered per request.
+/**
+ * ISR. The page reads no request state, so the HTML is the same for every
+ * visitor and can be cached for an hour. It used to call `getCurrentUser()`
+ * for the mature-content filter and the viewer's follow/subscription rows,
+ * which made `revalidate` a no-op.
+ *
+ * What was per-user moved to the client, resolved from `/api/auth/session`
+ * after hydration:
+ * - follow state and "this is you": `FollowCreatorButton`
+ * - the viewer's own subscription: `CreatorSupportCard`
+ * - mature characters in the grid: `MatureCreatorCharacters` via `actions.tsx`
+ */
 export const revalidate = 3600
+
+// No ids are listed at build (the build has no database); each profile is
+// rendered on first request and cached from then on.
+export function generateStaticParams() {
+  return []
+}
 
 export async function generateMetadata({ params }: CreatorProfilePageProps): Promise<Metadata> {
   const { userId } = await params
@@ -41,33 +56,12 @@ export async function generateMetadata({ params }: CreatorProfilePageProps): Pro
   }
 }
 
-interface CreatorCharacter {
-  id: string
-  slug: string
-  name: string
-  tagline: string | null
-  avatarUrl: string | null
-  category: string
-  usageCount: number
-  likeCount: number
-  isNsfw?: boolean
-  createdBy: {
-    id: string
-    name: string | null
-    image: string | null
-  } | null
-}
-
 interface CreatorProfilePageProps {
   params: Promise<{ userId: string }>
 }
 
 export default async function CreatorProfilePage({ params }: CreatorProfilePageProps) {
   const { userId } = await params
-
-  const viewerUser = await getCurrentUser()
-  const access = matureAccess(viewerUser)
-  const publicCharacterWhere = { isPublic: true, ...access.visibilityFilter }
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -79,7 +73,9 @@ export default async function CreatorProfilePage({ params }: CreatorProfilePageP
       website: true,
       createdAt: true,
       characters: {
-        where: publicCharacterWhere,
+        // The cached document is SFW for everyone; a viewer with the mature
+        // preference gets the full grid from the client after hydration.
+        where: { isPublic: true, isNsfw: false },
         orderBy: [{ usageCount: "desc" }, { createdAt: "desc" }],
         include: {
           createdBy: {
@@ -92,7 +88,7 @@ export default async function CreatorProfilePage({ params }: CreatorProfilePageP
 
   if (!user) notFound()
 
-  const [tips, subscriptions, viewerSubscription, followerCount, viewerFollow] = await Promise.all([
+  const [tips, subscriptions, followerCount, chatTotals] = await Promise.all([
     prisma.creatorTip.findMany({
       where: {
         creatorId: user.id,
@@ -118,43 +114,18 @@ export default async function CreatorProfilePage({ params }: CreatorProfilePageP
       },
       take: 500,
     }),
-    viewerUser?.id
-      ? prisma.creatorSubscription.findUnique({
-          where: {
-            supporterId_creatorId: {
-              supporterId: viewerUser.id,
-              creatorId: user.id,
-            },
-          },
-          select: {
-            id: true,
-            tierName: true,
-            amountCents: true,
-            interval: true,
-            status: true,
-          },
-        })
-      : Promise.resolve(null),
     prisma.userFollow.count({
       where: { followingId: user.id },
     }),
-    viewerUser?.id
-      ? prisma.userFollow.findUnique({
-          where: {
-            followerId_followingId: {
-              followerId: viewerUser.id,
-              followingId: user.id,
-            },
-          },
-          select: { followerId: true },
-        })
-      : Promise.resolve(null),
+    // Across every public character, mature ones included: an aggregate
+    // reveals nothing and should not shrink for viewers who cannot see them.
+    prisma.character.aggregate({
+      where: { createdById: user.id, isPublic: true },
+      _sum: { usageCount: true },
+    }),
   ])
 
-  const totalChats = user.characters.reduce(
-    (sum: number, c: { usageCount: number }) => sum + c.usageCount,
-    0
-  )
+  const totalChats = chatTotals._sum.usageCount ?? 0
 
   const summary = {
     tipCount: tips.length,
@@ -231,34 +202,20 @@ export default async function CreatorProfilePage({ params }: CreatorProfilePageP
         <FollowCreatorButton
           creatorId={user.id}
           creatorName={user.name || "Creator"}
-          initialIsFollowing={Boolean(viewerFollow)}
           initialFollowerCount={followerCount}
-          disabled={viewerUser?.id === user.id}
         />
       </div>
 
       {/* Characters Grid */}
-      <div>
-        <h2 className="mb-4 text-lg font-semibold">Characters ({user.characters.length})</h2>
-        {user.characters.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 py-12 text-center">
-            <p className="text-sm text-muted-foreground">No public characters yet.</p>
-          </div>
-        ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {user.characters.map((character: CreatorCharacter) => (
-              <PublicCharacterCard key={character.id} character={character} />
-            ))}
-          </div>
-        )}
-      </div>
+      <MatureCreatorCharacters creatorId={user.id}>
+        <CreatorCharacterGrid characters={user.characters} />
+      </MatureCreatorCharacters>
 
       <Suspense fallback={<CreatorSupportCardFallback creatorName={user.name || "Creator"} />}>
         <CreatorSupportCard
           creatorId={user.id}
           creatorName={user.name || "Creator"}
           initialSummary={summary}
-          initialViewerSubscription={viewerSubscription}
         />
       </Suspense>
     </section>

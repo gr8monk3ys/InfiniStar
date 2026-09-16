@@ -13,10 +13,17 @@ import { useCsrfToken } from "@/app/hooks/useCsrfToken"
 interface PricingCtaButtonProps {
   isSignedIn: boolean
   isPro: boolean
+  /** Hold the button while the plan is still being resolved. */
+  pending?: boolean
   className?: string
 }
 
-export function PricingCtaButton({ isSignedIn, isPro, className }: PricingCtaButtonProps) {
+export function PricingCtaButton({
+  isSignedIn,
+  isPro,
+  pending = false,
+  className,
+}: PricingCtaButtonProps) {
   const { token: csrfToken, loading: csrfLoading } = useCsrfToken()
   const [isLoading, setIsLoading] = useState(false)
 
@@ -91,7 +98,7 @@ export function PricingCtaButton({ isSignedIn, isPro, className }: PricingCtaBut
       type="button"
       size="lg"
       onClick={handleClick}
-      disabled={csrfLoading || isLoading}
+      disabled={pending || csrfLoading || isLoading}
       className={className}
     >
       {isLoading ? "Redirecting..." : isPro ? "Manage Billing" : "Upgrade to PRO"}

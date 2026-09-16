@@ -7,6 +7,66 @@ import prisma from "@/app/lib/prismadb"
 import { apiLimiter, getClientIdentifier } from "@/app/lib/rate-limit"
 import getCurrentUser from "@/app/actions/getCurrentUser"
 
+/**
+ * GET: whether the current viewer has liked this character, plus the live
+ * count. The public character page is cached, so its HTML cannot say "liked";
+ * the like button asks here after hydration. Signed-out viewers get
+ * `liked: false` and the count, so the answer is safe to give without auth.
+ */
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ characterId: string }> }
+): Promise<NextResponse> {
+  const identifier = getClientIdentifier(request)
+  const allowed = await Promise.resolve(apiLimiter.check(identifier))
+  if (!allowed) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 })
+  }
+
+  try {
+    const { characterId } = await params
+
+    const character = await prisma.character.findUnique({
+      where: { id: characterId },
+      select: { id: true, isPublic: true, isNsfw: true, likeCount: true },
+    })
+
+    if (!character || !character.isPublic) {
+      return NextResponse.json({ error: "Character not found" }, { status: 404 })
+    }
+
+    const currentUser = await getCurrentUser()
+    if (!currentUser) {
+      return NextResponse.json(
+        { liked: false, likeCount: character.likeCount },
+        { headers: { "Cache-Control": "private, no-store" } }
+      )
+    }
+
+    if (character.isNsfw && !canAccessNsfw(currentUser)) {
+      return NextResponse.json({ error: "NSFW content is not enabled." }, { status: 403 })
+    }
+
+    const existing = await prisma.characterLike.findUnique({
+      where: {
+        userId_characterId: {
+          userId: currentUser.id,
+          characterId,
+        },
+      },
+      select: { userId: true },
+    })
+
+    return NextResponse.json(
+      { liked: Boolean(existing), likeCount: character.likeCount },
+      { headers: { "Cache-Control": "private, no-store" } }
+    )
+  } catch (error) {
+    apiLogger.error({ err: error }, "Failed to read character like state")
+    return NextResponse.json({ error: "Failed to read like state" }, { status: 500 })
+  }
+}
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ characterId: string }> }

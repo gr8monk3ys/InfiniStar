@@ -1,10 +1,11 @@
 "use client"
 
-import { useEffect, useState, useSyncExternalStore } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 
 import { buttonVariants } from "@/app/components/ui/button"
 import { ThemeToggleCompact } from "@/app/components/theme-toggle"
+import { useClerkSessionHint, type SignedInHint } from "@/app/hooks/useClerkSessionHint"
 
 /**
  * Sign-in state for the site header, resolved on the client.
@@ -27,34 +28,9 @@ import { ThemeToggleCompact } from "@/app/components/theme-toggle"
  *    covers the fallback-auth cookie, which is HttpOnly and has no hint).
  */
 
-type SignedInState = "unknown" | "signed-in" | "signed-out"
-
-function subscribe() {
-  // The cookie hint has no change event; the fetch below is the source of
-  // truth after hydration, so nothing to subscribe to.
-  return () => {}
-}
-
-function readClerkCookieHint(): SignedInState {
-  if (typeof document === "undefined") {
-    return "unknown"
-  }
-  // `__client_uat=<unix seconds>` when a Clerk client has a session,
-  // `__client_uat=0` when it does not. Multi-instance setups suffix the name.
-  const match = /(?:^|;\s*)__client_uat(?:_[A-Za-z0-9]+)?=([^;]*)/.exec(document.cookie)
-  if (!match) {
-    return "unknown"
-  }
-  return match[1] && match[1] !== "0" ? "signed-in" : "signed-out"
-}
-
-function getServerSnapshot(): SignedInState {
-  return "unknown"
-}
-
 export function HeaderActions() {
-  const cookieHint = useSyncExternalStore(subscribe, readClerkCookieHint, getServerSnapshot)
-  const [confirmed, setConfirmed] = useState<SignedInState>("unknown")
+  const cookieHint = useClerkSessionHint()
+  const [confirmed, setConfirmed] = useState<SignedInHint>("unknown")
 
   useEffect(() => {
     const controller = new AbortController()

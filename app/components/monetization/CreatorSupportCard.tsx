@@ -35,7 +35,12 @@ interface CreatorSupportCardProps {
   creatorId: string
   creatorName: string
   initialSummary: SupportSummary
-  initialViewerSubscription: ViewerSubscription | null
+  /**
+   * The viewer's own subscription, when the caller knows it. The cached
+   * creator page does not, so it leaves this out and the card refreshes from
+   * `/api/creators/[id]/monetization/summary` once the session is signed in.
+   */
+  initialViewerSubscription?: ViewerSubscription | null
 }
 
 /**
@@ -59,7 +64,7 @@ function CreatorSupportCardInner({
   creatorId,
   creatorName,
   initialSummary,
-  initialViewerSubscription,
+  initialViewerSubscription = null,
 }: CreatorSupportCardProps) {
   const { isSignedIn } = useAppAuth()
   const pathname = usePathname()
@@ -77,16 +82,20 @@ function CreatorSupportCardInner({
   )
 
   const refreshSummary = useCallback(async () => {
-    const response = await fetch(`/api/creators/${creatorId}/monetization/summary`)
-    if (!response.ok) {
-      return
+    try {
+      const response = await fetch(`/api/creators/${creatorId}/monetization/summary`)
+      if (!response.ok) {
+        return
+      }
+      const payload = (await response.json()) as {
+        summary: SupportSummary
+        viewerSubscription: ViewerSubscription | null
+      }
+      setSummary(payload.summary)
+      setViewerSubscription(payload.viewerSubscription)
+    } catch {
+      // Best-effort: the server-rendered summary stays up.
     }
-    const payload = (await response.json()) as {
-      summary: SupportSummary
-      viewerSubscription: ViewerSubscription | null
-    }
-    setSummary(payload.summary)
-    setViewerSubscription(payload.viewerSubscription)
   }, [creatorId])
 
   async function handleTip(amountCents: number) {
@@ -202,6 +211,12 @@ function CreatorSupportCardInner({
       setIsLoading(false)
     }
   }
+
+  useEffect(() => {
+    if (isSignedIn) {
+      void refreshSummary()
+    }
+  }, [isSignedIn, refreshSummary])
 
   useEffect(() => {
     const supportStatus = searchParams.get("support")

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import toast from "react-hot-toast"
 
@@ -11,24 +11,53 @@ import { useCsrfToken } from "@/app/hooks/useCsrfToken"
 interface FollowCreatorButtonProps {
   creatorId: string
   creatorName: string
-  initialIsFollowing: boolean
+  /**
+   * Known follow state, when the caller has it. The cached creator page does
+   * not — its HTML is shared by every visitor — so it leaves this out and the
+   * button asks `GET /api/creators/[id]/follow` once the session says who is
+   * looking.
+   */
+  initialIsFollowing?: boolean
   initialFollowerCount: number
-  disabled?: boolean
 }
 
 export default function FollowCreatorButton({
   creatorId,
   creatorName,
-  initialIsFollowing,
+  initialIsFollowing = false,
   initialFollowerCount,
-  disabled = false,
 }: FollowCreatorButtonProps) {
-  const { userId } = useAppAuth()
+  const { userId, isSignedInHint } = useAppAuth()
   const { token: csrfToken } = useCsrfToken()
 
   const [isFollowing, setIsFollowing] = useState(initialIsFollowing)
   const [followerCount, setFollowerCount] = useState(initialFollowerCount)
   const [isLoading, setIsLoading] = useState(false)
+
+  // A creator cannot follow themselves; the page cannot know who is looking.
+  const disabled = userId === creatorId
+
+  useEffect(() => {
+    if (!userId) return
+
+    const controller = new AbortController()
+    fetch(`/api/creators/${creatorId}/follow`, {
+      cache: "no-store",
+      credentials: "include",
+      signal: controller.signal,
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { isFollowing?: boolean; followerCount?: number } | null) => {
+        if (!data) return
+        if (typeof data.isFollowing === "boolean") setIsFollowing(data.isFollowing)
+        if (typeof data.followerCount === "number") setFollowerCount(data.followerCount)
+      })
+      .catch(() => {
+        // Unknown follow state reads as "not following", same as signed out.
+      })
+
+    return () => controller.abort()
+  }, [creatorId, userId])
 
   const handleToggleFollow = async () => {
     if (!csrfToken) {
@@ -61,7 +90,9 @@ export default function FollowCreatorButton({
     }
   }
 
-  if (!userId) {
+  // The hint picks the layout at hydration so a signed-in visitor does not see
+  // "Sign in to follow" flash; the real user id gates the request below.
+  if (!userId && !isSignedInHint) {
     return (
       <div className="flex items-center gap-3">
         <Button asChild size="sm" variant="outline">
@@ -80,9 +111,9 @@ export default function FollowCreatorButton({
         type="button"
         size="sm"
         variant={isFollowing ? "secondary" : "default"}
-        disabled={disabled || isLoading}
+        disabled={disabled || isLoading || !userId}
         onClick={() => {
-          if (disabled) return
+          if (disabled || !userId) return
           handleToggleFollow().catch(() => {
             // handled in function
           })
