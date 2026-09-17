@@ -3,6 +3,9 @@ import { config } from "@/app/lib/config"
 export const metadata = {
   title: "Terms of Service | InfiniStar",
   description: "InfiniStar terms of service — the rules for using our platform.",
+  alternates: {
+    canonical: "/terms",
+  },
 }
 
 export default function TermsPage() {
