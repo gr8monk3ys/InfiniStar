@@ -187,6 +187,16 @@ function buildSecurityHeaders() {
 const nextConfig = {
   output: "standalone",
   reactStrictMode: true,
+  // Inlined into the browser bundle at build time so app/lib/sentry-enabled.ts
+  // can tell a deploy from a laptop on the client too. Vercel only guarantees
+  // the unprefixed VERCEL_ENV; whether NEXT_PUBLIC_VERCEL_ENV reaches the
+  // client depends on a per-project "expose system environment variables"
+  // setting, so this derives it here instead of depending on that setting
+  // being on. Empty string anywhere Vercel is not building, which is what
+  // closes the Sentry gate.
+  env: {
+    NEXT_PUBLIC_VERCEL_ENV: process.env.NEXT_PUBLIC_VERCEL_ENV || process.env.VERCEL_ENV || "",
+  },
   // The kit's `import` condition points at its TypeScript source, so Next has
   // to compile it like first-party code.
   transpilePackages: ["@gr8monk3ys/next-kit"],
