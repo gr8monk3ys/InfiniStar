@@ -10,7 +10,18 @@ import {
   CREATOR_TIP_AMOUNTS_CENTS,
   formatCurrencyFromCents,
 } from "@/app/lib/creator-monetization"
+import { formatNumber } from "@/app/lib/intl-format"
 import { monetizationConfig } from "@/app/lib/monetization"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/app/components/ui/alert-dialog"
 import { Button } from "@/app/components/ui/button"
 import { useAppAuth } from "@/app/hooks/useAppAuth"
 import { useCsrfToken, withCsrfHeader } from "@/app/hooks/useCsrfToken"
@@ -75,6 +86,7 @@ function CreatorSupportCardInner({
   const [summary, setSummary] = useState(initialSummary)
   const [viewerSubscription, setViewerSubscription] = useState(initialViewerSubscription)
   const [isLoading, setIsLoading] = useState(false)
+  const [confirmCancelOpen, setConfirmCancelOpen] = useState(false)
 
   const monthlyPlans = useMemo(
     () => CREATOR_SUBSCRIPTION_PLANS.filter((plan) => plan.interval === "MONTHLY"),
@@ -120,9 +132,9 @@ function CreatorSupportCardInner({
         }),
       })
 
-      const payload = await response.json()
+      const payload = await response.json().catch(() => ({}))
       if (!response.ok) {
-        throw new Error(payload.error || "Unable to send tip")
+        throw new Error(payload.error || "Couldn't send the tip. Try again.")
       }
 
       if (payload.url && typeof payload.url === "string") {
@@ -132,7 +144,7 @@ function CreatorSupportCardInner({
 
       toast.success(`Queued ${formatCurrencyFromCents(amountCents)} tip`)
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Unable to send tip")
+      toast.error(error instanceof Error ? error.message : "Couldn't send the tip. Try again.")
     } finally {
       setIsLoading(false)
     }
@@ -165,9 +177,9 @@ function CreatorSupportCardInner({
           interval: plan.interval,
         }),
       })
-      const payload = await response.json()
+      const payload = await response.json().catch(() => ({}))
       if (!response.ok) {
-        throw new Error(payload.error || "Unable to subscribe")
+        throw new Error(payload.error || "Couldn't start the membership. Try again.")
       }
 
       if (payload.url && typeof payload.url === "string") {
@@ -178,7 +190,9 @@ function CreatorSupportCardInner({
       toast.success(`Subscription started: ${plan.tierName}`)
       await refreshSummary()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Unable to subscribe")
+      toast.error(
+        error instanceof Error ? error.message : "Couldn't start the membership. Try again."
+      )
     } finally {
       setIsLoading(false)
     }
@@ -198,15 +212,17 @@ function CreatorSupportCardInner({
           "Content-Type": "application/json",
         }),
       })
-      const payload = await response.json()
+      const payload = await response.json().catch(() => ({}))
       if (!response.ok) {
-        throw new Error(payload.error || "Unable to cancel subscription")
+        throw new Error(payload.error || "Couldn't cancel the membership. Try again.")
       }
 
       toast.success("Subscription canceled")
       await refreshSummary()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Unable to cancel subscription")
+      toast.error(
+        error instanceof Error ? error.message : "Couldn't cancel the membership. Try again."
+      )
     } finally {
       setIsLoading(false)
     }
@@ -243,7 +259,7 @@ function CreatorSupportCardInner({
   return (
     <div className="rounded-xl border bg-card p-6 shadow-sm">
       <div className="mb-4 flex items-center gap-2">
-        <HiHeart className="size-5 text-primary" />
+        <HiHeart className="size-5 text-primary" aria-hidden="true" />
         <h2 className="text-lg font-semibold">Support {creatorName}</h2>
       </div>
       <p className="text-sm text-muted-foreground">
@@ -253,13 +269,15 @@ function CreatorSupportCardInner({
       <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
         <div className="rounded-lg border bg-muted/30 p-3">
           <p className="text-muted-foreground">Total tips</p>
-          <p className="mt-1 text-sm font-semibold">
+          <p className="mt-1 text-sm font-semibold tabular-nums">
             {formatCurrencyFromCents(summary.tipsTotalCents)}
           </p>
         </div>
         <div className="rounded-lg border bg-muted/30 p-3">
           <p className="text-muted-foreground">Active supporters</p>
-          <p className="mt-1 text-sm font-semibold">{summary.activeSubscriberCount}</p>
+          <p className="mt-1 text-sm font-semibold tabular-nums">
+            {formatNumber(summary.activeSubscriberCount)}
+          </p>
         </div>
       </div>
       <p className="mt-2 text-xs text-muted-foreground">
@@ -281,7 +299,7 @@ function CreatorSupportCardInner({
               disabled={isLoading}
               onClick={() => handleTip(amount)}
             >
-              {formatCurrencyFromCents(amount)}
+              <span suppressHydrationWarning>{formatCurrencyFromCents(amount)}</span>
             </Button>
           ))}
         </div>
@@ -303,7 +321,9 @@ function CreatorSupportCardInner({
               className="w-full justify-between"
             >
               <span>{plan.tierName}</span>
-              <span>{formatCurrencyFromCents(plan.amountCents)}/mo</span>
+              <span className="tabular-nums" suppressHydrationWarning>
+                {formatCurrencyFromCents(plan.amountCents)}/mo
+              </span>
             </Button>
           ))}
         </div>
@@ -312,7 +332,7 @@ function CreatorSupportCardInner({
       {viewerSubscription?.status === "ACTIVE" && (
         <div className="mt-5 rounded-lg border border-emerald-200 bg-emerald-50/60 p-3">
           <div className="flex items-center gap-2 text-sm font-medium text-emerald-700">
-            <HiSparkles className="size-4" />
+            <HiSparkles className="size-4" aria-hidden="true" />
             Active Supporter
           </div>
           <p className="mt-1 text-xs text-emerald-700">
@@ -324,13 +344,43 @@ function CreatorSupportCardInner({
             variant="ghost"
             size="sm"
             className="mt-2 h-8 px-2 text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800"
-            onClick={handleCancelSubscription}
+            onClick={() => setConfirmCancelOpen(true)}
             disabled={isLoading}
           >
             Cancel Membership
           </Button>
         </div>
       )}
+
+      {isLoading ? (
+        <p className="mt-3 text-xs text-muted-foreground" role="status">
+          Working on it…
+        </p>
+      ) : null}
+
+      {/* Cancelling ends paid support: confirm before doing it */}
+      <AlertDialog open={confirmCancelOpen} onOpenChange={setConfirmCancelOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel Your Membership?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Your {viewerSubscription?.tierName} membership with {creatorName} ends and you stop
+              supporting them. You can join again later.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep Membership</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                void handleCancelSubscription()
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Cancel Membership
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

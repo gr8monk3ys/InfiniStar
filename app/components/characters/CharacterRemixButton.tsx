@@ -47,13 +47,15 @@ export function CharacterRemixButton({ characterId, slug }: { characterId: strin
       } | null
 
       if (!response.ok) {
-        throw new Error(data?.error || "Failed to remix character")
+        throw new Error(data?.error || "Couldn't remix the character. Try again.")
       }
 
       toast.success("Character remixed")
       router.push(`/dashboard/characters/${data?.id}/edit`)
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to remix character")
+      toast.error(
+        error instanceof Error ? error.message : "Couldn't remix the character. Try again."
+      )
     } finally {
       setIsLoading(false)
     }

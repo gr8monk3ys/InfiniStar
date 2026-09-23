@@ -15,6 +15,12 @@ import { getAllPersonalities, type PersonalityType } from "@/app/lib/ai-personal
 import Modal from "@/app/components/ui/modal"
 import createAIConversation from "@/app/actions/createAIConversation"
 
+// Static catalogues: built once per module, not on every render.
+const PERSONALITIES = getAllPersonalities()
+const PRESET_PERSONALITIES = PERSONALITIES.filter((p) => p.id !== "custom")
+const PERSONALITY_BY_ID = new Map(PERSONALITIES.map((p) => [p.id, p]))
+const MODELS = getAllModels()
+
 interface PersonalitySelectionModalProps {
   isOpen: boolean
   onClose: () => void
@@ -26,12 +32,9 @@ const PersonalitySelectionModal: React.FC<PersonalitySelectionModalProps> = ({
 }) => {
   const router = useRouter()
   const [selectedPersonality, setSelectedPersonality] = useState<PersonalityType>("assistant")
-  const [selectedModel, setSelectedModel] = useState<ModelType>(getDefaultModel())
+  const [selectedModel, setSelectedModel] = useState<ModelType>(getDefaultModel)
   const [customPrompt, setCustomPrompt] = useState("")
   const [isLoading, setIsLoading] = useState(false)
-
-  const personalities = getAllPersonalities()
-  const models = getAllModels()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -50,20 +53,20 @@ const PersonalitySelectionModal: React.FC<PersonalitySelectionModalProps> = ({
         router.refresh()
         onClose()
       } else {
-        toast.error("Failed to create AI conversation")
+        toast.error("Couldn't create the AI conversation. Try again.")
       }
     } catch (error) {
       console.error("Error creating AI conversation:", error)
-      toast.error("Something went wrong")
+      toast.error("Something went wrong. Try again.")
     } finally {
       setIsLoading(false)
     }
   }
 
-  const selectedConfig = personalities.find((p) => p.id === selectedPersonality)
+  const selectedConfig = PERSONALITY_BY_ID.get(selectedPersonality)
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose}>
+    <Modal isOpen={isOpen} onClose={onClose} ariaLabel="Create AI Conversation">
       <form onSubmit={handleSubmit}>
         <div className="space-y-6">
           <div className="border-b border-border pb-4">
@@ -76,16 +79,17 @@ const PersonalitySelectionModal: React.FC<PersonalitySelectionModalProps> = ({
           </div>
 
           {/* Model Selection */}
-          <div>
-            <label className="mb-3 block text-sm font-medium leading-6 text-foreground">
+          <fieldset>
+            <legend className="mb-3 block text-sm font-medium leading-6 text-foreground">
               AI Model
-            </label>
+            </legend>
             <div className="grid grid-cols-1 gap-3">
-              {models.map((model) => (
+              {MODELS.map((model) => (
                 <button
                   key={model.id}
                   type="button"
                   onClick={() => setSelectedModel(model.id)}
+                  aria-pressed={selectedModel === model.id}
                   className={`
                     flex items-start gap-3 rounded-lg border-2 p-4 text-left transition
                     ${
@@ -95,7 +99,9 @@ const PersonalitySelectionModal: React.FC<PersonalitySelectionModalProps> = ({
                     }
                   `}
                 >
-                  <span className="text-2xl">{getModelIcon(model.speed)}</span>
+                  <span className="text-2xl" aria-hidden="true">
+                    {getModelIcon(model.speed)}
+                  </span>
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium text-foreground">{model.name}</span>
@@ -115,22 +121,21 @@ const PersonalitySelectionModal: React.FC<PersonalitySelectionModalProps> = ({
                 </button>
               ))}
             </div>
-          </div>
+          </fieldset>
 
           {/* Personality Grid */}
-          <div>
-            <label className="mb-3 block text-sm font-medium leading-6 text-foreground">
+          <fieldset>
+            <legend className="mb-3 block text-sm font-medium leading-6 text-foreground">
               Personality Type
-            </label>
+            </legend>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              {personalities
-                .filter((p) => p.id !== "custom")
-                .map((personality) => (
-                  <button
-                    key={personality.id}
-                    type="button"
-                    onClick={() => setSelectedPersonality(personality.id)}
-                    className={`
+              {PRESET_PERSONALITIES.map((personality) => (
+                <button
+                  key={personality.id}
+                  type="button"
+                  onClick={() => setSelectedPersonality(personality.id)}
+                  aria-pressed={selectedPersonality === personality.id}
+                  className={`
                     flex flex-col items-center gap-2 rounded-lg border-2 p-4 text-center transition
                     ${
                       selectedPersonality === personality.id
@@ -138,20 +143,23 @@ const PersonalitySelectionModal: React.FC<PersonalitySelectionModalProps> = ({
                         : "border-border hover:border-primary/30"
                     }
                   `}
-                  >
-                    <span className="text-3xl">{personality.icon}</span>
-                    <span className="text-sm font-medium text-foreground">{personality.name}</span>
-                    <span className="text-xs text-muted-foreground">{personality.description}</span>
-                  </button>
-                ))}
+                >
+                  <span className="text-3xl" aria-hidden="true">
+                    {personality.icon}
+                  </span>
+                  <span className="text-sm font-medium text-foreground">{personality.name}</span>
+                  <span className="text-xs text-muted-foreground">{personality.description}</span>
+                </button>
+              ))}
             </div>
-          </div>
+          </fieldset>
 
           {/* Custom Personality Option */}
           <div>
             <button
               type="button"
               onClick={() => setSelectedPersonality("custom")}
+              aria-pressed={selectedPersonality === "custom"}
               className={`
                 flex w-full flex-col items-start gap-2 rounded-lg border-2 p-4 transition
                 ${
@@ -162,7 +170,9 @@ const PersonalitySelectionModal: React.FC<PersonalitySelectionModalProps> = ({
               `}
             >
               <div className="flex items-center gap-2">
-                <span className="text-2xl">🎨</span>
+                <span className="text-2xl" aria-hidden="true">
+                  🎨
+                </span>
                 <span className="text-sm font-medium text-foreground">Custom Personality</span>
               </div>
               <span className="text-xs text-muted-foreground">
@@ -181,7 +191,10 @@ const PersonalitySelectionModal: React.FC<PersonalitySelectionModalProps> = ({
                 <div className="mt-2">
                   <textarea
                     id="customPrompt"
+                    name="customPrompt"
+                    autoComplete="off"
                     rows={4}
+                    maxLength={4000}
                     value={customPrompt}
                     onChange={(e) => setCustomPrompt(e.target.value)}
                     className="block w-full rounded-md border border-input bg-background px-3 py-1.5 text-foreground shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:text-sm sm:leading-6"

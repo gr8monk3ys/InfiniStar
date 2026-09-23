@@ -68,7 +68,7 @@ const StatusModal: React.FC<StatusModalProps> = ({ isOpen, onClose }) => {
       onClose()
     } catch (error: unknown) {
       const axiosError = error as { response?: { data?: { error?: string } } }
-      toast.error(axiosError.response?.data?.error || "Failed to update status")
+      toast.error(axiosError.response?.data?.error || "Couldn't update your status. Try again.")
     } finally {
       setIsLoading(false)
     }
@@ -102,39 +102,41 @@ const StatusModal: React.FC<StatusModalProps> = ({ isOpen, onClose }) => {
       onClose()
     } catch (error: unknown) {
       const axiosError = error as { response?: { data?: { error?: string } } }
-      toast.error(axiosError.response?.data?.error || "Failed to clear status")
+      toast.error(axiosError.response?.data?.error || "Couldn't clear your status. Try again.")
     } finally {
       setIsLoading(false)
     }
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose}>
+    <Modal isOpen={isOpen} onClose={onClose} ariaLabel="Set Your Status">
       <form onSubmit={handleSubmit}>
         <div className="space-y-6">
           <div className="flex items-center justify-between border-b border-border pb-4">
-            <h3 className="text-lg font-medium leading-6 text-foreground">Set your status</h3>
+            <h3 className="text-lg font-medium leading-6 text-foreground">Set Your Status</h3>
             <button
               type="button"
               onClick={onClose}
+              aria-label="Close"
               className="rounded-md text-muted-foreground transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <HiOutlineXMark size={24} />
+              <HiOutlineXMark size={24} aria-hidden="true" />
             </button>
           </div>
 
           <div className="space-y-4">
             {/* Emoji Picker */}
-            <div>
-              <label className="mb-2 block text-sm font-medium text-foreground">
+            <fieldset>
+              <legend className="mb-2 block text-sm font-medium text-foreground">
                 Choose an emoji
-              </label>
+              </legend>
               <div className="grid grid-cols-8 gap-2">
                 {COMMON_EMOJIS.map((emoji) => (
                   <button
                     key={emoji}
                     type="button"
                     onClick={() => setCustomStatusEmoji(emoji)}
+                    aria-pressed={customStatusEmoji === emoji}
                     className={`flex items-center justify-center rounded-md p-2 text-2xl transition ${
                       customStatusEmoji === emoji
                         ? "bg-primary/10 ring-2 ring-primary"
@@ -151,10 +153,10 @@ const StatusModal: React.FC<StatusModalProps> = ({ isOpen, onClose }) => {
                   onClick={() => setCustomStatusEmoji("")}
                   className="mt-2 text-sm text-muted-foreground transition hover:text-foreground"
                 >
-                  Clear emoji
+                  Clear Emoji
                 </button>
               )}
-            </div>
+            </fieldset>
 
             {/* Status Text */}
             <div>
@@ -163,6 +165,8 @@ const StatusModal: React.FC<StatusModalProps> = ({ isOpen, onClose }) => {
               </label>
               <input
                 id="status"
+                name="customStatus"
+                autoComplete="off"
                 type="text"
                 value={customStatus}
                 onChange={(e) => setCustomStatus(e.target.value)}
@@ -171,7 +175,7 @@ const StatusModal: React.FC<StatusModalProps> = ({ isOpen, onClose }) => {
                 placeholder="e.g., In a meeting, Working from home, On vacation…"
                 maxLength={100}
               />
-              <p className="mt-1 text-sm text-muted-foreground">
+              <p className="mt-1 text-sm tabular-nums text-muted-foreground">
                 {customStatus.length}/100 characters
               </p>
             </div>
@@ -196,7 +200,7 @@ const StatusModal: React.FC<StatusModalProps> = ({ isOpen, onClose }) => {
               disabled={isLoading || (!customStatus && !customStatusEmoji)}
               className="rounded-md px-4 py-2 text-sm font-medium text-foreground transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Clear status
+              Clear Status
             </button>
             <div className="flex gap-3">
               <button
@@ -212,7 +216,7 @@ const StatusModal: React.FC<StatusModalProps> = ({ isOpen, onClose }) => {
                 disabled={isLoading || (!customStatus && !customStatusEmoji)}
                 className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {isLoading ? "Saving…" : "Save status"}
+                {isLoading ? "Saving…" : "Save Status"}
               </button>
             </div>
           </div>

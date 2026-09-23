@@ -51,6 +51,7 @@ const TagSelector: React.FC<TagSelectorProps> = ({
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [newTagName, setNewTagName] = useState("")
   const [newTagColor, setNewTagColor] = useState<TagColor>("blue")
+  const [isCreating, setIsCreating] = useState(false)
 
   const { tags: allTags, isLoading: isLoadingTags, createTag } = useTags()
   const { addTag, removeTag, isLoading: isUpdating } = useConversationTags(conversationId)
@@ -79,20 +80,25 @@ const TagSelector: React.FC<TagSelectorProps> = ({
   )
 
   const handleCreateTag = useCallback(async () => {
-    if (!newTagName.trim()) return
+    if (!newTagName.trim() || isCreating) return
 
-    const createdTag = await createTag(newTagName.trim(), newTagColor)
-    if (createdTag) {
-      // Automatically add the new tag to the conversation
-      const success = await addTag(createdTag.id)
-      if (success && onTagsChange) {
-        onTagsChange([...currentTags, createdTag])
+    setIsCreating(true)
+    try {
+      const createdTag = await createTag(newTagName.trim(), newTagColor)
+      if (createdTag) {
+        // Automatically add the new tag to the conversation
+        const success = await addTag(createdTag.id)
+        if (success && onTagsChange) {
+          onTagsChange([...currentTags, createdTag])
+        }
+        setNewTagName("")
+        setNewTagColor("blue")
+        setShowCreateForm(false)
       }
-      setNewTagName("")
-      setNewTagColor("blue")
-      setShowCreateForm(false)
+    } finally {
+      setIsCreating(false)
     }
-  }, [newTagName, newTagColor, createTag, addTag, currentTags, onTagsChange])
+  }, [newTagName, newTagColor, isCreating, createTag, addTag, currentTags, onTagsChange])
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -118,7 +124,7 @@ const TagSelector: React.FC<TagSelectorProps> = ({
       title="Manage tags"
       aria-label="Manage conversation tags"
     >
-      <HiOutlineTag className={cn(size === "sm" ? "size-3.5" : "size-4")} />
+      <HiOutlineTag className={cn(size === "sm" ? "size-3.5" : "size-4")} aria-hidden="true" />
       <span className="hidden sm:inline">Tags</span>
     </button>
   )
@@ -140,14 +146,14 @@ const TagSelector: React.FC<TagSelectorProps> = ({
               onClick={() => setShowCreateForm(true)}
               className="inline-flex items-center gap-1 text-primary hover:underline"
             >
-              <HiPlus className="size-3" />
-              Create your first tag
+              <HiPlus className="size-3" aria-hidden="true" />
+              Create Your First Tag
             </button>
           </div>
         ) : (
           <>
             {/* Existing tags */}
-            <div className="max-h-48 overflow-y-auto">
+            <div className="max-h-48 overflow-y-auto overscroll-contain">
               {allTags.map((tag) => {
                 const isApplied = appliedTagIds.has(tag.id)
                 const colorScheme = TAG_COLORS[tag.color as TagColor] || TAG_COLORS.gray
@@ -166,15 +172,21 @@ const TagSelector: React.FC<TagSelectorProps> = ({
                       <div className="flex items-center gap-2">
                         <span
                           className={cn(
-                            "size-3 rounded-full",
+                            "size-3 shrink-0 rounded-full",
                             colorScheme.bg,
                             colorScheme.border,
                             "border"
                           )}
+                          aria-hidden="true"
                         />
                         <span className="truncate">{tag.name}</span>
                       </div>
-                      {isApplied && <HiCheck className="size-4 text-primary" />}
+                      {isApplied && (
+                        <>
+                          <HiCheck className="size-4 shrink-0 text-primary" aria-hidden="true" />
+                          <span className="sr-only">(applied)</span>
+                        </>
+                      )}
                     </div>
                   </DropdownMenuItem>
                 )
@@ -190,12 +202,16 @@ const TagSelector: React.FC<TagSelectorProps> = ({
                 onClick={(e) => e.stopPropagation()}
                 onKeyDown={(e) => e.stopPropagation()}
               >
+                {/* autoFocus: the user just chose "Create New Tag"; this is the only field. */}
                 <input
                   type="text"
+                  name="tagName"
+                  autoComplete="off"
+                  aria-label="New tag name"
                   value={newTagName}
                   onChange={(e) => setNewTagName(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder="Tag name"
+                  placeholder="e.g. Work…"
                   className="mb-2 w-full rounded-md border border-input bg-background px-2 py-1 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                   maxLength={30}
                   autoFocus
@@ -210,6 +226,7 @@ const TagSelector: React.FC<TagSelectorProps> = ({
                         key={color}
                         type="button"
                         onClick={() => setNewTagColor(color)}
+                        aria-pressed={newTagColor === color}
                         className={cn(
                           "size-5 rounded-full border-2 transition",
                           colorScheme.bg,
@@ -238,10 +255,10 @@ const TagSelector: React.FC<TagSelectorProps> = ({
                   <button
                     type="button"
                     onClick={handleCreateTag}
-                    disabled={!newTagName.trim()}
+                    disabled={!newTagName.trim() || isCreating}
                     className="flex-1 rounded-md bg-primary px-2 py-1 text-xs text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
                   >
-                    Create
+                    {isCreating ? "Creating…" : "Create Tag"}
                   </button>
                 </div>
               </div>
@@ -253,8 +270,8 @@ const TagSelector: React.FC<TagSelectorProps> = ({
                 }}
                 className="cursor-pointer"
               >
-                <HiPlus className="mr-2 size-4" />
-                Create new tag
+                <HiPlus className="mr-2 size-4" aria-hidden="true" />
+                Create New Tag
               </DropdownMenuItem>
             )}
           </>

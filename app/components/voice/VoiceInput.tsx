@@ -1,6 +1,13 @@
 "use client"
 
-import { useCallback, useEffect, useRef, type ReactElement } from "react"
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useSyncExternalStore,
+  type ReactElement,
+} from "react"
 import { HiXMark } from "react-icons/hi2"
 
 import { cn } from "@/app/lib/utils"
@@ -19,6 +26,19 @@ import {
 import { VoiceInputButton } from "./VoiceInputButton"
 import { VoiceLanguageSelectorCompact } from "./VoiceLanguageSelector"
 import { VoiceWaveform, VoiceWaveformDots } from "./VoiceWaveform"
+
+// Browser support never changes during a session, so there is nothing to subscribe to.
+const subscribeToNothing = () => () => {}
+const serverSnapshotUnsupported = () => false
+
+/**
+ * Whether the Web Speech API is available. The server (and hydration) render
+ * sees "unsupported", then the client re-renders with the real answer, so the
+ * two renders never disagree.
+ */
+function useVoiceInputSupported(): boolean {
+  return useSyncExternalStore(subscribeToNothing, isVoiceInputSupported, serverSnapshotUnsupported)
+}
 
 /**
  * Mode for handling transcribed text
@@ -91,8 +111,9 @@ export function VoiceInput({
   onStateChange,
   onError,
 }: VoiceInputProps): ReactElement | null {
-  const isSupported = isVoiceInputSupported()
-  const browserInfo = getBrowserSupportInfo()
+  const isSupported = useVoiceInputSupported()
+  // Only read on the unsupported branch, which the hydration render always takes.
+  const browserInfo = isSupported ? null : getBrowserSupportInfo()
   const previewRef = useRef<HTMLDivElement>(null)
 
   // Initialize voice input hook
@@ -123,26 +144,32 @@ export function VoiceInput({
     },
   })
 
-  // Handle keyboard shortcut for voice input
-  const shortcuts: KeyboardShortcut[] = enableShortcut
-    ? [
-        {
-          id: "toggle-voice-input",
-          name: "Toggle Voice Input",
-          description: "Start or stop voice input",
-          category: "messages",
-          key: "v",
-          modifierKey: true,
-          shiftKey: true,
-          allowInInput: true,
-          action: () => {
-            if (!disabled && isSupported) {
-              toggleListening()
-            }
-          },
-        },
-      ]
-    : []
+  // Handle keyboard shortcut for voice input. Memoized: the shortcuts hook
+  // re-subscribes its keydown listener whenever this array changes identity,
+  // and this component re-renders on every keystroke in the composer.
+  const shortcuts = useMemo<KeyboardShortcut[]>(
+    () =>
+      enableShortcut
+        ? [
+            {
+              id: "toggle-voice-input",
+              name: "Toggle Voice Input",
+              description: "Start or stop voice input",
+              category: "messages",
+              key: "v",
+              modifierKey: true,
+              shiftKey: true,
+              allowInInput: true,
+              action: () => {
+                if (!disabled && isSupported) {
+                  toggleListening()
+                }
+              },
+            },
+          ]
+        : [],
+    [enableShortcut, disabled, isSupported, toggleListening]
+  )
 
   useLegacyKeyboardShortcuts({ shortcuts, enabled: enableShortcut && !disabled })
 
@@ -160,29 +187,37 @@ export function VoiceInput({
   // Scroll preview into view when transcript updates
   useEffect(() => {
     if (previewRef.current && (transcript || interimTranscript)) {
-      previewRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" })
+      const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      previewRef.current.scrollIntoView({
+        behavior: reduceMotion ? "auto" : "smooth",
+        block: "nearest",
+      })
     }
   }, [transcript, interimTranscript])
 
   // If not supported, show a message
   if (!isSupported) {
+    const unsupportedMessage = browserInfo?.message ?? ""
     return (
-      <div className={cn("flex items-center gap-2", className)} role="alert" aria-live="polite">
+      <div className={cn("flex items-center gap-2", className)} role="status">
         <VoiceInputButton
           voiceState="idle"
           isSupported={false}
           onClick={() => {}}
           size={buttonSize}
-          errorMessage={browserInfo.message}
+          errorMessage={unsupportedMessage}
         />
-        <span className="sr-only">{browserInfo.message}</span>
+        {/* Differs between the server render and the browser; expected. */}
+        <span className="sr-only" suppressHydrationWarning>
+          {unsupportedMessage}
+        </span>
       </div>
     )
   }
 
   const _combinedTranscript = transcript + (interimTranscript ? ` ${interimTranscript}` : "")
   const showTranscriptPreview =
-    showPreview && state === "listening" && (transcript || interimTranscript)
+    showPreview && state === "listening" && Boolean(transcript || interimTranscript)
 
   return (
     <div className={cn("relative flex items-center gap-2", className)}>
@@ -249,7 +284,8 @@ export function VoiceInput({
 
       {/* Keyboard shortcut hint */}
       {enableShortcut && state === "idle" && (
-        <span className="sr-only">
+        // Platform-dependent text: the server cannot know the viewer's OS.
+        <span className="sr-only" suppressHydrationWarning>
           Press {isMac() ? "Cmd" : "Ctrl"}+Shift+V to start voice input
         </span>
       )}
@@ -271,7 +307,7 @@ export function VoiceInputMinimal({
   disabled?: boolean
   className?: string
 }): ReactElement | null {
-  const isSupported = isVoiceInputSupported()
+  const isSupported = useVoiceInputSupported()
 
   const { state, errorMessage, toggleListening } = useVoiceInput({
     language,

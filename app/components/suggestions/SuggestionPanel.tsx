@@ -112,7 +112,7 @@ export function SuggestionPanel({
         <button
           type="button"
           onClick={toggleExpanded}
-          className="flex flex-1 items-center gap-2 text-sm font-medium text-foreground"
+          className="flex flex-1 items-center gap-2 rounded-md text-sm font-medium text-foreground transition-colors hover:text-foreground/80"
           aria-expanded={isExpanded}
           aria-controls="suggestion-panel-content"
         >
@@ -154,6 +154,7 @@ export function SuggestionPanel({
             {SUGGESTION_TABS.map((tab) => (
               <button
                 key={tab.type}
+                id={`tab-${tab.type}`}
                 type="button"
                 role="tab"
                 aria-selected={currentType === tab.type}
@@ -170,7 +171,8 @@ export function SuggestionPanel({
                 )}
               >
                 {tab.icon}
-                <span className="hidden sm:inline">{tab.label}</span>
+                {/* Icon-only on small screens, but the name stays for assistive tech */}
+                <span className="sr-only sm:not-sr-only">{tab.label}</span>
               </button>
             ))}
           </div>
@@ -180,6 +182,7 @@ export function SuggestionPanel({
             id={`suggestions-${currentType}`}
             role="tabpanel"
             aria-labelledby={currentType ? `tab-${currentType}` : undefined}
+            aria-busy={isLoading}
             className="space-y-2"
           >
             {isLoading ? (

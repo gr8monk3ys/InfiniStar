@@ -23,7 +23,7 @@ export function ShareLinkCopy({ shareUrl, className, variant = "default" }: Shar
       toast.success("Link copied to clipboard")
       setTimeout(() => setCopied(false), 2000)
     } catch {
-      toast.error("Failed to copy link")
+      toast.error("Couldn't copy the link. Select it and copy it manually.")
     }
   }
 
@@ -36,7 +36,11 @@ export function ShareLinkCopy({ shareUrl, className, variant = "default" }: Shar
         className={cn("gap-2", className)}
         aria-label="Copy share link"
       >
-        {copied ? <Check className="size-4 text-green-500" /> : <Copy className="size-4" />}
+        {copied ? (
+          <Check className="size-4 text-green-500" aria-hidden="true" />
+        ) : (
+          <Copy className="size-4" aria-hidden="true" />
+        )}
         <span className="sr-only">Copy link</span>
       </Button>
     )
@@ -45,12 +49,15 @@ export function ShareLinkCopy({ shareUrl, className, variant = "default" }: Shar
   return (
     <div className={cn("flex items-center gap-2", className)}>
       <div className="flex flex-1 items-center gap-2 rounded-md border bg-muted/50 px-3 py-2 focus-within:ring-2 focus-within:ring-ring">
-        <Link className="size-4 shrink-0 text-muted-foreground" />
+        <Link className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
         <input
-          type="text"
+          type="url"
+          name="shareUrl"
           value={shareUrl}
           readOnly
-          className="flex-1 bg-transparent text-sm focus-visible:outline-none"
+          spellCheck={false}
+          translate="no"
+          className="min-w-0 flex-1 bg-transparent text-sm focus-visible:outline-none"
           aria-label="Share URL"
         />
       </div>
@@ -62,13 +69,13 @@ export function ShareLinkCopy({ shareUrl, className, variant = "default" }: Shar
       >
         {copied ? (
           <>
-            <Check className="size-4 text-green-500" />
+            <Check className="size-4 text-green-500" aria-hidden="true" />
             Copied
           </>
         ) : (
           <>
-            <Copy className="size-4" />
-            Copy
+            <Copy className="size-4" aria-hidden="true" />
+            Copy Link
           </>
         )}
       </Button>

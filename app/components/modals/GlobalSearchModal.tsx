@@ -40,8 +40,25 @@ interface GlobalSearchModalProps {
  * - Keyboard navigation
  * - Faceted search with result counts
  * - Sort options (relevance, date, message count)
+ *
+ * The search state lives in `GlobalSearchDialog`, which only mounts while the
+ * modal is open, so closing it discards the query, filters and results without
+ * an effect that watches `isOpen`. It also keeps tag loading off pages where
+ * search is never opened.
  */
 const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, onClose }) => {
+  if (!isOpen) return null
+
+  return <GlobalSearchDialog onClose={onClose} />
+}
+
+function prefersReducedMotion(): boolean {
+  return (
+    typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  )
+}
+
+function GlobalSearchDialog({ onClose }: { onClose: () => void }) {
   const router = useRouter()
   const inputRef = useRef<HTMLInputElement>(null)
   const resultsRef = useRef<HTMLDivElement>(null)
@@ -75,7 +92,6 @@ const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, onClose }
     setSelectedIndex,
     toggleFilters,
     hideSuggestions,
-    reset,
     navigateUp,
     navigateDown,
     getSelectedItem,
@@ -83,19 +99,12 @@ const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, onClose }
     prevPage,
   } = useSearch()
 
-  // Focus input when modal opens
+  // Focus the search field once the dialog has painted. The dialog exists to
+  // take a query, so its single input is the right initial focus.
   useEffect(() => {
-    if (isOpen && inputRef.current) {
-      setTimeout(() => inputRef.current?.focus(), 100)
-    }
-  }, [isOpen])
-
-  // Reset state when modal closes
-  useEffect(() => {
-    if (!isOpen) {
-      reset()
-    }
-  }, [isOpen, reset])
+    const timer = setTimeout(() => inputRef.current?.focus(), 100)
+    return () => clearTimeout(timer)
+  }, [])
 
   // Handle result click - navigate to conversation
   const handleResultClick = useCallback(
@@ -168,7 +177,10 @@ const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, onClose }
   useEffect(() => {
     if (selectedIndex >= 0 && resultsRef.current) {
       const selectedElement = resultsRef.current.querySelector(`[data-index="${selectedIndex}"]`)
-      selectedElement?.scrollIntoView({ block: "nearest", behavior: "smooth" })
+      selectedElement?.scrollIntoView({
+        block: "nearest",
+        behavior: prefersReducedMotion() ? "auto" : "smooth",
+      })
     }
   }, [selectedIndex])
 
@@ -181,15 +193,13 @@ const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, onClose }
     [setFilters, setSelectedIndex]
   )
 
-  if (!isOpen) return null
-
   const totalResults = conversationCount + messageCount
   const hasResults = totalResults > 0
   const showRecentSearches = !hasSearched && query.length < 2
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-scrim/70 pt-20"
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-contain bg-scrim/70 pt-20"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
@@ -216,7 +226,7 @@ const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, onClose }
                 className="rounded-md p-1 text-muted-foreground/70 hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 aria-label="Close search"
               >
-                <HiOutlineXMark size={24} />
+                <HiOutlineXMark size={24} aria-hidden="true" />
               </button>
             </div>
           </div>
@@ -229,11 +239,13 @@ const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, onClose }
                   className={`size-5 ${
                     isSearching ? "animate-pulse text-primary" : "text-muted-foreground/70"
                   }`}
+                  aria-hidden="true"
                 />
               </div>
               <input
                 ref={inputRef}
-                type="text"
+                type="search"
+                name="query"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onFocus={() => query.length >= 2 && !hasSearched && hideSuggestions()}
@@ -256,9 +268,10 @@ const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, onClose }
                   aria-expanded={showFilters}
                   aria-label={showFilters ? "Hide filters" : "Show filters"}
                 >
-                  <HiAdjustmentsHorizontal className="size-4" />
+                  <HiAdjustmentsHorizontal className="size-4" aria-hidden="true" />
                   <HiChevronDown
                     className={`size-3 transition-transform ${showFilters ? "rotate-180" : ""}`}
+                    aria-hidden="true"
                   />
                 </button>
                 <kbd className="hidden rounded border-border bg-muted px-2 py-0.5 text-xs text-muted-foreground sm:inline">
@@ -269,7 +282,9 @@ const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, onClose }
             <p id="search-hint" className="mt-1 text-xs text-muted-foreground">
               Type at least 2 characters to search
               {searchTimeMs !== undefined && hasSearched && (
-                <span className="ml-2 text-muted-foreground/70">({searchTimeMs}ms)</span>
+                <span className="ml-2 tabular-nums text-muted-foreground/70">
+                  ({searchTimeMs}&nbsp;ms)
+                </span>
               )}
             </p>
 
@@ -319,7 +334,9 @@ const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, onClose }
                 }`}
               >
                 All
-                <span className="rounded-full bg-muted px-2 py-0.5 text-xs">{totalResults}</span>
+                <span className="rounded-full bg-muted px-2 py-0.5 text-xs tabular-nums">
+                  {totalResults}
+                </span>
               </button>
               <button
                 id="search-tab-conversations"
@@ -333,9 +350,9 @@ const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, onClose }
                     : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                <HiOutlineChatBubbleLeftRight className="size-4" />
+                <HiOutlineChatBubbleLeftRight className="size-4" aria-hidden="true" />
                 Conversations
-                <span className="rounded-full bg-muted px-2 py-0.5 text-xs">
+                <span className="rounded-full bg-muted px-2 py-0.5 text-xs tabular-nums">
                   {conversationCount}
                 </span>
               </button>
@@ -351,9 +368,11 @@ const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, onClose }
                     : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                <HiMagnifyingGlass className="size-4" />
+                <HiMagnifyingGlass className="size-4" aria-hidden="true" />
                 Messages
-                <span className="rounded-full bg-muted px-2 py-0.5 text-xs">{messageCount}</span>
+                <span className="rounded-full bg-muted px-2 py-0.5 text-xs tabular-nums">
+                  {messageCount}
+                </span>
               </button>
             </div>
           )}
@@ -363,7 +382,7 @@ const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, onClose }
         <div
           ref={resultsRef}
           id="search-results-panel"
-          className="max-h-[50vh] overflow-y-auto p-4"
+          className="max-h-[50vh] overflow-y-auto overscroll-contain p-4"
           role="listbox"
           aria-label="Search results"
           aria-labelledby={`search-tab-${filters.type}`}
@@ -389,7 +408,7 @@ const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, onClose }
                 onClick={() => setQuery(query)}
                 className="mt-2 text-sm text-primary-accent hover:text-primary/80"
               >
-                Try again
+                Try Again
               </button>
             </div>
           )}
@@ -397,9 +416,12 @@ const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, onClose }
           {/* No Results */}
           {hasSearched && !isSearching && !error && !hasResults && (
             <div className="py-8 text-center">
-              <HiMagnifyingGlass className="mx-auto size-12 text-muted-foreground/50" />
-              <p className="mt-2 text-sm text-muted-foreground">
-                No results found for &quot;{debouncedQuery}&quot;
+              <HiMagnifyingGlass
+                className="mx-auto size-12 text-muted-foreground/50"
+                aria-hidden="true"
+              />
+              <p className="mt-2 break-words text-sm text-muted-foreground">
+                No results found for &ldquo;{debouncedQuery}&rdquo;
               </p>
               <p className="mt-1 text-xs text-muted-foreground/70">
                 Try different keywords or adjust your filters
@@ -410,7 +432,7 @@ const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, onClose }
                   onClick={resetFilters}
                   className="mt-3 text-sm font-medium text-primary-accent hover:text-primary/80"
                 >
-                  Clear all filters
+                  Clear All Filters
                 </button>
               )}
             </div>
@@ -421,7 +443,7 @@ const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, onClose }
             <div className="mb-4">
               {filters.type === "all" && (
                 <h3 className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  <HiOutlineChatBubbleLeftRight className="size-4" />
+                  <HiOutlineChatBubbleLeftRight className="size-4" aria-hidden="true" />
                   Conversations ({conversationCount})
                 </h3>
               )}
@@ -447,7 +469,7 @@ const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, onClose }
               )}
               {filters.type === "all" && (
                 <h3 className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  <HiMagnifyingGlass className="size-4" />
+                  <HiMagnifyingGlass className="size-4" aria-hidden="true" />
                   Messages ({messageCount})
                 </h3>
               )}
@@ -476,7 +498,10 @@ const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, onClose }
           {/* Initial State */}
           {!hasSearched && !isSearching && query.length < 2 && (
             <div className="py-8 text-center">
-              <HiMagnifyingGlass className="mx-auto size-12 text-muted-foreground/50" />
+              <HiMagnifyingGlass
+                className="mx-auto size-12 text-muted-foreground/50"
+                aria-hidden="true"
+              />
               <p className="mt-2 text-sm text-muted-foreground">
                 Search across all your conversations and messages
               </p>
@@ -500,10 +525,10 @@ const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, onClose }
                   className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground disabled:cursor-not-allowed disabled:opacity-50"
                   aria-label="Previous page"
                 >
-                  <HiChevronLeft className="size-4" />
+                  <HiChevronLeft className="size-4" aria-hidden="true" />
                   Prev
                 </button>
-                <span className="text-xs text-muted-foreground">
+                <span className="text-xs tabular-nums text-muted-foreground">
                   Page {filters.page} of {totalPages}
                 </span>
                 <button
@@ -514,7 +539,7 @@ const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, onClose }
                   aria-label="Next page"
                 >
                   Next
-                  <HiChevronRight className="size-4" />
+                  <HiChevronRight className="size-4" aria-hidden="true" />
                 </button>
               </div>
             )}

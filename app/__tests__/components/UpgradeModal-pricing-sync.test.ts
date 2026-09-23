@@ -4,11 +4,11 @@
  * server-only env at module init) and the canonical PRO plan definition.
  */
 import { proPlan } from "@/config/subscriptions"
-import { PRO_HIGHLIGHTS, PRO_PRICE_PER_MONTH } from "@/app/components/modals/UpgradeModal"
+import { PRO_HIGHLIGHTS, PRO_PRICE_USD } from "@/app/components/modals/UpgradeModal"
 
 describe("UpgradeModal pricing sync", () => {
   it("shows the canonical PRO price", () => {
-    expect(PRO_PRICE_PER_MONTH).toBe(`$${proPlan.price.toFixed(2)}/month`)
+    expect(PRO_PRICE_USD).toBe(proPlan.price)
   })
 
   it("only lists highlights that exist in the PRO plan features", () => {

@@ -1,10 +1,10 @@
 "use client"
 
 import { useState } from "react"
-import { formatDistanceToNow } from "date-fns"
 import { Copy, Eye, Link, MoreHorizontal, Pencil, Trash2, Users } from "lucide-react"
 import toast from "react-hot-toast"
 
+import { formatRelative } from "@/app/lib/intl-format"
 import { cn } from "@/app/lib/utils"
 import {
   AlertDialog,
@@ -66,7 +66,7 @@ export function ActiveShares({
       await navigator.clipboard.writeText(shareUrl)
       toast.success("Link copied to clipboard")
     } catch {
-      toast.error("Failed to copy link")
+      toast.error("Couldn't copy the link. Try again.")
     }
   }
 
@@ -78,7 +78,7 @@ export function ActiveShares({
       await onDelete(deleteShareId)
       toast.success("Share link deleted")
     } catch {
-      toast.error("Failed to delete share link")
+      toast.error("Couldn't delete the share link. Try again.")
     } finally {
       setIsDeleting(false)
       setDeleteShareId(null)
@@ -90,9 +90,31 @@ export function ActiveShares({
 
     try {
       await onToggleActive(share.id, !share.isActive)
-      toast.success(share.isActive ? "Share link disabled" : "Share link enabled")
+      if (share.isActive) {
+        // Disabling cuts off everyone holding the link, so offer a way back.
+        toast.success((t) => (
+          <span className="flex items-center gap-3">
+            Share link disabled
+            <button
+              type="button"
+              className="font-medium underline underline-offset-2"
+              onClick={() => {
+                toast.dismiss(t.id)
+                onToggleActive(share.id, true).then(
+                  () => toast.success("Share link enabled"),
+                  () => toast.error("Couldn't enable the share link. Try again.")
+                )
+              }}
+            >
+              Undo
+            </button>
+          </span>
+        ))
+      } else {
+        toast.success("Share link enabled")
+      }
     } catch {
-      toast.error("Failed to update share link")
+      toast.error("Couldn't update the share link. Try again.")
     }
   }
 
@@ -119,7 +141,7 @@ export function ActiveShares({
   if (shares.length === 0) {
     return (
       <div className={cn("py-8 text-center", className)}>
-        <Link className="mx-auto size-12 text-muted-foreground" />
+        <Link className="mx-auto size-12 text-muted-foreground" aria-hidden="true" />
         <p className="mt-2 text-muted-foreground">No active share links</p>
         <p className="text-sm text-muted-foreground">
           Create a share link to let others join this conversation
@@ -141,21 +163,23 @@ export function ActiveShares({
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <h4 className="truncate font-medium">{share.name || "Untitled Share"}</h4>
-                    <div className="flex gap-1">
+                    <h4 className="min-w-0 truncate font-medium">
+                      {share.name || "Untitled Share"}
+                    </h4>
+                    <div className="flex shrink-0 gap-1">
                       <Badge variant={share.shareType === "LINK" ? "secondary" : "outline"}>
                         {share.shareType === "LINK" ? (
-                          <Link className="mr-1 size-3" />
+                          <Link className="mr-1 size-3" aria-hidden="true" />
                         ) : (
-                          <Users className="mr-1 size-3" />
+                          <Users className="mr-1 size-3" aria-hidden="true" />
                         )}
                         {share.shareType === "LINK" ? "Public" : "Invite"}
                       </Badge>
                       <Badge variant={share.permission === "VIEW" ? "secondary" : "default"}>
                         {share.permission === "VIEW" ? (
-                          <Eye className="mr-1 size-3" />
+                          <Eye className="mr-1 size-3" aria-hidden="true" />
                         ) : (
-                          <Pencil className="mr-1 size-3" />
+                          <Pencil className="mr-1 size-3" aria-hidden="true" />
                         )}
                         {share.permission === "VIEW" ? "View" : "Participate"}
                       </Badge>
@@ -163,30 +187,21 @@ export function ActiveShares({
                   </div>
 
                   <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
-                    <span>
-                      Created{" "}
-                      {formatDistanceToNow(new Date(share.createdAt), {
-                        addSuffix: true,
-                      })}
-                    </span>
-                    <span>
+                    <span>Created {formatRelative(share.createdAt)}</span>
+                    <span className="tabular-nums">
                       {share.useCount} use{share.useCount !== 1 ? "s" : ""}
-                      {share.maxUses && ` / ${share.maxUses} max`}
+                      {share.maxUses ? ` / ${share.maxUses} max` : null}
                     </span>
                     {share.expiresAt && (
                       <span className={cn(expired && "text-red-500")}>
-                        {expired
-                          ? "Expired"
-                          : `Expires ${formatDistanceToNow(new Date(share.expiresAt), {
-                              addSuffix: true,
-                            })}`}
+                        {expired ? "Expired" : `Expires ${formatRelative(share.expiresAt)}`}
                       </span>
                     )}
                   </div>
 
                   {share.shareType === "INVITE" && share.allowedEmails.length > 0 && (
                     <div className="mt-2">
-                      <span className="text-xs text-muted-foreground">
+                      <span className="break-words text-xs text-muted-foreground">
                         Invited: {share.allowedEmails.slice(0, 3).join(", ")}
                         {share.allowedEmails.length > 3 &&
                           ` +${share.allowedEmails.length - 3} more`}
@@ -204,18 +219,18 @@ export function ActiveShares({
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="sm">
-                      <MoreHorizontal className="size-4" />
-                      <span className="sr-only">Actions</span>
+                      <MoreHorizontal className="size-4" aria-hidden="true" />
+                      <span className="sr-only">Actions for {share.name || "Untitled Share"}</span>
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onClick={() => handleCopyLink(share.shareUrl)}>
-                      <Copy className="mr-2 size-4" />
+                      <Copy className="mr-2 size-4" aria-hidden="true" />
                       Copy Link
                     </DropdownMenuItem>
                     {onEdit && (
                       <DropdownMenuItem onClick={() => onEdit(share)}>
-                        <Pencil className="mr-2 size-4" />
+                        <Pencil className="mr-2 size-4" aria-hidden="true" />
                         Edit Settings
                       </DropdownMenuItem>
                     )}
@@ -223,12 +238,12 @@ export function ActiveShares({
                       <DropdownMenuItem onClick={() => handleToggleActive(share)}>
                         {share.isActive ? (
                           <>
-                            <Eye className="mr-2 size-4" />
+                            <Eye className="mr-2 size-4" aria-hidden="true" />
                             Disable
                           </>
                         ) : (
                           <>
-                            <Eye className="mr-2 size-4" />
+                            <Eye className="mr-2 size-4" aria-hidden="true" />
                             Enable
                           </>
                         )}
@@ -239,7 +254,7 @@ export function ActiveShares({
                       onClick={() => setDeleteShareId(share.id)}
                       className="text-red-600"
                     >
-                      <Trash2 className="mr-2 size-4" />
+                      <Trash2 className="mr-2 size-4" aria-hidden="true" />
                       Delete
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -255,8 +270,8 @@ export function ActiveShares({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Share Link</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this share link? Anyone who has the link will no
-              longer be able to join this conversation. This action cannot be undone.
+              Delete this share link? Anyone who has it can no longer join this conversation. You
+              can&rsquo;t undo this.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -266,7 +281,7 @@ export function ActiveShares({
               disabled={isDeleting}
               className="bg-red-600 hover:bg-red-700"
             >
-              {isDeleting ? "Deleting…" : "Delete"}
+              {isDeleting ? "Deleting…" : "Delete Link"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

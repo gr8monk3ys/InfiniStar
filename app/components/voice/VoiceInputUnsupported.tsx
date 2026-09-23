@@ -43,7 +43,7 @@ export function VoiceInputUnsupported({
     return (
       <div
         className={cn("flex max-w-xs items-start gap-2 rounded-md bg-muted p-3 text-sm", className)}
-        role="alert"
+        role="status"
       >
         <HiInformationCircle
           className="mt-0.5 size-4 shrink-0 text-muted-foreground"
@@ -68,7 +68,7 @@ export function VoiceInputUnsupported({
           "flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-900 dark:bg-amber-950",
           className
         )}
-        role="alert"
+        role="status"
       >
         <HiExclamationTriangle
           className="size-5 shrink-0 text-amber-600 dark:text-amber-500"
@@ -82,7 +82,10 @@ export function VoiceInputUnsupported({
           {showSuggestions && !browserInfo.supported && (
             <div className="mt-2">
               <p className="text-xs text-amber-600 dark:text-amber-400">Supported browsers:</p>
-              <ul className="mt-1 flex flex-wrap gap-2 text-xs text-amber-700 dark:text-amber-300">
+              <ul
+                className="mt-1 flex flex-wrap gap-2 text-xs text-amber-700 dark:text-amber-300"
+                translate="no"
+              >
                 <li className="rounded bg-amber-100 px-2 py-0.5 dark:bg-amber-900">
                   Google Chrome
                 </li>
@@ -102,7 +105,7 @@ export function VoiceInputUnsupported({
   return (
     <div
       className={cn("flex items-center gap-2 text-sm text-muted-foreground", className)}
-      role="alert"
+      role="status"
     >
       <HiInformationCircle className="size-4 shrink-0" aria-hidden="true" />
       <span>{browserInfo.message}</span>

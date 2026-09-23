@@ -24,15 +24,17 @@ interface ContinueChattingRailProps {
   chats: RecentCharacterChat[]
 }
 
+// Built once: Intl formatters are expensive, and this one renders a word per chat.
+const relativeDays = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" })
+
 /** "yesterday", "4 days ago" — the resolution a person actually thinks in. */
 function describeLastVisit(at: Date): string {
   const days = Math.floor((Date.now() - new Date(at).getTime()) / 86_400_000)
-  if (days <= 0) return "today"
-  if (days === 1) return "yesterday"
-  if (days < 7) return `${days} days ago`
-  if (days < 14) return "last week"
-  if (days < 60) return `${Math.floor(days / 7)} weeks ago`
-  return `${Math.floor(days / 30)} months ago`
+  if (days <= 0) return relativeDays.format(0, "day")
+  if (days < 7) return relativeDays.format(-days, "day")
+  if (days < 14) return relativeDays.format(-1, "week")
+  if (days < 60) return relativeDays.format(-Math.floor(days / 7), "week")
+  return relativeDays.format(-Math.floor(days / 30), "month")
 }
 
 export function ContinueChattingRail({ chats }: ContinueChattingRailProps) {
@@ -44,7 +46,7 @@ export function ContinueChattingRail({ chats }: ContinueChattingRailProps) {
         id="continue-chatting-heading"
         className="text-xs font-medium uppercase tracking-wider text-primary-accent"
       >
-        Pick up where you left off
+        Pick Up Where You Left Off
       </h2>
 
       {/*
@@ -89,7 +91,9 @@ export function ContinueChattingRail({ chats }: ContinueChattingRailProps) {
                       {chat.name}
                     </span>
                     <span className="block truncate text-xs text-muted-foreground">
-                      {describeLastVisit(chat.lastMessageAt)} &middot; {chat.messageCount}{" "}
+                      {/* Relative to "now", which differs between the server render and hydration. */}
+                      <span suppressHydrationWarning>{describeLastVisit(chat.lastMessageAt)}</span>{" "}
+                      &middot; {chat.messageCount}{" "}
                       {chat.messageCount === 1 ? "message" : "messages"}
                     </span>
                   </span>

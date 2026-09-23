@@ -20,6 +20,11 @@ interface TagBadgeProps {
   truncate?: boolean
 }
 
+const SIZE_CLASSES = {
+  sm: "px-1.5 py-0.5 text-xs",
+  md: "px-2 py-0.5 text-xs",
+} as const
+
 /**
  * TagBadge - A small colored badge showing a tag name
  *
@@ -36,11 +41,6 @@ const TagBadge: React.FC<TagBadgeProps> = ({
 }) => {
   const colorScheme = TAG_COLORS[tag.color as TagColor] || TAG_COLORS.gray
 
-  const sizeClasses = {
-    sm: "px-1.5 py-0.5 text-xs",
-    md: "px-2 py-0.5 text-xs",
-  }
-
   const handleRemove = (e: React.MouseEvent) => {
     e.stopPropagation()
     e.preventDefault()
@@ -55,7 +55,7 @@ const TagBadge: React.FC<TagBadgeProps> = ({
         colorScheme.text,
         colorScheme.border,
         "border",
-        sizeClasses[size],
+        SIZE_CLASSES[size],
         className
       )}
       title={tag.name}
@@ -71,7 +71,7 @@ const TagBadge: React.FC<TagBadgeProps> = ({
           )}
           aria-label={`Remove tag ${tag.name}`}
         >
-          <HiXMark className="size-3" />
+          <HiXMark className="size-3" aria-hidden="true" />
         </button>
       )}
     </span>

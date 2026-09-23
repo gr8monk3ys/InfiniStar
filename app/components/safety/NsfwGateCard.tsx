@@ -47,7 +47,8 @@ export function NsfwGateCard() {
       await refresh()
       router.refresh()
     } catch (error) {
-      const message = error instanceof ApiError ? error.message : "Failed to enable NSFW content"
+      const message =
+        error instanceof ApiError ? error.message : "Couldn't enable NSFW content. Try again."
       loader.error(message)
     } finally {
       setIsLoading(false)
@@ -93,19 +94,24 @@ export function NsfwGateCard() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex items-start gap-3 py-2">
+          {/* One <label> wraps box and text, so the whole row is a single hit target. */}
+          <label
+            htmlFor="age-confirm"
+            className="flex cursor-pointer items-start gap-3 py-2 text-sm text-foreground"
+          >
             <input
               type="checkbox"
               id="age-confirm"
+              name="ageConfirmed"
               checked={ageConfirmed}
               onChange={(e) => setAgeConfirmed(e.target.checked)}
-              className="mt-0.5 h-4 w-4 rounded border-border"
+              className="mt-0.5 h-4 w-4 shrink-0 rounded border-border"
             />
-            <label htmlFor="age-confirm" className="cursor-pointer text-sm text-foreground">
+            <span>
               I confirm that I am <strong>18 years of age or older</strong> and understand this
               content may include adult themes.
-            </label>
-          </div>
+            </span>
+          </label>
 
           <DialogFooter>
             <Button variant="outline" onClick={handleClose} disabled={isLoading}>

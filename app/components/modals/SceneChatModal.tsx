@@ -80,9 +80,12 @@ const SceneChatModal: React.FC<SceneChatModalProps> = ({ isOpen, onClose, charac
   const [state, dispatch] = useReducer(sceneChatReducer, initialSceneChatState)
   const { isSubmitting, searchQuery, sceneName, sceneScenario, selectedCharacterIds } = state
 
+  // One Set per selection change; the list below checks membership once per row.
+  const selectedIdSet = useMemo(() => new Set(selectedCharacterIds), [selectedCharacterIds])
+
   const selectedCharacters = useMemo(
-    () => characters.filter((character) => selectedCharacterIds.includes(character.id)),
-    [characters, selectedCharacterIds]
+    () => characters.filter((character) => selectedIdSet.has(character.id)),
+    [characters, selectedIdSet]
   )
 
   const filteredCharacters = useMemo(() => {
@@ -105,16 +108,16 @@ const SceneChatModal: React.FC<SceneChatModalProps> = ({ isOpen, onClose, charac
 
   const toggleCharacter = useCallback(
     (characterId: string) => {
-      const isSelected = selectedCharacterIds.includes(characterId)
+      const isSelected = selectedIdSet.has(characterId)
 
-      if (!isSelected && selectedCharacterIds.length >= MAX_SCENE_CHARACTERS) {
+      if (!isSelected && selectedIdSet.size >= MAX_SCENE_CHARACTERS) {
         toast.error(`You can select up to ${MAX_SCENE_CHARACTERS} characters`)
         return
       }
 
       dispatch({ type: "toggle_character", characterId })
     },
-    [selectedCharacterIds]
+    [selectedIdSet]
   )
 
   const handleSubmit = useCallback(
@@ -157,7 +160,7 @@ const SceneChatModal: React.FC<SceneChatModalProps> = ({ isOpen, onClose, charac
         const message =
           isAxiosError(error) && error.response?.data?.error
             ? error.response.data.error
-            : "Failed to create scene chat"
+            : "Couldn't create the scene chat. Try again."
         toast.error(message)
       } finally {
         dispatch({ type: "set_submitting", value: false })
@@ -179,7 +182,7 @@ const SceneChatModal: React.FC<SceneChatModalProps> = ({ isOpen, onClose, charac
       <form onSubmit={handleSubmit}>
         <div className="space-y-6">
           <div className="border-b border-border pb-4">
-            <h2 className="text-base font-semibold leading-7 text-foreground">Create scene chat</h2>
+            <h2 className="text-base font-semibold leading-7 text-foreground">Create Scene Chat</h2>
             <p className="mt-1 text-sm leading-6 text-muted-foreground">
               Pick multiple AI characters and set an optional scenario.
             </p>
@@ -191,11 +194,13 @@ const SceneChatModal: React.FC<SceneChatModalProps> = ({ isOpen, onClose, charac
             </label>
             <input
               id="sceneName"
+              name="sceneName"
+              autoComplete="off"
               value={sceneName}
               onChange={(event) => dispatch({ type: "set_scene_name", value: event.target.value })}
               maxLength={100}
               disabled={isSubmitting}
-              placeholder="e.g. Space Mission Briefing"
+              placeholder="e.g. Space Mission Briefing…"
               className="mt-2 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             />
           </div>
@@ -209,6 +214,8 @@ const SceneChatModal: React.FC<SceneChatModalProps> = ({ isOpen, onClose, charac
             </label>
             <textarea
               id="sceneScenario"
+              name="sceneScenario"
+              autoComplete="off"
               rows={3}
               value={sceneScenario}
               onChange={(event) =>
@@ -216,7 +223,7 @@ const SceneChatModal: React.FC<SceneChatModalProps> = ({ isOpen, onClose, charac
               }
               maxLength={1000}
               disabled={isSubmitting}
-              placeholder="e.g. The team is planning a rescue before sunrise."
+              placeholder="e.g. The team is planning a rescue before sunrise…"
               className="mt-2 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             />
             <p className="mt-1 text-xs text-muted-foreground">
@@ -232,16 +239,21 @@ const SceneChatModal: React.FC<SceneChatModalProps> = ({ isOpen, onClose, charac
               >
                 Characters
               </label>
-              <span className="text-xs text-muted-foreground">
+              <span className="text-xs tabular-nums text-muted-foreground">
                 {selectedCharacterIds.length}/{MAX_SCENE_CHARACTERS} selected
               </span>
             </div>
 
             <div className="relative">
-              <HiMagnifyingGlass className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground/70" />
+              <HiMagnifyingGlass
+                className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground/70"
+                aria-hidden="true"
+              />
               <input
                 id="scene-character-search"
-                type="text"
+                name="characterSearch"
+                type="search"
+                autoComplete="off"
                 value={searchQuery}
                 onChange={(event) =>
                   dispatch({ type: "set_search_query", value: event.target.value })
@@ -258,29 +270,30 @@ const SceneChatModal: React.FC<SceneChatModalProps> = ({ isOpen, onClose, charac
                     key={character.id}
                     type="button"
                     onClick={() => toggleCharacter(character.id)}
+                    aria-label={`Remove ${character.name}`}
                     className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary-accent transition hover:bg-primary/20"
                   >
                     {character.name}
-                    <HiXMark className="size-3.5" />
+                    <HiXMark className="size-3.5" aria-hidden="true" />
                   </button>
                 ))}
               </div>
             )}
 
-            <div className="mt-3 max-h-64 space-y-2 overflow-y-auto rounded-md border border-border p-2">
+            <div className="mt-3 max-h-64 space-y-2 overflow-y-auto overscroll-contain rounded-md border border-border p-2">
               {filteredCharacters.length === 0 ? (
                 <div className="py-8 text-center text-sm text-muted-foreground">
                   No characters found
                 </div>
               ) : (
                 filteredCharacters.map((character) => {
-                  const selected = selectedCharacterIds.includes(character.id)
+                  const selected = selectedIdSet.has(character.id)
                   return (
                     <button
                       key={character.id}
                       type="button"
                       onClick={() => toggleCharacter(character.id)}
-                      className={`flex w-full items-center gap-3 rounded-md border px-3 py-2 text-left transition ${
+                      className={`flex w-full items-center gap-3 rounded-md border px-3 py-2 text-left transition [contain-intrinsic-size:auto_54px] [content-visibility:auto] ${
                         selected
                           ? "border-primary bg-primary/10"
                           : "border-border bg-card hover:border-primary/30"
@@ -291,14 +304,17 @@ const SceneChatModal: React.FC<SceneChatModalProps> = ({ isOpen, onClose, charac
                         <div className="relative size-9 shrink-0 overflow-hidden rounded-full border border-border">
                           <Image
                             src={character.avatarUrl}
-                            alt={character.name}
+                            alt=""
                             fill
                             sizes="36px"
                             className="object-cover"
                           />
                         </div>
                       ) : (
-                        <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary-accent">
+                        <div
+                          className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary-accent"
+                          aria-hidden="true"
+                        >
                           {character.name.slice(0, 1).toUpperCase()}
                         </div>
                       )}

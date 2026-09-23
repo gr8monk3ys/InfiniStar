@@ -21,13 +21,7 @@ export type SearchResultType = "all" | "conversations" | "messages"
  * AI personality options for filtering
  */
 export type AIPersonality =
-  | "helpful"
-  | "concise"
-  | "creative"
-  | "analytical"
-  | "empathetic"
-  | "professional"
-  | "custom"
+  "helpful" | "concise" | "creative" | "analytical" | "empathetic" | "professional" | "custom"
 
 /**
  * Extended filters for advanced search
@@ -259,4 +253,9 @@ export const MAX_RECENT_SEARCHES = 10
 /**
  * Local storage key for recent searches
  */
-export const RECENT_SEARCHES_KEY = "infinistar_recent_searches"
+export const RECENT_SEARCHES_KEY = "infinistar_recent_searches:v1"
+
+/**
+ * Pre-versioning key; read once and migrated to RECENT_SEARCHES_KEY
+ */
+export const LEGACY_RECENT_SEARCHES_KEY = "infinistar_recent_searches"

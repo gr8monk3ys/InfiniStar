@@ -3,6 +3,8 @@
 import { useCallback, useMemo } from "react"
 import { HiOutlineCalendar, HiOutlineXMark } from "react-icons/hi2"
 
+import { formatDate } from "@/app/lib/intl-format"
+
 interface DateRangePickerProps {
   dateFrom: string
   dateTo: string
@@ -17,10 +19,27 @@ interface DateRangePickerProps {
  */
 const DATE_PRESETS = [
   { label: "Today", days: 0 },
-  { label: "Last 7 days", days: 7 },
-  { label: "Last 30 days", days: 30 },
-  { label: "Last 90 days", days: 90 },
+  { label: "Last 7 Days", days: 7 },
+  { label: "Last 30 Days", days: 30 },
+  { label: "Last 90 Days", days: 90 },
 ] as const
+
+const pad2 = (value: number) => String(value).padStart(2, "0")
+
+/**
+ * `YYYY-MM-DD` in the viewer's time zone, the wire format of `<input type="date">`.
+ * (`toISOString()` would give the UTC date, which is tomorrow or yesterday for
+ * part of every day outside UTC.)
+ */
+function toDateInputValue(date: Date): string {
+  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`
+}
+
+/** Parses a `YYYY-MM-DD` input value as a local calendar date, not UTC midnight. */
+function parseDateInputValue(value: string): Date {
+  const [year, month, day] = value.split("-").map(Number)
+  return new Date(year, month - 1, day)
+}
 
 /**
  * DateRangePicker Component
@@ -36,13 +55,8 @@ export function DateRangePicker({
   onClear,
   className = "",
 }: DateRangePickerProps) {
-  // Format date for input element (YYYY-MM-DD)
-  const formatDateForInput = useCallback((date: Date): string => {
-    return date.toISOString().split("T")[0]
-  }, [])
-
   // Get today's date formatted for max attribute
-  const today = useMemo(() => formatDateForInput(new Date()), [formatDateForInput])
+  const today = useMemo(() => toDateInputValue(new Date()), [])
 
   // Apply a preset date range
   const applyPreset = useCallback(
@@ -52,23 +66,23 @@ export function DateRangePicker({
 
       if (days === 0) {
         // Today only
-        onDateFromChange(formatDateForInput(startDate))
-        onDateToChange(formatDateForInput(endDate))
+        onDateFromChange(toDateInputValue(startDate))
+        onDateToChange(toDateInputValue(endDate))
       } else {
         startDate.setDate(startDate.getDate() - days)
-        onDateFromChange(formatDateForInput(startDate))
-        onDateToChange(formatDateForInput(endDate))
+        onDateFromChange(toDateInputValue(startDate))
+        onDateToChange(toDateInputValue(endDate))
       }
     },
-    [formatDateForInput, onDateFromChange, onDateToChange]
+    [onDateFromChange, onDateToChange]
   )
 
   // Check if a preset is currently active
   const activePreset = useMemo(() => {
     if (!dateFrom || !dateTo) return null
 
-    const fromDate = new Date(dateFrom)
-    const toDate = new Date(dateTo)
+    const fromDate = parseDateInputValue(dateFrom)
+    const toDate = parseDateInputValue(dateTo)
     const todayDate = new Date()
     todayDate.setHours(0, 0, 0, 0)
 
@@ -115,7 +129,7 @@ export function DateRangePicker({
             className="flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-border"
             aria-label="Clear date range"
           >
-            <HiOutlineXMark className="size-3" />
+            <HiOutlineXMark className="size-3" aria-hidden="true" />
             Clear
           </button>
         )}
@@ -128,12 +142,14 @@ export function DateRangePicker({
             htmlFor="date-from"
             className="mb-1 flex items-center gap-1 text-xs font-medium text-foreground"
           >
-            <HiOutlineCalendar className="size-3.5" />
+            <HiOutlineCalendar className="size-3.5" aria-hidden="true" />
             From
           </label>
           <input
             id="date-from"
+            name="dateFrom"
             type="date"
+            autoComplete="off"
             value={dateFrom}
             onChange={(e) => onDateFromChange(e.target.value)}
             max={dateTo || today}
@@ -146,12 +162,14 @@ export function DateRangePicker({
             htmlFor="date-to"
             className="mb-1 flex items-center gap-1 text-xs font-medium text-foreground"
           >
-            <HiOutlineCalendar className="size-3.5" />
+            <HiOutlineCalendar className="size-3.5" aria-hidden="true" />
             To
           </label>
           <input
             id="date-to"
+            name="dateTo"
             type="date"
+            autoComplete="off"
             value={dateTo}
             onChange={(e) => onDateToChange(e.target.value)}
             min={dateFrom || undefined}
@@ -168,13 +186,13 @@ export function DateRangePicker({
           Showing results{" "}
           {dateFrom && (
             <>
-              from <span className="font-medium">{dateFrom}</span>
+              from <span className="font-medium">{formatDate(parseDateInputValue(dateFrom))}</span>
             </>
           )}
           {dateFrom && dateTo && " "}
           {dateTo && (
             <>
-              to <span className="font-medium">{dateTo}</span>
+              to <span className="font-medium">{formatDate(parseDateInputValue(dateTo))}</span>
             </>
           )}
         </p>

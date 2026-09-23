@@ -64,11 +64,18 @@ const MemoryBadge: React.FC<MemoryBadgeProps> = ({ className, showCount = true, 
         "text-primary-accent",
         className
       )}
-      title={`${count} memories stored`}
-      aria-label={`AI has ${count} memories about you`}
+      title={`${count} ${count === 1 ? "memory" : "memories"} stored`}
     >
-      <HiOutlineSparkles className={cn(size === "sm" ? "size-3" : "size-4")} />
-      {showCount && <span>{count}</span>}
+      <HiOutlineSparkles className={cn(size === "sm" ? "size-3" : "size-4")} aria-hidden="true" />
+      {showCount && (
+        <span className="tabular-nums" aria-hidden="true">
+          {count}
+        </span>
+      )}
+      {/* aria-label on a plain <div> is not reliably announced; real text is. */}
+      <span className="sr-only">
+        AI has {count} {count === 1 ? "memory" : "memories"} about you
+      </span>
     </div>
   )
 }

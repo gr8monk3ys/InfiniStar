@@ -45,7 +45,6 @@ export function SuggestionChips({
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const [canScrollLeft, setCanScrollLeft] = useState(false)
   const [canScrollRight, setCanScrollRight] = useState(false)
-  const [focusedIndex, setFocusedIndex] = useState(-1)
   const chipRefs = useRef<(HTMLButtonElement | null)[]>([])
 
   // Check scroll state
@@ -73,20 +72,16 @@ export function SuggestionChips({
     }
   }, [suggestions, updateScrollState])
 
-  // Scroll functions
-  const scrollLeft = useCallback(() => {
+  // Scroll functions (instant when the viewer asked for reduced motion)
+  const scrollByOffset = useCallback((left: number) => {
     const container = scrollContainerRef.current
-    if (container) {
-      container.scrollBy({ left: -200, behavior: "smooth" })
-    }
+    if (!container) return
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    container.scrollBy({ left, behavior: reduceMotion ? "auto" : "smooth" })
   }, [])
 
-  const scrollRight = useCallback(() => {
-    const container = scrollContainerRef.current
-    if (container) {
-      container.scrollBy({ left: 200, behavior: "smooth" })
-    }
-  }, [])
+  const scrollLeft = useCallback(() => scrollByOffset(-200), [scrollByOffset])
+  const scrollRight = useCallback(() => scrollByOffset(200), [scrollByOffset])
 
   // Keyboard navigation
   const handleKeyDown = useCallback(
@@ -95,14 +90,12 @@ export function SuggestionChips({
         case "ArrowLeft":
           e.preventDefault()
           if (index > 0) {
-            setFocusedIndex(() => index - 1)
             chipRefs.current[index - 1]?.focus()
           }
           break
         case "ArrowRight":
           e.preventDefault()
           if (index < suggestions.length - 1) {
-            setFocusedIndex(() => index + 1)
             chipRefs.current[index + 1]?.focus()
           }
           break
@@ -185,7 +178,6 @@ export function SuggestionChips({
               type="button"
               onClick={() => handleChipClick(suggestion.text)}
               onKeyDown={(e) => handleKeyDown(e, index)}
-              onFocus={() => setFocusedIndex(index)}
               disabled={disabled}
               aria-label={`Suggestion: ${suggestion.text}`}
               className={cn(
@@ -193,8 +185,7 @@ export function SuggestionChips({
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
                 "border-border bg-secondary text-secondary-foreground",
                 "hover:bg-accent hover:text-accent-foreground",
-                disabled && "cursor-not-allowed opacity-50",
-                focusedIndex === index && "ring-2 ring-ring"
+                disabled && "cursor-not-allowed opacity-50"
               )}
             >
               <span className="line-clamp-1 max-w-[200px]">{suggestion.text}</span>

@@ -7,6 +7,7 @@ import toast from "react-hot-toast"
 import { HiExclamationTriangle, HiEye, HiEyeSlash } from "react-icons/hi2"
 
 import { api, ApiError, createLoadingToast } from "@/app/lib/api-client"
+import { formatDate } from "@/app/lib/intl-format"
 
 import Modal from "./Modal"
 
@@ -58,8 +59,7 @@ const DeleteAccountModal: React.FC<DeleteAccountModalProps> = ({
         showErrorToast: false,
       })
 
-      const scheduledDate = new Date(response.deletionScheduledFor)
-      const formattedDate = scheduledDate.toLocaleDateString("en-US", {
+      const formattedDate = formatDate(response.deletionScheduledFor, {
         weekday: "long",
         year: "numeric",
         month: "long",
@@ -87,7 +87,9 @@ const DeleteAccountModal: React.FC<DeleteAccountModalProps> = ({
       router.refresh()
     } catch (error) {
       const message =
-        error instanceof ApiError ? error.message : "Failed to process deletion request"
+        error instanceof ApiError
+          ? error.message
+          : "Couldn't schedule the deletion. Check your connection and try again."
       loader.error(message)
     } finally {
       setIsLoading(false)
@@ -124,8 +126,8 @@ const DeleteAccountModal: React.FC<DeleteAccountModalProps> = ({
             </ul>
             <div className="mt-4 rounded-md bg-yellow-50 p-3">
               <p className="text-sm text-yellow-800">
-                <strong>30-Day Grace Period:</strong> Your account will be scheduled for deletion in
-                30 days. During this time, you can log in and cancel the deletion request.
+                <strong>30-Day Grace Period:</strong> Deletion happens 30 days after you confirm.
+                Until then, you can log in and cancel the request.
               </p>
             </div>
           </div>
@@ -142,21 +144,28 @@ const DeleteAccountModal: React.FC<DeleteAccountModalProps> = ({
             <div className="relative mt-1">
               <input
                 id="delete-password"
+                name="password"
+                autoComplete="current-password"
+                spellCheck={false}
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={isLoading}
                 className="block w-full rounded-md border border-input bg-background px-3 py-2 pr-10 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-muted"
-                placeholder="Your current password"
+                placeholder="Your current password…"
                 aria-required="true"
               />
               <button
                 type="button"
-                onClick={() => setShowPassword(!showPassword)}
+                onClick={() => setShowPassword((shown) => !shown)}
                 className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground/70 hover:text-muted-foreground"
                 aria-label={showPassword ? "Hide password" : "Show password"}
               >
-                {showPassword ? <HiEyeSlash className="size-5" /> : <HiEye className="size-5" />}
+                {showPassword ? (
+                  <HiEyeSlash className="size-5" aria-hidden="true" />
+                ) : (
+                  <HiEye className="size-5" aria-hidden="true" />
+                )}
               </button>
             </div>
           </div>
@@ -169,7 +178,10 @@ const DeleteAccountModal: React.FC<DeleteAccountModalProps> = ({
           </label>
           <input
             id="confirmation-text"
+            name="confirmationText"
             type="text"
+            spellCheck={false}
+            autoCapitalize="characters"
             value={confirmationText}
             onChange={(e) => setConfirmationText(e.target.value.toUpperCase())}
             disabled={isLoading}

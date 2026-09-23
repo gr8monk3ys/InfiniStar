@@ -12,6 +12,9 @@ import { Input } from "@/app/components/ui/simple-input"
 
 const emailSchema = z.string().email()
 
+/** Commas, semicolons and whitespace separate pasted addresses. */
+const EMAIL_SEPARATORS = /[,;\s]+/
+
 interface ShareInviteFormProps {
   emails: string[]
   onChange: (emails: string[]) => void
@@ -47,19 +50,19 @@ export function ShareInviteForm({
     // Validate email
     const result = emailSchema.safeParse(email)
     if (!result.success) {
-      setError("Please enter a valid email address")
+      setError("Enter a valid email address, like name@example.com.")
       return
     }
 
     // Check for duplicates
     if (emails.includes(email)) {
-      setError("This email has already been added")
+      setError("That email is already on the list.")
       return
     }
 
     // Check max emails
     if (emails.length >= maxEmails) {
-      setError(`Maximum ${maxEmails} emails allowed`)
+      setError(`You can invite up to ${maxEmails} emails. Remove one to add another.`)
       return
     }
 
@@ -80,21 +83,29 @@ export function ShareInviteForm({
   }
 
   const handlePaste = (e: React.ClipboardEvent) => {
-    e.preventDefault()
     const pastedText = e.clipboardData.getData("text")
 
     // Split by common separators (comma, semicolon, newline, space)
     const pastedEmails = pastedText
-      .split(/[,;\s\n]+/)
+      .split(EMAIL_SEPARATORS)
       .map((email) => email.trim().toLowerCase())
       .filter((email) => email.length > 0)
 
+    // A single value pastes into the field as normal; only a list is taken over
+    // and split into invites.
+    if (pastedEmails.length < 2) {
+      return
+    }
+    e.preventDefault()
+
+    const seen = new Set(emails)
     const validEmails: string[] = []
     const invalidEmails: string[] = []
 
     for (const email of pastedEmails) {
       const result = emailSchema.safeParse(email)
-      if (result.success && !emails.includes(email) && !validEmails.includes(email)) {
+      if (result.success && !seen.has(email)) {
+        seen.add(email)
         validEmails.push(email)
       } else if (!result.success) {
         invalidEmails.push(email)
@@ -107,7 +118,14 @@ export function ShareInviteForm({
     }
 
     if (invalidEmails.length > 0) {
-      setError(`${invalidEmails.length} invalid email(s) skipped`)
+      setError(
+        invalidEmails.length === 1
+          ? "Skipped 1 address that isn't a valid email."
+          : `Skipped ${invalidEmails.length} addresses that aren't valid emails.`
+      )
+      if (errorTimeoutRef.current) {
+        clearTimeout(errorTimeoutRef.current)
+      }
       errorTimeoutRef.current = setTimeout(() => setError(null), 3000)
     }
   }
@@ -119,8 +137,12 @@ export function ShareInviteForm({
         <div className="flex gap-2">
           <Input
             id="invite-email"
+            name="inviteEmail"
             type="email"
-            placeholder="Enter email address"
+            inputMode="email"
+            autoComplete="off"
+            spellCheck={false}
+            placeholder="name@example.com…"
             value={inputValue}
             onChange={(e) => {
               setInputValue(e.target.value)
@@ -129,6 +151,7 @@ export function ShareInviteForm({
             onKeyDown={handleKeyDown}
             onPaste={handlePaste}
             className={cn(error && "border-red-500")}
+            aria-invalid={error ? true : undefined}
             aria-describedby={error ? "email-error" : undefined}
           />
           <Button
@@ -138,7 +161,7 @@ export function ShareInviteForm({
             size="default"
             aria-label="Add email"
           >
-            <Plus className="size-4" />
+            <Plus className="size-4" aria-hidden="true" />
           </Button>
         </div>
         {error && (
@@ -153,10 +176,12 @@ export function ShareInviteForm({
 
       {emails.length > 0 && (
         <div className="space-y-2">
-          <Label>Invited Emails ({emails.length})</Label>
+          <p className="text-sm font-medium leading-none">
+            Invited Emails (<span className="tabular-nums">{emails.length}</span>)
+          </p>
           <div className="flex flex-wrap gap-2 rounded-md border p-3">
             {emails.map((email) => (
-              <Badge key={email} variant="secondary" className="gap-1 pr-1">
+              <Badge key={email} variant="secondary" className="max-w-full gap-1 break-all pr-1">
                 {email}
                 <button
                   type="button"
@@ -164,7 +189,7 @@ export function ShareInviteForm({
                   className="ml-1 rounded-full p-0.5 hover:bg-muted"
                   aria-label={`Remove ${email}`}
                 >
-                  <X className="size-3" />
+                  <X className="size-3" aria-hidden="true" />
                 </button>
               </Badge>
             ))}

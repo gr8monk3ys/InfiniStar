@@ -50,7 +50,7 @@ const GroupChatModal: React.FC<GroupChatModalProps> = ({ isOpen, onClose, user =
         router.refresh()
         onClose()
       })
-      .catch(() => toast.error("Something went wrong!"))
+      .catch(() => toast.error("Couldn't create the group chat. Try again."))
       .finally(() => setIsLoading(false))
   }
 
@@ -60,7 +60,7 @@ const GroupChatModal: React.FC<GroupChatModalProps> = ({ isOpen, onClose, user =
         <div className="space-y-12">
           <div className="border-b border-border pb-12">
             <h2 className="text-base font-semibold leading-7 text-foreground">
-              Create a group chat
+              Create a Group Chat
             </h2>
             <p className="mt-1 text-sm leading-6 text-muted-foreground">
               Create a chat with more than 2 people.
@@ -95,7 +95,7 @@ const GroupChatModal: React.FC<GroupChatModalProps> = ({ isOpen, onClose, user =
             Cancel
           </Button>
           <Button disabled={isLoading} type="submit">
-            Create
+            {isLoading ? "Creating…" : "Create Group Chat"}
           </Button>
         </div>
       </form>

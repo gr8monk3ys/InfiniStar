@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback } from "react"
+import { useCallback, useId } from "react"
 import { HiCog6Tooth } from "react-icons/hi2"
 
 import { cn } from "@/app/lib/utils"
@@ -19,6 +19,8 @@ interface SuggestionSettingsProps {
 /**
  * Available suggestion type options
  */
+const SUGGESTION_COUNT_OPTIONS = [2, 3, 4, 5]
+
 const SUGGESTION_TYPE_OPTIONS: {
   type: SuggestionType
   label: string
@@ -52,6 +54,11 @@ const SUGGESTION_TYPE_OPTIONS: {
  */
 export function SuggestionSettings({ onSettingsChange, className }: SuggestionSettingsProps) {
   const { preferences, setPreferences } = useSuggestionPreferences()
+  const idPrefix = useId()
+  const enabledLabelId = `${idPrefix}-enabled-label`
+  const enabledHintId = `${idPrefix}-enabled-hint`
+  const autoShowLabelId = `${idPrefix}-autoshow-label`
+  const autoShowHintId = `${idPrefix}-autoshow-hint`
 
   const handleToggleEnabled = useCallback(() => {
     setPreferences({ enabled: !preferences.enabled })
@@ -101,21 +108,28 @@ export function SuggestionSettings({ onSettingsChange, className }: SuggestionSe
       {/* Enable/Disable Toggle */}
       <div className="mb-4 flex items-center justify-between">
         <div>
-          <p className="text-sm font-medium text-foreground">Enable Suggestions</p>
-          <p className="text-xs text-muted-foreground">Show AI-powered message suggestions</p>
+          <p id={enabledLabelId} className="text-sm font-medium text-foreground">
+            Enable Suggestions
+          </p>
+          <p id={enabledHintId} className="text-xs text-muted-foreground">
+            Show AI-powered message suggestions
+          </p>
         </div>
         <button
           type="button"
           role="switch"
           aria-checked={preferences.enabled}
+          aria-labelledby={enabledLabelId}
+          aria-describedby={enabledHintId}
           onClick={handleToggleEnabled}
           className={cn(
             "relative h-6 w-11 rounded-full transition-colors",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-            preferences.enabled ? "bg-primary" : "bg-muted"
+            preferences.enabled ? "bg-primary hover:bg-primary/90" : "bg-muted hover:bg-muted/80"
           )}
         >
           <span
+            aria-hidden="true"
             className={cn(
               "absolute left-0.5 top-0.5 size-5 rounded-full bg-white shadow transition-transform",
               preferences.enabled ? "translate-x-5" : "translate-x-0"
@@ -130,8 +144,10 @@ export function SuggestionSettings({ onSettingsChange, className }: SuggestionSe
           {/* Auto-show Toggle */}
           <div className="mb-4 flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-foreground">Auto-show Suggestions</p>
-              <p className="text-xs text-muted-foreground">
+              <p id={autoShowLabelId} className="text-sm font-medium text-foreground">
+                Auto-show Suggestions
+              </p>
+              <p id={autoShowHintId} className="text-xs text-muted-foreground">
                 Automatically show suggestions after AI responds
               </p>
             </div>
@@ -139,14 +155,19 @@ export function SuggestionSettings({ onSettingsChange, className }: SuggestionSe
               type="button"
               role="switch"
               aria-checked={preferences.autoShow}
+              aria-labelledby={autoShowLabelId}
+              aria-describedby={autoShowHintId}
               onClick={handleToggleAutoShow}
               className={cn(
                 "relative h-6 w-11 rounded-full transition-colors",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                preferences.autoShow ? "bg-primary" : "bg-muted"
+                preferences.autoShow
+                  ? "bg-primary hover:bg-primary/90"
+                  : "bg-muted hover:bg-muted/80"
               )}
             >
               <span
+                aria-hidden="true"
                 className={cn(
                   "absolute left-0.5 top-0.5 size-5 rounded-full bg-white shadow transition-transform",
                   preferences.autoShow ? "translate-x-5" : "translate-x-0"
@@ -159,7 +180,7 @@ export function SuggestionSettings({ onSettingsChange, className }: SuggestionSe
           <div className="mb-4">
             <p className="mb-2 text-sm font-medium text-foreground">Number of Suggestions</p>
             <div className="flex gap-2">
-              {[2, 3, 4, 5].map((num) => (
+              {SUGGESTION_COUNT_OPTIONS.map((num) => (
                 <button
                   key={num}
                   type="button"

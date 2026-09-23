@@ -65,24 +65,26 @@ const TagManager: React.FC<TagManagerProps> = ({ className }) => {
 
     setIsSubmitting(true)
 
-    if (editingTag) {
-      // Update existing tag
-      const updated = await updateTag(editingTag.id, {
-        name: formName.trim(),
-        color: formColor,
-      })
-      if (updated) {
-        resetForm()
+    try {
+      if (editingTag) {
+        // Update existing tag
+        const updated = await updateTag(editingTag.id, {
+          name: formName.trim(),
+          color: formColor,
+        })
+        if (updated) {
+          resetForm()
+        }
+      } else {
+        // Create new tag
+        const created = await createTag(formName.trim(), formColor)
+        if (created) {
+          resetForm()
+        }
       }
-    } else {
-      // Create new tag
-      const created = await createTag(formName.trim(), formColor)
-      if (created) {
-        resetForm()
-      }
+    } finally {
+      setIsSubmitting(false)
     }
-
-    setIsSubmitting(false)
   }, [formName, formColor, editingTag, createTag, updateTag, resetForm])
 
   const handleDelete = useCallback(async () => {
@@ -120,7 +122,7 @@ const TagManager: React.FC<TagManagerProps> = ({ className }) => {
             onClick={() => setShowForm(true)}
             className="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
-            <HiPlus className="size-4" />
+            <HiPlus className="size-4" aria-hidden="true" />
             Create Tag
           </button>
         )}
@@ -139,23 +141,28 @@ const TagManager: React.FC<TagManagerProps> = ({ className }) => {
               <label htmlFor="tag-name" className="mb-1 block text-sm font-medium text-foreground">
                 Name
               </label>
+              {/* autoFocus: the form opens on an explicit "Create Tag"/edit click; one field. */}
               <input
                 id="tag-name"
+                name="tagName"
+                autoComplete="off"
                 type="text"
                 value={formName}
                 onChange={(e) => setFormName(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="e.g., Work, Personal, Important"
+                placeholder="e.g., Work, Personal, Important…"
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 maxLength={30}
                 autoFocus
               />
-              <p className="mt-1 text-xs text-muted-foreground">{formName.length}/30 characters</p>
+              <p className="mt-1 text-xs tabular-nums text-muted-foreground">
+                {formName.length}/30 characters
+              </p>
             </div>
 
             {/* Color picker */}
-            <div>
-              <label className="mb-2 block text-sm font-medium text-foreground">Color</label>
+            <fieldset>
+              <legend className="mb-2 block text-sm font-medium text-foreground">Color</legend>
               <div className="flex flex-wrap gap-2">
                 {(Object.keys(TAG_COLORS) as TagColor[]).map((color) => {
                   const colorScheme = TAG_COLORS[color]
@@ -164,6 +171,7 @@ const TagManager: React.FC<TagManagerProps> = ({ className }) => {
                       key={color}
                       type="button"
                       onClick={() => setFormColor(color)}
+                      aria-pressed={formColor === color}
                       className={cn(
                         "flex items-center gap-2 rounded-md px-3 py-1.5 text-sm transition",
                         colorScheme.bg,
@@ -179,12 +187,12 @@ const TagManager: React.FC<TagManagerProps> = ({ className }) => {
                   )
                 })}
               </div>
-            </div>
+            </fieldset>
 
             {/* Preview */}
             {formName.trim() && (
               <div>
-                <label className="mb-2 block text-sm font-medium text-foreground">Preview</label>
+                <p className="mb-2 block text-sm font-medium text-foreground">Preview</p>
                 <TagBadge
                   tag={{
                     id: "preview",
@@ -226,16 +234,19 @@ const TagManager: React.FC<TagManagerProps> = ({ className }) => {
 
       {/* Tags List */}
       {isLoading ? (
-        <div className="py-8 text-center text-muted-foreground">
-          <div className="mx-auto mb-2 size-8 animate-spin rounded-full border-2 border-muted border-t-primary" />
+        <div className="py-8 text-center text-muted-foreground" role="status">
+          <div
+            className="mx-auto mb-2 size-8 animate-spin rounded-full border-2 border-muted border-t-primary"
+            aria-hidden="true"
+          />
           Loading tags…
         </div>
       ) : tags.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border py-12 text-center">
           <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-muted">
-            <HiPlus className="size-6 text-muted-foreground" />
+            <HiPlus className="size-6 text-muted-foreground" aria-hidden="true" />
           </div>
-          <h3 className="mb-1 text-sm font-medium text-foreground">No tags yet</h3>
+          <h3 className="mb-1 text-sm font-medium text-foreground">No Tags Yet</h3>
           <p className="mb-4 text-sm text-muted-foreground">
             Create tags to organize your conversations
           </p>
@@ -245,8 +256,8 @@ const TagManager: React.FC<TagManagerProps> = ({ className }) => {
               onClick={() => setShowForm(true)}
               className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
             >
-              <HiPlus className="size-4" />
-              Create your first tag
+              <HiPlus className="size-4" aria-hidden="true" />
+              Create Your First Tag
             </button>
           )}
         </div>
@@ -259,7 +270,7 @@ const TagManager: React.FC<TagManagerProps> = ({ className }) => {
             >
               <div className="flex items-center gap-3">
                 <TagBadge tag={tag} size="md" truncate={false} />
-                <span className="text-sm text-muted-foreground">
+                <span className="text-sm tabular-nums text-muted-foreground">
                   {tag.conversationCount}{" "}
                   {tag.conversationCount === 1 ? "conversation" : "conversations"}
                 </span>
@@ -272,7 +283,7 @@ const TagManager: React.FC<TagManagerProps> = ({ className }) => {
                   title="Edit tag"
                   aria-label={`Edit tag ${tag.name}`}
                 >
-                  <HiOutlinePencil className="size-4" />
+                  <HiOutlinePencil className="size-4" aria-hidden="true" />
                 </button>
                 <button
                   type="button"
@@ -281,13 +292,15 @@ const TagManager: React.FC<TagManagerProps> = ({ className }) => {
                   title="Delete tag"
                   aria-label={`Delete tag ${tag.name}`}
                 >
-                  <HiOutlineTrash className="size-4" />
+                  <HiOutlineTrash className="size-4" aria-hidden="true" />
                 </button>
               </div>
             </div>
           ))}
 
-          <p className="pt-2 text-xs text-muted-foreground">{tags.length}/20 tags used</p>
+          <p className="pt-2 text-xs tabular-nums text-muted-foreground">
+            {tags.length}/20 tags used
+          </p>
         </div>
       )}
 
@@ -297,9 +310,11 @@ const TagManager: React.FC<TagManagerProps> = ({ className }) => {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Tag</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete the tag &quot;{tagToDelete?.name}&quot;? This will
-              remove it from all {tagToDelete?.conversationCount || 0} conversations. This action
-              cannot be undone.
+              Delete the tag &ldquo;{tagToDelete?.name}&rdquo;? It comes off{" "}
+              {tagToDelete?.conversationCount === 1
+                ? "the 1 conversation"
+                : `all ${tagToDelete?.conversationCount || 0} conversations`}{" "}
+              it&rsquo;s on. You can&rsquo;t undo this.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -308,7 +323,7 @@ const TagManager: React.FC<TagManagerProps> = ({ className }) => {
               onClick={handleDelete}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Delete
+              Delete Tag
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
