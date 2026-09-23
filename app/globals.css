@@ -153,6 +153,18 @@
     :root {
       --theme-transition-duration: 0ms;
     }
+
+    /* Honor the preference everywhere, not only for theme changes: stop
+       decorative loops (pulse, bounce, spin, marquee) and collapse
+       transitions and smooth scrolling to an instant change. */
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }
 
@@ -169,6 +181,11 @@
     font-family: var(--font-body);
   }
 
+  html {
+    /* Intentional, theme-tinted tap feedback instead of the platform grey. */
+    -webkit-tap-highlight-color: hsl(var(--primary) / 0.12);
+  }
+
   h1,
   h2,
   h3,
@@ -176,6 +193,30 @@
   h5,
   h6 {
     font-family: var(--font-heading);
+    text-wrap: balance;
+  }
+
+  /* Anchor targets land below the sticky 4rem site header. */
+  [id] {
+    scroll-margin-top: 5rem;
+  }
+
+  /* No double-tap-to-zoom delay on controls. */
+  a,
+  button,
+  input,
+  label,
+  select,
+  summary,
+  textarea,
+  [role="button"] {
+    touch-action: manipulation;
+  }
+
+  /* Native selects ignore the theme on Windows dark mode unless told. */
+  select {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
   }
 }
 
