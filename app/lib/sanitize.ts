@@ -95,6 +95,51 @@ function stripHtmlTags(html: string): string {
   return cleaned
 }
 
+const DEFAULT_ALLOWED_TAGS = [
+  "p",
+  "br",
+  "strong",
+  "em",
+  "u",
+  "s",
+  "a",
+  "ul",
+  "ol",
+  "li",
+  "blockquote",
+  "code",
+  "pre",
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
+]
+
+const SAFE_ATTRS = ["href", "src", "alt", "title", "class", "id"]
+
+/**
+ * The two allow-list patterns `sanitizeHtml` needs. Both are global, and both
+ * are only ever used with `String.prototype.replace`, which resets `lastIndex`
+ * before and after matching — so one instance is safe to share across calls.
+ */
+function buildAllowedTagPatterns(allowedTags: string[]): { tagRegex: RegExp; attrPattern: RegExp } {
+  const allowedPattern = allowedTags.join("|")
+  return {
+    tagRegex: new RegExp(`<(?!\\/?(${allowedPattern})(?:\\s|>|$))[^>]*>`, "gi"),
+    attrPattern: new RegExp(
+      `(<(?:${allowedPattern})[^>]*?)\\s+(?!(?:${SAFE_ATTRS.join(
+        "|"
+      )})\\s*=)[a-z-]+\\s*=\\s*(?:"[^"]*"|'[^']*'|[^\\s>]*)`,
+      "gi"
+    ),
+  }
+}
+
+// Built once for the default allow-list instead of on every call.
+const DEFAULT_ALLOWED_TAG_PATTERNS = buildAllowedTagPatterns(DEFAULT_ALLOWED_TAGS)
+
 /**
  * Sanitize HTML content to prevent XSS attacks
  * Strips all potentially dangerous content
@@ -118,27 +163,9 @@ export function sanitizeHtml(
     return ""
   }
 
-  const allowedTags = options?.allowedTags || [
-    "p",
-    "br",
-    "strong",
-    "em",
-    "u",
-    "s",
-    "a",
-    "ul",
-    "ol",
-    "li",
-    "blockquote",
-    "code",
-    "pre",
-    "h1",
-    "h2",
-    "h3",
-    "h4",
-    "h5",
-    "h6",
-  ]
+  const { tagRegex, attrPattern } = options?.allowedTags
+    ? buildAllowedTagPatterns(options.allowedTags)
+    : DEFAULT_ALLOWED_TAG_PATTERNS
 
   // Remove script and style tags with content
   let cleaned = dirty.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
@@ -150,23 +177,10 @@ export function sanitizeHtml(
   cleaned = cleaned.replace(/href\s*=\s*(['"])javascript:[^'"]*\1/gi, 'href=""')
   cleaned = cleaned.replace(/src\s*=\s*(['"])javascript:[^'"]*\1/gi, 'src=""')
 
-  // Build regex pattern for allowed tags
-  const allowedPattern = allowedTags.join("|")
-  const tagRegex = new RegExp(`<(?!\\/?(${allowedPattern})(?:\\s|>|$))[^>]*>`, "gi")
-
   // Remove disallowed tags but keep content
   cleaned = cleaned.replace(tagRegex, "")
 
-  // Clean up attributes on allowed tags - only keep safe attributes
-  const safeAttrs = ["href", "src", "alt", "title", "class", "id"]
-  const attrPattern = new RegExp(
-    `(<(?:${allowedPattern})[^>]*?)\\s+(?!(?:${safeAttrs.join(
-      "|"
-    )})\\s*=)[a-z-]+\\s*=\\s*(?:"[^"]*"|'[^']*'|[^\\s>]*)`,
-    "gi"
-  )
-
-  // Iteratively remove unsafe attributes
+  // Iteratively remove unsafe attributes (only keep SAFE_ATTRS on allowed tags)
   let prevCleaned = ""
   while (prevCleaned !== cleaned) {
     prevCleaned = cleaned

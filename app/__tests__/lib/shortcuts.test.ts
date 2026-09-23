@@ -7,7 +7,8 @@
  */
 import { shortcuts, type ShortcutBinding } from "@/app/lib/shortcuts"
 
-const STORAGE_KEY = "infinstar-custom-shortcuts"
+const STORAGE_KEY = "infinstar-custom-shortcuts:v1"
+const LEGACY_STORAGE_KEY = "infinstar-custom-shortcuts"
 const ENABLED_KEY = "infinstar-shortcuts-enabled"
 
 function setPlatform(platform: string) {
@@ -587,6 +588,34 @@ describe("shortcuts.reload — persisted bindings", () => {
 
     expect(shortcuts.binding("focusInput")).toEqual({ key: "i", modifiers: ["meta"] })
     expect(shortcuts.binding("toggleSidebar")).toEqual({ key: "l", modifiers: ["meta"] })
+  })
+
+  it("migrates bindings saved under the pre-versioning key", () => {
+    window.localStorage.setItem(
+      LEGACY_STORAGE_KEY,
+      JSON.stringify({ focusInput: { key: "j", modifiers: ["meta"] } })
+    )
+    shortcuts.reload()
+
+    expect(shortcuts.binding("focusInput")).toEqual({ key: "j", modifiers: ["meta"] })
+    expect(JSON.parse(window.localStorage.getItem(STORAGE_KEY) as string)).toEqual({
+      focusInput: { key: "j", modifiers: ["meta"] },
+    })
+    expect(window.localStorage.getItem(LEGACY_STORAGE_KEY)).toBeNull()
+  })
+
+  it("prefers the versioned key over a leftover legacy one", () => {
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ focusInput: { key: "k", modifiers: ["meta"] } })
+    )
+    window.localStorage.setItem(
+      LEGACY_STORAGE_KEY,
+      JSON.stringify({ focusInput: { key: "j", modifiers: ["meta"] } })
+    )
+    shortcuts.reload()
+
+    expect(shortcuts.binding("focusInput")).toEqual({ key: "k", modifiers: ["meta"] })
   })
 
   it("falls back to defaults when storage holds junk", () => {

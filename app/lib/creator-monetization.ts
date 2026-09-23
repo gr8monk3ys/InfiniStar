@@ -1,5 +1,7 @@
 import { type CreatorSubscriptionInterval } from "@prisma/client"
 
+import { formatNumber } from "@/app/lib/intl-format"
+
 export const CREATOR_TIP_AMOUNTS_CENTS = [500, 1000, 2500, 5000] as const
 
 export const CREATOR_SUBSCRIPTION_PLANS = [
@@ -53,10 +55,10 @@ export function toMonthlyRecurringCents(
 }
 
 export function formatCurrencyFromCents(amountCents: number, currency = "USD"): string {
-  return new Intl.NumberFormat("en-US", {
+  return formatNumber(amountCents / 100, {
     style: "currency",
     currency,
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(amountCents / 100)
+  })
 }

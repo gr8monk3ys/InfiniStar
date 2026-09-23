@@ -108,7 +108,15 @@ export interface ImportResult {
 // Implementation: catalogue and display data
 // ---------------------------------------------------------------------------
 
-const SHORTCUTS_STORAGE_KEY = "infinstar-custom-shortcuts"
+/**
+ * Custom bindings are a JSON document, so the key carries a schema version: a
+ * future change to the binding shape takes a new key instead of misreading old
+ * data. The unversioned key is what shipped first; it is read once, migrated,
+ * and removed, so nobody loses their bindings.
+ */
+const SHORTCUTS_STORAGE_KEY = "infinstar-custom-shortcuts:v1"
+const LEGACY_SHORTCUTS_STORAGE_KEY = "infinstar-custom-shortcuts"
+/** A bare "true"/"false" flag with no schema to evolve, so it stays unversioned. */
 const SHORTCUTS_ENABLED_KEY = "infinstar-shortcuts-enabled"
 
 type ModifierKey = "meta" | "ctrl" | "shift" | "alt"
@@ -472,7 +480,20 @@ function isTypingInInput(): boolean {
 // Implementation: validation
 // ---------------------------------------------------------------------------
 
-const RESERVED_KEYS = ["F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12"]
+const RESERVED_KEYS: ReadonlySet<string> = new Set([
+  "F1",
+  "F2",
+  "F3",
+  "F4",
+  "F5",
+  "F6",
+  "F7",
+  "F8",
+  "F9",
+  "F10",
+  "F11",
+  "F12",
+])
 
 function validateBinding(actionId: string, binding: ShortcutBinding): string | null {
   if (!isKnownAction(actionId)) {
@@ -485,7 +506,7 @@ function validateBinding(actionId: string, binding: ShortcutBinding): string | n
     return "This shortcut requires at least one modifier key (Cmd/Ctrl, Shift, or Alt)"
   }
 
-  if (RESERVED_KEYS.includes(binding.key)) {
+  if (RESERVED_KEYS.has(binding.key)) {
     return "Function keys are reserved and cannot be used"
   }
 
@@ -536,7 +557,7 @@ function readCustomFromStorage(): CustomShortcuts {
   if (typeof window === "undefined") return {}
 
   try {
-    const stored = localStorage.getItem(SHORTCUTS_STORAGE_KEY)
+    const stored = localStorage.getItem(SHORTCUTS_STORAGE_KEY) ?? migrateLegacyShortcuts()
     if (!stored) return {}
 
     const parsed: unknown = JSON.parse(stored)
@@ -557,6 +578,25 @@ function readCustomFromStorage(): CustomShortcuts {
   } catch {
     return {}
   }
+}
+
+/**
+ * Moves bindings saved under the pre-versioning key to the current one and
+ * returns them, or null when there are none. Call inside a try: reading
+ * storage can throw. A failed move (quota) still returns the legacy copy, so
+ * the bindings apply this session and the move is retried on the next load.
+ */
+function migrateLegacyShortcuts(): string | null {
+  const legacy = localStorage.getItem(LEGACY_SHORTCUTS_STORAGE_KEY)
+  if (legacy === null) return null
+
+  try {
+    localStorage.setItem(SHORTCUTS_STORAGE_KEY, legacy)
+    localStorage.removeItem(LEGACY_SHORTCUTS_STORAGE_KEY)
+  } catch {
+    // Keep reading the legacy copy until the move succeeds.
+  }
+  return legacy
 }
 
 function customShortcuts(): CustomShortcuts {

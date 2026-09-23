@@ -91,7 +91,8 @@ export async function maybeAutoExtractMemories(
     return
   }
 
-  const newCount = extracted.filter((m) => !existingMemories.some((em) => em.key === m.key)).length
+  const existingKeys = new Set(existingMemories.map((memory) => memory.key))
+  const newCount = extracted.filter((m) => !existingKeys.has(m.key)).length
 
   if (newCount > capacityInfo.limit - capacityInfo.current) {
     aiLogger.info(

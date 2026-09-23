@@ -7,6 +7,7 @@
 
 import { type MessageTemplate, type Prisma } from "@prisma/client"
 
+import { formatDate } from "@/app/lib/intl-format"
 import prisma from "@/app/lib/prismadb"
 import { getUserSubscriptionPlan } from "@/app/lib/subscription"
 import {
@@ -195,13 +196,15 @@ export async function createTemplate(
   userId: string,
   data: CreateTemplateData
 ): Promise<MessageTemplate> {
-  // Check template limit based on subscription
-  const subscription = await getUserSubscriptionPlan(userId)
+  // Check template limit based on subscription. The plan and the count are
+  // independent reads.
+  const [subscription, currentCount] = await Promise.all([
+    getUserSubscriptionPlan(userId),
+    prisma.messageTemplate.count({
+      where: { userId },
+    }),
+  ])
   const limit = subscription.isPro ? TEMPLATE_LIMITS.PRO : TEMPLATE_LIMITS.FREE
-
-  const currentCount = await prisma.messageTemplate.count({
-    where: { userId },
-  })
 
   if (currentCount >= limit) {
     throw new Error(
@@ -420,12 +423,16 @@ export async function incrementTemplateUsage(
  */
 export function processTemplateVariables(
   content: string,
-  variables: TemplateVariables = {}
+  variables: TemplateVariables = {},
+  /** BCP 47 locale for `{{date}}` / `{{time}}`; the runtime default when omitted. */
+  locale?: string
 ): string {
-  // Add default variables
+  // Add default variables. Same shapes `toLocaleDateString()` /
+  // `toLocaleTimeString()` produced, through the shared cached Intl formatters.
+  const now = new Date()
   const defaultVariables: TemplateVariables = {
-    date: new Date().toLocaleDateString(),
-    time: new Date().toLocaleTimeString(),
+    date: formatDate(now, {}, locale),
+    time: formatDate(now, { timeStyle: "medium" }, locale),
     ...variables,
   }
 
@@ -470,9 +477,9 @@ export async function getUserTemplateCategories(userId: string): Promise<string[
     distinct: ["category"],
   })
 
-  return templates
-    .map((t: { category: string | null }) => t.category)
-    .filter((c: string | null): c is string => c !== null)
+  return templates.flatMap((t: { category: string | null }) =>
+    t.category !== null ? [t.category] : []
+  )
 }
 
 /**
@@ -500,9 +507,11 @@ export async function getTemplateLimitInfo(userId: string): Promise<{
   isLimitReached: boolean
   isPro: boolean
 }> {
-  const subscription = await getUserSubscriptionPlan(userId)
+  const [subscription, current] = await Promise.all([
+    getUserSubscriptionPlan(userId),
+    getUserTemplateCount(userId),
+  ])
   const limit = subscription.isPro ? TEMPLATE_LIMITS.PRO : TEMPLATE_LIMITS.FREE
-  const current = await getUserTemplateCount(userId)
 
   return {
     current,

@@ -299,13 +299,14 @@ export async function deleteOldConversations(userId: string): Promise<AutoDelete
         )
     )
   )
-  await Promise.all(pusherPromises)
-
-  // Update last run time
-  await prisma.user.update({
-    where: { id: userId },
-    data: { lastAutoDeleteRun: new Date() },
-  })
+  // The notifications and the last-run stamp are independent of each other.
+  await Promise.all([
+    ...pusherPromises,
+    prisma.user.update({
+      where: { id: userId },
+      data: { lastAutoDeleteRun: new Date() },
+    }),
+  ])
 
   return {
     deletedCount: deletedIds.length,

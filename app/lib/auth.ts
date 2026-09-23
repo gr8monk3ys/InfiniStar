@@ -1,3 +1,4 @@
+import { cache } from "react"
 import { auth, currentUser } from "@clerk/nextjs/server"
 import { createClerkAuth, isClerkConfigured, setClerkModule } from "@gr8monk3ys/next-kit/auth/clerk"
 
@@ -105,14 +106,22 @@ async function getFallbackSession(): Promise<AppAuthSession | null> {
   }
 }
 
-export async function getAuthSession(): Promise<AppAuthSession | null> {
+/**
+ * The signed-in session for this request.
+ *
+ * `React.cache` dedupes it across one server render: `getCurrentUser`,
+ * `getCurrentUserSlim` and `getSession` all start here, and a dashboard page
+ * reaches two or three of them. Outside a React render (route handlers) `cache`
+ * is a pass-through, so each call resolves afresh.
+ */
+export const getAuthSession = cache(async (): Promise<AppAuthSession | null> => {
   const clerkSession = await getClerkSession()
   if (clerkSession) {
     return clerkSession
   }
 
   return getFallbackSession()
-}
+})
 
 export async function getCurrentUserId() {
   const session = await getAuthSession()

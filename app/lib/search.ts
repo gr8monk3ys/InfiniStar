@@ -47,20 +47,29 @@ export function escapeRegex(str: string): string {
  */
 export function highlightSearchTerm(text: string, query: string): string {
   if (!query || !text) return text
+  return createHighlighter(query)(text)
+}
+
+/**
+ * A highlighter for one query, so a result page builds its RegExp once rather
+ * than once per row. Sharing the global regex across `replace` calls is safe:
+ * `String.prototype.replace` resets `lastIndex` before and after a global match.
+ */
+function createHighlighter(query: string): (text: string) => string {
+  if (!query) return (text) => text
 
   // Protect against ReDoS by limiting lengths
   const safeQuery =
     query.length > MAX_SEARCH_QUERY_LENGTH ? query.substring(0, MAX_SEARCH_QUERY_LENGTH) : query
+  const regex = new RegExp(`(${escapeRegex(safeQuery)})`, "gi")
 
-  // Skip highlighting for very long texts
-  if (text.length > MAX_TEXT_LENGTH_FOR_HIGHLIGHT) {
-    return text
+  return (text) => {
+    // Skip highlighting for empty and very long texts
+    if (!text || text.length > MAX_TEXT_LENGTH_FOR_HIGHLIGHT) {
+      return text
+    }
+    return text.replace(regex, "[hl]$1[/hl]")
   }
-
-  const escapedQuery = escapeRegex(safeQuery)
-  const regex = new RegExp(`(${escapedQuery})`, "gi")
-
-  return text.replace(regex, "[hl]$1[/hl]")
 }
 
 /**
@@ -98,7 +107,8 @@ export function buildDateFilter(
  */
 function calculateRelevanceScore(
   text: string,
-  query: string,
+  /** Already lowercased by the caller, once per search rather than per row. */
+  lowerQuery: string,
   factors: {
     isExactMatch?: boolean
     isTitle?: boolean
@@ -108,7 +118,6 @@ function calculateRelevanceScore(
 ): number {
   let score = 0
   const lowerText = text.toLowerCase()
-  const lowerQuery = query.toLowerCase()
 
   // Base score for containing the query
   if (lowerText.includes(lowerQuery)) {
@@ -245,6 +254,8 @@ export async function searchConversations(
     prisma.conversation.count({ where: whereClause }),
   ])
 
+  const lowerQuery = query.toLowerCase()
+
   let items: ConversationSearchResult[] = conversations.map(
     (conv: {
       id: string
@@ -277,7 +288,7 @@ export async function searchConversations(
         tags: conv.tags,
         isArchived: conv.archivedBy.includes(userId),
         relevanceScore: useRelevanceSort
-          ? calculateRelevanceScore(conv.name || "", query, {
+          ? calculateRelevanceScore(conv.name || "", lowerQuery, {
               isTitle: true,
               recency: daysSinceActive,
               messageCount: conv._count.messages,
@@ -380,6 +391,9 @@ export async function searchMessages(
     prisma.message.count({ where: whereClause }),
   ])
 
+  const highlight = createHighlighter(query)
+  const lowerQuery = query.toLowerCase()
+
   let items: MessageSearchResult[] = messages.map(
     (msg: {
       id: string
@@ -397,14 +411,14 @@ export async function searchMessages(
       return {
         id: msg.id,
         body: msg.body || "",
-        highlightedBody: highlightSearchTerm(msg.body || "", query),
+        highlightedBody: highlight(msg.body || ""),
         createdAt: msg.createdAt.toISOString(),
         isAI: msg.isAI,
         hasImage: !!msg.image,
         sender: msg.sender,
         conversation: msg.conversation,
         relevanceScore: useMsgRelevanceSort
-          ? calculateRelevanceScore(msg.body || "", query, {
+          ? calculateRelevanceScore(msg.body || "", lowerQuery, {
               recency: daysSinceCreated,
             })
           : undefined,
@@ -433,27 +447,42 @@ export async function getSearchSuggestions(
 
   const escapedQuery = escapeRegex(query)
   const suggestions: SearchSuggestion[] = []
+  const highlight = createHighlighter(query)
 
-  // Use full-text search to find matching conversation names
-  const matchingConvIds = await searchConversationIdsByName(query, limit * 2)
-
-  const conversations =
-    matchingConvIds.length > 0
-      ? await prisma.conversation.findMany({
-          where: {
-            id: { in: matchingConvIds },
-            users: { some: { id: userId } },
-            archivedBy: { isEmpty: true },
-          },
-          select: {
-            id: true,
-            name: true,
-            isAI: true,
-          },
-          take: limit,
-          orderBy: { lastMessageAt: "desc" },
-        })
-      : []
+  // The conversation lookup (full-text ids, then the rows) and the tag lookup
+  // are independent, so they run together. Conversations still list first.
+  const [conversations, tags] = await Promise.all([
+    searchConversationIdsByName(query, limit * 2).then((matchingConvIds) =>
+      matchingConvIds.length > 0
+        ? prisma.conversation.findMany({
+            where: {
+              id: { in: matchingConvIds },
+              users: { some: { id: userId } },
+              archivedBy: { isEmpty: true },
+            },
+            select: {
+              id: true,
+              name: true,
+              isAI: true,
+            },
+            take: limit,
+            orderBy: { lastMessageAt: "desc" },
+          })
+        : []
+    ),
+    prisma.tag.findMany({
+      where: {
+        userId,
+        name: { contains: escapedQuery, mode: "insensitive" as const },
+      },
+      select: {
+        id: true,
+        name: true,
+        color: true,
+      },
+      take: limit,
+    }),
+  ])
 
   conversations.forEach((conv: { id: string; name: string | null; isAI: boolean }) => {
     if (conv.name) {
@@ -462,23 +491,9 @@ export async function getSearchSuggestions(
         type: "conversation",
         text: conv.name,
         context: conv.isAI ? "AI Conversation" : "Conversation",
-        highlightedText: highlightSearchTerm(conv.name, query),
+        highlightedText: highlight(conv.name),
       })
     }
-  })
-
-  // Search tags
-  const tags = await prisma.tag.findMany({
-    where: {
-      userId,
-      name: { contains: escapedQuery, mode: "insensitive" as const },
-    },
-    select: {
-      id: true,
-      name: true,
-      color: true,
-    },
-    take: limit,
   })
 
   tags.forEach((tag: { id: string; name: string; color: string }) => {
@@ -487,7 +502,7 @@ export async function getSearchSuggestions(
       type: "tag",
       text: tag.name,
       context: `Tag (${tag.color})`,
-      highlightedText: highlightSearchTerm(tag.name, query),
+      highlightedText: highlight(tag.name),
     })
   })
 

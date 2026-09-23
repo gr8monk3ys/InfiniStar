@@ -19,13 +19,18 @@ export function getVapidPublicKey(): string | null {
   return process.env.VAPID_PUBLIC_KEY || null
 }
 
+// `web-push` stores VAPID details globally, and `setVapidDetails` decodes and
+// validates both keys on every call, so it runs once per process rather than
+// once per send.
+let webPushConfigured = false
+
 function configureWebPush() {
-  if (!isConfigured()) return
+  if (webPushConfigured || !isConfigured()) return
 
   const subject = process.env.VAPID_SUBJECT || config.appUrl
 
-  // Safe to call multiple times; `web-push` stores these values globally.
   webpush.setVapidDetails(subject, process.env.VAPID_PUBLIC_KEY!, process.env.VAPID_PRIVATE_KEY!)
+  webPushConfigured = true
 }
 
 function buildSubscription(input: { endpoint: string; p256dh: string; auth: string }) {

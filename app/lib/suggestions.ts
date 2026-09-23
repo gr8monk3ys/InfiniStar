@@ -44,8 +44,11 @@ export interface SuggestionContext {
 
 /**
  * Simple in-memory cache for suggestions
- * Key: hash of context + type
+ * Key: type + the recent messages' ids + the partial input (see generateCacheKey)
  * Value: cached suggestions with timestamp
+ *
+ * This Map is module state shared by every request the instance serves, so its
+ * key must scope an entry to the conversation it came from.
  */
 const suggestionCache = new Map<
   string,
@@ -62,8 +65,17 @@ const MAX_CACHE_SIZE = 100
  * Generate a cache key from the context and type
  */
 function generateCacheKey(context: SuggestionContext, type: SuggestionType): string {
-  const lastMessages = context.messages.slice(-3).map((m) => m.body?.slice(0, 50) || "")
-  const inputPart = context.partialInput?.slice(0, 50) || ""
+  // Keyed on message ids, not only on truncated bodies. Two conversations whose
+  // last three messages *start* alike — a stock character greeting and a "hi" —
+  // used to share a key, handing one chatter suggestions generated from another
+  // chatter's history. A message id belongs to one conversation, so it scopes
+  // the entry to people who can already read that conversation. The body slice
+  // stays so an edited message still misses. The partial input is kept whole:
+  // it is sent to the model whole, so a 50-character prefix under-keyed it.
+  const lastMessages = context.messages
+    .slice(-3)
+    .map((m) => `${m.id}:${m.body?.slice(0, 50) || ""}`)
+  const inputPart = context.partialInput || ""
   return `${type}:${lastMessages.join("|")}:${inputPart}`
 }
 
@@ -141,8 +153,9 @@ export function buildSuggestionPrompt(
     })
     .join("\n")
 
-  const lastAIMessage = recentMessages.filter((m) => m.isAI).pop()?.body || ""
-  const lastUserMessage = recentMessages.filter((m) => !m.isAI).pop()?.body || ""
+  // Search from the end instead of filtering the whole window twice.
+  const lastAIMessage = recentMessages.findLast((m) => m.isAI)?.body || ""
+  const lastUserMessage = recentMessages.findLast((m) => !m.isAI)?.body || ""
 
   let systemPrompt = ""
   let userPrompt = ""
@@ -227,21 +240,30 @@ Suggest 4 different ways to phrase this message:`
   return { system: systemPrompt, user: userPrompt }
 }
 
+const NUMBERED_LINE = /^\d+[\.\)]\s/
+// Global, but only ever used with `replace`, which resets `lastIndex` itself.
+const SURROUNDING_QUOTES = /^["']|["']$/g
+const MAX_PARSED_SUGGESTIONS = 5
+
 /**
  * Parse Claude's response into an array of suggestions
  */
 export function parseSuggestions(response: string, type: SuggestionType): Suggestion[] {
-  const lines = response
-    .split("\n")
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0)
-    .filter((line) => !line.match(/^\d+[\.\)]\s/)) // Remove numbered lines
-    .filter((line) => !line.startsWith("-")) // Remove bullet points
-    .map((line) => line.replace(/^["']|["']$/g, "").trim()) // Remove quotes
-    .filter((line) => line.length > 5) // Filter out very short lines
+  // One pass over the lines, stopping once there are enough.
+  const lines: string[] = []
+  for (const rawLine of response.split("\n")) {
+    const line = rawLine.trim()
+    if (line.length === 0) continue
+    if (NUMBERED_LINE.test(line)) continue // Remove numbered lines
+    if (line.startsWith("-")) continue // Remove bullet points
+    const text = line.replace(SURROUNDING_QUOTES, "").trim() // Remove quotes
+    if (text.length <= 5) continue // Filter out very short lines
+    lines.push(text)
+    if (lines.length === MAX_PARSED_SUGGESTIONS) break
+  }
 
   // Take up to 5 suggestions
-  const suggestions = lines.slice(0, 5).map((text, index) => ({
+  const suggestions = lines.map((text, index) => ({
     id: `${type}-${index}-${Date.now()}`,
     text,
     type,
