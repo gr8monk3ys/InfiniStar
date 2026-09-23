@@ -22,6 +22,9 @@ const Input: React.FC<InputProps> = ({
   type = "text",
   disabled,
 }) => {
+  const hasError = Boolean(errors[id])
+  const errorId = `${id}-error`
+
   return (
     <div>
       <label
@@ -41,7 +44,10 @@ const Input: React.FC<InputProps> = ({
           id={id}
           type={type}
           autoComplete={id}
+          spellCheck={type === "email" ? false : undefined}
           disabled={disabled}
+          aria-invalid={hasError || undefined}
+          aria-describedby={hasError ? errorId : undefined}
           {...register(id, { required })}
           className={clsx(
             `
@@ -67,6 +73,11 @@ const Input: React.FC<InputProps> = ({
           )}
         />
       </div>
+      {hasError ? (
+        <p id={errorId} className="mt-1 text-sm text-destructive" aria-live="polite">
+          Enter a {label.toLowerCase()}.
+        </p>
+      ) : null}
     </div>
   )
 }

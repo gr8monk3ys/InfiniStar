@@ -17,12 +17,15 @@ export default async function ConversationsLayout({ children }: { children: Reac
   // Only fetch the user directory when group chat is enabled — otherwise we'd be
   // shipping every account's name/email/avatar to the client to populate a picker
   // that is never shown.
-  const [conversations, user, currentUser] = await Promise.all([
+  // Scene characters depend only on the viewer, so they chain off the user
+  // promise instead of waiting for every other read to finish.
+  const currentUserPromise = getCurrentUser()
+  const [conversations, user, currentUser, sceneCharacters] = await Promise.all([
     getConversations(),
     isGroupChatEnabled() ? getUsers().then((r) => r.users) : Promise.resolve([]),
-    getCurrentUser(),
+    currentUserPromise,
+    currentUserPromise.then((viewer) => getPopularSceneCharacters(viewer)),
   ])
-  const sceneCharacters = await getPopularSceneCharacters(currentUser)
   const initialNotificationPrefs: NotificationPreferences | null = currentUser
     ? {
         browserNotifications: currentUser.browserNotifications ?? false,
@@ -36,7 +39,7 @@ export default async function ConversationsLayout({ children }: { children: Reac
     <GlobalSearchProvider>
       <KeyboardShortcutsProvider>
         <PresenceProvider>
-          <Sidebar>
+          <Sidebar currentUser={currentUser}>
             <div className="h-full">
               <ConversationList
                 user={user}

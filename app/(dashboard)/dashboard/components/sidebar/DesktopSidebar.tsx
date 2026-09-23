@@ -41,7 +41,7 @@ const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ currentUser }) => {
           lg:pb-4
         "
       >
-        <nav className="mt-4 flex flex-col justify-between">
+        <nav className="mt-4 flex flex-col justify-between" aria-label="Dashboard">
           <ul role="list" className="flex flex-col items-center space-y-1">
             {routes.map((item) => (
               <React.Fragment key={item.label}>
@@ -61,9 +61,10 @@ const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ currentUser }) => {
             ))}
           </ul>
         </nav>
-        <nav className="mt-auto flex flex-col items-center gap-3 pb-4">
+        <div className="mt-auto flex flex-col items-center gap-3 pb-4">
           {/* Keyboard shortcuts help button */}
           <button
+            type="button"
             onClick={openHelp}
             className="group relative flex cursor-pointer items-center justify-center rounded-md p-3 text-muted-foreground transition hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             aria-label="Keyboard shortcuts (press ? or Cmd+/)"
@@ -73,13 +74,15 @@ const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ currentUser }) => {
             <span className="sr-only">Keyboard shortcuts</span>
           </button>
           {/* User avatar */}
-          <div
+          <button
+            type="button"
             onClick={() => setIsOpen(true)}
-            className="cursor-pointer transition hover:opacity-75"
+            className="cursor-pointer rounded-full transition hover:opacity-75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            aria-label="Open profile settings"
           >
             <Avatar user={currentUser} />
-          </div>
-        </nav>
+          </button>
+        </div>
       </div>
     </>
   )

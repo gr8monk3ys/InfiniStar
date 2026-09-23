@@ -39,7 +39,7 @@ export function ImageGenerationDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Generate image</DialogTitle>
+          <DialogTitle>Generate Image</DialogTitle>
           <DialogDescription>
             Creates an AI-generated image and sends it to this conversation.
           </DialogDescription>
@@ -51,9 +51,11 @@ export function ImageGenerationDialog({
           </label>
           <textarea
             id="image-prompt"
+            name="prompt"
+            autoComplete="off"
             value={prompt}
             onChange={(e) => onPromptChange(e.target.value)}
-            placeholder="Describe the image you want…"
+            placeholder="A lighthouse on a cliff at dusk, oil painting…"
             className="min-h-28 w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             maxLength={2000}
             disabled={isGenerating || isStreaming}
@@ -64,6 +66,8 @@ export function ImageGenerationDialog({
           </label>
           <select
             id="image-size"
+            name="size"
+            autoComplete="off"
             value={size}
             onChange={(e) => onSizeChange(e.target.value as ImageSize)}
             className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -86,7 +90,7 @@ export function ImageGenerationDialog({
             Cancel
           </Button>
           <Button type="button" onClick={onGenerate} disabled={isGenerating || isStreaming}>
-            {isGenerating ? "Generating…" : "Generate"}
+            {isGenerating ? "Generating…" : "Generate Image"}
           </Button>
         </DialogFooter>
       </DialogContent>

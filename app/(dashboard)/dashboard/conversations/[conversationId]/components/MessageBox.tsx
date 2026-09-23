@@ -4,11 +4,11 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import clsx from "clsx"
-import { format } from "date-fns"
 import toast from "react-hot-toast"
 import { HiArrowPath, HiArrowUturnLeft } from "react-icons/hi2"
 
 import { api, ApiError } from "@/app/lib/api-client"
+import { formatDateTime, formatTime } from "@/app/lib/intl-format"
 import { MarkdownRenderer } from "@/app/components/ui/MarkdownRenderer"
 import Avatar from "@/app/components/Avatar"
 import { type FullMessageType } from "@/app/types"
@@ -92,19 +92,17 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
   const safeActiveVariant =
     variants.length > 0 ? Math.min(Math.max(activeVariant, 0), variants.length - 1) : 0
 
-  useEffect(() => {
-    if (localActiveVariant === null && localBodyOverride === null) return
-
-    if (
-      localActiveVariant !== null &&
-      typeof data.activeVariant === "number" &&
-      data.activeVariant === localActiveVariant &&
-      (localBodyOverride === null || data.body === localBodyOverride)
-    ) {
-      setLocalActiveVariant(null)
-      setLocalBodyOverride(null)
-    }
-  }, [data.activeVariant, data.body, localActiveVariant, localBodyOverride])
+  // Once the server copy catches up with the optimistic variant, drop the local
+  // override. Adjusted during render (not in an effect) so there is no extra paint.
+  if (
+    localActiveVariant !== null &&
+    typeof data.activeVariant === "number" &&
+    data.activeVariant === localActiveVariant &&
+    (localBodyOverride === null || data.body === localBodyOverride)
+  ) {
+    setLocalActiveVariant(null)
+    setLocalBodyOverride(null)
+  }
 
   const isThisRegenerating = Boolean(
     data.isAI && isRegenerating && regeneratingMessageId === data.id
@@ -112,17 +110,15 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
   const baseBody = localBodyOverride ?? data.body ?? ""
   const displayBody = isThisRegenerating ? (regeneratingContent ?? "") : baseBody
 
-  // Check if message body contains code blocks (for AI messages)
-  const hasCodeBlocks = useMemo(() => {
-    if (!displayBody) return false
-    return displayBody.includes("```") || displayBody.includes("`")
-  }, [displayBody])
+  // Check if message body contains code blocks (for AI messages). A simple boolean
+  // expression, so it is not memoized.
+  const hasCodeBlocks = Boolean(displayBody) && displayBody.includes("`")
 
   // AI messages with code blocks get special styling
   const isAiWithCode = data.isAI && hasCodeBlocks
 
   const message = clsx(
-    "text-sm w-fit overflow-hidden",
+    "text-sm w-fit overflow-hidden break-words",
     isOwn ? "chat-bubble-user" : "chat-bubble-ai",
     data.image
       ? "rounded-md p-0"
@@ -152,7 +148,8 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
       setIsEditing(false)
       setShowMenu(false)
     } catch (error) {
-      const message = error instanceof ApiError ? error.message : "Failed to edit message"
+      const message =
+        error instanceof ApiError ? error.message : "Couldn't edit the message. Try again."
       toast.error(message)
       setEditedBody(data.body || "")
     }
@@ -177,7 +174,8 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
       toast.success("Message deleted")
       setShowMenu(false)
     } catch (error) {
-      const message = error instanceof ApiError ? error.message : "Failed to delete message"
+      const message =
+        error instanceof ApiError ? error.message : "Couldn't delete the message. Try again."
       toast.error(message)
     } finally {
       setIsDeleting(false)
@@ -204,7 +202,8 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
         )
         setShowReactionPicker(false)
       } catch (error) {
-        const message = error instanceof ApiError ? error.message : "Failed to add reaction"
+        const message =
+          error instanceof ApiError ? error.message : "Couldn't add the reaction. Try again."
         toast.error(message)
       }
     },
@@ -248,7 +247,8 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
           setLocalBodyOverride(updated.body)
         }
       } catch (error) {
-        const message = error instanceof ApiError ? error.message : "Failed to switch reply variant"
+        const message =
+          error instanceof ApiError ? error.message : "Couldn't switch to that reply. Try again."
         toast.error(message)
         setLocalActiveVariant(null)
         setLocalBodyOverride(null)
@@ -284,7 +284,7 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
 
       const nextConversationId = result && typeof result.id === "string" ? result.id : null
       if (!nextConversationId) {
-        throw new Error("Failed to create branch")
+        throw new Error("Couldn't create the branch. Try again.")
       }
 
       toast.success("Branch created")
@@ -293,7 +293,7 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
       const message =
         error instanceof ApiError || error instanceof Error
           ? error.message
-          : "Failed to create branch"
+          : "Couldn't create the branch. Try again."
       toast.error(message)
     } finally {
       setIsForking(false)
@@ -306,7 +306,7 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
       await navigator.clipboard.writeText(displayBody)
       toast.success("Copied")
     } catch {
-      toast.error("Could not copy message")
+      toast.error("Couldn't copy the message. Select the text and copy it instead.")
     }
     setShowMenu(false)
   }, [displayBody])
@@ -352,16 +352,12 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
   // Don't show deleted messages
   if (data.isDeleted) {
     return (
-      <div className={container} role="article" aria-label="Deleted message">
+      <article className={container} aria-label="Deleted message">
         <div className={avatar}>
           {data.isAI && characterAvatar ? (
             <div className="relative size-9 overflow-hidden rounded-full">
-              <Image
-                src={characterAvatar}
-                alt={characterName || "AI"}
-                fill
-                className="object-cover"
-              />
+              {/* Decorative: the sender's name is shown next to it. */}
+              <Image src={characterAvatar} alt="" fill sizes="36px" className="object-cover" />
             </div>
           ) : (
             <Avatar user={data.sender} />
@@ -372,15 +368,19 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
             <div className="text-sm text-muted-foreground">
               {data.isAI && characterName ? characterName : data.sender.name}
             </div>
-            <div className="text-xs text-muted-foreground">
-              {format(new Date(data.createdAt), "p")}
-            </div>
+            <time
+              className="text-xs tabular-nums text-muted-foreground"
+              dateTime={new Date(data.createdAt).toISOString()}
+              suppressHydrationWarning
+            >
+              {formatTime(data.createdAt)}
+            </time>
           </div>
           <div className="rounded-full bg-secondary px-3 py-2 text-sm italic text-muted-foreground">
             This message was deleted
           </div>
         </div>
-      </div>
+      </article>
     )
   }
 
@@ -391,20 +391,15 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
         onOpenChange={setIsDeleteConfirmOpen}
         onConfirm={handleDeleteConfirm}
       />
-      <div
+      <article
         className={container}
-        role="article"
         aria-label={`Message from ${data.isAI && characterName ? characterName : data.sender.name}`}
       >
         <div className={avatar}>
           {data.isAI && characterAvatar ? (
             <div className="relative size-9 overflow-hidden rounded-full">
-              <Image
-                src={characterAvatar}
-                alt={characterName || "AI"}
-                fill
-                className="object-cover"
-              />
+              {/* Decorative: the sender's name is shown next to it. */}
+              <Image src={characterAvatar} alt="" fill sizes="36px" className="object-cover" />
             </div>
           ) : (
             <Avatar user={data.sender} />
@@ -415,16 +410,18 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
             <div className="text-sm text-muted-foreground">
               {data.isAI && characterName ? characterName : data.sender.name}
             </div>
-            <div
-              className="text-xs text-muted-foreground"
-              aria-label={`Sent at ${format(new Date(data.createdAt), "p")}`}
+            <time
+              className="text-xs tabular-nums text-muted-foreground"
+              dateTime={new Date(data.createdAt).toISOString()}
+              suppressHydrationWarning
             >
-              {format(new Date(data.createdAt), "p")}
-            </div>
+              {formatTime(data.createdAt)}
+            </time>
             {data.editedAt && (
               <div
                 className="text-xs italic text-muted-foreground"
-                title={`Edited ${format(new Date(data.editedAt), "PPp")}`}
+                title={`Edited ${formatDateTime(data.editedAt)}`}
+                suppressHydrationWarning
               >
                 (edited)
               </div>
@@ -455,31 +452,27 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
                     onClose={() => setImageModalOpen(false)}
                   />
                   {data.image ? (
-                    <Image
-                      alt={`Image attachment from ${data.sender.name}`}
-                      height={288}
-                      width={288}
-                      sizes="(max-width: 640px) 100vw, 288px"
+                    <button
+                      type="button"
                       onClick={() => setImageModalOpen(true)}
-                      src={data.image}
-                      className="
-                      translate
-                      cursor-pointer
-                      object-cover
-                      transition
-                      hover:scale-110
-                      motion-reduce:transform-none
-                    "
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault()
-                          setImageModalOpen(true)
-                        }
-                      }}
-                      aria-label="Click to view full-size image"
-                    />
+                      className="block cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      aria-label={`View full-size image from ${data.sender.name}`}
+                    >
+                      <Image
+                        alt={`Image attachment from ${data.sender.name}`}
+                        height={288}
+                        width={288}
+                        sizes="(max-width: 640px) 100vw, 288px"
+                        src={data.image}
+                        className="
+                        translate
+                        object-cover
+                        transition
+                        hover:scale-110
+                        motion-reduce:transform-none
+                      "
+                      />
+                    </button>
                   ) : data.audioUrl ? (
                     <div className="flex flex-col gap-2">
                       <audio
@@ -515,18 +508,20 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
                   {/* Reply button */}
                   {onReply && !data.isDeleted && (
                     <button
+                      type="button"
                       onClick={() => onReply(data)}
                       className={actionButtonClass}
                       aria-label="Reply to message"
                       title="Reply"
                     >
-                      <HiArrowUturnLeft size={16} />
+                      <HiArrowUturnLeft size={16} aria-hidden="true" />
                     </button>
                   )}
 
                   {/* Regenerate button - only show for AI messages */}
                   {data.isAI && onRegenerate && !data.isDeleted && (
                     <button
+                      type="button"
                       onClick={() => onRegenerate(data.id)}
                       disabled={isRegenerating}
                       className={clsx(
@@ -542,7 +537,7 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
                           : "Reply again"
                       }
                     >
-                      <HiArrowPath size={16} />
+                      <HiArrowPath size={16} aria-hidden="true" />
                     </button>
                   )}
 
@@ -550,7 +545,7 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
                   <MessageReactionPicker
                     containerRef={reactionPickerRef}
                     open={showReactionPicker}
-                    onToggle={() => setShowReactionPicker(!showReactionPicker)}
+                    onToggle={() => setShowReactionPicker((open) => !open)}
                     onReact={handleReaction}
                   />
 
@@ -570,7 +565,7 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
                       containerRef={menuRef}
                       open={showMenu}
                       isDeleting={isDeleting}
-                      onToggle={() => setShowMenu(!showMenu)}
+                      onToggle={() => setShowMenu((open) => !open)}
                       onCopy={displayBody && !data.image && !data.audioUrl ? handleCopy : undefined}
                       onBranch={
                         isAiConversation
@@ -632,7 +627,9 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
                     title={`${userIds.length} reaction${userIds.length > 1 ? "s" : ""}`}
                   >
                     <span>{emoji}</span>
-                    <span className="text-xs text-muted-foreground">{userIds.length}</span>
+                    <span className="text-xs tabular-nums text-muted-foreground">
+                      {userIds.length}
+                    </span>
                   </button>
                 )
               })}
@@ -643,7 +640,7 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
             <div className="text-xs font-light text-muted-foreground">{`Seen by ${seenList}`}</div>
           )}
         </div>
-      </div>
+      </article>
     </>
   )
 })

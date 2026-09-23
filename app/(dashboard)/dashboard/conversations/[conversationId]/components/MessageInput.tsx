@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useSyncExternalStore } from "react"
 import { type FieldErrors, type FieldValues, type UseFormRegister } from "react-hook-form"
 
 import { isMac } from "@/app/hooks/useKeyboardShortcuts"
@@ -20,6 +20,14 @@ interface MessageInputProps {
   "aria-label"?: string
 }
 
+// The platform never changes after load, so there is nothing to subscribe to.
+const subscribeNoop = () => () => {}
+const getIsMacOS = () =>
+  navigator.platform?.toLowerCase().includes("mac") ||
+  navigator.userAgent?.toLowerCase().includes("mac")
+// Server (and hydration) render "Ctrl"; the client corrects it without a mismatch.
+const getServerIsMacOS = () => false
+
 const MessageInput: React.FC<MessageInputProps> = ({
   placeholder,
   id,
@@ -32,16 +40,9 @@ const MessageInput: React.FC<MessageInputProps> = ({
 }) => {
   const registeredProps = register(id, { required })
 
-  // Detect Mac platform after mount to avoid SSR hydration mismatch.
-  // isMac() reads navigator.platform which is only available client-side.
-  const [isMacOS, setIsMacOS] = useState(false)
-  useEffect(() => {
-    setIsMacOS(
-      typeof navigator !== "undefined" &&
-        (navigator.platform?.toLowerCase().includes("mac") ||
-          navigator.userAgent?.toLowerCase().includes("mac"))
-    )
-  }, [])
+  // Detect the Mac platform without an effect + extra render, and without an SSR
+  // hydration mismatch (navigator is client-only).
+  const isMacOS = useSyncExternalStore(subscribeNoop, getIsMacOS, getServerIsMacOS)
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     // Call the original register onChange
@@ -67,7 +68,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
       <input
         id={id}
         type={type}
-        autoComplete={id}
+        autoComplete="off"
         {...registeredProps}
         onChange={handleChange}
         onKeyDown={handleKeyDown}

@@ -86,9 +86,9 @@ export function ComposerRow({
 
   const placeholder = isAI
     ? characterName
-      ? `Say something to ${characterName}`
-      : "Say something"
-    : "Write a message"
+      ? `Say something to ${characterName}…`
+      : "Say something…"
+    : "Write a message…"
 
   return (
     <div className="flex w-full items-center gap-1 p-3 sm:p-4">
@@ -122,7 +122,7 @@ export function ComposerRow({
           aria-label="Generate image"
           title="Generate image"
         >
-          <HiSparkles size={24} />
+          <HiSparkles size={24} aria-hidden="true" />
         </button>
       )}
       {voiceMessageSupported && capabilities.voiceTranscription && (
@@ -139,7 +139,11 @@ export function ComposerRow({
           aria-pressed={isRecordingVoiceMessage}
           title={isRecordingVoiceMessage ? "Stop recording" : "Record voice message"}
         >
-          {isRecordingVoiceMessage ? <HiStopCircle size={24} /> : <HiMicrophone size={24} />}
+          {isRecordingVoiceMessage ? (
+            <HiStopCircle size={24} aria-hidden="true" />
+          ) : (
+            <HiMicrophone size={24} aria-hidden="true" />
+          )}
         </button>
       )}
       <form

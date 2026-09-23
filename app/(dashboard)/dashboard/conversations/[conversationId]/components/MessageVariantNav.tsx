@@ -22,6 +22,7 @@ export default function MessageVariantNav({
         "flex items-center gap-1 rounded-md border border-border bg-background/50 px-1 py-0.5",
         disabled && "opacity-60"
       )}
+      role="group"
       aria-label="Alternative replies"
       title="Alternative replies"
     >
@@ -37,9 +38,9 @@ export default function MessageVariantNav({
         className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-50"
         aria-label="Previous reply variant"
       >
-        <HiChevronLeft size={16} />
+        <HiChevronLeft size={16} aria-hidden="true" />
       </button>
-      <span className="min-w-10 text-center text-xs text-muted-foreground">
+      <span className="min-w-10 text-center text-xs tabular-nums text-muted-foreground">
         {activeIndex + 1}/{variantCount}
       </span>
       <button
@@ -54,7 +55,7 @@ export default function MessageVariantNav({
         className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-50"
         aria-label="Next reply variant"
       >
-        <HiChevronRight size={16} />
+        <HiChevronRight size={16} aria-hidden="true" />
       </button>
     </div>
   )

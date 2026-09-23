@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 
 import { api, ApiError, createLoadingToast } from "@/app/lib/api-client"
 
@@ -47,17 +47,17 @@ export function SafetyTabContent() {
       setIsAdult(response.preferences.isAdult)
       setNsfwEnabled(response.preferences.nsfwEnabled)
     } catch (error) {
-      const message = error instanceof ApiError ? error.message : "Failed to save safety settings"
+      const message =
+        error instanceof ApiError
+          ? error.message
+          : "Couldn't save your safety settings. Check your connection and try again."
       loader.error(message)
     } finally {
       setIsLoading(false)
     }
   }
 
-  const nsfwDisabledReason = useMemo(() => {
-    if (!isAdult) return "Confirm 18+ to enable NSFW content."
-    return null
-  }, [isAdult])
+  const nsfwDisabledReason = isAdult ? null : "Confirm 18+ to enable NSFW content."
 
   return (
     <form
@@ -66,7 +66,7 @@ export function SafetyTabContent() {
       aria-label="Safety and content settings form"
     >
       <div>
-        <h3 className="text-lg font-medium text-foreground">Safety &amp; Content</h3>
+        <h2 className="text-lg font-medium text-foreground">Safety &amp; Content</h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Control whether you can view and chat with NSFW (18+) characters.
         </p>
@@ -76,6 +76,7 @@ export function SafetyTabContent() {
         <label className="flex items-start gap-3">
           <input
             type="checkbox"
+            name="isAdult"
             checked={isAdult}
             onChange={(e) => {
               const next = e.target.checked
@@ -98,6 +99,7 @@ export function SafetyTabContent() {
         <label className="flex items-start gap-3">
           <input
             type="checkbox"
+            name="nsfwEnabled"
             checked={nsfwEnabled}
             onChange={(e) => setNsfwEnabled(e.target.checked)}
             disabled={isLoading || !isAdult}

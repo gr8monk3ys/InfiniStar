@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react"
 import { useForm, type FieldValues } from "react-hook-form"
 import toast from "react-hot-toast"
 
@@ -21,6 +21,12 @@ import { type ImageSize } from "./ImageGenerationDialog"
 import { useMessageSubmit } from "./useMessageSubmit"
 
 const EMPTY_MESSAGES: FullMessageType[] = []
+
+// Browser speech support never changes after load; nothing to subscribe to. The
+// server snapshot is "unsupported" so SSR and hydration agree, then the client
+// switches — reading window during render caused a hydration mismatch.
+const subscribeNoop = () => () => {}
+const getServerVoiceSupport = () => false
 
 interface FormProps {
   isAI?: boolean
@@ -61,7 +67,11 @@ const Form: React.FC<FormProps> = ({
   } | null>(null)
   const { token: csrfToken } = useCsrfToken()
   const viewerId = currentUserId ?? undefined
-  const voiceSupported = isVoiceInputSupported()
+  const voiceSupported = useSyncExternalStore(
+    subscribeNoop,
+    isVoiceInputSupported,
+    getServerVoiceSupport
+  )
   const { preferences: suggestionPrefs } = useSuggestionPreferences()
   const [showSuggestions, setShowSuggestions] = useState(true)
   const {
@@ -100,7 +110,7 @@ const Form: React.FC<FormProps> = ({
         setUpgradeModal({ reason: details.code, limits: details.limits })
         return
       }
-      toast.error(`AI error: ${error}`)
+      toast.error(`AI error: ${error}. Try again.`)
     },
   })
   useEffect(() => {

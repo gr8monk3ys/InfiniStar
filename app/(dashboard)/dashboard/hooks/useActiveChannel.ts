@@ -13,7 +13,11 @@ interface PusherMember {
 }
 
 const useActiveChannel = (): void => {
-  const { set, add, remove, updatePresence } = useActiveList()
+  // Select only the (stable) actions so presence updates do not re-render the caller.
+  const set = useActiveList((state) => state.set)
+  const add = useActiveList((state) => state.add)
+  const remove = useActiveList((state) => state.remove)
+  const updatePresence = useActiveList((state) => state.updatePresence)
   const channelRef = useRef<Channel | null>(null)
 
   useEffect(() => {

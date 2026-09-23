@@ -17,7 +17,7 @@ function CreatorEarningsComingSoon() {
   return (
     <div className="h-full lg:pl-80">
       <div className="flex h-full flex-col overflow-auto">
-        <main className="flex-1 space-y-6 p-4 sm:p-6 lg:p-8">
+        <div className="flex-1 space-y-6 p-4 sm:p-6 lg:p-8">
           <header>
             <h1 className="text-2xl font-bold">Creator Earnings</h1>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -36,7 +36,7 @@ function CreatorEarningsComingSoon() {
               creator payments launch.
             </p>
           </section>
-        </main>
+        </div>
       </div>
     </div>
   )
@@ -102,11 +102,16 @@ export default async function CreatorEarningsPage() {
     }),
   ])
 
-  const tipsTotalCents = tips.reduce((sum, tip) => sum + tip.amountCents, 0)
+  // One pass for both totals.
   const now = Date.now()
-  const tips30dCents = tips
-    .filter((tip) => now - new Date(tip.createdAt).getTime() <= 30 * 24 * 60 * 60 * 1000)
-    .reduce((sum, tip) => sum + tip.amountCents, 0)
+  let tipsTotalCents = 0
+  let tips30dCents = 0
+  for (const tip of tips) {
+    tipsTotalCents += tip.amountCents
+    if (now - new Date(tip.createdAt).getTime() <= 30 * 24 * 60 * 60 * 1000) {
+      tips30dCents += tip.amountCents
+    }
+  }
 
   const activeSubscriptions = subscriptions.filter(
     (subscription) => subscription.status === "ACTIVE"
@@ -118,7 +123,7 @@ export default async function CreatorEarningsPage() {
     0
   )
 
-  const supporterTotals = new Map<string, { label: string; total: number }>()
+  const supporterTotals = new Map<string, { id: string; label: string; total: number }>()
   topSupporters.forEach((tip) => {
     const key = tip.supporterId
     const existing = supporterTotals.get(key)
@@ -128,19 +133,20 @@ export default async function CreatorEarningsPage() {
       return
     }
     supporterTotals.set(key, {
+      id: key,
       label,
       total: tip.amountCents,
     })
   })
 
   const topSupportersList = [...supporterTotals.values()]
-    .sort((a, b) => b.total - a.total)
+    .toSorted((a, b) => b.total - a.total)
     .slice(0, 5)
 
   return (
     <div className="h-full lg:pl-80">
       <div className="flex h-full flex-col overflow-auto">
-        <main className="flex-1 space-y-6 p-4 sm:p-6 lg:p-8">
+        <div className="flex-1 space-y-6 p-4 sm:p-6 lg:p-8">
           <header>
             <h1 className="text-2xl font-bold">Creator Earnings</h1>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -151,38 +157,40 @@ export default async function CreatorEarningsPage() {
           <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <article className="rounded-xl border bg-card p-4">
               <div className="flex items-center gap-2 text-muted-foreground">
-                <HiCurrencyDollar className="size-4" />
+                <HiCurrencyDollar className="size-4" aria-hidden="true" />
                 <span className="text-xs uppercase tracking-wide">Lifetime Tips</span>
               </div>
-              <p className="mt-2 text-xl font-semibold">
+              <p className="mt-2 text-xl font-semibold tabular-nums">
                 {formatCurrencyFromCents(tipsTotalCents)}
               </p>
             </article>
 
             <article className="rounded-xl border bg-card p-4">
               <div className="flex items-center gap-2 text-muted-foreground">
-                <HiArrowTrendingUp className="size-4" />
+                <HiArrowTrendingUp className="size-4" aria-hidden="true" />
                 <span className="text-xs uppercase tracking-wide">Tips (30d)</span>
               </div>
-              <p className="mt-2 text-xl font-semibold">{formatCurrencyFromCents(tips30dCents)}</p>
+              <p className="mt-2 text-xl font-semibold tabular-nums">
+                {formatCurrencyFromCents(tips30dCents)}
+              </p>
             </article>
 
             <article className="rounded-xl border bg-card p-4">
               <div className="flex items-center gap-2 text-muted-foreground">
-                <HiSparkles className="size-4" />
+                <HiSparkles className="size-4" aria-hidden="true" />
                 <span className="text-xs uppercase tracking-wide">MRR</span>
               </div>
-              <p className="mt-2 text-xl font-semibold">
+              <p className="mt-2 text-xl font-semibold tabular-nums">
                 {formatCurrencyFromCents(monthlyRecurringCents)}
               </p>
             </article>
 
             <article className="rounded-xl border bg-card p-4">
               <div className="flex items-center gap-2 text-muted-foreground">
-                <HiHeart className="size-4" />
+                <HiHeart className="size-4" aria-hidden="true" />
                 <span className="text-xs uppercase tracking-wide">Active Members</span>
               </div>
-              <p className="mt-2 text-xl font-semibold">{activeSubscriberCount}</p>
+              <p className="mt-2 text-xl font-semibold tabular-nums">{activeSubscriberCount}</p>
             </article>
           </section>
 
@@ -194,17 +202,19 @@ export default async function CreatorEarningsPage() {
               <div className="mt-3 space-y-2">
                 {topSupportersList.map((supporter) => (
                   <div
-                    key={supporter.label}
+                    key={supporter.id}
                     className="flex items-center justify-between rounded-lg border bg-muted/20 px-3 py-2 text-sm"
                   >
-                    <span className="truncate pr-4">{supporter.label}</span>
-                    <span className="font-medium">{formatCurrencyFromCents(supporter.total)}</span>
+                    <span className="min-w-0 truncate pr-4">{supporter.label}</span>
+                    <span className="shrink-0 font-medium tabular-nums">
+                      {formatCurrencyFromCents(supporter.total)}
+                    </span>
                   </div>
                 ))}
               </div>
             )}
           </section>
-        </main>
+        </div>
       </div>
     </div>
   )

@@ -20,9 +20,15 @@ const ImageModal: React.FC<ImageModalProps> = ({ isOpen, onClose, src }) => {
       <div className="fixed inset-0 z-50 mx-auto flex items-center justify-center p-4">
         <div className="relative flex max-h-[90vh] max-w-[90vw] items-center">
           <div className="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left">
-            <h3 className="text-base font-semibold leading-6 text-foreground">View image</h3>
+            <h3 className="text-base font-semibold leading-6 text-foreground">View Image</h3>
             <div className="mt-2">
-              <Image alt="Image" height="320" width="320" className="object-cover" src={src} />
+              <Image
+                alt="Full-size image attachment"
+                height="320"
+                width="320"
+                className="object-cover"
+                src={src}
+              />
             </div>
           </div>
         </div>

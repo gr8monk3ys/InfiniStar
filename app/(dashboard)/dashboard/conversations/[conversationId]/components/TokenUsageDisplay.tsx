@@ -4,6 +4,7 @@ import * as React from "react"
 import { memo, useState } from "react"
 import { HiChevronDown, HiChevronUp, HiInformationCircle } from "react-icons/hi2"
 
+import { formatNumber } from "@/app/lib/intl-format"
 import { cn } from "@/app/lib/utils"
 import { Popover, PopoverContent, PopoverTrigger } from "@/app/components/ui/popover"
 import {
@@ -15,6 +16,22 @@ import {
   type TokenUsage,
   type UsageStats,
 } from "@/app/hooks/useTokenUsage"
+
+const PROGRESS_COLOR_CLASSES = {
+  sky: "bg-primary",
+  green: "bg-green-500",
+  yellow: "bg-yellow-500",
+  red: "bg-red-500",
+} as const
+
+/** Locale-aware "42.5%" from a 0–100 value. */
+function formatPercent(value: number): string {
+  return formatNumber(value / 100, {
+    style: "percent",
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  })
+}
 
 /**
  * Progress bar component for visual usage indication
@@ -33,24 +50,18 @@ function ProgressBar({
   showPercentage?: boolean
 }) {
   const percentage = max > 0 ? Math.min((value / max) * 100, 100) : 0
-  const colorClasses = {
-    sky: "bg-primary",
-    green: "bg-green-500",
-    yellow: "bg-yellow-500",
-    red: "bg-red-500",
-  }
 
   return (
     <div className="space-y-1">
-      <div className="flex justify-between text-xs text-muted-foreground">
+      <div className="flex justify-between text-xs tabular-nums text-muted-foreground">
         <span>{label}</span>
-        {showPercentage && <span>{percentage.toFixed(1)}%</span>}
+        {showPercentage && <span>{formatPercent(percentage)}</span>}
       </div>
       <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
         <div
           className={cn(
             "h-full w-full origin-left transition-transform duration-300",
-            colorClasses[color]
+            PROGRESS_COLOR_CLASSES[color]
           )}
           style={{ transform: `scaleX(${Math.min(percentage, 100) / 100})` }}
         />
@@ -115,7 +126,7 @@ function TokenCountsGrid({
   totalTokens: number
 }) {
   return (
-    <div className="grid grid-cols-3 gap-2 text-center">
+    <div className="grid grid-cols-3 gap-2 text-center tabular-nums">
       <div>
         <div className="text-lg font-semibold text-primary">{formatTokenCount(inputTokens)}</div>
         <div className="text-xs text-muted-foreground">Input</div>
@@ -185,7 +196,7 @@ function SubscriptionSection({ subscription }: { subscription: SubscriptionUsage
       {subscription.isPro ? (
         hasCostCap ? (
           <>
-            <div className="mb-2 grid grid-cols-2 gap-2 text-center">
+            <div className="mb-2 grid grid-cols-2 gap-2 text-center tabular-nums">
               <div>
                 <div className="text-lg font-semibold text-foreground">
                   {formatCost(subscription.monthlyCostUsageCents)}
@@ -210,8 +221,9 @@ function SubscriptionSection({ subscription }: { subscription: SubscriptionUsage
                 subscription.monthlyCostQuotaCents
               )}
             />
-            <div className="mt-2 text-center text-xs text-muted-foreground">
-              {subscription.monthlyMessageCount} messages this month
+            <div className="mt-2 text-center text-xs tabular-nums text-muted-foreground">
+              {subscription.monthlyMessageCount}{" "}
+              {subscription.monthlyMessageCount === 1 ? "message" : "messages"} this month
             </div>
           </>
         ) : (
@@ -219,14 +231,15 @@ function SubscriptionSection({ subscription }: { subscription: SubscriptionUsage
             <div className="text-lg font-semibold text-green-600 dark:text-green-400">
               Unlimited
             </div>
-            <div className="text-xs text-muted-foreground">
-              {subscription.monthlyMessageCount} messages this month
+            <div className="text-xs tabular-nums text-muted-foreground">
+              {subscription.monthlyMessageCount}{" "}
+              {subscription.monthlyMessageCount === 1 ? "message" : "messages"} this month
             </div>
           </div>
         )
       ) : (
         <>
-          <div className="mb-2 grid grid-cols-2 gap-2 text-center">
+          <div className="mb-2 grid grid-cols-2 gap-2 text-center tabular-nums">
             <div>
               <div className="text-lg font-semibold text-foreground">
                 {subscription.monthlyMessageCount}
@@ -283,7 +296,7 @@ function SubscriptionSection({ subscription }: { subscription: SubscriptionUsage
 function OverallStatsSection({ stats }: { stats: UsageStats }) {
   return (
     <UsageBreakdownSection title="Overall Statistics (This Month)">
-      <div className="grid grid-cols-2 gap-2 text-sm">
+      <div className="grid grid-cols-2 gap-2 text-sm tabular-nums">
         <div className="flex justify-between">
           <span className="text-muted-foreground">Total Requests:</span>
           <span className="font-medium">{stats.totalRequests}</span>
@@ -294,7 +307,7 @@ function OverallStatsSection({ stats }: { stats: UsageStats }) {
         </div>
         <div className="flex justify-between">
           <span className="text-muted-foreground">Avg Latency:</span>
-          <span className="font-medium">{stats.averageLatency}ms</span>
+          <span className="font-medium">{formatNumber(stats.averageLatency)}&nbsp;ms</span>
         </div>
         <div className="flex justify-between">
           <span className="text-muted-foreground">Est. Cost:</span>
@@ -345,8 +358,9 @@ export const TokenUsageCompact = memo(function TokenUsageCompact({
     <Popover>
       <PopoverTrigger asChild>
         <button
+          type="button"
           className={cn(
-            "flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors",
+            "flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium tabular-nums transition-colors",
             "hover:ring-2 hover:ring-ring hover:ring-offset-2",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
             getBadgeColor()
@@ -355,7 +369,7 @@ export const TokenUsageCompact = memo(function TokenUsageCompact({
           title="Token usage"
         >
           {isLoading ? (
-            <span className="animate-pulse">...</span>
+            <span className="animate-pulse">…</span>
           ) : error ? (
             <span className="text-red-500">Error</span>
           ) : (
@@ -434,7 +448,8 @@ export const TokenUsageDisplay = memo(function TokenUsageDisplay({
     <div className="border-b border-border bg-muted/30 px-4 py-2">
       {/* Collapsed view */}
       <button
-        onClick={() => setIsExpanded(!isExpanded)}
+        type="button"
+        onClick={() => setIsExpanded((expanded) => !expanded)}
         className="flex w-full items-center justify-between text-sm text-muted-foreground hover:text-foreground"
         aria-expanded={isExpanded}
         aria-label="Toggle token usage details"
@@ -443,13 +458,13 @@ export const TokenUsageDisplay = memo(function TokenUsageDisplay({
           <HiInformationCircle className="size-4" aria-hidden="true" />
           <span className="font-medium">Token Usage</span>
           {latestMessageUsage && (
-            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary-accent">
+            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs tabular-nums text-primary-accent">
               Last: {formatTokenCount(latestMessageUsage.totalTokens)} tokens
             </span>
           )}
           {data?.conversationTokens && (
-            <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-              Context: {data.conversationTokens.contextUsagePercentage.toFixed(1)}%
+            <span className="rounded-full bg-muted px-2 py-0.5 text-xs tabular-nums text-muted-foreground">
+              Context: {formatPercent(data.conversationTokens.contextUsagePercentage)}
             </span>
           )}
         </div>

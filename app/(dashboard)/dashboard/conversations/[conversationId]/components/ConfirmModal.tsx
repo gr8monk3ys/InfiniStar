@@ -6,7 +6,7 @@ import { toast } from "react-hot-toast"
 
 import { api } from "@/app/lib/api-client"
 import { Button } from "@/app/components/ui/button"
-import { Dialog, DialogContent } from "@/app/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/app/components/ui/dialog"
 
 interface ConfirmModalProps {
   isOpen?: boolean
@@ -29,7 +29,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({ isOpen, onClose }) => {
         router.push("/dashboard/conversations")
         router.refresh()
       })
-      .catch(() => toast.error("Something went wrong!"))
+      .catch(() => toast.error("Couldn't delete the conversation. Try again."))
       .finally(() => setIsLoading(false))
   }, [router, conversationId, onClose])
 
@@ -38,19 +38,19 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({ isOpen, onClose }) => {
       <DialogContent>
         <div className="sm:flex sm:items-start">
           <div className="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left">
-            <h3 className="text-base font-semibold leading-6 text-foreground">
-              Delete conversation
-            </h3>
+            <DialogTitle className="text-base font-semibold leading-6 text-foreground">
+              Delete Conversation
+            </DialogTitle>
             <div className="mt-2">
-              <p className="text-sm text-muted-foreground">
+              <DialogDescription className="text-sm text-muted-foreground">
                 Are you sure you want to delete this conversation? This action cannot be undone.
-              </p>
+              </DialogDescription>
             </div>
           </div>
         </div>
         <div className="mt-5 flex flex-col gap-2 sm:mt-4 sm:flex-row-reverse">
           <Button type="button" variant="destructive" disabled={isLoading} onClick={onDelete}>
-            Delete
+            {isLoading ? "Deleting…" : "Delete Conversation"}
           </Button>
           <Button type="button" variant="ghost" disabled={isLoading} onClick={onClose}>
             Cancel

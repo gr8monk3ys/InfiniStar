@@ -28,13 +28,13 @@ export default function MessageReactionPicker({
         aria-expanded={open}
         aria-haspopup="true"
       >
-        <HiFaceSmile size={16} />
+        <HiFaceSmile size={16} aria-hidden="true" />
       </button>
 
       {open && (
         <div
           className="absolute left-0 z-10 mt-1 flex gap-1 rounded-md border border-border bg-popover p-2 shadow-lg"
-          role="toolbar"
+          role="group"
           aria-label="Message reactions"
         >
           {commonEmojis.map((emoji) => (

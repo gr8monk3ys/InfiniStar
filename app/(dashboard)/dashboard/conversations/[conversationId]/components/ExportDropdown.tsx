@@ -32,6 +32,11 @@ export const exportOptions: ExportOption[] = [
   },
 ]
 
+// Hoisted so they are compiled once, not on every export.
+const UNSAFE_FILENAME_CHARS = /[<>:"/\\|?*]/g
+const WHITESPACE_RUN = /\s+/g
+const CONTENT_DISPOSITION_FILENAME = /filename="?([^";\n]+)"?/
+
 /**
  * Export a conversation as a downloadable file. Shared by the standalone
  * ExportDropdown and the conversation header's overflow menu.
@@ -63,17 +68,17 @@ export function useConversationExport(conversationId: string, conversationName =
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}))
-          throw new Error(errorData.error || "Failed to export conversation")
+          throw new Error(errorData.error || "Couldn't export the conversation. Try again.")
         }
 
         // Get the filename from the Content-Disposition header
         const contentDisposition = response.headers.get("Content-Disposition")
-        let filename = `${conversationName.replace(/[<>:"/\\|?*]/g, "").replace(/\s+/g, "_")}.${
+        let filename = `${conversationName.replace(UNSAFE_FILENAME_CHARS, "").replace(WHITESPACE_RUN, "_")}.${
           format === "markdown" ? "md" : format
         }`
 
         if (contentDisposition) {
-          const filenameMatch = contentDisposition.match(/filename="?([^";\n]+)"?/)
+          const filenameMatch = contentDisposition.match(CONTENT_DISPOSITION_FILENAME)
           if (filenameMatch?.[1]) {
             filename = filenameMatch[1]
           }
@@ -94,10 +99,10 @@ export function useConversationExport(conversationId: string, conversationName =
         document.body.removeChild(link)
         window.URL.revokeObjectURL(url)
 
-        toast.success("Export completed!", { id: loadingToast })
+        toast.success("Export complete", { id: loadingToast })
       } catch (error) {
         const errorMessage =
-          error instanceof Error ? error.message : "Failed to export conversation"
+          error instanceof Error ? error.message : "Couldn't export the conversation. Try again."
         toast.error(errorMessage, { id: loadingToast })
         console.error("Export error:", error)
       } finally {

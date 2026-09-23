@@ -102,13 +102,13 @@ describe("TypingIndicator", () => {
 describe("ComposerRow character voice", () => {
   it("addresses the character in the placeholder and send label", () => {
     render(<ComposerRow {...buildComposerProps({ characterName: "Elara" })} />)
-    expect(screen.getByPlaceholderText("Say something to Elara")).toBeInTheDocument()
+    expect(screen.getByPlaceholderText("Say something to Elara…")).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Send message to Elara" })).toBeInTheDocument()
   })
 
   it("keeps a neutral placeholder for human chats", () => {
     render(<ComposerRow {...buildComposerProps({ isAI: false })} />)
-    expect(screen.getByPlaceholderText("Write a message")).toBeInTheDocument()
+    expect(screen.getByPlaceholderText("Write a message…")).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Send message" })).toBeInTheDocument()
   })
 
@@ -128,15 +128,35 @@ describe("formatConversationTimestamp", () => {
   })
 
   it("shows the weekday within the last week", () => {
-    expect(formatConversationTimestamp(new Date(2026, 8, 1, 9, 5), now)).toBe("Tue")
+    const date = new Date(2026, 8, 1, 9, 5)
+    // Locale-aware (Intl): "Tue" in English.
+    expect(formatConversationTimestamp(date, now)).toBe(
+      new Intl.DateTimeFormat(undefined, { weekday: "short" }).format(date)
+    )
   })
 
   it("shows a short date beyond a week", () => {
-    expect(formatConversationTimestamp(new Date(2026, 7, 20, 9, 5), now)).toBe("20 Aug")
+    const date = new Date(2026, 7, 20, 9, 5)
+    // Locale-aware (Intl): "Aug 20" in en-US, "20 Aug" in en-GB.
+    const formatted = formatConversationTimestamp(date, now)
+    expect(formatted).toBe(
+      new Intl.DateTimeFormat(undefined, { day: "numeric", month: "short" }).format(date)
+    )
+    expect(formatted).toMatch(/20/)
+    expect(formatted).not.toMatch(/2026/)
   })
 
   it("adds the year for older years", () => {
-    expect(formatConversationTimestamp(new Date(2025, 11, 24, 9, 5), now)).toBe("24 Dec 2025")
+    const date = new Date(2025, 11, 24, 9, 5)
+    const formatted = formatConversationTimestamp(date, now)
+    expect(formatted).toBe(
+      new Intl.DateTimeFormat(undefined, {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      }).format(date)
+    )
+    expect(formatted).toMatch(/2025/)
   })
 })
 

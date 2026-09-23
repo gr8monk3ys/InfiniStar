@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react"
 import toast from "react-hot-toast"
 
 interface UseMessageSpeechOptions {
@@ -9,8 +9,20 @@ interface UseMessageSpeechOptions {
   isRegenerating: boolean
 }
 
+// Speech synthesis support never changes after load; nothing to subscribe to.
+const subscribeNoop = () => () => {}
+const getSpeechSupport = () =>
+  "speechSynthesis" in window && typeof SpeechSynthesisUtterance !== "undefined"
+const getServerSpeechSupport = () => false
+
 export function useMessageSpeech({ isAI, text, isRegenerating }: UseMessageSpeechOptions) {
-  const [isSpeechSupported, setIsSpeechSupported] = useState(false)
+  // Read without an effect + setState, so each mounted message renders once (and
+  // the server/hydration render agree on "unsupported").
+  const isSpeechSupported = useSyncExternalStore(
+    subscribeNoop,
+    getSpeechSupport,
+    getServerSpeechSupport
+  )
   const [isSpeaking, setIsSpeaking] = useState(false)
   const speechUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null)
 
@@ -49,7 +61,7 @@ export function useMessageSpeech({ isAI, text, isRegenerating }: UseMessageSpeec
       if (speechUtteranceRef.current === utterance) {
         speechUtteranceRef.current = null
         setIsSpeaking(false)
-        toast.error("Text-to-speech failed")
+        toast.error("Couldn't read the message aloud. Try again.")
       }
     }
 
@@ -60,12 +72,6 @@ export function useMessageSpeech({ isAI, text, isRegenerating }: UseMessageSpeec
   }, [isSpeechSupported, isAI, text, isSpeaking, isRegenerating, stopSpeech])
 
   useEffect(() => {
-    const supported =
-      typeof window !== "undefined" &&
-      "speechSynthesis" in window &&
-      typeof SpeechSynthesisUtterance !== "undefined"
-    setIsSpeechSupported(supported)
-
     return () => {
       if (speechUtteranceRef.current && typeof window !== "undefined") {
         window.speechSynthesis.cancel()

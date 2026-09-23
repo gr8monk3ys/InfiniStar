@@ -75,7 +75,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, currentU
         router.refresh()
         onClose()
       })
-      .catch(() => toast.error("Something went wrong!"))
+      .catch(() => toast.error("Couldn't save your profile. Try again."))
       .finally(() => setIsLoading(false))
   }
 
@@ -107,9 +107,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, currentU
                 required
                 register={register}
               />
-              <div>
-                <label
-                  htmlFor="photo"
+              <div role="group" aria-labelledby="settings-photo-label">
+                <p
+                  id="settings-photo-label"
                   className="
                     block 
                     text-sm 
@@ -119,14 +119,14 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, currentU
                   "
                 >
                   Photo
-                </label>
+                </p>
                 <div className="mt-2 flex items-center gap-x-3">
                   <Image
                     width="48"
                     height="48"
                     className="rounded-full"
                     src={image || currentUser?.image || "/icon-192.png"}
-                    alt="Avatar"
+                    alt="Your avatar"
                   />
                   {hasCloudinaryConfig ? (
                     <CldUploadButton
@@ -135,7 +135,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, currentU
                       uploadPreset={cloudinaryUploadPreset}
                     >
                       <Button disabled={isLoading} variant="ghost" type="button">
-                        Change
+                        Change Photo
                       </Button>
                     </CldUploadButton>
                   ) : (
@@ -145,14 +145,14 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, currentU
                       type="button"
                       title="Avatar upload is unavailable until Cloudinary is configured."
                     >
-                      Change
+                      Change Photo
                     </Button>
                   )}
                 </div>
               </div>
-              <div>
-                <label
-                  htmlFor="status"
+              <div role="group" aria-labelledby="settings-status-label">
+                <p
+                  id="settings-status-label"
                   className="
                     block
                     text-sm
@@ -162,11 +162,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, currentU
                   "
                 >
                   Status
-                </label>
+                </p>
                 <div className="mt-2 flex items-center gap-x-3">
-                  <div className="flex-1">
+                  <div className="min-w-0 flex-1">
                     {currentUser?.customStatus || currentUser?.customStatusEmoji ? (
-                      <p className="text-sm text-foreground">
+                      <p className="break-words text-sm text-foreground">
                         {currentUser.customStatusEmoji && (
                           <span className="mr-1">{currentUser.customStatusEmoji}</span>
                         )}
@@ -203,7 +203,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, currentU
             Cancel
           </Button>
           <Button disabled={isLoading} type="submit">
-            Save
+            Save Profile
           </Button>
         </div>
       </form>

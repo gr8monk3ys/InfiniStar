@@ -19,13 +19,13 @@ const Home = () => {
         action={
           <>
             <Link href="/explore" className={cn(buttonVariants({ variant: "default" }))}>
-              Discover characters
+              Discover Characters
             </Link>
             <Link
               href="/dashboard/characters/new"
               className={cn(buttonVariants({ variant: "outline" }))}
             >
-              Create your own
+              Create Your Own
             </Link>
           </>
         }

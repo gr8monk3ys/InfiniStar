@@ -6,6 +6,7 @@ import { HiExclamationTriangle, HiTrash } from "react-icons/hi2"
 
 import { api, ApiError, createLoadingToast } from "@/app/lib/api-client"
 import { config } from "@/app/lib/config"
+import { formatDate } from "@/app/lib/intl-format"
 
 const DeleteAccountModal = dynamic(() => import("@/app/components/modals/DeleteAccountModal"), {
   ssr: false,
@@ -67,7 +68,9 @@ export function AccountTabContent() {
       await fetchDeletionStatus()
     } catch (error) {
       const message =
-        error instanceof ApiError ? error.message : "Failed to cancel deletion request"
+        error instanceof ApiError
+          ? error.message
+          : "Couldn't cancel the deletion request. Try again."
       loader.error(message)
     } finally {
       setIsDeletionLoading(false)
@@ -76,23 +79,26 @@ export function AccountTabContent() {
 
   return (
     <>
-      <div className="space-y-6" aria-label="Account deletion section">
+      <section className="space-y-6" aria-label="Account deletion section">
         {deletionStatus?.deletionRequested ? (
           /* Deletion Pending State */
           <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-6">
             <div className="flex items-start gap-4">
               <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-yellow-100 dark:bg-yellow-900/30">
-                <HiExclamationTriangle className="size-5 text-yellow-600 dark:text-yellow-400" />
+                <HiExclamationTriangle
+                  className="size-5 text-yellow-600 dark:text-yellow-400"
+                  aria-hidden="true"
+                />
               </div>
               <div className="flex-1">
-                <h3 className="text-lg font-semibold text-yellow-800 dark:text-yellow-200">
+                <h2 className="text-lg font-semibold text-yellow-800 dark:text-yellow-200">
                   Account Deletion Pending
-                </h3>
+                </h2>
                 <p className="mt-1 text-sm text-yellow-700 dark:text-yellow-300">
                   Your account is scheduled to be deleted on{" "}
                   <strong>
                     {deletionStatus.deletionScheduledFor
-                      ? new Date(deletionStatus.deletionScheduledFor).toLocaleDateString("en-US", {
+                      ? formatDate(deletionStatus.deletionScheduledFor, {
                           weekday: "long",
                           year: "numeric",
                           month: "long",
@@ -104,8 +110,12 @@ export function AccountTabContent() {
                 </p>
                 {deletionStatus.daysRemaining !== null && (
                   <p className="mt-2 text-sm text-yellow-700 dark:text-yellow-300">
-                    You have <strong>{deletionStatus.daysRemaining} days</strong> remaining to
-                    cancel this request.
+                    You have{" "}
+                    <strong className="tabular-nums">
+                      {deletionStatus.daysRemaining}{" "}
+                      {deletionStatus.daysRemaining === 1 ? "day" : "days"}
+                    </strong>{" "}
+                    remaining to cancel this request.
                   </p>
                 )}
                 <div className="mt-4">
@@ -125,7 +135,7 @@ export function AccountTabContent() {
           /* Normal Delete Account State */
           <>
             <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-6">
-              <h3 className="text-lg font-semibold text-destructive">Danger Zone</h3>
+              <h2 className="text-lg font-semibold text-destructive">Danger Zone</h2>
               <p className="mt-2 text-sm text-muted-foreground">
                 Once you delete your account, there is no going back. Please be certain.
               </p>
@@ -153,14 +163,14 @@ export function AccountTabContent() {
                   onClick={() => setIsDeleteModalOpen(true)}
                   className="inline-flex items-center gap-2 rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground hover:bg-destructive/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-2"
                 >
-                  <HiTrash size={16} />
+                  <HiTrash size={16} aria-hidden="true" />
                   Delete My Account
                 </button>
               </div>
             </div>
 
             <div className="rounded-lg border border-border bg-muted p-6">
-              <h3 className="text-base font-medium text-foreground">Need help instead?</h3>
+              <h2 className="text-base font-medium text-foreground">Need Help Instead?</h2>
               <p className="mt-2 text-sm text-muted-foreground">
                 If you are having issues with your account, our support team is here to help. You do
                 not need to delete your account to resolve most problems.
@@ -174,7 +184,7 @@ export function AccountTabContent() {
             </div>
           </>
         )}
-      </div>
+      </section>
 
       {isDeleteModalOpen && (
         <DeleteAccountModal

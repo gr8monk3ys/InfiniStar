@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react"
 import axios from "axios"
 import toast from "react-hot-toast"
 
@@ -19,6 +19,14 @@ interface UseVoiceRecordingReturn {
   toggleVoiceMessageRecording: () => Promise<void>
 }
 
+// Browser capability never changes after load, so there is nothing to subscribe to.
+const subscribeNoop = () => () => {}
+const getVoiceSupport = () =>
+  Boolean(navigator.mediaDevices?.getUserMedia) && typeof MediaRecorder !== "undefined"
+// The server cannot know, so it (and the hydrating client) render "unsupported"
+// and the client switches after hydration — no hydration mismatch.
+const getServerVoiceSupport = () => false
+
 export default function useVoiceRecording({
   conversationId,
   csrfToken,
@@ -33,11 +41,11 @@ export default function useVoiceRecording({
   const voiceRecorderStreamRef = useRef<MediaStream | null>(null)
   const voiceChunksRef = useRef<Blob[]>([])
 
-  const voiceMessageSupported =
-    typeof window !== "undefined" &&
-    typeof navigator !== "undefined" &&
-    Boolean(navigator.mediaDevices?.getUserMedia) &&
-    typeof MediaRecorder !== "undefined"
+  const voiceMessageSupported = useSyncExternalStore(
+    subscribeNoop,
+    getVoiceSupport,
+    getServerVoiceSupport
+  )
 
   const cleanupVoiceRecorder = useCallback(() => {
     const recorder = voiceRecorderRef.current
@@ -80,7 +88,7 @@ export default function useVoiceRecording({
 
       const blob = new Blob(chunks, { type: mimeType || "audio/webm" })
       if (blob.size < 1024) {
-        toast.error("Voice message too short")
+        toast.error("Voice message is too short. Record for at least a second.")
         return
       }
 
@@ -91,7 +99,7 @@ export default function useVoiceRecording({
         const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
         const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET
         if (!cloudName || !uploadPreset) {
-          throw new Error("Cloudinary not configured")
+          throw new Error("Voice messages aren't available right now.")
         }
 
         const uploadForm = new FormData()
@@ -111,7 +119,9 @@ export default function useVoiceRecording({
 
         const audioUrl = uploadJson?.secure_url ?? uploadJson?.url ?? null
         if (!uploadRes.ok || !audioUrl) {
-          throw new Error(uploadJson?.error?.message || "Failed to upload voice message")
+          throw new Error(
+            uploadJson?.error?.message || "Couldn't upload your voice message. Try again."
+          )
         }
 
         let transcript = ""
@@ -172,7 +182,9 @@ export default function useVoiceRecording({
           transcriptTrimmed ? "Voice message sent" : "Voice message sent (no transcript)"
         )
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : "Failed to send voice message")
+        toast.error(
+          error instanceof Error ? error.message : "Couldn't send your voice message. Try again."
+        )
       } finally {
         toast.dismiss(loader)
         setIsSendingVoiceMessage(false)
@@ -197,7 +209,7 @@ export default function useVoiceRecording({
     if (typeof window === "undefined") return
 
     if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
-      toast.error("Voice messages are not supported in this browser.")
+      toast.error("This browser doesn't support voice messages. Try a different browser.")
       return
     }
 
@@ -223,7 +235,7 @@ export default function useVoiceRecording({
       setIsRecordingVoiceMessage(true)
       toast.success("Recording voice message…")
     } catch {
-      toast.error("Microphone permission denied")
+      toast.error("Allow microphone access in your browser settings, then try again.")
       cleanupVoiceRecorder()
     }
   }, [cleanupVoiceRecorder, handleVoiceMessageStop, isRecordingVoiceMessage, isSendingVoiceMessage])

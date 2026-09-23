@@ -1,12 +1,13 @@
 "use client"
 
-import { memo, useCallback, useMemo } from "react"
-import { useRouter } from "next/navigation"
+import { memo, useMemo } from "react"
+import Link from "next/link"
 import clsx from "clsx"
-import { format, isSameDay, isSameYear } from "date-fns"
+import { isSameDay, isSameYear } from "date-fns"
 import { BsPinAngleFill } from "react-icons/bs"
 import { HiOutlineBellSlash } from "react-icons/hi2"
 
+import { formatDate, formatDateTime, formatTime } from "@/app/lib/intl-format"
 import useOtherUser from "@/app/(dashboard)/dashboard/hooks/useOtherUser"
 import Avatar from "@/app/components/Avatar"
 import AvatarGroup from "@/app/components/AvatarGroup"
@@ -18,11 +19,14 @@ import type { FullConversationType } from "@/app/types"
  * returning reader can tell "Tue" from "3 Sep" at a glance.
  */
 export function formatConversationTimestamp(value: Date | string, now = new Date()): string {
+  // Intl, not a hardcoded pattern, so the order and names follow the viewer's locale.
   const date = new Date(value)
-  if (isSameDay(date, now)) return format(date, "p")
+  if (isSameDay(date, now)) return formatTime(date)
   const dayMs = 24 * 60 * 60 * 1000
-  if (now.getTime() - date.getTime() < 6 * dayMs) return format(date, "EEE")
-  return isSameYear(date, now) ? format(date, "d MMM") : format(date, "d MMM yyyy")
+  if (now.getTime() - date.getTime() < 6 * dayMs) return formatDate(date, { weekday: "short" })
+  return isSameYear(date, now)
+    ? formatDate(date, { day: "numeric", month: "short" })
+    : formatDate(date, { day: "numeric", month: "short", year: "numeric" })
 }
 
 interface ConversationBoxProps {
@@ -41,11 +45,6 @@ const ConversationBox: React.FC<ConversationBoxProps> = ({
   currentUserId,
 }) => {
   const otherUser = useOtherUser(data)
-  const router = useRouter()
-
-  const handleClick = useCallback(() => {
-    router.push(`/dashboard/conversations/${data.id}`)
-  }, [data.id, router])
 
   const lastMessage = useMemo(() => {
     const messages = data.messages || []
@@ -67,31 +66,19 @@ const ConversationBox: React.FC<ConversationBoxProps> = ({
     return seenArray.some((user) => user.id === currentUserId)
   }, [currentUserId, lastMessage])
 
-  const lastMessageText = useMemo(() => {
-    if (lastMessage?.image) {
-      return "Sent an image"
-    }
-
-    if (lastMessage?.body) {
-      return lastMessage?.body
-    }
-
-    return "Started a conversation"
-  }, [lastMessage])
-
-  const isMuted = useMemo(() => {
-    if (!currentUserId) return false
-    return data.mutedBy?.includes(currentUserId) || false
-  }, [data.mutedBy, currentUserId])
-
-  const isPinned = useMemo(() => {
-    if (!currentUserId) return false
-    return data.pinnedBy?.includes(currentUserId) || false
-  }, [data.pinnedBy, currentUserId])
+  // Simple expressions with primitive results: computed inline, not memoized.
+  const lastMessageText = lastMessage?.image
+    ? "Sent an image"
+    : lastMessage?.body || "Started a conversation"
+  const isMuted = currentUserId ? data.mutedBy?.includes(currentUserId) || false : false
+  const isPinned = currentUserId ? data.pinnedBy?.includes(currentUserId) || false : false
+  const displayName = data.name || otherUser?.name
 
   return (
-    <div
-      onClick={handleClick}
+    // Navigation, so a real link (Cmd/Ctrl-click, middle-click, prefetch). Rows are
+    // skipped by the browser while off-screen (up to 100 conversations).
+    <Link
+      href={`/dashboard/conversations/${data.id}`}
       className={clsx(
         `
         w-full
@@ -104,47 +91,53 @@ const ConversationBox: React.FC<ConversationBoxProps> = ({
         rounded-lg
         transition
         cursor-pointer
+        [content-visibility:auto]
+        [contain-intrinsic-size:auto_76px]
+        focus-visible:outline-none
+        focus-visible:ring-2
+        focus-visible:ring-ring
         `,
         selected ? "bg-accent" : "bg-background",
         keyboardSelected && !selected && "ring-2 ring-ring ring-offset-1 ring-offset-background"
       )}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          handleClick()
-        }
-      }}
-      aria-label={`Open conversation with ${data.name || otherUser?.name || "this contact"}`}
+      aria-current={selected ? "page" : undefined}
     >
       {data.isGroup ? <AvatarGroup users={data.users} /> : <Avatar user={otherUser} />}
       <div className="min-w-0 flex-1">
         <div>
           <span className="absolute inset-0" aria-hidden="true" />
           <div className="mb-1 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <p className="text-md font-medium text-foreground">{data.name || otherUser?.name}</p>
+            <div className="flex min-w-0 items-center gap-2">
+              <p className="text-md truncate font-medium text-foreground">{displayName}</p>
               {isPinned && (
-                <BsPinAngleFill
-                  size={14}
-                  className="text-primary"
-                  title="Pinned"
-                  aria-label="Conversation pinned"
-                />
+                <>
+                  <BsPinAngleFill
+                    size={14}
+                    className="shrink-0 text-primary"
+                    title="Pinned"
+                    aria-hidden="true"
+                  />
+                  <span className="sr-only">(pinned)</span>
+                </>
               )}
               {isMuted && (
-                <HiOutlineBellSlash
-                  size={16}
-                  className="text-muted-foreground"
-                  title="Muted"
-                  aria-label="Conversation muted"
-                />
+                <>
+                  <HiOutlineBellSlash
+                    size={16}
+                    className="shrink-0 text-muted-foreground"
+                    title="Muted"
+                    aria-hidden="true"
+                  />
+                  <span className="sr-only">(muted)</span>
+                </>
               )}
             </div>
             {lastMessage?.createdAt && (
+              // Formatted in the viewer's locale/time zone; the server's differs.
               <p
-                className="text-xs font-light text-muted-foreground"
-                title={format(new Date(lastMessage.createdAt), "PPp")}
+                className="shrink-0 text-xs font-light tabular-nums text-muted-foreground"
+                title={formatDateTime(lastMessage.createdAt)}
+                suppressHydrationWarning
               >
                 {formatConversationTimestamp(lastMessage.createdAt)}
               </p>
@@ -160,10 +153,10 @@ const ConversationBox: React.FC<ConversationBoxProps> = ({
               {lastMessageText}
             </p>
             {!hasSeen && lastMessage && (
-              <span
-                className="size-2 shrink-0 rounded-full bg-primary"
-                aria-label="Unread message"
-              />
+              <>
+                <span className="size-2 shrink-0 rounded-full bg-primary" aria-hidden="true" />
+                <span className="sr-only">Unread</span>
+              </>
             )}
           </div>
           {/* Display tags if any */}
@@ -183,7 +176,7 @@ const ConversationBox: React.FC<ConversationBoxProps> = ({
           )}
         </div>
       </div>
-    </div>
+    </Link>
   )
 }
 
