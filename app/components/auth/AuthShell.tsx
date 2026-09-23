@@ -13,8 +13,11 @@ import { buttonVariants } from "@/app/components/ui/button"
 interface AuthShellProps {
   title: string
   description: string
-  /** Short label above the form, e.g. "Sign in to talk to Nyra". Omit for the generic case. */
-  cardEyebrow?: string
+  /**
+   * Short label above the form, e.g. "Sign in to talk to Nyra". Omit for the
+   * generic case. A node so a page can stream it in behind a Suspense boundary.
+   */
+  cardEyebrow?: React.ReactNode
   children: React.ReactNode
 }
 
@@ -65,7 +68,7 @@ export const authAppearance = {
 export function AuthShell({ title, description, cardEyebrow, children }: AuthShellProps) {
   return (
     <section className="relative overflow-hidden">
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
         <div className="absolute left-1/2 top-0 h-[32rem] w-[32rem] -translate-x-1/2 rounded-full bg-gradient-to-br from-[hsl(var(--aurora-violet)/0.15)] via-[hsl(var(--aurora-fuchsia)/0.10)] to-[hsl(var(--aurora-amber)/0.10)] blur-[96px]" />
         <div className="absolute bottom-0 left-0 h-72 w-72 rounded-full bg-primary/10 blur-[80px]" />
       </div>
@@ -98,17 +101,20 @@ export function AuthShell({ title, description, cardEyebrow, children }: AuthShe
 
           <div className="flex flex-wrap gap-3">
             <Link href="/explore" className={cn(buttonVariants({ variant: "outline" }), "gap-2")}>
-              Browse characters
+              Browse Characters
               <HiArrowRight className="size-4" aria-hidden="true" />
             </Link>
             <Link href="/pricing" className={cn(buttonVariants({ variant: "ghost" }), "gap-2")}>
-              See plans
+              See Plans
             </Link>
           </div>
         </div>
 
         <div className="relative">
-          <div className="absolute inset-0 rounded-[2rem] bg-gradient-to-br from-primary/10 via-transparent to-primary/10 blur-2xl" />
+          <div
+            className="absolute inset-0 rounded-[2rem] bg-gradient-to-br from-primary/10 via-transparent to-primary/10 blur-2xl"
+            aria-hidden="true"
+          />
           <div className="relative rounded-[2rem] border border-border/60 bg-background/90 p-5 shadow-2xl shadow-primary/5 backdrop-blur md:p-8">
             {cardEyebrow ? (
               <p className="mb-6 text-sm font-medium text-primary-accent">{cardEyebrow}</p>

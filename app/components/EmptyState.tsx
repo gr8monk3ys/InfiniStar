@@ -11,7 +11,7 @@ interface EmptyStateProps {
 }
 
 const EmptyState = ({
-  title = "Select a chat or start a new conversation",
+  title = "Select a Chat or Start a New Conversation",
   description = "Choose a conversation from the sidebar or create a new one to get started.",
   action,
 }: EmptyStateProps) => {

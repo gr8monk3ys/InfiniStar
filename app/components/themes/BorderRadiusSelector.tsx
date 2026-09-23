@@ -52,6 +52,7 @@ export function BorderRadiusSelector({
             style={{ borderRadius: borderRadiusValues[option.value] }}
           >
             <div
+              aria-hidden="true"
               className={cn(
                 "size-8 border-2",
                 value === option.value ? "border-primary bg-primary/20" : "border-border bg-muted"

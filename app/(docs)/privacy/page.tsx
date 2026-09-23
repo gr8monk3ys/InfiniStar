@@ -1,7 +1,8 @@
 import { config } from "@/app/lib/config"
 
 export const metadata = {
-  title: "Privacy Policy | InfiniStar",
+  // The root layout template appends " - InfiniStar".
+  title: "Privacy Policy",
   description: "InfiniStar privacy policy — how we collect and use your data.",
   alternates: {
     canonical: "/privacy",
@@ -17,12 +18,12 @@ export default function PrivacyPage() {
         </h1>
         <p className="text-sm text-muted-foreground">Last updated: June 12, 2026</p>
         <p className="text-lg text-muted-foreground">
-          InfiniStar (&quot;InfiniStar&quot;, &quot;we&quot;, &quot;us&quot;, or &quot;our&quot;)
-          operates an AI character-chat service available through our website (the
-          &quot;Service&quot;). This Privacy Policy explains what information we collect when you
-          use the Service, how we use and share it, and the choices and rights you have. By using
-          the Service, you agree to the practices described here. If you do not agree, please do not
-          use the Service.
+          InfiniStar (&ldquo;InfiniStar&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;, or
+          &ldquo;our&rdquo;) operates an AI character-chat service available through our website
+          (the &ldquo;Service&rdquo;). This Privacy Policy explains what information we collect when
+          you use the Service, how we use and share it, and the choices and rights you have. By
+          using the Service, you agree to the practices described here. If you do not agree, please
+          do not use the Service.
         </p>
       </div>
 
@@ -276,10 +277,10 @@ export default function PrivacyPage() {
           <h2 className="text-2xl font-bold">12. Changes to This Policy</h2>
           <p className="text-muted-foreground">
             We may update this Privacy Policy from time to time. When we do, we will post the
-            updated version on this page and revise the &quot;Last updated&quot; date above. If the
-            changes are material, we will provide additional notice, such as by email or an in-app
-            notice. Your continued use of the Service after changes take effect means you accept the
-            updated policy.
+            updated version on this page and revise the &ldquo;Last updated&rdquo; date above. If
+            the changes are material, we will provide additional notice, such as by email or an
+            in-app notice. Your continued use of the Service after changes take effect means you
+            accept the updated policy.
           </p>
         </section>
 

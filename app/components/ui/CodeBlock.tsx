@@ -1,7 +1,8 @@
 "use client"
 
 import * as React from "react"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
+import { useTheme } from "next-themes"
 import { Highlight, themes, type Language } from "prism-react-renderer"
 import { HiCheck, HiClipboard } from "react-icons/hi2"
 
@@ -54,72 +55,68 @@ const getLanguage = (lang?: string): Language => {
   return languageMap[normalizedLang] || (normalizedLang as Language)
 }
 
+const LANGUAGE_DISPLAY_NAMES: Record<string, string> = {
+  javascript: "JavaScript",
+  typescript: "TypeScript",
+  jsx: "JSX",
+  tsx: "TSX",
+  python: "Python",
+  ruby: "Ruby",
+  bash: "Bash",
+  shell: "Shell",
+  yaml: "YAML",
+  json: "JSON",
+  markdown: "Markdown",
+  html: "HTML",
+  css: "CSS",
+  sql: "SQL",
+  go: "Go",
+  rust: "Rust",
+  java: "Java",
+  c: "C",
+  cpp: "C++",
+  csharp: "C#",
+  php: "PHP",
+  swift: "Swift",
+  kotlin: "Kotlin",
+  scala: "Scala",
+  graphql: "GraphQL",
+  diff: "Diff",
+}
+
 const getLanguageDisplayName = (lang?: string): string => {
   if (!lang) return "Code"
   const langLower = lang.toLowerCase().trim()
-  const displayNames: Record<string, string> = {
-    javascript: "JavaScript",
-    typescript: "TypeScript",
-    jsx: "JSX",
-    tsx: "TSX",
-    python: "Python",
-    ruby: "Ruby",
-    bash: "Bash",
-    shell: "Shell",
-    yaml: "YAML",
-    json: "JSON",
-    markdown: "Markdown",
-    html: "HTML",
-    css: "CSS",
-    sql: "SQL",
-    go: "Go",
-    rust: "Rust",
-    java: "Java",
-    c: "C",
-    cpp: "C++",
-    csharp: "C#",
-    php: "PHP",
-    swift: "Swift",
-    kotlin: "Kotlin",
-    scala: "Scala",
-    graphql: "GraphQL",
-    diff: "Diff",
-  }
-  return displayNames[langLower] || lang.charAt(0).toUpperCase() + lang.slice(1)
+  return LANGUAGE_DISPLAY_NAMES[langLower] || lang.charAt(0).toUpperCase() + lang.slice(1)
 }
 
 const CodeBlock = React.forwardRef<HTMLDivElement, CodeBlockProps>(
   ({ code, language, className, showLineNumbers = true }, ref) => {
     const [isCopied, setIsCopied] = useState(false)
-    const [isDarkMode, setIsDarkMode] = useState(false)
+    const copiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+    // One shared theme context instead of a MutationObserver per code block.
+    // CodeBlock only renders on the client (LazyCodeBlock is ssr:false), and
+    // next-themes resolves the stored theme synchronously there, so the first
+    // paint already uses the right palette.
+    const { resolvedTheme } = useTheme()
+    const isDarkMode = resolvedTheme === "dark"
 
-    // Check for dark mode
     useEffect(() => {
-      const checkDarkMode = () => {
-        setIsDarkMode(document.documentElement.classList.contains("dark"))
+      return () => {
+        if (copiedTimeoutRef.current) {
+          clearTimeout(copiedTimeoutRef.current)
+        }
       }
-
-      checkDarkMode()
-
-      // Create observer for class changes on document element
-      const observer = new MutationObserver((mutations) => {
-        mutations.forEach((mutation) => {
-          if (mutation.attributeName === "class") {
-            checkDarkMode()
-          }
-        })
-      })
-
-      observer.observe(document.documentElement, { attributes: true })
-
-      return () => observer.disconnect()
     }, [])
 
     const handleCopy = useCallback(async () => {
       try {
         await navigator.clipboard.writeText(code)
         setIsCopied(true)
-        setTimeout(() => setIsCopied(false), 2000)
+        if (copiedTimeoutRef.current) {
+          clearTimeout(copiedTimeoutRef.current)
+        }
+        copiedTimeoutRef.current = setTimeout(() => setIsCopied(false), 2000)
       } catch (err) {
         console.error("Failed to copy code:", err)
       }
@@ -144,8 +141,12 @@ const CodeBlock = React.forwardRef<HTMLDivElement, CodeBlockProps>(
           <span
             className="text-xs font-medium text-muted-foreground"
             aria-label={`Code language: ${displayLanguage}`}
+            translate="no"
           >
             {displayLanguage}
+          </span>
+          <span className="sr-only" role="status" aria-live="polite">
+            {isCopied ? "Code copied to clipboard" : ""}
           </span>
           <button
             onClick={handleCopy}
@@ -181,6 +182,7 @@ const CodeBlock = React.forwardRef<HTMLDivElement, CodeBlockProps>(
                 isDarkMode ? "bg-[#011627]" : "bg-[#f6f8fa]"
               )}
               style={style}
+              translate="no"
               tabIndex={0}
               role="region"
               aria-label={`Code block in ${displayLanguage}`}

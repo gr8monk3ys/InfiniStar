@@ -2,7 +2,6 @@
 
 import { Fragment } from "react"
 import { Dialog, Transition } from "@headlessui/react"
-import { format } from "date-fns"
 import {
   HiArchiveBox,
   HiChatBubbleLeftRight,
@@ -10,6 +9,8 @@ import {
   HiExclamationTriangle,
   HiXMark,
 } from "react-icons/hi2"
+
+import { formatDate, formatRelative } from "@/app/lib/intl-format"
 
 interface ConversationPreview {
   id: string
@@ -62,7 +63,7 @@ export function AutoDeletePreview({
           <div className="fixed inset-0 bg-black/25" />
         </Transition.Child>
 
-        <div className="fixed inset-0 overflow-y-auto">
+        <div className="fixed inset-0 overflow-y-auto overscroll-contain">
           <div className="flex min-h-full items-center justify-center p-4 text-center">
             <Transition.Child
               as={Fragment}
@@ -94,15 +95,18 @@ export function AutoDeletePreview({
                     className="rounded-md text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                     aria-label="Close preview"
                   >
-                    <HiXMark className="size-6" />
+                    <HiXMark className="size-6" aria-hidden="true" />
                   </button>
                 </div>
 
                 {/* Summary */}
                 <div className="mt-4 rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-4">
                   <div className="flex items-center gap-2">
-                    <HiExclamationTriangle className="size-5 text-yellow-600 dark:text-yellow-400" />
-                    <span className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                    <HiExclamationTriangle
+                      className="size-5 shrink-0 text-yellow-600 dark:text-yellow-400"
+                      aria-hidden="true"
+                    />
+                    <span className="text-sm font-medium tabular-nums text-yellow-800 dark:text-yellow-200">
                       {totalCount === 0
                         ? "No conversations match the deletion criteria"
                         : totalCount === 1
@@ -118,42 +122,42 @@ export function AutoDeletePreview({
 
                 {/* Conversation List */}
                 {conversations.length > 0 && (
-                  <div className="mt-4 max-h-80 overflow-y-auto">
-                    <div className="space-y-2">
+                  <div className="mt-4 max-h-80 overflow-y-auto overscroll-contain">
+                    <ul className="space-y-2">
                       {conversations.map((conversation) => (
-                        <div
+                        <li
                           key={conversation.id}
-                          className="flex items-center justify-between rounded-lg border border-border p-3"
+                          className="flex items-center justify-between gap-3 rounded-lg border border-border p-3 [contain-intrinsic-size:auto_66px] [content-visibility:auto]"
                         >
-                          <div className="flex items-center gap-3">
-                            <div className="flex size-10 items-center justify-center rounded-full bg-muted">
+                          <div className="flex min-w-0 items-center gap-3">
+                            <div
+                              className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted"
+                              aria-hidden="true"
+                            >
                               {conversation.isAI ? (
                                 <HiCpuChip className="size-5 text-primary" />
                               ) : (
                                 <HiChatBubbleLeftRight className="size-5 text-primary" />
                               )}
                             </div>
-                            <div>
-                              <p className="text-sm font-medium text-foreground">
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-medium text-foreground">
                                 {conversation.name || "Untitled Conversation"}
                               </p>
-                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <div className="flex items-center gap-2 text-xs tabular-nums text-muted-foreground">
                                 <span>
                                   {conversation.messageCount}{" "}
                                   {conversation.messageCount === 1 ? "message" : "messages"}
                                 </span>
-                                <span>-</span>
-                                <span>
-                                  Last active{" "}
-                                  {format(new Date(conversation.lastMessageAt), "MMM d, yyyy")}
-                                </span>
+                                <span aria-hidden="true">·</span>
+                                <span>Last active {formatDate(conversation.lastMessageAt)}</span>
                               </div>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex shrink-0 items-center gap-2">
                             {conversation.isArchived && (
                               <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-1 text-xs text-muted-foreground">
-                                <HiArchiveBox className="size-3" />
+                                <HiArchiveBox className="size-3" aria-hidden="true" />
                                 Archived
                               </span>
                             )}
@@ -162,7 +166,7 @@ export function AutoDeletePreview({
                                 {conversation.tags.slice(0, 2).map((tag) => (
                                   <span
                                     key={tag.id}
-                                    className="inline-flex rounded-full px-2 py-1 text-xs"
+                                    className="inline-flex max-w-24 truncate rounded-full px-2 py-1 text-xs"
                                     style={{
                                       backgroundColor: `var(--tag-${tag.color}-bg, hsl(var(--muted)))`,
                                       color: `var(--tag-${tag.color}-text, hsl(var(--muted-foreground)))`,
@@ -172,26 +176,29 @@ export function AutoDeletePreview({
                                   </span>
                                 ))}
                                 {conversation.tags.length > 2 && (
-                                  <span className="inline-flex rounded-full bg-muted px-2 py-1 text-xs text-muted-foreground">
+                                  <span className="inline-flex rounded-full bg-muted px-2 py-1 text-xs tabular-nums text-muted-foreground">
                                     +{conversation.tags.length - 2}
                                   </span>
                                 )}
                               </div>
                             )}
                             <span className="text-xs text-muted-foreground">
-                              {conversation.daysSinceLastMessage}d ago
+                              {formatRelative(conversation.lastMessageAt)}
                             </span>
                           </div>
-                        </div>
+                        </li>
                       ))}
-                    </div>
+                    </ul>
                   </div>
                 )}
 
                 {/* Empty State */}
                 {conversations.length === 0 && (
                   <div className="mt-4 rounded-lg border-2 border-dashed border-border p-8 text-center">
-                    <HiChatBubbleLeftRight className="mx-auto size-12 text-muted-foreground/30" />
+                    <HiChatBubbleLeftRight
+                      className="mx-auto size-12 text-muted-foreground/30"
+                      aria-hidden="true"
+                    />
                     <p className="mt-2 text-sm text-muted-foreground">
                       No conversations match your auto-delete criteria.
                     </p>

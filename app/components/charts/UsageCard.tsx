@@ -3,6 +3,7 @@
 import type { ReactNode } from "react"
 import { HiArrowDown, HiArrowUp, HiMinus } from "react-icons/hi"
 
+import { formatNumber } from "@/app/lib/intl-format"
 import { cn } from "@/app/lib/utils"
 
 interface UsageCardProps {
@@ -16,6 +17,12 @@ interface UsageCardProps {
   }
   className?: string
   loading?: boolean
+}
+
+const TREND_FORMAT: Intl.NumberFormatOptions = {
+  style: "percent",
+  signDisplay: "exceptZero",
+  maximumFractionDigits: 1,
 }
 
 /**
@@ -37,7 +44,6 @@ export function UsageCard({
     const { value: trendValue, label } = trend
     const isPositive = trendValue > 0
     const isNegative = trendValue < 0
-    const isNeutral = trendValue === 0
 
     const Icon = isPositive ? HiArrowUp : isNegative ? HiArrowDown : HiMinus
     const colorClass = isPositive
@@ -47,10 +53,10 @@ export function UsageCard({
         : "text-muted-foreground"
 
     return (
-      <div className={cn("flex items-center gap-1 text-xs", colorClass)}>
+      <div className={cn("flex items-center gap-1 text-xs tabular-nums", colorClass)}>
         <Icon className="size-3" aria-hidden="true" />
         <span>
-          {isNeutral ? "0" : isPositive ? `+${trendValue}` : trendValue}%
+          {formatNumber(trendValue / 100, TREND_FORMAT)}
           {label && <span className="text-muted-foreground"> {label}</span>}
         </span>
       </div>
@@ -77,10 +83,10 @@ export function UsageCard({
       )}
     >
       <div className="flex items-start justify-between">
-        <div className="flex-1">
+        <div className="min-w-0 flex-1">
           <p className="text-sm font-medium text-muted-foreground">{title}</p>
-          <p className="mt-2 text-2xl font-bold text-card-foreground sm:text-3xl">
-            {typeof value === "number" ? value.toLocaleString() : value}
+          <p className="mt-2 text-2xl font-bold tabular-nums text-card-foreground sm:text-3xl">
+            {typeof value === "number" ? formatNumber(value) : value}
           </p>
           {(subtitle || trend) && (
             <div className="mt-1 flex items-center gap-2">
@@ -89,7 +95,11 @@ export function UsageCard({
             </div>
           )}
         </div>
-        {icon && <div className="rounded-lg bg-primary/10 p-2 text-primary">{icon}</div>}
+        {icon ? (
+          <div className="rounded-lg bg-primary/10 p-2 text-primary" aria-hidden="true">
+            {icon}
+          </div>
+        ) : null}
       </div>
     </div>
   )

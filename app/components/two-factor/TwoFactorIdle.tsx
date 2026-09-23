@@ -38,7 +38,10 @@ export function TwoFactorIdle({ hasPassword, onSetupStarted }: TwoFactorIdleProp
       loader.dismiss()
       onSetupStarted(response)
     } catch (error) {
-      const message = error instanceof ApiError ? error.message : "Failed to start 2FA setup"
+      const message =
+        error instanceof ApiError
+          ? error.message
+          : "Couldn't start 2FA setup. Check your connection and try again."
       loader.error(message)
     } finally {
       setIsLoading(false)
@@ -49,10 +52,10 @@ export function TwoFactorIdle({ hasPassword, onSetupStarted }: TwoFactorIdleProp
     <div className="space-y-4">
       <div className="flex items-start gap-4 rounded-lg border border-border bg-muted p-4">
         <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted">
-          <HiShieldExclamation className="size-6 text-muted-foreground" />
+          <HiShieldExclamation className="size-6 text-muted-foreground" aria-hidden="true" />
         </div>
-        <div className="flex-1">
-          <h3 className="font-medium text-foreground">Two-Factor Authentication is Off</h3>
+        <div className="min-w-0 flex-1">
+          <h3 className="font-medium text-foreground">Two-Factor Authentication Is Off</h3>
           <p className="mt-1 text-sm text-muted-foreground">
             Add an extra layer of security to your account by enabling two-factor authentication.
             You will need an authenticator app like Google Authenticator or Authy.
@@ -64,11 +67,12 @@ export function TwoFactorIdle({ hasPassword, onSetupStarted }: TwoFactorIdleProp
             </p>
           )}
           <button
+            type="button"
             onClick={handleStartSetup}
             disabled={isLoading || !hasPassword}
             className="mt-4 inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <HiShieldCheck className="size-4" />
+            <HiShieldCheck className="size-4" aria-hidden="true" />
             Enable Two-Factor Authentication
           </button>
         </div>

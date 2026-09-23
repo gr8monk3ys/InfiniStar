@@ -1,3 +1,4 @@
+import { Suspense } from "react"
 import { SignIn } from "@clerk/nextjs"
 
 import {
@@ -18,15 +19,14 @@ interface SignInPageProps {
 
 const CHARACTER_PATH_PATTERN = /^\/characters\/([a-z0-9-]+)(?:[/?#]|$)/i
 
+const GENERIC_EYEBROW = "Sign in to keep chatting"
+
 /**
  * When the visitor was bounced here from a character page, name the character
  * so the form reads as a step in their flow, not a wall. One indexed lookup;
  * any failure degrades to the generic line.
  */
-async function getCardEyebrow(redirectPath: string) {
-  const slug = CHARACTER_PATH_PATTERN.exec(redirectPath)?.[1]
-  if (!slug) return undefined
-
+async function CharacterCardEyebrow({ slug }: { slug: string }) {
   try {
     const character = await prisma.character.findUnique({
       where: { slug },
@@ -39,7 +39,7 @@ async function getCardEyebrow(redirectPath: string) {
     // Fall through to the generic label.
   }
 
-  return "Sign in to keep chatting"
+  return GENERIC_EYEBROW
 }
 
 export default async function SignInPage({ searchParams }: SignInPageProps) {
@@ -47,7 +47,14 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
   const redirectPath = getSafePostAuthPath(resolvedSearchParams.redirect_url)
   const fallbackEnabled = isFallbackAuthEnabled()
   const clerkEnabled = isClerkClientConfigured()
-  const cardEyebrow = await getCardEyebrow(redirectPath)
+  const characterSlug = CHARACTER_PATH_PATTERN.exec(redirectPath)?.[1]
+  // The character lookup streams in behind Suspense so the shell and the
+  // sign-in form are not held back by the database round trip.
+  const cardEyebrow = characterSlug ? (
+    <Suspense fallback={GENERIC_EYEBROW}>
+      <CharacterCardEyebrow slug={characterSlug} />
+    </Suspense>
+  ) : undefined
 
   return (
     <AuthShell

@@ -108,7 +108,7 @@ export function ColorPicker({
 
   return (
     <div className={cn("flex items-center justify-between gap-4", className)}>
-      <div className="flex-1">
+      <div className="min-w-0 flex-1">
         <label htmlFor={id} className="block text-sm font-medium text-foreground">
           {label}
         </label>
@@ -131,7 +131,9 @@ export function ColorPicker({
           className="sr-only"
           aria-label={`${label} color picker`}
         />
-        <span className="w-20 font-mono text-xs text-muted-foreground">{hexValue}</span>
+        <span className="w-20 font-mono text-xs text-muted-foreground" translate="no">
+          {hexValue}
+        </span>
       </div>
     </div>
   )

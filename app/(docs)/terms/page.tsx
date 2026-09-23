@@ -1,7 +1,8 @@
 import { config } from "@/app/lib/config"
 
 export const metadata = {
-  title: "Terms of Service | InfiniStar",
+  // The root layout template appends " - InfiniStar".
+  title: "Terms of Service",
   description: "InfiniStar terms of service — the rules for using our platform.",
   alternates: {
     canonical: "/terms",
@@ -17,12 +18,13 @@ export default function TermsPage() {
         </h1>
         <p className="text-sm text-muted-foreground">Last updated: June 12, 2026</p>
         <p className="text-lg text-muted-foreground">
-          These Terms of Service (the &quot;Terms&quot;) are an agreement between you and InfiniStar
-          (&quot;InfiniStar&quot;, &quot;we&quot;, &quot;us&quot;, or &quot;our&quot;) and govern
-          your access to and use of our AI character-chat service, including our website,
-          applications, and related features (together, the &quot;Service&quot;). Please read them
-          carefully. By creating an account or using the Service, you agree to these Terms and to
-          our Privacy Policy. If you do not agree, do not use the Service.
+          These Terms of Service (the &ldquo;Terms&rdquo;) are an agreement between you and
+          InfiniStar (&ldquo;InfiniStar&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;, or
+          &ldquo;our&rdquo;) and govern your access to and use of our AI character-chat service,
+          including our website, applications, and related features (together, the
+          &ldquo;Service&rdquo;). Please read them carefully. By creating an account or using the
+          Service, you agree to these Terms and to our Privacy Policy. If you do not agree, do not
+          use the Service.
         </p>
       </div>
 
@@ -128,8 +130,8 @@ export default function TermsPage() {
             <li>
               <strong>Ownership.</strong> You retain ownership of the content you create on the
               Service, including your messages, characters (names, descriptions, greetings, system
-              prompts, and artwork you upload), templates, and personas (together, &quot;User
-              Content&quot;).
+              prompts, and artwork you upload), templates, and personas (together, &ldquo;User
+              Content&rdquo;).
             </li>
             <li>
               <strong>License to us.</strong> So that we can operate the Service, you grant
@@ -258,7 +260,7 @@ export default function TermsPage() {
         <section className="flex flex-col gap-2">
           <h2 className="text-2xl font-bold">13. Disclaimers</h2>
           <p className="text-muted-foreground">
-            The Service is provided &quot;as is&quot; and &quot;as available&quot;, without
+            The Service is provided &ldquo;as is&rdquo; and &ldquo;as available&rdquo;, without
             warranties of any kind, whether express or implied, including implied warranties of
             merchantability, fitness for a particular purpose, and non-infringement. We do not
             warrant that the Service will be uninterrupted, error-free, or secure, or that AI output
@@ -299,7 +301,7 @@ export default function TermsPage() {
           <h2 className="text-2xl font-bold">16. Changes to These Terms</h2>
           <p className="text-muted-foreground">
             We may update these Terms from time to time. When we do, we will post the updated
-            version on this page and revise the &quot;Last updated&quot; date above. For material
+            version on this page and revise the &ldquo;Last updated&rdquo; date above. For material
             changes, we will provide reasonable advance notice, such as by email or an in-app
             notice. Changes take effect no earlier than the date they are posted (or the date stated
             in the notice), and your continued use of the Service after that date means you accept

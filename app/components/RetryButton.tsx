@@ -16,7 +16,7 @@ interface RetryButtonProps {
  * Re-runs the server render for the current route. Used by error states so a
  * failed query can be retried in place instead of forcing a full page reload.
  */
-export function RetryButton({ label = "Try again", className }: RetryButtonProps) {
+export function RetryButton({ label = "Try Again", className }: RetryButtonProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
 

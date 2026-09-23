@@ -25,17 +25,18 @@ interface ParsedContent {
  * - Inline code (`code`)
  * - Regular text
  */
+// Regex for fenced code blocks: ```language\ncode```
+// Captures: optional language, code content. Hoisted; `matchAll` clones it per
+// call, so the shared `lastIndex` of a /g regex is never reused across calls.
+const CODE_BLOCK_REGEX = /```(\w*)\n?([\s\S]*?)```/g
+const INLINE_CODE_REGEX = /`([^`]+)`/g
+
 const parseMarkdownContent = (content: string): ParsedContent[] => {
   const result: ParsedContent[] = []
 
-  // Regex for fenced code blocks: ```language\ncode```
-  // Captures: optional language, code content
-  const codeBlockRegex = /```(\w*)\n?([\s\S]*?)```/g
-
   let lastIndex = 0
-  let match: RegExpExecArray | null
 
-  while ((match = codeBlockRegex.exec(content)) !== null) {
+  for (const match of content.matchAll(CODE_BLOCK_REGEX)) {
     // Add text before the code block
     if (match.index > lastIndex) {
       const textBefore = content.slice(lastIndex, match.index)
@@ -78,12 +79,10 @@ const parseMarkdownContent = (content: string): ParsedContent[] => {
  */
 const parseInlineCode = (text: string): ParsedContent[] => {
   const result: ParsedContent[] = []
-  const inlineCodeRegex = /`([^`]+)`/g
 
   let lastIndex = 0
-  let match: RegExpExecArray | null
 
-  while ((match = inlineCodeRegex.exec(text)) !== null) {
+  for (const match of text.matchAll(INLINE_CODE_REGEX)) {
     // Add text before the inline code
     if (match.index > lastIndex) {
       const textBefore = text.slice(lastIndex, match.index)
@@ -132,6 +131,7 @@ const parseInlineCode = (text: string): ParsedContent[] => {
 const InlineCode: React.FC<{ children: string }> = ({ children }) => (
   <code
     className={cn("rounded-md bg-muted px-1.5 py-0.5 font-mono text-sm", "text-primary-accent")}
+    translate="no"
   >
     {children}
   </code>
@@ -177,7 +177,7 @@ const MarkdownRenderer = React.forwardRef<HTMLDivElement, MarkdownRendererProps>
       <div
         ref={ref}
         className={cn(
-          "prose prose-sm dark:prose-invert max-w-none",
+          "prose prose-sm dark:prose-invert max-w-none break-words",
           // Only add prose classes if there are code blocks
           hasOnlyText ? "" : "prose-pre:p-0 prose-pre:bg-transparent",
           className
@@ -192,7 +192,7 @@ const MarkdownRenderer = React.forwardRef<HTMLDivElement, MarkdownRendererProps>
                   key={`segment-${index}`}
                   code={segment.content}
                   language={segment.language}
-                  showLineNumbers={segment.content.split("\n").length > 1}
+                  showLineNumbers={segment.content.includes("\n")}
                 />
               )
             case "inline-code":

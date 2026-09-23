@@ -3,7 +3,8 @@ import { type Metadata } from "next"
 import { AuthProvider } from "@/app/components/providers/AuthProvider"
 
 export const metadata: Metadata = {
-  title: "Join Conversation | InfiniStar",
+  // The root layout template appends " - InfiniStar".
+  title: "Join Conversation",
   description: "Join a shared conversation on InfiniStar",
 }
 

@@ -38,6 +38,50 @@ interface ThemeCustomContextValue {
 
 const ThemeCustomContext = React.createContext<ThemeCustomContextValue | undefined>(undefined)
 
+/**
+ * The resolved CSS variables of a non-default theme, for both modes, so the
+ * inline script below can paint them before hydration. Without it a custom
+ * theme flashed the default palette on every dashboard load until the mount
+ * effect ran. Versioned: bump the suffix if the stored shape changes.
+ */
+const THEME_CSS_CACHE_KEY = "infinistar-theme-css:v1"
+
+// Runs synchronously while the HTML is parsed, after next-themes has set the
+// `dark` class on <html>, and before any dashboard content paints.
+const APPLY_CACHED_THEME_SCRIPT = `(function(){try{var c=localStorage.getItem(${JSON.stringify(
+  THEME_CSS_CACHE_KEY
+)});if(!c)return;var v=JSON.parse(c);var r=document.documentElement;var m=r.classList.contains("dark")?"dark":"light";var s=v&&v[m];if(!s)return;for(var k in s){r.style.setProperty(k,s[k])}}catch(e){}})()`
+
+function writeThemeCssCache(theme: Theme): void {
+  try {
+    if (theme.id === getDefaultTheme().id && !theme.isCustom) {
+      // The default palette is already in globals.css; nothing to pre-paint.
+      localStorage.removeItem(THEME_CSS_CACHE_KEY)
+      return
+    }
+    localStorage.setItem(
+      THEME_CSS_CACHE_KEY,
+      JSON.stringify({
+        light: themeToCssVariables(theme, "light"),
+        dark: themeToCssVariables(theme, "dark"),
+      })
+    )
+  } catch {
+    // Storage unavailable: the theme still applies after mount, as before.
+  }
+}
+
+type IdleHandle = { cancel: () => void }
+
+function scheduleIdle(callback: () => void): IdleHandle {
+  if (typeof window.requestIdleCallback === "function") {
+    const id = window.requestIdleCallback(callback, { timeout: 2000 })
+    return { cancel: () => window.cancelIdleCallback(id) }
+  }
+  const id = window.setTimeout(callback, 1)
+  return { cancel: () => window.clearTimeout(id) }
+}
+
 export function useThemeCustom() {
   const context = React.useContext(ThemeCustomContext)
   if (context === undefined) {
@@ -60,7 +104,7 @@ export function ThemeCustomProvider({
   const [preference, setPreference] = React.useState<UserThemePreference>({
     themeId: defaultThemeId,
   })
-  const [currentTheme, setCurrentTheme] = React.useState<Theme>(getDefaultTheme())
+  const [currentTheme, setCurrentTheme] = React.useState<Theme>(getDefaultTheme)
 
   // Load theme preference from localStorage on mount
   React.useEffect(() => {
@@ -98,9 +142,11 @@ export function ThemeCustomProvider({
       root.style.setProperty("--theme-transition-duration", "200ms")
     }
 
-    return () => {
-      // Cleanup is handled by next theme change
-    }
+    // Cache for the pre-paint script off the critical path; dragging a color
+    // picker fires this effect many times a second.
+    const idle = scheduleIdle(() => writeThemeCssCache(currentTheme))
+
+    return () => idle.cancel()
   }, [currentTheme, resolvedTheme, isLoading])
 
   // Set theme by ID
@@ -197,5 +243,14 @@ export function ThemeCustomProvider({
     ]
   )
 
-  return <ThemeCustomContext.Provider value={value}>{children}</ThemeCustomContext.Provider>
+  return (
+    <>
+      <script
+        // Static string, no user input: applies the cached custom palette pre-paint.
+        dangerouslySetInnerHTML={{ __html: APPLY_CACHED_THEME_SCRIPT }}
+        suppressHydrationWarning
+      />
+      <ThemeCustomContext.Provider value={value}>{children}</ThemeCustomContext.Provider>
+    </>
+  )
 }

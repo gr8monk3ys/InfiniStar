@@ -22,14 +22,25 @@ const themeOptions: { value: ThemeOption; label: string; icon: React.ReactNode }
   },
 ]
 
+const subscribeNoop = () => () => {}
+
+/**
+ * The stored theme is only known in the browser. `useSyncExternalStore` renders
+ * the placeholder for the server HTML and during hydration, but a toggle that
+ * mounts later on the client (e.g. switching to the Appearance tab) renders the
+ * real control on its first pass instead of flashing the skeleton after an effect.
+ */
+function useIsClient(): boolean {
+  return React.useSyncExternalStore(
+    subscribeNoop,
+    () => true,
+    () => false
+  )
+}
+
 export function DarkModeToggle({ className }: DarkModeToggleProps) {
   const { theme, setTheme, systemTheme } = useTheme()
-  const [mounted, setMounted] = React.useState(false)
-
-  // Avoid hydration mismatch
-  React.useEffect(() => {
-    setMounted(true)
-  }, [])
+  const mounted = useIsClient()
 
   if (!mounted) {
     return (
@@ -44,6 +55,7 @@ export function DarkModeToggle({ className }: DarkModeToggleProps) {
           {themeOptions.map((option) => (
             <div
               key={option.value}
+              aria-hidden="true"
               className="flex flex-1 animate-pulse flex-col items-center gap-1 rounded-lg border-2 border-border bg-muted px-4 py-3"
             >
               <div className="size-5 rounded bg-border" />

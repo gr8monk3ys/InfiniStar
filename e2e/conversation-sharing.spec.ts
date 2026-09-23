@@ -130,7 +130,7 @@ test.describe("Conversation Join Page — Valid share", () => {
     await page.goto(`/join/${VALID_TOKEN}`)
 
     // Clerk reports !isSignedIn for unauthenticated users
-    const loginButton = page.getByRole("button", { name: /log in to join/i })
+    const loginButton = page.getByRole("link", { name: /log in to join/i })
     await expect(loginButton).toBeVisible()
   })
 
@@ -147,7 +147,7 @@ test.describe("Conversation Join Page — Valid share", () => {
   }) => {
     await page.goto(`/join/${VALID_TOKEN}`)
 
-    const loginButton = page.getByRole("button", { name: /log in to join/i })
+    const loginButton = page.getByRole("link", { name: /log in to join/i })
     await loginButton.click()
 
     // The JoinPage uses router.push('/sign-in?redirect_url=/join/VALID_TOKEN')
@@ -205,7 +205,7 @@ test.describe("Conversation Join Page — Expired share", () => {
   test("should show 'Go to Home' button on expired share page", async ({ page }) => {
     await page.goto(`/join/${EXPIRED_TOKEN}`)
 
-    await expect(page.getByRole("button", { name: /go to home/i })).toBeVisible({ timeout: 8000 })
+    await expect(page.getByRole("link", { name: /go to home/i })).toBeVisible({ timeout: 8000 })
   })
 })
 

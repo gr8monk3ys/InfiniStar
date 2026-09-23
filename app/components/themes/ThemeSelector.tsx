@@ -34,13 +34,14 @@ export function ThemeSelector({ className }: ThemeSelectorProps) {
       <div className="mb-4">
         <h3 className="text-lg font-medium text-foreground">Choose a Theme</h3>
         <p className="mt-1 text-sm text-muted-foreground">
-          Select a preset theme to customize the appearance of InfiniStar.
+          Select a preset theme to customize the appearance of{" "}
+          <span translate="no">InfiniStar</span>.
         </p>
       </div>
 
       <div
         className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4"
-        role="radiogroup"
+        role="group"
         aria-label="Theme selection"
       >
         {presetThemes.map((theme) => (

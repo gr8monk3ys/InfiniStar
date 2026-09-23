@@ -14,6 +14,8 @@ interface DensitySelectorProps {
   className?: string
 }
 
+const PREVIEW_ROWS = ["first", "second", "third"] as const
+
 const densityOptions: { value: Density; icon: React.ReactNode }[] = [
   { value: "compact", icon: <HiMinus className="size-5" aria-hidden="true" /> },
   { value: "comfortable", icon: <HiViewColumns className="size-5" aria-hidden="true" /> },
@@ -27,6 +29,11 @@ export function DensitySelector({
   onChange,
   className,
 }: DensitySelectorProps) {
+  const previewRowStyle = {
+    height: `${1.5 * densitySpacing[value].base}rem`,
+    padding: `${0.25 * densitySpacing[value].base}rem`,
+  }
+
   return (
     <div className={cn("space-y-3", className)}>
       <div>
@@ -56,7 +63,7 @@ export function DensitySelector({
       </div>
 
       {/* Visual preview of spacing */}
-      <div className="rounded-md border border-border bg-muted p-3">
+      <div className="rounded-md border border-border bg-muted p-3" aria-hidden="true">
         <p className="mb-2 text-xs text-muted-foreground">Preview</p>
         <div
           className="space-y-0"
@@ -66,27 +73,9 @@ export function DensitySelector({
             flexDirection: "column",
           }}
         >
-          <div
-            className="rounded bg-border"
-            style={{
-              height: `${1.5 * densitySpacing[value].base}rem`,
-              padding: `${0.25 * densitySpacing[value].base}rem`,
-            }}
-          />
-          <div
-            className="rounded bg-border"
-            style={{
-              height: `${1.5 * densitySpacing[value].base}rem`,
-              padding: `${0.25 * densitySpacing[value].base}rem`,
-            }}
-          />
-          <div
-            className="rounded bg-border"
-            style={{
-              height: `${1.5 * densitySpacing[value].base}rem`,
-              padding: `${0.25 * densitySpacing[value].base}rem`,
-            }}
-          />
+          {PREVIEW_ROWS.map((row) => (
+            <div key={row} className="rounded bg-border" style={previewRowStyle} />
+          ))}
         </div>
       </div>
     </div>

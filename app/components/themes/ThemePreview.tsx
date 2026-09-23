@@ -34,6 +34,7 @@ export function ThemePreview({ theme, isSelected, onClick }: ThemePreviewProps) 
     >
       {/* Theme preview card */}
       <div
+        aria-hidden="true"
         className="relative aspect-[4/3] w-full p-3"
         style={{ backgroundColor: `hsl(${colors.background})` }}
       >

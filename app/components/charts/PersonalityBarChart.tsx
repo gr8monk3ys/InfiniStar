@@ -2,6 +2,7 @@
 
 import { useMemo } from "react"
 
+import { formatNumber } from "@/app/lib/intl-format"
 import { cn } from "@/app/lib/utils"
 import { ChartLoadingState, useRechartsModule } from "@/app/components/charts/useRechartsModule"
 
@@ -46,6 +47,15 @@ const PERSONALITY_COLORS: Record<string, string> = {
 
 const DEFAULT_COLOR = "#8b5cf6"
 
+const COMPACT_FORMAT: Intl.NumberFormatOptions = {
+  notation: "compact",
+  maximumFractionDigits: 1,
+}
+
+function formatCompactTick(value: number) {
+  return formatNumber(value, COMPACT_FORMAT)
+}
+
 function PersonalityTooltip({ active, payload, metric }: PersonalityTooltipProps) {
   if (!active || !payload || payload.length === 0) return null
 
@@ -55,7 +65,7 @@ function PersonalityTooltip({ active, payload, metric }: PersonalityTooltipProps
       <p className="mb-1 text-sm font-medium text-foreground">{item.name}</p>
       <p className="text-sm text-muted-foreground">
         {metric === "count" ? "Messages" : "Tokens"}:{" "}
-        <span className="font-medium text-foreground">{item.value.toLocaleString()}</span>
+        <span className="font-medium tabular-nums text-foreground">{formatNumber(item.value)}</span>
       </p>
     </div>
   )
@@ -139,9 +149,7 @@ export function PersonalityBarChart({
             className="fill-muted-foreground"
             tickLine={false}
             axisLine={false}
-            tickFormatter={(value) =>
-              value >= 1000 ? `${(value / 1000).toFixed(1)}k` : value.toString()
-            }
+            tickFormatter={formatCompactTick}
           />
           <YAxis
             type="category"

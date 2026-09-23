@@ -9,6 +9,7 @@ import {
   HiOutlineSparkles,
 } from "react-icons/hi2"
 
+import { formatNumber } from "@/app/lib/intl-format"
 import { cn } from "@/app/lib/utils"
 
 import { UsageCard } from "./UsageCard"
@@ -47,23 +48,36 @@ interface UsageSummaryProps {
 /**
  * Format cost in dollars from cents
  */
+const COST_FORMAT: Intl.NumberFormatOptions = {
+  style: "currency",
+  currency: "USD",
+  minimumFractionDigits: 4,
+  maximumFractionDigits: 4,
+}
+const COMPACT_FORMAT: Intl.NumberFormatOptions = { notation: "compact", maximumFractionDigits: 1 }
+const PERCENT_FORMAT: Intl.NumberFormatOptions = {
+  style: "percent",
+  minimumFractionDigits: 1,
+  maximumFractionDigits: 1,
+}
+const ONE_DECIMAL_FORMAT: Intl.NumberFormatOptions = {
+  minimumFractionDigits: 1,
+  maximumFractionDigits: 1,
+}
+
 function formatCost(cents: number): string {
   const dollars = cents / 100
-  if (dollars < 0.01) return "<$0.01"
-  return `$${dollars.toFixed(4)}`
+  if (dollars < 0.01) {
+    return `<${formatNumber(0.01, { style: "currency", currency: "USD" })}`
+  }
+  return formatNumber(dollars, COST_FORMAT)
 }
 
 /**
  * Format number with K/M suffix for large numbers
  */
 function formatCompactNumber(num: number): string {
-  if (num >= 1_000_000) {
-    return `${(num / 1_000_000).toFixed(1)}M`
-  }
-  if (num >= 1_000) {
-    return `${(num / 1_000).toFixed(1)}K`
-  }
-  return num.toLocaleString()
+  return formatNumber(num, COMPACT_FORMAT)
 }
 
 /**
@@ -71,9 +85,19 @@ function formatCompactNumber(num: number): string {
  */
 function formatLatency(ms: number): string {
   if (ms >= 1000) {
-    return `${(ms / 1000).toFixed(1)}s`
+    return formatNumber(ms / 1000, {
+      style: "unit",
+      unit: "second",
+      unitDisplay: "narrow",
+      maximumFractionDigits: 1,
+    })
   }
-  return `${ms}ms`
+  return formatNumber(ms, {
+    style: "unit",
+    unit: "millisecond",
+    unitDisplay: "narrow",
+    maximumFractionDigits: 0,
+  })
 }
 
 /**
@@ -97,8 +121,8 @@ export function UsageSummary({
 }: UsageSummaryProps) {
   // Calculate messages remaining for display
   const messagesDisplay = subscription.isPro
-    ? `${subscription.monthlyMessageCount} this month`
-    : `${subscription.remainingMessages ?? 0} remaining`
+    ? `${formatNumber(subscription.monthlyMessageCount)} this month`
+    : `${formatNumber(subscription.remainingMessages ?? 0)} remaining`
 
   const hasCostCap = subscription.isPro && subscription.monthlyCostQuotaCents !== null
   const quotaTitle = hasCostCap ? "Monthly AI Fair-Use Cap" : "Monthly Token Quota"
@@ -117,7 +141,7 @@ export function UsageSummary({
         <div className="mb-3 flex items-center justify-between">
           <h3 className="text-sm font-medium text-card-foreground">{quotaTitle}</h3>
           {quotaTotal ? (
-            <span className="text-sm text-muted-foreground">
+            <span className="text-sm tabular-nums text-muted-foreground">
               {hasCostCap ? (
                 <>
                   {formatCost(quotaUsed)} / {formatCost(quotaTotal)}
@@ -129,7 +153,7 @@ export function UsageSummary({
               )}
             </span>
           ) : (
-            <span className="text-sm text-muted-foreground">
+            <span className="text-sm tabular-nums text-muted-foreground">
               {hasCostCap ? formatCost(quotaUsed) : `${formatCompactNumber(quotaUsed)} tokens`}
             </span>
           )}
@@ -155,20 +179,21 @@ export function UsageSummary({
           />
         </div>
         <div className="mt-2 flex items-center justify-between">
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs tabular-nums text-muted-foreground">
             {quotaTotal ? (
               hasCostCap ? (
                 <>
-                  {formatCost(quotaRemaining)} remaining ({(100 - quotaPercentage).toFixed(1)}%)
+                  {formatCost(quotaRemaining)} remaining (
+                  {formatNumber((100 - quotaPercentage) / 100, PERCENT_FORMAT)})
                 </>
               ) : (
                 <>
                   {formatCompactNumber(quotaRemaining)} tokens remaining (
-                  {(100 - quotaPercentage).toFixed(1)}%)
+                  {formatNumber((100 - quotaPercentage) / 100, PERCENT_FORMAT)})
                 </>
               )
             ) : (
-              <>{subscription.isPro ? "No quota configured" : "No quota configured"}</>
+              "No quota configured"
             )}
           </p>
           <span
@@ -224,7 +249,7 @@ export function UsageSummary({
 
         <UsageCard
           title="Avg Messages/Chat"
-          value={avgMessagesPerConversation.toFixed(1)}
+          value={formatNumber(avgMessagesPerConversation, ONE_DECIMAL_FORMAT)}
           subtitle="per conversation"
           icon={<HiOutlineChartBar className="size-5" />}
           loading={loading}
@@ -238,7 +263,7 @@ export function UsageSummary({
               ? hasCostCap
                 ? `${formatCost(subscription.monthlyCostQuotaCents!)} fair-use cap`
                 : "Unlimited access"
-              : `${subscription.monthlyMessageLimit} msg/month`
+              : `${formatNumber(subscription.monthlyMessageLimit ?? 0)} msg/month`
           }
           icon={<HiOutlineSparkles className="size-5" />}
           loading={loading}

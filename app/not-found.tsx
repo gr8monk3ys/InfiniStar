@@ -8,7 +8,7 @@ export default function NotFound() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4 text-center">
       {/* Background glow */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
           <div className="h-[400px] w-[400px] rounded-full bg-primary/10 blur-[100px]" />
         </div>
@@ -16,12 +16,17 @@ export default function NotFound() {
 
       <div className="relative flex flex-col items-center gap-6">
         {/* 404 number */}
-        <p className="text-8xl font-bold tracking-tighter text-primary/20 sm:text-9xl">404</p>
+        <p
+          className="text-8xl font-bold tabular-nums tracking-tighter text-primary/20 sm:text-9xl"
+          aria-hidden="true"
+        >
+          404
+        </p>
 
         {/* Heading */}
         <div className="flex flex-col gap-2">
           <h1 className="font-heading text-2xl font-bold tracking-tight sm:text-3xl">
-            Page not found
+            Page Not Found
           </h1>
           <p className="max-w-md text-muted-foreground">
             The page you&apos;re looking for doesn&apos;t exist or has been moved.
@@ -37,14 +42,14 @@ export default function NotFound() {
               "gradient-bg-cta gap-2 border-0 text-white shadow-lg shadow-[color:hsl(var(--glow-color)/0.25)] hover:shadow-[color:hsl(var(--glow-color)/0.4)]"
             )}
           >
-            <HiOutlineChatBubbleLeftRight className="size-5" />
+            <HiOutlineChatBubbleLeftRight className="size-5" aria-hidden="true" />
             Go to Dashboard
           </Link>
           <Link
             href="/"
             className={cn(buttonVariants({ variant: "outline", size: "lg" }), "gap-2")}
           >
-            <HiOutlineHome className="size-5" />
+            <HiOutlineHome className="size-5" aria-hidden="true" />
             Home
           </Link>
         </div>
