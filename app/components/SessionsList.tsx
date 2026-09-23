@@ -262,7 +262,7 @@ export default function SessionsList() {
    */
   const revokeSession = useCallback(async (sessionId: string) => {
     setIsRevoking(true)
-    const loader = createLoadingToast("Revoking session...")
+    const loader = createLoadingToast("Revoking session…")
 
     try {
       const token = getStoredSessionToken()
@@ -299,7 +299,7 @@ export default function SessionsList() {
   const revokeAllOtherSessions = useCallback(async () => {
     setShowRevokeAllDialog(false)
     setIsRevoking(true)
-    const loader = createLoadingToast("Revoking all other sessions...")
+    const loader = createLoadingToast("Revoking all other sessions…")
 
     try {
       const token = getStoredSessionToken()
@@ -341,7 +341,7 @@ export default function SessionsList() {
     return (
       <div className="flex items-center justify-center py-12">
         <div className="size-8 animate-spin rounded-full border-4 border-muted border-t-primary" />
-        <span className="sr-only">Loading sessions...</span>
+        <span className="sr-only">Loading sessions…</span>
       </div>
     )
   }

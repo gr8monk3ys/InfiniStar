@@ -271,7 +271,7 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = memo(function ProfileDrawer(
             rows={3}
             value={blockReason}
             onChange={(e) => setBlockReason(e.target.value)}
-            placeholder="Reason (optional)..."
+            placeholder="Reason (optional)…"
             maxLength={500}
           />
           <AlertDialogFooter>
@@ -295,7 +295,7 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = memo(function ProfileDrawer(
             rows={3}
             value={reportReason}
             onChange={(e) => setReportReason(e.target.value)}
-            placeholder="Describe the issue..."
+            placeholder="Describe the issue…"
             maxLength={500}
           />
           <AlertDialogFooter>

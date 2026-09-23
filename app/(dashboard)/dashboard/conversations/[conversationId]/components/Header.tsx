@@ -183,7 +183,7 @@ const Header: React.FC<HeaderProps> = memo(function Header({ conversation, curre
               <DropdownMenuSub>
                 <DropdownMenuSubTrigger disabled={isExporting}>
                   <HiOutlineArrowDownTray className="mr-2 size-4" aria-hidden="true" />
-                  {isExporting ? "Exporting..." : "Export conversation"}
+                  {isExporting ? "Exporting…" : "Export conversation"}
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent className="w-56">
                   <DropdownMenuLabel>Export as</DropdownMenuLabel>
@@ -199,7 +199,7 @@ const Header: React.FC<HeaderProps> = memo(function Header({ conversation, curre
                         <span className="font-medium">
                           {option.label}
                           {exportingFormat === option.format && (
-                            <span className="ml-2 text-xs text-muted-foreground">Exporting...</span>
+                            <span className="ml-2 text-xs text-muted-foreground">Exporting…</span>
                           )}
                         </span>
                         <span className="text-xs text-muted-foreground">{option.description}</span>

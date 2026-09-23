@@ -61,7 +61,7 @@ export function CharacterRemixButton({ characterId, slug }: { characterId: strin
 
   return (
     <Button type="button" variant="outline" onClick={handleRemix} disabled={isLoading}>
-      {isLoading ? "Remixing..." : "Remix"}
+      {isLoading ? "Remixing…" : "Remix"}
     </Button>
   )
 }

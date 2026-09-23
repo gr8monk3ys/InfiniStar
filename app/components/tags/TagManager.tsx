@@ -213,8 +213,8 @@ const TagManager: React.FC<TagManagerProps> = ({ className }) => {
               >
                 {isSubmitting
                   ? editingTag
-                    ? "Updating..."
-                    : "Creating..."
+                    ? "Updating…"
+                    : "Creating…"
                   : editingTag
                     ? "Update Tag"
                     : "Create Tag"}
@@ -228,7 +228,7 @@ const TagManager: React.FC<TagManagerProps> = ({ className }) => {
       {isLoading ? (
         <div className="py-8 text-center text-muted-foreground">
           <div className="mx-auto mb-2 size-8 animate-spin rounded-full border-2 border-muted border-t-primary" />
-          Loading tags...
+          Loading tags…
         </div>
       ) : tags.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border py-12 text-center">

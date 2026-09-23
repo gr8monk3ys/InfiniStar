@@ -366,8 +366,8 @@ const MemoryManager: React.FC<MemoryManagerProps> = ({ className }) => {
               >
                 {isSubmitting
                   ? editingMemory
-                    ? "Updating..."
-                    : "Creating..."
+                    ? "Updating…"
+                    : "Creating…"
                   : editingMemory
                     ? "Update Memory"
                     : "Add Memory"}
@@ -420,7 +420,7 @@ const MemoryManager: React.FC<MemoryManagerProps> = ({ className }) => {
       {isLoading ? (
         <div className="py-8 text-center text-muted-foreground">
           <div className="mx-auto mb-2 size-8 animate-spin rounded-full border-2 border-muted border-t-primary" />
-          Loading memories...
+          Loading memories…
         </div>
       ) : memories.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border py-12 text-center">

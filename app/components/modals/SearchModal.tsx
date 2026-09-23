@@ -138,7 +138,7 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose, conversation
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search for messages..."
+              placeholder="Search for messages…"
               className="block w-full rounded-md border border-input bg-background py-2 pl-10 pr-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               disabled={isSearching}
             />
@@ -148,7 +148,7 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose, conversation
             disabled={isSearching || !query.trim()}
             className="w-full rounded-md bg-primary px-4 py-2 text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {isSearching ? "Searching..." : "Search"}
+            {isSearching ? "Searching…" : "Search"}
           </button>
         </form>
 

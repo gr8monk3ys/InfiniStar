@@ -182,7 +182,7 @@ export default function ImportCharacterPage() {
                 />
 
                 {state === "loading" ? (
-                  <p className="text-sm text-muted-foreground">Importing character...</p>
+                  <p className="text-sm text-muted-foreground">Importing character…</p>
                 ) : (
                   <>
                     <p className="text-lg font-medium">Drop a character card here</p>

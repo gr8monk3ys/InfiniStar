@@ -59,7 +59,7 @@ export function useTags(): UseTagsReturn {
   }, [fetchTags])
 
   const createTag = useCallback(async (name: string, color: TagColor): Promise<Tag | null> => {
-    const loader = createLoadingToast("Creating tag...")
+    const loader = createLoadingToast("Creating tag…")
 
     try {
       const response = await api.post<TagResponse>(
@@ -83,7 +83,7 @@ export function useTags(): UseTagsReturn {
 
   const updateTag = useCallback(
     async (tagId: string, data: { name?: string; color?: TagColor }): Promise<Tag | null> => {
-      const loader = createLoadingToast("Updating tag...")
+      const loader = createLoadingToast("Updating tag…")
 
       try {
         const response = await api.patch<TagResponse>(`/api/tags/${tagId}`, data, {
@@ -110,7 +110,7 @@ export function useTags(): UseTagsReturn {
   )
 
   const deleteTag = useCallback(async (tagId: string): Promise<boolean> => {
-    const loader = createLoadingToast("Deleting tag...")
+    const loader = createLoadingToast("Deleting tag…")
 
     try {
       await api.delete(`/api/tags/${tagId}`, {

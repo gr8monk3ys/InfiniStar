@@ -237,7 +237,7 @@ const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, onClose }
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onFocus={() => query.length >= 2 && !hasSearched && hideSuggestions()}
-                placeholder="Search conversations and messages..."
+                placeholder="Search conversations and messages…"
                 className="block w-full rounded-lg border border-input bg-background py-3 pl-10 pr-24 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 aria-label="Search conversations and messages"
                 aria-describedby="search-hint"

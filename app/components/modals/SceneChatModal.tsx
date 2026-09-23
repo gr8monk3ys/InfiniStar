@@ -246,7 +246,7 @@ const SceneChatModal: React.FC<SceneChatModalProps> = ({ isOpen, onClose, charac
                 onChange={(event) =>
                   dispatch({ type: "set_search_query", value: event.target.value })
                 }
-                placeholder="Search characters..."
+                placeholder="Search characters…"
                 className="block w-full rounded-md border border-input bg-background py-2 pl-9 pr-3 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               />
             </div>
@@ -328,7 +328,7 @@ const SceneChatModal: React.FC<SceneChatModalProps> = ({ isOpen, onClose, charac
             Cancel
           </Button>
           <Button type="submit" disabled={isSubmitting || selectedCharacterIds.length < 2}>
-            {isSubmitting ? "Creating..." : "Create Scene"}
+            {isSubmitting ? "Creating…" : "Create Scene"}
           </Button>
         </div>
       </form>

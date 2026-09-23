@@ -79,7 +79,7 @@ export function PersonalityBarChart({
       .map<PersonalityChartDatum>((item) => ({
         name: item.personality,
         shortName:
-          item.personality.length > 15 ? item.personality.slice(0, 12) + "..." : item.personality,
+          item.personality.length > 15 ? item.personality.slice(0, 12) + "…" : item.personality,
         value: metric === "count" ? item.count : item.tokens,
         color: PERSONALITY_COLORS[item.personality] || DEFAULT_COLOR,
       }))

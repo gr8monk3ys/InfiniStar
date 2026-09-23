@@ -136,7 +136,7 @@ _Generated: ${
       return (
         <div className="flex flex-col items-center justify-center py-8">
           <div className="size-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          <p className="mt-4 text-sm text-muted-foreground">Loading summary...</p>
+          <p className="mt-4 text-sm text-muted-foreground">Loading summary…</p>
         </div>
       )
     }
@@ -179,7 +179,7 @@ _Generated: ${
                 {isGenerating ? (
                   <>
                     <HiOutlineArrowPath className="mr-2 size-4 animate-spin" />
-                    Generating...
+                    Generating…
                   </>
                 ) : (
                   "Generate Summary"
@@ -294,7 +294,7 @@ _Generated: ${
             {isGenerating ? (
               <>
                 <HiOutlineArrowPath className="mr-2 size-4 animate-spin" />
-                Regenerating...
+                Regenerating…
               </>
             ) : (
               <>

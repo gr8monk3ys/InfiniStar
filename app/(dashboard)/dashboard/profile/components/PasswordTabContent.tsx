@@ -25,7 +25,7 @@ export function PasswordTabContent() {
     }
 
     setIsLoading(true)
-    const loader = createLoadingToast("Changing password...")
+    const loader = createLoadingToast("Changing password…")
 
     try {
       const response = await api.patch<{ message: string }>(
@@ -120,7 +120,7 @@ export function PasswordTabContent() {
           aria-busy={isLoading}
           className="rounded-md bg-primary px-4 py-2 text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {isLoading ? "Changing..." : "Change Password"}
+          {isLoading ? "Changing…" : "Change Password"}
         </button>
       </div>
     </form>

@@ -115,7 +115,7 @@ export default function JoinPageClient() {
         <Card className="w-full max-w-md">
           <CardContent className="flex flex-col items-center py-12">
             <Loader2 className="size-8 animate-spin text-primary" />
-            <p className="mt-4 text-muted-foreground">Loading share information...</p>
+            <p className="mt-4 text-muted-foreground">Loading share information…</p>
           </CardContent>
         </Card>
       </div>
@@ -253,7 +253,7 @@ export default function JoinPageClient() {
               {isJoining ? (
                 <>
                   <Loader2 className="mr-2 size-4 animate-spin" />
-                  Joining...
+                  Joining…
                 </>
               ) : (
                 <>

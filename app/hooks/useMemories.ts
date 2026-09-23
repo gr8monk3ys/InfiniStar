@@ -129,7 +129,7 @@ export function useMemories(options?: UseMemoriesOptions): UseMemoriesReturn {
         expiresAt?: string | null
       }
     ): Promise<AIMemory | null> => {
-      const loader = createLoadingToast("Saving memory...")
+      const loader = createLoadingToast("Saving memory…")
 
       try {
         const response = await api.post<MemoryResponse>(
@@ -187,7 +187,7 @@ export function useMemories(options?: UseMemoriesOptions): UseMemoriesReturn {
         expiresAt?: string | null
       }
     ): Promise<AIMemory | null> => {
-      const loader = createLoadingToast("Updating memory...")
+      const loader = createLoadingToast("Updating memory…")
 
       try {
         const response = await api.patch<MemoryResponse>(
@@ -214,7 +214,7 @@ export function useMemories(options?: UseMemoriesOptions): UseMemoriesReturn {
   )
 
   const deleteMemory = useCallback(async (key: string): Promise<boolean> => {
-    const loader = createLoadingToast("Deleting memory...")
+    const loader = createLoadingToast("Deleting memory…")
 
     try {
       await api.delete(`/api/ai/memory/${encodeURIComponent(key)}`, {
@@ -242,7 +242,7 @@ export function useMemories(options?: UseMemoriesOptions): UseMemoriesReturn {
 
   const extractMemories = useCallback(
     async (conversationId: string, autoSave = false): Promise<ExtractedMemory[] | null> => {
-      const loader = createLoadingToast("Analyzing conversation...")
+      const loader = createLoadingToast("Analyzing conversation…")
 
       try {
         const response = await api.post<ExtractResponse>(

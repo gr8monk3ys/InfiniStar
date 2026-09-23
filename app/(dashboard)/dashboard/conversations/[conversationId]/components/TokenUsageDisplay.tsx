@@ -377,7 +377,7 @@ export const TokenUsageCompact = memo(function TokenUsageCompact({
 
           {isLoading && (
             <div className="py-4 text-center text-sm text-muted-foreground">
-              Loading usage data...
+              Loading usage data…
             </div>
           )}
 
@@ -465,7 +465,7 @@ export const TokenUsageDisplay = memo(function TokenUsageDisplay({
         <div className="mt-3 space-y-3">
           {isLoading && (
             <div className="py-4 text-center text-sm text-muted-foreground">
-              Loading usage data...
+              Loading usage data…
             </div>
           )}
 

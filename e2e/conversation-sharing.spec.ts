@@ -419,8 +419,8 @@ if (hasE2EAuthCredentials) {
       await expect(joinButton).toBeVisible({ timeout: 8000 })
       await joinButton.click()
 
-      // While joining, the button shows "Joining..."
-      await expect(page.getByText("Joining...")).toBeVisible({ timeout: 3000 })
+      // While joining, the button shows "Joining…"
+      await expect(page.getByText("Joining…")).toBeVisible({ timeout: 3000 })
     })
   })
 

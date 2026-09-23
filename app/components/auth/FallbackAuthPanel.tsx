@@ -126,7 +126,7 @@ export function FallbackAuthPanel({ mode, redirectPath }: FallbackAuthPanelProps
 
         <Button type="submit" className="w-full" disabled={isPending}>
           {isPending
-            ? "Please wait..."
+            ? "Please wait…"
             : isSignIn
               ? "Continue with Backup Access"
               : "Create Backup Account"}

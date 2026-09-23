@@ -26,7 +26,7 @@ export function TwoFactorIdle({ hasPassword, onSetupStarted }: TwoFactorIdleProp
     }
 
     setIsLoading(true)
-    const loader = createLoadingToast("Setting up 2FA...")
+    const loader = createLoadingToast("Setting up 2FA…")
 
     try {
       const response = await api.post<SetupData>(

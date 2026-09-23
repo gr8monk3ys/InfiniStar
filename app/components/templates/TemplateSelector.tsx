@@ -104,7 +104,7 @@ export function TemplateSelector({
               <input
                 type="text"
                 className="flex h-8 w-full rounded-md border border-input bg-background py-1 pl-8 pr-3 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                placeholder="Search templates..."
+                placeholder="Search templates…"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onClick={(e) => e.stopPropagation()}
@@ -150,7 +150,7 @@ export function TemplateSelector({
 
           <div className="max-h-48 overflow-auto">
             {isLoading ? (
-              <div className="p-4 text-center text-sm text-muted-foreground">Loading...</div>
+              <div className="p-4 text-center text-sm text-muted-foreground">Loading…</div>
             ) : filteredTemplates.length === 0 ? (
               <div className="p-4 text-center text-sm text-muted-foreground">
                 {templates.length === 0 ? "No templates yet" : "No templates found"}

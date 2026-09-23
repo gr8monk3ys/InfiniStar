@@ -50,7 +50,7 @@ export function useConversationExport(conversationId: string, conversationName =
       setIsExporting(true)
       setExportingFormat(format)
 
-      const loadingToast = toast.loading(`Exporting as ${format}...`)
+      const loadingToast = toast.loading(`Exporting as ${format}…`)
 
       try {
         const response = await fetch(

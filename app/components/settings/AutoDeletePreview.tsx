@@ -220,7 +220,7 @@ export function AutoDeletePreview({
                       className="inline-flex w-full justify-center rounded-md border border-transparent bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground shadow-sm hover:bg-destructive/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
                     >
                       {isDeleting
-                        ? "Deleting..."
+                        ? "Deleting…"
                         : `Delete ${totalCount} Conversation${totalCount === 1 ? "" : "s"}`}
                     </button>
                   )}

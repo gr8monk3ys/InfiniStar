@@ -55,7 +55,7 @@ if (hasE2EAuthCredentials) {
       await expect(page.getByRole("heading", { name: /comments/i }).first()).toBeVisible()
 
       const commentText = `e2e comment ${Date.now()}`
-      const commentInput = page.getByPlaceholder("Share your thoughts...")
+      const commentInput = page.getByPlaceholder("Share your thoughts…")
       await expect(commentInput).toBeVisible()
       await commentInput.fill(commentText)
 

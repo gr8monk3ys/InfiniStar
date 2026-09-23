@@ -43,7 +43,7 @@ export default function useImageGeneration({
     }
 
     setIsGeneratingImage(true)
-    const loader = toast.loading("Generating image...")
+    const loader = toast.loading("Generating image…")
 
     try {
       const res = await fetch("/api/ai/image/generate", {

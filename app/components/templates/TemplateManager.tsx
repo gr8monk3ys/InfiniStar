@@ -213,7 +213,7 @@ export function TemplateManager({ isOpen, onClose, onSelectTemplate }: TemplateM
               </Label>
               <Textarea
                 id="template-content"
-                placeholder="Enter your template message..."
+                placeholder="Enter your template message…"
                 value={formData.content}
                 onChange={(e) => setFormData((prev) => ({ ...prev, content: e.target.value }))}
                 maxLength={TEMPLATE_CONSTRAINTS.CONTENT_MAX_LENGTH}
@@ -267,7 +267,7 @@ export function TemplateManager({ isOpen, onClose, onSelectTemplate }: TemplateM
                 Cancel
               </Button>
               <Button onClick={handleSave} disabled={isSaving}>
-                {isSaving ? "Saving..." : editingTemplate ? "Update Template" : "Create Template"}
+                {isSaving ? "Saving…" : editingTemplate ? "Update Template" : "Create Template"}
               </Button>
             </DialogFooter>
           </div>
@@ -280,7 +280,7 @@ export function TemplateManager({ isOpen, onClose, onSelectTemplate }: TemplateM
                 <input
                   type="text"
                   className="flex h-9 w-full rounded-md border border-input bg-background py-2 pl-8 pr-3 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  placeholder="Search templates..."
+                  placeholder="Search templates…"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -318,7 +318,7 @@ export function TemplateManager({ isOpen, onClose, onSelectTemplate }: TemplateM
             <div className="max-h-[400px] min-h-[200px] flex-1 overflow-auto rounded-md border">
               {isLoading ? (
                 <div className="flex h-32 items-center justify-center">
-                  <p className="text-muted-foreground">Loading templates...</p>
+                  <p className="text-muted-foreground">Loading templates…</p>
                 </div>
               ) : filteredTemplates.length === 0 ? (
                 <div className="flex h-32 flex-col items-center justify-center gap-2">

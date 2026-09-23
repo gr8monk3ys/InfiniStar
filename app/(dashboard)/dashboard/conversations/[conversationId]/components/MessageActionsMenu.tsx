@@ -99,7 +99,7 @@ export default function MessageActionsMenu({
               className={itemClass}
             >
               <HiOutlineSquare2Stack size={16} aria-hidden="true" />
-              {isBranching ? "Branching..." : "Branch from here"}
+              {isBranching ? "Branching…" : "Branch from here"}
             </button>
           )}
           {onEdit && (
@@ -123,7 +123,7 @@ export default function MessageActionsMenu({
               disabled={isDeleting}
             >
               <HiTrash size={16} aria-hidden="true" />
-              {isDeleting ? "Deleting..." : "Delete"}
+              {isDeleting ? "Deleting…" : "Delete"}
             </button>
           )}
         </div>

@@ -32,7 +32,7 @@ export function SafetyTabContent() {
     e.preventDefault()
     setIsLoading(true)
 
-    const loader = createLoadingToast("Saving safety settings...")
+    const loader = createLoadingToast("Saving safety settings…")
 
     try {
       const response = await api.patch<{
@@ -122,7 +122,7 @@ export function SafetyTabContent() {
           aria-busy={isLoading}
           className="rounded-md bg-primary px-4 py-2 text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {isLoading ? "Saving..." : "Save Changes"}
+          {isLoading ? "Saving…" : "Save Changes"}
         </button>
       </div>
     </form>

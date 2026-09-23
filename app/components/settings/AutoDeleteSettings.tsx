@@ -137,7 +137,7 @@ export function AutoDeleteSettings() {
     }
 
     setIsSaving(true)
-    const loader = createLoadingToast("Saving auto-delete settings...")
+    const loader = createLoadingToast("Saving auto-delete settings…")
 
     try {
       const response = await api.patch<{ message: string; settings: AutoDeleteSettingsData }>(
@@ -192,7 +192,7 @@ export function AutoDeleteSettings() {
   // Run manual cleanup
   const handleRunNow = async () => {
     setIsDeleting(true)
-    const loader = createLoadingToast("Running auto-delete cleanup...")
+    const loader = createLoadingToast("Running auto-delete cleanup…")
 
     try {
       const response = await api.post<{
@@ -311,7 +311,7 @@ export function AutoDeleteSettings() {
                   disabled={isSaving}
                   className="inline-flex items-center rounded-md bg-yellow-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-yellow-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-500 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {isSaving ? "Saving..." : "Confirm & Enable"}
+                  {isSaving ? "Saving…" : "Confirm & Enable"}
                 </button>
                 <button
                   type="button"
@@ -469,7 +469,7 @@ export function AutoDeleteSettings() {
                 className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-foreground shadow-sm hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <HiEye className="size-4" />
-                {isPreviewLoading ? "Loading..." : "Preview"}
+                {isPreviewLoading ? "Loading…" : "Preview"}
               </button>
               <button
                 type="button"
@@ -478,7 +478,7 @@ export function AutoDeleteSettings() {
                 className="inline-flex items-center gap-2 rounded-md border border-destructive/30 bg-card px-4 py-2 text-sm font-medium text-destructive shadow-sm hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <HiTrash className="size-4" />
-                {isDeleting ? "Deleting..." : "Run Now"}
+                {isDeleting ? "Deleting…" : "Run Now"}
               </button>
             </>
           )}
@@ -491,7 +491,7 @@ export function AutoDeleteSettings() {
             aria-busy={isSaving}
             className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {isSaving ? "Saving..." : "Save Changes"}
+            {isSaving ? "Saving…" : "Save Changes"}
           </button>
         )}
       </div>

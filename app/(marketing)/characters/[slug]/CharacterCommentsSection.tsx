@@ -100,7 +100,7 @@ export default function CharacterCommentsSection({
     if (!trimmed) return
 
     setIsSubmitting(true)
-    const loader = toast.loading("Posting comment...")
+    const loader = toast.loading("Posting comment…")
 
     try {
       const res = await fetch(`/api/characters/${characterId}/comments`, {
@@ -147,7 +147,7 @@ export default function CharacterCommentsSection({
         return
       }
 
-      const loader = toast.loading("Deleting comment...")
+      const loader = toast.loading("Deleting comment…")
       try {
         const res = await fetch(`/api/character-comments/${commentId}`, {
           method: "DELETE",
@@ -195,7 +195,7 @@ export default function CharacterCommentsSection({
           <textarea
             value={commentBody}
             onChange={(e) => setCommentBody(e.target.value)}
-            placeholder="Share your thoughts..."
+            placeholder="Share your thoughts…"
             className={cn(
               "min-h-[84px] w-full resize-y rounded-xl border bg-background px-3 py-2 text-sm",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
@@ -290,7 +290,7 @@ export default function CharacterCommentsSection({
             disabled={isLoading}
             className="self-center rounded-md border px-4 py-2 text-sm font-medium hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {isLoading ? "Loading..." : "Load more"}
+            {isLoading ? "Loading…" : "Load more"}
           </button>
         )}
       </div>

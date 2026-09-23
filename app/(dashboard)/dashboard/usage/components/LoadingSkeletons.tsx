@@ -21,7 +21,7 @@ export function ChartSkeleton({ height = 300, className }: ChartSkeletonProps) {
       <div className="flex h-full items-center justify-center">
         <div className="flex flex-col items-center gap-2">
           <div className="size-8 animate-spin rounded-full border-4 border-muted-foreground/20 border-t-primary" />
-          <span className="text-xs text-muted-foreground">Loading chart...</span>
+          <span className="text-xs text-muted-foreground">Loading chart…</span>
         </div>
       </div>
     </div>

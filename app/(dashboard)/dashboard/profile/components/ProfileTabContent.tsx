@@ -50,7 +50,7 @@ export function ProfileTabContent() {
       }
 
       const imageUrl = result.info.secure_url
-      const loader = createLoadingToast("Uploading avatar...")
+      const loader = createLoadingToast("Uploading avatar…")
 
       try {
         await api.patch<{ message: string; user: { image: string } }>(
@@ -73,7 +73,7 @@ export function ProfileTabContent() {
     e.preventDefault()
     setIsLoading(true)
 
-    const loader = createLoadingToast("Updating profile...")
+    const loader = createLoadingToast("Updating profile…")
 
     try {
       const response = await api.patch<{ message: string; user: { name: string } }>(
@@ -208,7 +208,7 @@ export function ProfileTabContent() {
             disabled={isLoading}
             rows={4}
             className="mt-1 block w-full rounded-md border border-border bg-background px-3 py-2 text-foreground shadow-sm focus-visible:border-ring focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:bg-muted"
-            placeholder="Tell us about yourself..."
+            placeholder="Tell us about yourself…"
             maxLength={500}
           />
           <p className="mt-1 text-sm text-muted-foreground">{bio.length}/500 characters</p>
@@ -261,7 +261,7 @@ export function ProfileTabContent() {
             aria-busy={isLoading}
             className="rounded-md bg-primary px-4 py-2 text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {isLoading ? "Saving..." : "Save Changes"}
+            {isLoading ? "Saving…" : "Save Changes"}
           </button>
         </div>
       </form>

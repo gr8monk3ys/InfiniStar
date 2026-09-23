@@ -41,7 +41,7 @@ export function TwoFactorEnabled({
       }
 
       setIsLoading(true)
-      const loader = createLoadingToast("Disabling 2FA...")
+      const loader = createLoadingToast("Disabling 2FA…")
 
       try {
         await api.post(
@@ -75,7 +75,7 @@ export function TwoFactorEnabled({
       }
 
       setIsLoading(true)
-      const loader = createLoadingToast("Generating new backup codes...")
+      const loader = createLoadingToast("Generating new backup codes…")
 
       try {
         const response = await api.post<{ backupCodes: string[] }>(
@@ -202,7 +202,7 @@ export function TwoFactorEnabled({
               disabled={isLoading || !regeneratePassword || regenerateCode.length !== 6}
               className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {isLoading ? "Generating..." : "Generate Codes"}
+              {isLoading ? "Generating…" : "Generate Codes"}
             </button>
           </div>
         </form>
@@ -289,7 +289,7 @@ export function TwoFactorEnabled({
               disabled={isLoading || !disablePassword || !disableCode}
               className="rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground hover:bg-destructive/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {isLoading ? "Disabling..." : "Disable 2FA"}
+              {isLoading ? "Disabling…" : "Disable 2FA"}
             </button>
           </div>
         </form>

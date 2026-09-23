@@ -84,7 +84,7 @@ describe("TypingIndicator", () => {
     act(() => {
       jest.advanceTimersByTime(20)
     })
-    expect(screen.getByText("Elara is writing...")).toBeInTheDocument()
+    expect(screen.getByText("Elara is writing…")).toBeInTheDocument()
   })
 
   it("keeps 'is typing' for people and does not double-announce", () => {
@@ -92,7 +92,7 @@ describe("TypingIndicator", () => {
     act(() => {
       jest.advanceTimersByTime(20)
     })
-    expect(screen.getByText("Sam is typing...")).toBeInTheDocument()
+    expect(screen.getByText("Sam is typing…")).toBeInTheDocument()
     // ConversationContainer owns the single live region for typing
     expect(container.querySelector("[aria-live]")).toBeNull()
     expect(container.querySelector("[role='status']")).toBeNull()

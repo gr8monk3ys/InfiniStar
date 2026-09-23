@@ -168,7 +168,7 @@ const StatusModal: React.FC<StatusModalProps> = ({ isOpen, onClose }) => {
                 onChange={(e) => setCustomStatus(e.target.value)}
                 disabled={isLoading}
                 className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-foreground shadow-sm focus-visible:border-ring focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:bg-muted"
-                placeholder="e.g., In a meeting, Working from home, On vacation..."
+                placeholder="e.g., In a meeting, Working from home, On vacation…"
                 maxLength={100}
               />
               <p className="mt-1 text-sm text-muted-foreground">
@@ -212,7 +212,7 @@ const StatusModal: React.FC<StatusModalProps> = ({ isOpen, onClose }) => {
                 disabled={isLoading || (!customStatus && !customStatusEmoji)}
                 className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {isLoading ? "Saving..." : "Save status"}
+                {isLoading ? "Saving…" : "Save status"}
               </button>
             </div>
           </div>

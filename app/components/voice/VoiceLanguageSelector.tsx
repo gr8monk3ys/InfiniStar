@@ -198,7 +198,7 @@ export function VoiceLanguageSelector({
                 setSearchQuery(e.target.value)
                 setHighlightedIndex(0)
               }}
-              placeholder="Search languages..."
+              placeholder="Search languages…"
               className={cn(
                 "w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm",
                 "placeholder:text-muted-foreground",

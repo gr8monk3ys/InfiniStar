@@ -496,7 +496,7 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
                     displayBody ? (
                       <MarkdownRenderer content={displayBody} />
                     ) : isThisRegenerating ? (
-                      <div className="text-sm italic text-muted-foreground">Regenerating...</div>
+                      <div className="text-sm italic text-muted-foreground">Regenerating…</div>
                     ) : null
                   ) : (
                     <div>{displayBody}</div>
@@ -538,7 +538,7 @@ const MessageBox: React.FC<MessageBoxProps> = memo(function MessageBox({
                       aria-label={`Ask ${characterName ?? "the character"} to reply again`}
                       title={
                         isRegenerating && regeneratingMessageId === data.id
-                          ? "Replying again..."
+                          ? "Replying again…"
                           : "Reply again"
                       }
                     >

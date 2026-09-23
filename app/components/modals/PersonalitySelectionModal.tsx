@@ -185,7 +185,7 @@ const PersonalitySelectionModal: React.FC<PersonalitySelectionModalProps> = ({
                     value={customPrompt}
                     onChange={(e) => setCustomPrompt(e.target.value)}
                     className="block w-full rounded-md border border-input bg-background px-3 py-1.5 text-foreground shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:text-sm sm:leading-6"
-                    placeholder="e.g., You are a helpful coding assistant that specializes in React and TypeScript..."
+                    placeholder="e.g., You are a helpful coding assistant that specializes in React and TypeScript…"
                     required={selectedPersonality === "custom"}
                   />
                 </div>
@@ -219,7 +219,7 @@ const PersonalitySelectionModal: React.FC<PersonalitySelectionModalProps> = ({
               disabled={isLoading || (selectedPersonality === "custom" && !customPrompt.trim())}
               className="gradient-bg-cta rounded-md px-3 py-2 text-sm font-semibold text-white shadow-sm hover:opacity-75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {isLoading ? "Creating..." : "Create AI Chat"}
+              {isLoading ? "Creating…" : "Create AI Chat"}
             </button>
           </div>
         </div>

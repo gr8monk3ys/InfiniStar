@@ -229,7 +229,7 @@ export function useTemplates() {
    */
   const createTemplate = useCallback(
     async (data: CreateTemplateData): Promise<MessageTemplateType | null> => {
-      const loader = createLoadingToast("Creating template...")
+      const loader = createLoadingToast("Creating template…")
 
       try {
         const response = await api.post<TemplateResponse>("/api/templates", data, {
@@ -259,7 +259,7 @@ export function useTemplates() {
    */
   const updateTemplate = useCallback(
     async (templateId: string, data: UpdateTemplateData): Promise<MessageTemplateType | null> => {
-      const loader = createLoadingToast("Updating template...")
+      const loader = createLoadingToast("Updating template…")
 
       try {
         const response = await api.patch<TemplateResponse>(`/api/templates/${templateId}`, data, {
@@ -285,7 +285,7 @@ export function useTemplates() {
    * Delete a template
    */
   const deleteTemplate = useCallback(async (templateId: string): Promise<boolean> => {
-    const loader = createLoadingToast("Deleting template...")
+    const loader = createLoadingToast("Deleting template…")
 
     try {
       const response = await api.delete<{ success: boolean; limitInfo: TemplateLimitInfo }>(

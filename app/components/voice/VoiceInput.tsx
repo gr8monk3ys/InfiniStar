@@ -224,7 +224,7 @@ export function VoiceInput({
         >
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1">
-              <p className="mb-1 text-xs font-medium text-muted-foreground">Transcribing...</p>
+              <p className="mb-1 text-xs font-medium text-muted-foreground">Transcribing…</p>
               <p className="text-sm text-foreground">
                 {currentText && defaultMode === "append" && (
                   <span className="text-muted-foreground">{currentText} </span>

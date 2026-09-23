@@ -316,8 +316,8 @@ export function MessageResultItem({
         {/* Context preview */}
         {message.context && (message.context.before || message.context.after) && (
           <div className="mt-1.5 rounded border border-border/50 bg-muted/50 px-2 py-1 text-xs text-muted-foreground/70">
-            {message.context.before && <p className="line-clamp-1">...{message.context.before}</p>}
-            {message.context.after && <p className="line-clamp-1">{message.context.after}...</p>}
+            {message.context.before && <p className="line-clamp-1">…{message.context.before}</p>}
+            {message.context.after && <p className="line-clamp-1">{message.context.after}…</p>}
           </div>
         )}
       </div>

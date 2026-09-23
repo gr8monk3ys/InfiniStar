@@ -101,7 +101,7 @@ export function PricingCtaButton({
       disabled={pending || csrfLoading || isLoading}
       className={className}
     >
-      {isLoading ? "Redirecting..." : isPro ? "Manage Billing" : "Upgrade to PRO"}
+      {isLoading ? "Redirecting…" : isPro ? "Manage Billing" : "Upgrade to PRO"}
     </Button>
   )
 }

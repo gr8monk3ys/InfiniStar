@@ -70,7 +70,7 @@ export function TwoFactorSetup({ setupData, onVerified, onCancel }: TwoFactorSet
     }
 
     setIsLoading(true)
-    const loader = createLoadingToast("Verifying code...")
+    const loader = createLoadingToast("Verifying code…")
 
     try {
       const response = await api.post<{ backupCodes: string[] }>(
@@ -211,7 +211,7 @@ export function TwoFactorSetup({ setupData, onVerified, onCancel }: TwoFactorSet
           disabled={isLoading || verificationCode.some((d) => !d)}
           className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {isLoading ? "Verifying..." : "Verify"}
+          {isLoading ? "Verifying…" : "Verify"}
         </button>
       </div>
     </div>

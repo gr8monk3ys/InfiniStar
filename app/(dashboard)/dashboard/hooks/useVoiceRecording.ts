@@ -85,7 +85,7 @@ export default function useVoiceRecording({
       }
 
       setIsSendingVoiceMessage(true)
-      const loader = toast.loading("Sending voice message...")
+      const loader = toast.loading("Sending voice message…")
 
       try {
         const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
@@ -221,7 +221,7 @@ export default function useVoiceRecording({
       voiceRecorderRef.current = recorder
       recorder.start()
       setIsRecordingVoiceMessage(true)
-      toast.success("Recording voice message...")
+      toast.success("Recording voice message…")
     } catch {
       toast.error("Microphone permission denied")
       cleanupVoiceRecorder()

@@ -42,7 +42,7 @@ const DeleteAccountModal: React.FC<DeleteAccountModalProps> = ({
     }
 
     setIsLoading(true)
-    const loader = createLoadingToast("Processing deletion request...")
+    const loader = createLoadingToast("Processing deletion request…")
 
     try {
       const response = await api.delete<{
@@ -197,7 +197,7 @@ const DeleteAccountModal: React.FC<DeleteAccountModalProps> = ({
           aria-busy={isLoading}
           className="inline-flex w-full justify-center rounded-md border border-transparent bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground shadow-sm hover:bg-destructive/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
         >
-          {isLoading ? "Processing..." : "Delete Account"}
+          {isLoading ? "Processing…" : "Delete Account"}
         </button>
       </div>
     </Modal>

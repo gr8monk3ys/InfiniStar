@@ -226,7 +226,7 @@ function CreatorSupportCardFallback({ creatorName }: { creatorName: string }) {
   return (
     <div className="rounded-xl border bg-card p-6 shadow-sm">
       <h2 className="text-lg font-semibold">Support {creatorName}</h2>
-      <p className="mt-2 text-sm text-muted-foreground">Loading creator support options...</p>
+      <p className="mt-2 text-sm text-muted-foreground">Loading creator support options…</p>
     </div>
   )
 }

@@ -412,7 +412,7 @@ export function CharacterForm({ initial, mode }: CharacterFormProps) {
                 id="description"
                 value={form.description}
                 onChange={(event) => handleChange("description", event.target.value)}
-                placeholder="Nova spent forty years charting stars for an empire that no longer exists..."
+                placeholder="Nova spent forty years charting stars for an empire that no longer exists…"
                 maxLength={2000}
                 rows={4}
               />
@@ -471,7 +471,7 @@ export function CharacterForm({ initial, mode }: CharacterFormProps) {
 
           <div className="flex flex-wrap items-center gap-3">
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Saving..." : mode === "create" ? "Create character" : "Save changes"}
+              {isSubmitting ? "Saving…" : mode === "create" ? "Create character" : "Save changes"}
             </Button>
             {isDirty && !isSubmitting && (
               <span className="text-xs text-muted-foreground">Unsaved changes</span>
@@ -484,7 +484,7 @@ export function CharacterForm({ initial, mode }: CharacterFormProps) {
                 onClick={() => setShowDeleteDialog(true)}
                 disabled={isDeleting}
               >
-                {isDeleting ? "Deleting..." : "Delete character"}
+                {isDeleting ? "Deleting…" : "Delete character"}
               </Button>
             )}
           </div>
@@ -538,7 +538,7 @@ export function CharacterForm({ initial, mode }: CharacterFormProps) {
               disabled={isDeleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {isDeleting ? "Deleting..." : `Delete ${deleteName}`}
+              {isDeleting ? "Deleting…" : `Delete ${deleteName}`}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -735,7 +735,7 @@ function ImageField({
               type="url"
               value={value}
               onChange={(event) => onChange(event.target.value)}
-              placeholder="https://..."
+              placeholder="https://…"
               aria-label={`${label} URL`}
               className="h-9"
             />

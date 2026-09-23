@@ -54,7 +54,7 @@ export function AccountTabContent() {
 
   const handleCancelDeletion = async () => {
     setIsDeletionLoading(true)
-    const loader = createLoadingToast("Cancelling deletion request...")
+    const loader = createLoadingToast("Cancelling deletion request…")
 
     try {
       const response = await api.post<{ success: boolean; message: string }>(
@@ -115,7 +115,7 @@ export function AccountTabContent() {
                     aria-busy={isDeletionLoading}
                     className="inline-flex items-center rounded-md bg-yellow-600 px-4 py-2 text-sm font-medium text-white hover:bg-yellow-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-yellow-700 dark:hover:bg-yellow-600"
                   >
-                    {isDeletionLoading ? "Cancelling..." : "Cancel Deletion Request"}
+                    {isDeletionLoading ? "Cancelling…" : "Cancel Deletion Request"}
                   </button>
                 </div>
               </div>

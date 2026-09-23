@@ -52,7 +52,7 @@ export function CharacterExportButton({ characterId }: { characterId: string }) 
 
   return (
     <Button type="button" variant="outline" onClick={handleExport} disabled={isLoading}>
-      {isLoading ? "Exporting..." : "Export"}
+      {isLoading ? "Exporting…" : "Export"}
     </Button>
   )
 }

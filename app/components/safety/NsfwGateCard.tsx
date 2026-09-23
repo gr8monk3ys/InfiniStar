@@ -33,7 +33,7 @@ export function NsfwGateCard() {
   const handleConfirm = async () => {
     if (!ageConfirmed) return
     setIsLoading(true)
-    const loader = createLoadingToast("Enabling NSFW content...")
+    const loader = createLoadingToast("Enabling NSFW content…")
     try {
       await api.patch(
         "/api/safety/preferences",
@@ -116,7 +116,7 @@ export function NsfwGateCard() {
               disabled={!ageConfirmed || isLoading}
               aria-busy={isLoading}
             >
-              {isLoading ? "Enabling..." : "Confirm & Enable"}
+              {isLoading ? "Enabling…" : "Confirm & Enable"}
             </Button>
           </DialogFooter>
         </DialogContent>

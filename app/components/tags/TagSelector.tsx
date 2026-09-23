@@ -131,7 +131,7 @@ const TagSelector: React.FC<TagSelectorProps> = ({
         <DropdownMenuSeparator />
 
         {isLoadingTags ? (
-          <div className="px-2 py-4 text-center text-sm text-muted-foreground">Loading tags...</div>
+          <div className="px-2 py-4 text-center text-sm text-muted-foreground">Loading tags…</div>
         ) : allTags.length === 0 && !showCreateForm ? (
           <div className="px-2 py-4 text-center text-sm text-muted-foreground">
             <p className="mb-2">No tags yet</p>

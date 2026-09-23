@@ -18,8 +18,8 @@ interface TypingIndicatorProps {
 /**
  * TypingIndicator - Displays animated typing indicators for chat
  *
- * Shows "[User] is typing..." for human users
- * Shows "[Character] is writing..." when the character is generating a reply
+ * Shows "[User] is typing…" for human users
+ * Shows "[Character] is writing…" when the character is generating a reply
  *
  * Features:
  * - Smooth fade in/out transitions
@@ -103,7 +103,7 @@ const TypingIndicator: React.FC<TypingIndicatorProps> = ({
       </div>
 
       {/* Typing message */}
-      <span className="text-sm font-medium text-muted-foreground">{getTypingMessage()}...</span>
+      <span className="text-sm font-medium text-muted-foreground">{getTypingMessage()}…</span>
     </div>
   )
 }

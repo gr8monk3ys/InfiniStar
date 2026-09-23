@@ -200,7 +200,7 @@ export function NotificationsTabContent() {
     e.preventDefault()
     setIsLoading(true)
 
-    const loader = createLoadingToast("Saving notification preferences...")
+    const loader = createLoadingToast("Saving notification preferences…")
 
     try {
       const response = await api.patch<{ message: string }>(
@@ -314,7 +314,7 @@ export function NotificationsTabContent() {
             <p className="mt-2 text-xs text-muted-foreground">
               Status:{" "}
               {pushStatusLoading
-                ? "Checking..."
+                ? "Checking…"
                 : !pushSupported
                   ? "Not supported on this browser"
                   : pushConfigured === false
@@ -341,7 +341,7 @@ export function NotificationsTabContent() {
             onClick={async () => {
               if (pushTestLoading || isLoading) return
               setPushTestLoading(true)
-              const loader = createLoadingToast("Sending test push...")
+              const loader = createLoadingToast("Sending test push…")
               try {
                 await api.post(
                   "/api/notifications/push/test",
@@ -358,7 +358,7 @@ export function NotificationsTabContent() {
             }}
             className="rounded-md bg-primary px-3 py-2 text-sm text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {pushTestLoading ? "Sending..." : "Send Test"}
+            {pushTestLoading ? "Sending…" : "Send Test"}
           </button>
         </div>
       </div>
@@ -537,7 +537,7 @@ export function NotificationsTabContent() {
           aria-busy={isLoading}
           className="rounded-md bg-primary px-4 py-2 text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {isLoading ? "Saving..." : "Save Preferences"}
+          {isLoading ? "Saving…" : "Save Preferences"}
         </button>
       </div>
     </form>
