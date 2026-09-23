@@ -198,14 +198,12 @@ export function VoiceWaveform({
           // eslint-disable-next-line react/no-array-index-key -- Waveform bars are visual elements without unique IDs
           key={`waveform-bar-${index}`}
           className={cn(
-            "rounded-full transition-all duration-100",
+            "h-full rounded-full transition-[transform,background-color] duration-100",
             state === "listening" ? activeColor : idleColor
           )}
           style={{
             width: barWidth,
-            height: `${Math.max(20, level * 100)}%`,
-            minHeight: 4,
-            transitionProperty: "height, background-color",
+            transform: `scaleY(${Math.max(0.2, Math.min(level, 1))})`,
           }}
           aria-hidden="true"
         />
@@ -234,7 +232,7 @@ export function VoiceWaveformDots({
         <div
           key={`waveform-dot-${index}`}
           className={cn(
-            "size-2 rounded-full transition-all duration-300",
+            "size-2 rounded-full transition-colors duration-300",
             state === "listening" ? "animate-pulse bg-red-500" : "bg-muted-foreground",
             state === "listening" && index === 1 && "animation-delay-150",
             state === "listening" && index === 2 && "animation-delay-300"

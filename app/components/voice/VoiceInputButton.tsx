@@ -11,7 +11,7 @@ import type { VoiceInputState } from "@/app/hooks/useVoiceInput"
  * Voice input button variants using class-variance-authority
  */
 const voiceButtonVariants = cva(
-  "relative inline-flex items-center justify-center rounded-full transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+  "relative inline-flex items-center justify-center rounded-full transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
   {
     variants: {
       size: {

@@ -131,7 +131,7 @@ export function SuggestionCard({
       disabled={disabled}
       aria-label={`Use suggestion: ${suggestion.text}`}
       className={cn(
-        "flex items-start gap-2 rounded-lg border text-left transition-all",
+        "flex items-start gap-2 rounded-lg border text-left transition",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
         colors.bg,
         colors.border,

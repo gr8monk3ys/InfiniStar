@@ -43,7 +43,7 @@ export function DensitySelector({
             aria-checked={value === option.value}
             onClick={() => onChange(option.value)}
             className={cn(
-              "flex flex-1 flex-col items-center gap-1 rounded-lg border-2 px-4 py-3 transition-all",
+              "flex flex-1 flex-col items-center gap-1 rounded-lg border-2 px-4 py-3 transition-colors",
               value === option.value
                 ? "border-primary bg-primary/10 text-primary"
                 : "border-border bg-card text-muted-foreground hover:border-primary/30"
@@ -59,7 +59,7 @@ export function DensitySelector({
       <div className="rounded-md border border-border bg-muted p-3">
         <p className="mb-2 text-xs text-muted-foreground">Preview</p>
         <div
-          className="space-y-0 transition-all duration-200"
+          className="space-y-0"
           style={{
             gap: `${0.5 * densitySpacing[value].base}rem`,
             display: "flex",
@@ -67,21 +67,21 @@ export function DensitySelector({
           }}
         >
           <div
-            className="rounded bg-border transition-all duration-200"
+            className="rounded bg-border"
             style={{
               height: `${1.5 * densitySpacing[value].base}rem`,
               padding: `${0.25 * densitySpacing[value].base}rem`,
             }}
           />
           <div
-            className="rounded bg-border transition-all duration-200"
+            className="rounded bg-border"
             style={{
               height: `${1.5 * densitySpacing[value].base}rem`,
               padding: `${0.25 * densitySpacing[value].base}rem`,
             }}
           />
           <div
-            className="rounded bg-border transition-all duration-200"
+            className="rounded bg-border"
             style={{
               height: `${1.5 * densitySpacing[value].base}rem`,
               padding: `${0.25 * densitySpacing[value].base}rem`,

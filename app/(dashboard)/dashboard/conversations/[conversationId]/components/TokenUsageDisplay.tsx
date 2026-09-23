@@ -48,8 +48,11 @@ function ProgressBar({
       </div>
       <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
         <div
-          className={cn("h-full transition-all duration-300", colorClasses[color])}
-          style={{ width: `${percentage}%` }}
+          className={cn(
+            "h-full w-full origin-left transition-transform duration-300",
+            colorClasses[color]
+          )}
+          style={{ transform: `scaleX(${Math.min(percentage, 100) / 100})` }}
         />
       </div>
     </div>

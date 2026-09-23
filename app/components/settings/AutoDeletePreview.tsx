@@ -73,7 +73,7 @@ export function AutoDeletePreview({
               leaveFrom="opacity-100 scale-100"
               leaveTo="opacity-0 scale-95"
             >
-              <Dialog.Panel className="w-full max-w-2xl overflow-hidden rounded-2xl bg-card p-6 text-left align-middle shadow-xl transition-all">
+              <Dialog.Panel className="w-full max-w-2xl overflow-hidden rounded-2xl bg-card p-6 text-left align-middle shadow-xl transition">
                 {/* Header */}
                 <div className="flex items-start justify-between">
                   <div>

@@ -44,7 +44,7 @@ export function BorderRadiusSelector({
             aria-checked={value === option.value}
             onClick={() => onChange(option.value)}
             className={cn(
-              "flex flex-col items-center gap-2 border-2 px-4 py-3 transition-all",
+              "flex flex-col items-center gap-2 border-2 px-4 py-3 transition-colors",
               value === option.value
                 ? "border-primary bg-primary/10 text-primary"
                 : "border-border bg-card text-muted-foreground hover:border-primary/30"

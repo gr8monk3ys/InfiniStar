@@ -189,7 +189,7 @@ export function SuggestionChips({
               disabled={disabled}
               aria-label={`Suggestion: ${suggestion.text}`}
               className={cn(
-                "shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition-all",
+                "shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
                 "border-border bg-secondary text-secondary-foreground",
                 "hover:bg-accent hover:text-accent-foreground",

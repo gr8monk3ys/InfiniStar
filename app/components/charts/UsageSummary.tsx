@@ -144,14 +144,14 @@ export function UsageSummary({
         >
           <div
             className={cn(
-              "h-full transition-all duration-500",
+              "h-full w-full origin-left transition-transform duration-500",
               quotaPercentage > 90
                 ? "bg-red-500"
                 : quotaPercentage > 70
                   ? "bg-yellow-500"
                   : "bg-primary"
             )}
-            style={{ width: `${quotaPercentage}%` }}
+            style={{ transform: `scaleX(${Math.min(quotaPercentage, 100) / 100})` }}
           />
         </div>
         <div className="mt-2 flex items-center justify-between">

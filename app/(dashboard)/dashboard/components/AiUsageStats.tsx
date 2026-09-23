@@ -135,14 +135,14 @@ const AiUsageStats = () => {
         </div>
         <div className="h-3 w-full overflow-hidden rounded-full bg-muted">
           <div
-            className={`h-full transition-all ${
+            className={`h-full w-full origin-left transition-transform ${
               quota.percentage > 90
                 ? "bg-red-500"
                 : quota.percentage > 70
                   ? "bg-yellow-500"
                   : "bg-primary"
             }`}
-            style={{ width: `${Math.min(quota.percentage, 100)}%` }}
+            style={{ transform: `scaleX(${Math.min(quota.percentage, 100) / 100})` }}
           />
         </div>
         <p className="mt-2 text-xs text-muted-foreground">

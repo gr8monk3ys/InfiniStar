@@ -211,7 +211,7 @@ const TagSelector: React.FC<TagSelectorProps> = ({
                         type="button"
                         onClick={() => setNewTagColor(color)}
                         className={cn(
-                          "size-5 rounded-full border-2 transition-all",
+                          "size-5 rounded-full border-2 transition",
                           colorScheme.bg,
                           newTagColor === color
                             ? "border-foreground ring-2 ring-ring ring-offset-1"

@@ -84,7 +84,7 @@ const TypingIndicator: React.FC<TypingIndicatorProps> = ({
   return (
     <div
       className={cn(
-        "flex items-center gap-2 px-4 py-2 transition-all duration-200 ease-in-out",
+        "flex items-center gap-2 px-4 py-2 transition-[transform,opacity] duration-200 ease-in-out",
         isVisible ? "translate-y-0 opacity-100" : "translate-y-1 opacity-0",
         className
       )}

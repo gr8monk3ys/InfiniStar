@@ -34,7 +34,7 @@ export function PeriodSelector({ value, onChange, className }: PeriodSelectorPro
           aria-selected={value === period.value}
           aria-controls={`panel-${period.value}`}
           className={cn(
-            "rounded-md px-3 py-1.5 text-sm font-medium transition-all",
+            "rounded-md px-3 py-1.5 text-sm font-medium transition",
             value === period.value
               ? "bg-primary text-primary-foreground shadow-sm"
               : "text-muted-foreground hover:bg-muted hover:text-foreground"

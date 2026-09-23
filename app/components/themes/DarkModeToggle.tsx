@@ -78,7 +78,7 @@ export function DarkModeToggle({ className }: DarkModeToggleProps) {
             aria-checked={currentTheme === option.value}
             onClick={() => setTheme(option.value)}
             className={cn(
-              "flex flex-1 flex-col items-center gap-1 rounded-lg border-2 px-4 py-3 transition-all",
+              "flex flex-1 flex-col items-center gap-1 rounded-lg border-2 px-4 py-3 transition-colors",
               currentTheme === option.value
                 ? "border-primary bg-primary/10 text-primary"
                 : "border-border bg-card text-muted-foreground hover:border-primary/30"

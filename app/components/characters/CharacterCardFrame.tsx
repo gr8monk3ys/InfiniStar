@@ -51,7 +51,7 @@ export function CharacterCardFrame({
       href={`/characters/${character.slug}`}
       className={cn(
         "group relative flex flex-col overflow-hidden rounded-xl border border-border/50",
-        "bg-card transition-all duration-300",
+        "bg-card transition duration-300",
         "hover:-translate-y-1 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/10"
       )}
     >

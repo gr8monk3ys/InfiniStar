@@ -221,14 +221,14 @@ const MemoryManager: React.FC<MemoryManagerProps> = ({ className }) => {
           <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted">
             <div
               className={cn(
-                "h-full rounded-full transition-all",
+                "h-full w-full origin-left rounded-full transition-transform",
                 capacity.remaining <= 5
                   ? "bg-destructive"
                   : capacity.remaining <= 15
                     ? "bg-yellow-500"
                     : "bg-primary"
               )}
-              style={{ width: `${(capacity.current / capacity.limit) * 100}%` }}
+              style={{ transform: `scaleX(${Math.min(capacity.current / capacity.limit, 1)})` }}
             />
           </div>
           {capacity.remaining <= 5 && (
@@ -312,7 +312,7 @@ const MemoryManager: React.FC<MemoryManagerProps> = ({ className }) => {
                       type="button"
                       onClick={() => setFormCategory(category)}
                       className={cn(
-                        "rounded-md border px-3 py-1.5 text-sm transition-all",
+                        "rounded-md border px-3 py-1.5 text-sm transition",
                         style.bg,
                         style.text,
                         style.border,

@@ -66,7 +66,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children }) => {
                   pt-5 
                   text-left 
                   shadow-xl
-                  transition-all
+                  transition
                   sm:my-8 
                   sm:w-full 
                   sm:max-w-lg 
