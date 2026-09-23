@@ -45,18 +45,19 @@ export async function GET(
   { params }: { params: Promise<{ creatorId: string }> }
 ) {
   const { creatorId } = await params
-  const creator = await prisma.user.findUnique({
-    where: { id: creatorId },
-    select: { id: true },
-  })
-  if (!creator) {
-    return NextResponse.json({ error: "Creator not found" }, { status: 404 })
-  }
 
-  const [tips, activeSubscriptions, viewerUser] = await Promise.all([
+  // Every read here is keyed on the creator id from the path (the lookup below
+  // is by primary key, so `creator.id === creatorId`), and the viewer's own
+  // subscription chains off the viewer lookup. Nothing waits on anything it
+  // does not need: one round trip instead of three.
+  const [creator, tips, activeSubscriptions, viewerSubscription] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: creatorId },
+      select: { id: true },
+    }),
     prisma.creatorTip.findMany({
       where: {
-        creatorId: creator.id,
+        creatorId,
         status: "COMPLETED",
       },
       select: {
@@ -68,7 +69,7 @@ export async function GET(
     }),
     prisma.creatorSubscription.findMany({
       where: {
-        creatorId: creator.id,
+        creatorId,
         status: "ACTIVE",
       },
       select: {
@@ -77,31 +78,35 @@ export async function GET(
       },
       take: 500,
     }),
-    getCurrentUser(),
+    getCurrentUser().then((viewerUser) =>
+      viewerUser?.id
+        ? prisma.creatorSubscription.findUnique({
+            where: {
+              supporterId_creatorId: {
+                supporterId: viewerUser.id,
+                creatorId,
+              },
+            },
+            select: {
+              id: true,
+              tierName: true,
+              amountCents: true,
+              interval: true,
+              status: true,
+            },
+          })
+        : null
+    ),
   ])
+
+  if (!creator) {
+    return NextResponse.json({ error: "Creator not found" }, { status: 404 })
+  }
 
   const summary = buildSummary(
     tips,
     activeSubscriptions as Array<{ amountCents: number; interval: "MONTHLY" | "YEARLY" }>
   )
-
-  const viewerSubscription = viewerUser?.id
-    ? await prisma.creatorSubscription.findUnique({
-        where: {
-          supporterId_creatorId: {
-            supporterId: viewerUser.id,
-            creatorId: creator.id,
-          },
-        },
-        select: {
-          id: true,
-          tierName: true,
-          amountCents: true,
-          interval: true,
-          status: true,
-        },
-      })
-    : null
 
   return NextResponse.json(
     {

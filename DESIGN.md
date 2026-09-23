@@ -284,7 +284,7 @@ Portraits are 3:4 with an image-cover, a 60% black gradient over the bottom thir
 
 - **Shape:** 0.75rem radius at default and icon sizes (`rounded-lg`); 0.625rem at `sm` and `lg`. Height 2.5rem default, 2.25rem small, 2.75rem large, 3rem for the hero CTA.
 - **Primary:** Nebula Violet fill, white text, 0.875rem medium Inter, 0.5rem by 1rem padding. Hover drops the fill to 90% alpha. The hero variant swaps the fill for the CTA gradient (`.gradient-bg-cta`, white text ≥ 5.0:1 at every stop) with the aurora button shadow and a right arrow that slides 2px on hover. `.gradient-bg` never sits under text.
-- **Hover / Focus:** 200ms `transition-all`; focus-visible shows a 2px Nebula Violet ring offset 2px from the surface. Disabled is 50% opacity with pointer events off.
+- **Hover / Focus:** 200ms `transition` (color, background, border, shadow, opacity, transform; never `transition-all`); focus-visible shows a 2px Nebula Violet ring offset 2px from the surface. Disabled is 50% opacity with pointer events off.
 - **Outline:** transparent with an input-stroke border; hover fills Mist (`accent`). **Secondary:** Mist fill, Ink text, hover 80%. **Ghost:** no border, hover fills Mist. **Link:** violet text, underline on hover offset 4px. **Destructive:** Signal Red fill, white text.
 - **`gradient` variant:** `.gradient-bg-cta` with white text and the aurora shadow; the same surface as the hero CTA, for the rare second gradient button (e.g. the pricing upgrade). Use sparingly.
 

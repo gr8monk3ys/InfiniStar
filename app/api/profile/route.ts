@@ -66,7 +66,9 @@ export const PATCH = guard(
       }
 
       const { currentPassword, newPassword } = validation.data
-      const nextHashedPassword = await hashFallbackPassword(newPassword)
+      // The new hash is a deliberately slow bcrypt round, so it is computed only
+      // once the current password has been verified, never on a failed attempt.
+      // It still runs before any write, so a hashing failure changes nothing.
 
       if (!user.clerkId || isFallbackClerkId(user.clerkId)) {
         // getCurrentUser() intentionally omits hashedPassword; fetch it directly here.
@@ -87,6 +89,7 @@ export const PATCH = guard(
           return NextResponse.json({ error: "Current password is incorrect" }, { status: 400 })
         }
 
+        const nextHashedPassword = await hashFallbackPassword(newPassword)
         await prisma.user.update({
           where: { id: user.id },
           data: {
@@ -116,6 +119,7 @@ export const PATCH = guard(
         return NextResponse.json({ error: "Current password is incorrect" }, { status: 400 })
       }
 
+      const nextHashedPassword = await hashFallbackPassword(newPassword)
       await clerk.users.updateUser(user.clerkId, {
         password: newPassword,
         signOutOfOtherSessions: false,
@@ -179,33 +183,40 @@ export const PATCH = guard(
 
 // GET /api/profile - Get current user profile
 export const GET = guard({ limiter: apiLimiter }, async ({ user: currentUser }) => {
-  const user = await prisma.user.findUnique({
-    where: { id: currentUser.id },
-    select: {
-      id: true,
-      clerkId: true,
-      name: true,
-      email: true,
-      image: true,
-      bio: true,
-      location: true,
-      website: true,
-      emailVerified: true,
-      createdAt: true,
-      updatedAt: true,
-      hashedPassword: true,
-    },
-  })
+  // The Clerk lookup needs only the clerkId the guard already resolved, so it
+  // starts alongside the profile read instead of waiting for it.
+  const shouldLoadClerkUser =
+    Boolean(process.env.CLERK_SECRET_KEY) &&
+    currentUser.clerkId &&
+    !isFallbackClerkId(currentUser.clerkId)
+  const clerkUserPromise = shouldLoadClerkUser
+    ? clerkClient().then((clerk) => clerk.users.getUser(currentUser.clerkId!))
+    : Promise.resolve(null)
+
+  const [user, clerkUser] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: currentUser.id },
+      select: {
+        id: true,
+        clerkId: true,
+        name: true,
+        email: true,
+        image: true,
+        bio: true,
+        location: true,
+        website: true,
+        emailVerified: true,
+        createdAt: true,
+        updatedAt: true,
+        hashedPassword: true,
+      },
+    }),
+    clerkUserPromise,
+  ])
 
   if (!user) {
     return NextResponse.json({ error: "User not found" }, { status: 404 })
   }
-
-  const shouldLoadClerkUser =
-    Boolean(process.env.CLERK_SECRET_KEY) && user.clerkId && !isFallbackClerkId(user.clerkId)
-  const clerkUser = shouldLoadClerkUser
-    ? await (await clerkClient()).users.getUser(user.clerkId!)
-    : null
 
   return NextResponse.json({
     user: {

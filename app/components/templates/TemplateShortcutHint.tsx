@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useEffectEvent, useState } from "react"
 import { Command } from "lucide-react"
 
 import { cn } from "@/app/lib/utils"
@@ -8,12 +8,43 @@ import { Badge } from "@/app/components/ui/badge"
 import { useTemplates } from "@/app/hooks/useTemplates"
 import { type MessageTemplateType, type TemplateVariables } from "@/app/types"
 
+// "/" alone opens the full list; the inline hint needs at least one character.
+const SHORTCUT_PREFIX_PATTERN = /^\/([a-zA-Z0-9_-]*)$/
+const SHORTCUT_PATTERN = /^\/([a-zA-Z0-9_-]+)$/
+
+/** The shortcut typed in the input ("/thx"), or null when the input is not one. */
+function readShortcut(inputValue: string, pattern: RegExp): string | null {
+  const match = pattern.exec(inputValue)
+  return match ? `/${match[1]}` : null
+}
+
+/**
+ * Whether a lookup made for `answered` still applies to what is typed now. While
+ * the user keeps typing (or backspacing) the same shortcut, the previous results
+ * stay up until the debounced lookup replaces them, so the list does not flicker.
+ */
+function isSameShortcutRun(answered: string, typed: string | null): boolean {
+  return typed !== null && (typed.startsWith(answered) || answered.startsWith(typed))
+}
+
 interface TemplateShortcutHintProps {
   inputValue: string
   onSelectTemplate: (content: string, template: MessageTemplateType) => void
   variables?: TemplateVariables
   className?: string
   maxSuggestions?: number
+}
+
+/**
+ * Lookup results are kept together with the shortcut they answer. Whether the
+ * list shows is then derived during render from the current input, instead of
+ * an effect resetting state every time the input stops being a shortcut.
+ */
+interface ShortcutLookup {
+  shortcut: string
+  suggestions: MessageTemplateType[]
+  selectedIndex: number
+  dismissed: boolean
 }
 
 export function TemplateShortcutHint({
@@ -24,41 +55,52 @@ export function TemplateShortcutHint({
   maxSuggestions = 5,
 }: TemplateShortcutHintProps) {
   const { searchByShortcut, applyTemplate } = useTemplates()
-  const [suggestions, setSuggestions] = useState<MessageTemplateType[]>([])
-  const [selectedIndex, setSelectedIndex] = useState(0)
-  const [isVisible, setIsVisible] = useState(false)
-  const containerRef = useRef<HTMLDivElement>(null)
+  const [lookup, setLookup] = useState<ShortcutLookup | null>(null)
 
-  // Detect shortcut pattern in input
+  const shortcut = readShortcut(inputValue, SHORTCUT_PREFIX_PATTERN)
+
+  // Debounced lookup whenever the typed shortcut changes
   useEffect(() => {
-    const shortcutMatch = inputValue.match(/^\/([a-zA-Z0-9_-]*)$/)
+    if (!shortcut) return
 
-    if (!shortcutMatch) {
-      setIsVisible(false)
-      setSuggestions([])
-      setSelectedIndex(0)
-      return
-    }
-
-    const shortcut = `/${shortcutMatch[1]}`
-
-    // Debounce search. setTimeout expects a void callback, so the async work is
-    // voided with a rejection handler — a failed lookup should just leave the
-    // hint hidden, not raise an unhandled rejection.
+    // setTimeout expects a void callback, so the async work is voided with a
+    // rejection handler — a failed lookup should just leave the hint hidden,
+    // not raise an unhandled rejection.
     const timeoutId = setTimeout(() => {
       void searchByShortcut(shortcut)
         .then((results) => {
-          setSuggestions(results.slice(0, maxSuggestions))
-          setSelectedIndex(0)
-          setIsVisible(results.length > 0)
+          setLookup({
+            shortcut,
+            suggestions: results.slice(0, maxSuggestions),
+            selectedIndex: 0,
+            dismissed: false,
+          })
         })
         .catch(() => {
-          setIsVisible(false)
+          setLookup(null)
         })
     }, 150)
 
     return () => clearTimeout(timeoutId)
-  }, [inputValue, searchByShortcut, maxSuggestions])
+  }, [shortcut, searchByShortcut, maxSuggestions])
+
+  const suggestions =
+    lookup && !lookup.dismissed && isSameShortcutRun(lookup.shortcut, shortcut)
+      ? lookup.suggestions
+      : []
+  const isVisible = suggestions.length > 0
+  const selectedIndex = lookup?.selectedIndex ?? 0
+
+  const setSelectedIndex = useCallback((update: (index: number, count: number) => number) => {
+    setLookup((current) =>
+      current
+        ? {
+            ...current,
+            selectedIndex: update(current.selectedIndex, current.suggestions.length),
+          }
+        : current
+    )
+  }, [])
 
   const handleSelectTemplate = useCallback(
     async (template: MessageTemplateType) => {
@@ -68,53 +110,48 @@ export function TemplateShortcutHint({
       } else {
         onSelectTemplate(template.content, template)
       }
-      setIsVisible(false)
-      setSuggestions([])
+      setLookup(null)
     },
     [applyTemplate, variables, onSelectTemplate]
   )
 
-  // Handle keyboard navigation
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if (!isVisible || suggestions.length === 0) return
+  // Keyboard navigation. An Effect Event reads the latest list and selection,
+  // so the document listener is added once instead of on every highlight move.
+  const handleKeyDown = useEffectEvent((e: KeyboardEvent) => {
+    if (!isVisible) return
 
-      switch (e.key) {
-        case "ArrowDown":
-          e.preventDefault()
-          setSelectedIndex((prev) => (prev + 1) % suggestions.length)
-          break
-        case "ArrowUp":
-          e.preventDefault()
-          setSelectedIndex((prev) => (prev - 1 + suggestions.length) % suggestions.length)
-          break
-        case "Enter":
-        case "Tab":
-          e.preventDefault()
-          void handleSelectTemplate(suggestions[selectedIndex])
-          break
-        case "Escape":
-          e.preventDefault()
-          setIsVisible(false)
-          break
-      }
-    },
-    [isVisible, suggestions, selectedIndex, handleSelectTemplate]
-  )
+    switch (e.key) {
+      case "ArrowDown":
+        e.preventDefault()
+        setSelectedIndex((index, count) => (index + 1) % count)
+        break
+      case "ArrowUp":
+        e.preventDefault()
+        setSelectedIndex((index, count) => (index - 1 + count) % count)
+        break
+      case "Enter":
+      case "Tab":
+        e.preventDefault()
+        void handleSelectTemplate(suggestions[selectedIndex])
+        break
+      case "Escape":
+        e.preventDefault()
+        setLookup((current) => (current ? { ...current, dismissed: true } : current))
+        break
+    }
+  })
 
-  // Add keyboard listener
   useEffect(() => {
     document.addEventListener("keydown", handleKeyDown)
     return () => document.removeEventListener("keydown", handleKeyDown)
-  }, [handleKeyDown])
+  }, [])
 
-  if (!isVisible || suggestions.length === 0) {
+  if (!isVisible) {
     return null
   }
 
   return (
     <div
-      ref={containerRef}
       className={cn(
         "absolute bottom-full left-0 z-50 mb-1 w-full max-w-md overflow-hidden rounded-md border bg-popover shadow-md",
         className
@@ -125,7 +162,7 @@ export function TemplateShortcutHint({
       {/* Header */}
       <div className="border-b bg-muted/50 px-3 py-2">
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Command className="size-3" />
+          <Command className="size-3" aria-hidden="true" />
           <span>Template Shortcuts</span>
           <span className="ml-auto">
             <kbd className="rounded bg-muted px-1 text-xs">Tab</kbd>
@@ -137,12 +174,13 @@ export function TemplateShortcutHint({
       </div>
 
       {/* Suggestions List */}
-      <div className="max-h-48 overflow-auto">
+      <div className="max-h-48 overflow-auto overscroll-contain">
         {suggestions.map((template, index) => (
           <button
             key={template.id}
+            type="button"
             onClick={() => handleSelectTemplate(template)}
-            onMouseEnter={() => setSelectedIndex(index)}
+            onMouseEnter={() => setSelectedIndex(() => index)}
             className={cn(
               "flex w-full flex-col gap-0.5 px-3 py-2 text-left transition-colors",
               index === selectedIndex ? "bg-accent" : "hover:bg-muted/50"
@@ -150,11 +188,11 @@ export function TemplateShortcutHint({
             role="option"
             aria-selected={index === selectedIndex}
           >
-            <div className="flex items-center gap-2">
-              <Badge variant="secondary" className="font-mono text-xs">
+            <div className="flex min-w-0 items-center gap-2">
+              <Badge variant="secondary" className="font-mono text-xs" translate="no">
                 {template.shortcut}
               </Badge>
-              <span className="text-sm font-medium">{template.name}</span>
+              <span className="truncate text-sm font-medium">{template.name}</span>
             </div>
             <span className="line-clamp-1 text-xs text-muted-foreground">{template.content}</span>
           </button>
@@ -180,35 +218,36 @@ export function InlineShortcutHint({
   variables,
 }: InlineShortcutHintProps) {
   const { searchByShortcut, applyTemplate } = useTemplates()
-  const [suggestion, setSuggestion] = useState<MessageTemplateType | null>(null)
+  // The match is stored with the shortcut it answers; see ShortcutLookup above.
+  const [match, setMatch] = useState<{
+    shortcut: string
+    template: MessageTemplateType | null
+  } | null>(null)
+
+  const shortcut = readShortcut(inputValue, SHORTCUT_PATTERN)
 
   useEffect(() => {
-    const shortcutMatch = inputValue.match(/^\/([a-zA-Z0-9_-]+)$/)
-
-    if (!shortcutMatch) {
-      setSuggestion(null)
-      return
-    }
-
-    const shortcut = `/${shortcutMatch[1]}`
+    if (!shortcut) return
 
     const timeoutId = setTimeout(() => {
       void searchByShortcut(shortcut)
         .then((results) => {
           // Only show if there's an exact match or single result
-          if (results.length === 1 || results.some((t) => t.shortcut === shortcut)) {
-            setSuggestion(results.find((t) => t.shortcut === shortcut) || results[0])
-          } else {
-            setSuggestion(null)
-          }
+          const exact = results.find((t) => t.shortcut === shortcut)
+          setMatch({
+            shortcut,
+            template: exact ?? (results.length === 1 ? results[0] : null),
+          })
         })
         .catch(() => {
-          setSuggestion(null)
+          setMatch(null)
         })
     }, 200)
 
     return () => clearTimeout(timeoutId)
-  }, [inputValue, searchByShortcut])
+  }, [shortcut, searchByShortcut])
+
+  const suggestion = match && isSameShortcutRun(match.shortcut, shortcut) ? match.template : null
 
   const handleSelect = useCallback(async () => {
     if (!suggestion) return
@@ -219,7 +258,7 @@ export function InlineShortcutHint({
     } else {
       onSelectTemplate(suggestion.content, suggestion)
     }
-    setSuggestion(null)
+    setMatch(null)
   }, [suggestion, applyTemplate, variables, onSelectTemplate])
 
   if (!suggestion) {
@@ -231,7 +270,11 @@ export function InlineShortcutHint({
       <span>Press</span>
       <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">Tab</kbd>
       <span>to insert:</span>
-      <button onClick={handleSelect} className="font-medium text-foreground hover:underline">
+      <button
+        type="button"
+        onClick={handleSelect}
+        className="font-medium text-foreground hover:underline"
+      >
         {suggestion.name}
       </button>
     </div>

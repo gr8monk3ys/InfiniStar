@@ -1,8 +1,8 @@
 "use client"
 
-import { useState } from "react"
 import dynamic from "next/dynamic"
-import { useRouter, useSearchParams } from "next/navigation"
+import Link from "next/link"
+import { useSearchParams } from "next/navigation"
 import {
   HiBell,
   HiClock,
@@ -75,39 +75,61 @@ function isTabType(value: string): value is TabType {
   return (TAB_IDS as string[]).includes(value)
 }
 
+// Static, so built once at module scope instead of on every render.
+const TABS: { id: TabType; label: string; icon: React.ReactNode; isDestructive?: boolean }[] = [
+  { id: "profile", label: "Profile Information", icon: <HiUser size={20} aria-hidden="true" /> },
+  { id: "password", label: "Change Password", icon: <HiLockClosed size={20} aria-hidden="true" /> },
+  { id: "security", label: "Security", icon: <HiShieldCheck size={20} aria-hidden="true" /> },
+  {
+    id: "safety",
+    label: "Safety & Content",
+    icon: <HiShieldExclamation size={20} aria-hidden="true" />,
+  },
+  { id: "notifications", label: "Notifications", icon: <HiBell size={20} aria-hidden="true" /> },
+  { id: "sessions", label: "Sessions", icon: <HiComputerDesktop size={20} aria-hidden="true" /> },
+  { id: "appearance", label: "Appearance", icon: <HiPaintBrush size={20} aria-hidden="true" /> },
+  { id: "memory", label: "AI Memory", icon: <HiSparkles size={20} aria-hidden="true" /> },
+  { id: "auto-delete", label: "Auto-Delete", icon: <HiClock size={20} aria-hidden="true" /> },
+  {
+    id: "account",
+    label: "Delete Account",
+    icon: <HiTrash size={20} aria-hidden="true" />,
+    isDestructive: true,
+  },
+]
+
 export default function ProfilePageClient({ hasPendingDeletion }: { hasPendingDeletion: boolean }) {
-  const router = useRouter()
+  // The active tab lives in the URL (?tab=…) so it survives reloads and can be
+  // deep-linked. It is derived from the search params on every render.
   const searchParams = useSearchParams()
   const requestedTab = searchParams.get("tab")
-  const [activeTab, setActiveTab] = useState<TabType>(
-    requestedTab && isTabType(requestedTab) ? requestedTab : "profile"
-  )
+  const activeTab: TabType = requestedTab && isTabType(requestedTab) ? requestedTab : "profile"
 
-  const tabs: { id: TabType; label: string; icon: React.ReactNode; isDestructive?: boolean }[] = [
-    { id: "profile", label: "Profile Information", icon: <HiUser size={20} /> },
-    { id: "password", label: "Change Password", icon: <HiLockClosed size={20} /> },
-    { id: "security", label: "Security", icon: <HiShieldCheck size={20} /> },
-    { id: "safety", label: "Safety & Content", icon: <HiShieldExclamation size={20} /> },
-    { id: "notifications", label: "Notifications", icon: <HiBell size={20} /> },
-    { id: "sessions", label: "Sessions", icon: <HiComputerDesktop size={20} /> },
-    { id: "appearance", label: "Appearance", icon: <HiPaintBrush size={20} /> },
-    { id: "memory", label: "AI Memory", icon: <HiSparkles size={20} /> },
-    { id: "auto-delete", label: "Auto-Delete", icon: <HiClock size={20} /> },
-    { id: "account", label: "Delete Account", icon: <HiTrash size={20} />, isDestructive: true },
-  ]
+  const selectTab = (tab: TabType) => {
+    const params = new URLSearchParams(window.location.search)
+    if (tab === "profile") {
+      params.delete("tab")
+    } else {
+      params.set("tab", tab)
+    }
+    const query = params.toString()
+    // Native replaceState integrates with the App Router (useSearchParams updates)
+    // without a server round trip for this dynamic page.
+    window.history.replaceState(null, "", `${window.location.pathname}${query ? `?${query}` : ""}`)
+  }
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <div className="border-b bg-background">
         <div className="mx-auto max-w-4xl px-4 py-6">
           <div className="flex items-center gap-4">
-            <button
-              onClick={() => router.push("/dashboard")}
+            <Link
+              href="/dashboard"
               className="text-muted-foreground hover:text-foreground"
               aria-label="Back to dashboard"
             >
               ← Back
-            </button>
+            </Link>
             <h1 className="text-2xl font-bold text-foreground">Profile Settings</h1>
           </div>
         </div>
@@ -116,12 +138,14 @@ export default function ProfilePageClient({ hasPendingDeletion }: { hasPendingDe
       <div className="mx-auto w-full max-w-4xl px-4 py-8">
         <div className="rounded-lg bg-card shadow">
           <div className="border-b border-border">
-            <nav className="-mb-px flex gap-8 px-6" aria-label="Profile tabs">
-              {tabs.map((tab) => (
+            <nav className="-mb-px flex gap-8 overflow-x-auto px-6" aria-label="Profile tabs">
+              {TABS.map((tab) => (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 border-b-2 px-1 py-4 text-sm font-medium ${
+                  type="button"
+                  onClick={() => selectTab(tab.id)}
+                  aria-current={activeTab === tab.id ? "true" : undefined}
+                  className={`flex shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-1 py-4 text-sm font-medium ${
                     activeTab === tab.id
                       ? tab.isDestructive
                         ? "border-red-500 text-red-600"
@@ -147,32 +171,32 @@ export default function ProfilePageClient({ hasPendingDeletion }: { hasPendingDe
             {activeTab === "notifications" && <NotificationsTabContent />}
 
             {activeTab === "sessions" && (
-              <div className="space-y-4" aria-label="Session management section">
+              <section className="space-y-4" aria-label="Session management section">
                 <div>
-                  <h3 className="text-lg font-medium text-foreground">Active Sessions</h3>
+                  <h2 className="text-lg font-medium text-foreground">Active Sessions</h2>
                   <p className="mt-1 text-sm text-muted-foreground">
                     Manage devices where you are currently logged in. Revoke access to any session
                     you do not recognize.
                   </p>
                 </div>
                 <SessionsList />
-              </div>
+              </section>
             )}
 
             {activeTab === "appearance" && (
-              <div className="space-y-8" aria-label="Appearance settings section">
+              <section className="space-y-8" aria-label="Appearance settings section">
                 <div>
-                  <h3 className="text-lg font-medium text-foreground">Appearance</h3>
+                  <h2 className="text-lg font-medium text-foreground">Appearance</h2>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Customize how InfiniStar looks. Choose a preset theme or create your own custom
-                    appearance.
+                    Customize how <span translate="no">InfiniStar</span> looks. Choose a preset
+                    theme or create your own custom appearance.
                   </p>
                 </div>
 
                 <section>
-                  <h4 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                  <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
                     Color Mode
-                  </h4>
+                  </h3>
                   <div className="rounded-lg border border-border bg-muted p-4">
                     <DarkModeToggle />
                   </div>
@@ -182,19 +206,19 @@ export default function ProfilePageClient({ hasPendingDeletion }: { hasPendingDe
                 <ThemeSelector />
                 <div className="border-t border-border" />
                 <ThemeCustomizer />
-              </div>
+              </section>
             )}
 
             {activeTab === "memory" && (
-              <div className="space-y-4" aria-label="AI memory settings section">
+              <section className="space-y-4" aria-label="AI memory settings section">
                 <MemoryManager />
-              </div>
+              </section>
             )}
 
             {activeTab === "auto-delete" && (
-              <div className="space-y-4" aria-label="Auto-delete settings section">
+              <section className="space-y-4" aria-label="Auto-delete settings section">
                 <AutoDeleteSettings />
-              </div>
+              </section>
             )}
 
             {activeTab === "account" && <AccountTabContent />}

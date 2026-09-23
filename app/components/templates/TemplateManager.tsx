@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { Edit2, Plus, Search, Trash2 } from "lucide-react"
 
 import { cn } from "@/app/lib/utils"
@@ -33,6 +33,14 @@ const defaultFormData: TemplateFormData = {
   category: "",
 }
 
+type FormErrorField = "name" | "content" | null
+
+interface FormError {
+  /** The field the message belongs to, or null for a save failure. */
+  field: FormErrorField
+  message: string
+}
+
 interface TemplateManagerProps {
   isOpen: boolean
   onClose: () => void
@@ -57,7 +65,9 @@ export function TemplateManager({ isOpen, onClose, onSelectTemplate }: TemplateM
   const [isEditing, setIsEditing] = useState(false)
   const [editingTemplate, setEditingTemplate] = useState<MessageTemplateType | null>(null)
   const [formData, setFormData] = useState<TemplateFormData>(defaultFormData)
-  const [formError, setFormError] = useState<string | null>(null)
+  const [formError, setFormError] = useState<FormError | null>(null)
+  const nameInputRef = useRef<HTMLInputElement>(null)
+  const contentInputRef = useRef<HTMLTextAreaElement>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
 
@@ -68,13 +78,14 @@ export function TemplateManager({ isOpen, onClose, onSelectTemplate }: TemplateM
     }
   }, [isOpen, fetchTemplates])
 
-  // Filter templates based on search and category
+  // Filter templates based on search and category (query lower-cased once)
+  const lowerQuery = searchQuery.toLowerCase()
   const filteredTemplates = templates.filter((template) => {
     const matchesSearch =
-      !searchQuery ||
-      template.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      template.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (template.shortcut && template.shortcut.toLowerCase().includes(searchQuery.toLowerCase()))
+      !lowerQuery ||
+      template.name.toLowerCase().includes(lowerQuery) ||
+      template.content.toLowerCase().includes(lowerQuery) ||
+      template.shortcut?.toLowerCase().includes(lowerQuery)
 
     const matchesCategory = !selectedCategory || template.category === selectedCategory
 
@@ -113,13 +124,15 @@ export function TemplateManager({ isOpen, onClose, onSelectTemplate }: TemplateM
   const handleSave = useCallback(async () => {
     setFormError(null)
 
-    // Validate
+    // Validate, then move focus to the first field that needs fixing
     if (!formData.name.trim()) {
-      setFormError("Template name is required")
+      setFormError({ field: "name", message: "Give the template a name." })
+      nameInputRef.current?.focus()
       return
     }
     if (!formData.content.trim()) {
-      setFormError("Template content is required")
+      setFormError({ field: "content", message: "Write the message this template inserts." })
+      contentInputRef.current?.focus()
       return
     }
 
@@ -142,7 +155,10 @@ export function TemplateManager({ isOpen, onClose, onSelectTemplate }: TemplateM
       handleCancelEdit()
       void fetchTemplates()
     } catch (error) {
-      setFormError(error instanceof Error ? error.message : "Failed to save template")
+      setFormError({
+        field: null,
+        message: error instanceof Error ? error.message : "Couldn't save the template. Try again.",
+      })
     } finally {
       setIsSaving(false)
     }
@@ -179,7 +195,7 @@ export function TemplateManager({ isOpen, onClose, onSelectTemplate }: TemplateM
           <DialogDescription>
             Create and manage reusable message templates for quick replies.
             {limitInfo && (
-              <span className="ml-2 text-muted-foreground">
+              <span className="ml-2 tabular-nums text-muted-foreground">
                 ({limitInfo.current}/{limitInfo.limit} templates)
               </span>
             )}
@@ -188,21 +204,33 @@ export function TemplateManager({ isOpen, onClose, onSelectTemplate }: TemplateM
 
         {isEditing ? (
           // Edit/Create Form
-          <div className="flex-1 space-y-4 overflow-auto py-4">
+          <div className="flex-1 space-y-4 overflow-auto overscroll-contain py-4">
             <div className="space-y-2">
               <Label htmlFor="template-name">
                 Name <span className="text-destructive">*</span>
               </Label>
               <input
+                ref={nameInputRef}
                 id="template-name"
+                name="templateName"
+                autoComplete="off"
+                aria-invalid={formError?.field === "name" || undefined}
+                aria-describedby={
+                  formError?.field === "name" ? "template-name-error" : "template-name-count"
+                }
                 type="text"
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                placeholder="e.g., Thank you message"
+                placeholder="e.g., Thank you message…"
                 value={formData.name}
                 onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
                 maxLength={TEMPLATE_CONSTRAINTS.NAME_MAX_LENGTH}
               />
-              <p className="text-xs text-muted-foreground">
+              {formError?.field === "name" && (
+                <p id="template-name-error" className="text-sm text-destructive" role="alert">
+                  {formError.message}
+                </p>
+              )}
+              <p id="template-name-count" className="text-xs tabular-nums text-muted-foreground">
                 {formData.name.length}/{TEMPLATE_CONSTRAINTS.NAME_MAX_LENGTH} characters
               </p>
             </div>
@@ -212,16 +240,34 @@ export function TemplateManager({ isOpen, onClose, onSelectTemplate }: TemplateM
                 Content <span className="text-destructive">*</span>
               </Label>
               <Textarea
+                ref={contentInputRef}
                 id="template-content"
-                placeholder="Enter your template message..."
+                name="templateContent"
+                autoComplete="off"
+                aria-invalid={formError?.field === "content" || undefined}
+                aria-describedby={
+                  formError?.field === "content"
+                    ? "template-content-error"
+                    : "template-content-hint"
+                }
+                placeholder="Enter your template message…"
                 value={formData.content}
                 onChange={(e) => setFormData((prev) => ({ ...prev, content: e.target.value }))}
                 maxLength={TEMPLATE_CONSTRAINTS.CONTENT_MAX_LENGTH}
                 className="min-h-[120px]"
               />
-              <p className="text-xs text-muted-foreground">
-                {formData.content.length}/{TEMPLATE_CONSTRAINTS.CONTENT_MAX_LENGTH} characters. Use{" "}
-                {"{{name}}"}, {"{{date}}"}, {"{{time}}"} for dynamic values.
+              {formError?.field === "content" && (
+                <p id="template-content-error" className="text-sm text-destructive" role="alert">
+                  {formError.message}
+                </p>
+              )}
+              <p id="template-content-hint" className="text-xs text-muted-foreground">
+                <span className="tabular-nums">
+                  {formData.content.length}/{TEMPLATE_CONSTRAINTS.CONTENT_MAX_LENGTH}
+                </span>{" "}
+                characters. Use <code translate="no">{"{{name}}"}</code>,{" "}
+                <code translate="no">{"{{date}}"}</code>, <code translate="no">{"{{time}}"}</code>{" "}
+                for dynamic values.
               </p>
             </div>
 
@@ -230,9 +276,14 @@ export function TemplateManager({ isOpen, onClose, onSelectTemplate }: TemplateM
                 <Label htmlFor="template-shortcut">Shortcut (optional)</Label>
                 <input
                   id="template-shortcut"
+                  name="templateShortcut"
+                  autoComplete="off"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  translate="no"
                   type="text"
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  placeholder="/thanks"
+                  placeholder="/thanks…"
                   value={formData.shortcut}
                   onChange={(e) => setFormData((prev) => ({ ...prev, shortcut: e.target.value }))}
                   maxLength={TEMPLATE_CONSTRAINTS.SHORTCUT_MAX_LENGTH}
@@ -246,6 +297,7 @@ export function TemplateManager({ isOpen, onClose, onSelectTemplate }: TemplateM
                 <Label htmlFor="template-category">Category (optional)</Label>
                 <select
                   id="template-category"
+                  name="templateCategory"
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   value={formData.category}
                   onChange={(e) => setFormData((prev) => ({ ...prev, category: e.target.value }))}
@@ -260,14 +312,18 @@ export function TemplateManager({ isOpen, onClose, onSelectTemplate }: TemplateM
               </div>
             </div>
 
-            {formError && <p className="text-sm text-destructive">{formError}</p>}
+            {formError && formError.field === null && (
+              <p className="text-sm text-destructive" role="alert">
+                {formError.message}
+              </p>
+            )}
 
             <DialogFooter className="pt-4">
               <Button variant="outline" onClick={handleCancelEdit} disabled={isSaving}>
                 Cancel
               </Button>
               <Button onClick={handleSave} disabled={isSaving}>
-                {isSaving ? "Saving..." : editingTemplate ? "Update Template" : "Create Template"}
+                {isSaving ? "Saving…" : editingTemplate ? "Update Template" : "Create Template"}
               </Button>
             </DialogFooter>
           </div>
@@ -276,18 +332,24 @@ export function TemplateManager({ isOpen, onClose, onSelectTemplate }: TemplateM
           <>
             <div className="flex items-center gap-2 py-2">
               <div className="relative flex-1">
-                <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
+                <Search
+                  className="absolute left-2.5 top-2.5 size-4 text-muted-foreground"
+                  aria-hidden="true"
+                />
                 <input
-                  type="text"
+                  type="search"
+                  name="templateSearch"
+                  autoComplete="off"
+                  aria-label="Search templates"
                   className="flex h-9 w-full rounded-md border border-input bg-background py-2 pl-8 pr-3 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  placeholder="Search templates..."
+                  placeholder="Search templates…"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
               <Button onClick={handleCreateNew} disabled={limitInfo?.isLimitReached} size="sm">
-                <Plus className="mr-1 size-4" />
-                New
+                <Plus className="mr-1 size-4" aria-hidden="true" />
+                New Template
               </Button>
             </div>
 
@@ -297,6 +359,7 @@ export function TemplateManager({ isOpen, onClose, onSelectTemplate }: TemplateM
                 variant={selectedCategory === null ? "default" : "outline"}
                 size="sm"
                 onClick={() => setSelectedCategory(null)}
+                aria-pressed={selectedCategory === null}
                 className="h-7 text-xs"
               >
                 All
@@ -307,6 +370,7 @@ export function TemplateManager({ isOpen, onClose, onSelectTemplate }: TemplateM
                   variant={selectedCategory === cat ? "default" : "outline"}
                   size="sm"
                   onClick={() => setSelectedCategory(cat)}
+                  aria-pressed={selectedCategory === cat}
                   className="h-7 text-xs"
                 >
                   {cat}
@@ -315,10 +379,10 @@ export function TemplateManager({ isOpen, onClose, onSelectTemplate }: TemplateM
             </div>
 
             {/* Template List */}
-            <div className="max-h-[400px] min-h-[200px] flex-1 overflow-auto rounded-md border">
+            <div className="max-h-[400px] min-h-[200px] flex-1 overflow-auto overscroll-contain rounded-md border">
               {isLoading ? (
                 <div className="flex h-32 items-center justify-center">
-                  <p className="text-muted-foreground">Loading templates...</p>
+                  <p className="text-muted-foreground">Loading templates…</p>
                 </div>
               ) : filteredTemplates.length === 0 ? (
                 <div className="flex h-32 flex-col items-center justify-center gap-2">
@@ -331,20 +395,39 @@ export function TemplateManager({ isOpen, onClose, onSelectTemplate }: TemplateM
               ) : (
                 <div className="divide-y">
                   {filteredTemplates.map((template) => (
+                    // The row holds its own Edit/Delete buttons, so it cannot be a
+                    // <button>; when selectable it gets button semantics and keys.
                     <div
                       key={template.id}
                       className={cn(
                         "p-3 transition-colors hover:bg-muted/50",
-                        onSelectTemplate && "cursor-pointer"
+                        onSelectTemplate &&
+                          "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
                       )}
+                      role={onSelectTemplate ? "button" : undefined}
+                      tabIndex={onSelectTemplate ? 0 : undefined}
+                      aria-label={onSelectTemplate ? `Use template ${template.name}` : undefined}
                       onClick={() => onSelectTemplate && handleSelectTemplate(template)}
+                      onKeyDown={(event) => {
+                        if (!onSelectTemplate || event.target !== event.currentTarget) return
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault()
+                          handleSelectTemplate(template)
+                        }
+                      }}
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2">
-                            <h4 className="truncate text-sm font-medium">{template.name}</h4>
+                            <h4 className="min-w-0 truncate text-sm font-medium">
+                              {template.name}
+                            </h4>
                             {template.shortcut && (
-                              <Badge variant="secondary" className="font-mono text-xs">
+                              <Badge
+                                variant="secondary"
+                                className="font-mono text-xs"
+                                translate="no"
+                              >
                                 {template.shortcut}
                               </Badge>
                             )}
@@ -357,7 +440,7 @@ export function TemplateManager({ isOpen, onClose, onSelectTemplate }: TemplateM
                           <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
                             {template.content}
                           </p>
-                          <p className="mt-1 text-xs text-muted-foreground">
+                          <p className="mt-1 text-xs tabular-nums text-muted-foreground">
                             Used {template.usageCount} time{template.usageCount !== 1 && "s"}
                           </p>
                         </div>
@@ -369,9 +452,9 @@ export function TemplateManager({ isOpen, onClose, onSelectTemplate }: TemplateM
                               e.stopPropagation()
                               handleEdit(template)
                             }}
-                            aria-label="Edit template"
+                            aria-label={`Edit template ${template.name}`}
                           >
-                            <Edit2 className="size-4" />
+                            <Edit2 className="size-4" aria-hidden="true" />
                           </Button>
                           <Button
                             variant="ghost"
@@ -380,10 +463,10 @@ export function TemplateManager({ isOpen, onClose, onSelectTemplate }: TemplateM
                               e.stopPropagation()
                               setDeleteConfirmId(template.id)
                             }}
-                            aria-label="Delete template"
+                            aria-label={`Delete template ${template.name}`}
                             className="text-destructive hover:text-destructive"
                           >
-                            <Trash2 className="size-4" />
+                            <Trash2 className="size-4" aria-hidden="true" />
                           </Button>
                         </div>
                       </div>
@@ -407,9 +490,7 @@ export function TemplateManager({ isOpen, onClose, onSelectTemplate }: TemplateM
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete Template</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete this template? This action cannot be undone.
-            </DialogDescription>
+            <DialogDescription>Delete this template? You can&rsquo;t undo this.</DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteConfirmId(null)}>
@@ -419,7 +500,7 @@ export function TemplateManager({ isOpen, onClose, onSelectTemplate }: TemplateM
               variant="destructive"
               onClick={() => deleteConfirmId && handleDelete(deleteConfirmId)}
             >
-              Delete
+              Delete Template
             </Button>
           </DialogFooter>
         </DialogContent>

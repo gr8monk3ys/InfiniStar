@@ -6,6 +6,17 @@ import toast from "react-hot-toast"
 import { HiArrowDownTray, HiArrowPath, HiArrowUpTray } from "react-icons/hi2"
 
 import type { BorderRadius, Density, FontFamily } from "@/app/lib/themes"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/app/components/ui/alert-dialog"
 import { useThemeCustom } from "@/app/components/providers/ThemeCustomProvider"
 
 import { BorderRadiusSelector } from "./BorderRadiusSelector"
@@ -92,11 +103,11 @@ export function ThemeCustomizer({ className }: ThemeCustomizerProps) {
       if (importTheme(json)) {
         toast.success("Theme imported successfully")
       } else {
-        toast.error("Invalid theme file")
+        toast.error("That file isn't a valid theme. Choose a .json file exported from this page.")
       }
     }
     reader.onerror = () => {
-      toast.error("Failed to read file")
+      toast.error("Couldn't read that file. Try again or choose a different file.")
     }
     reader.readAsText(file)
 
@@ -277,25 +288,45 @@ export function ThemeCustomizer({ className }: ThemeCustomizerProps) {
               <HiArrowDownTray className="size-4" aria-hidden="true" />
               Export Theme
             </button>
-            <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground shadow-sm hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+            {/* The focusable control is the visually hidden file input, so the
+                visible label shows its focus ring via :has(:focus-visible). */}
+            <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground shadow-sm hover:bg-accent hover:text-accent-foreground has-[:focus-visible]:outline-none has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-offset-2">
               <HiArrowUpTray className="size-4" aria-hidden="true" />
               Import Theme
               <input
                 ref={fileInputRef}
                 type="file"
+                name="themeFile"
                 accept=".json"
                 onChange={handleImport}
                 className="sr-only"
               />
             </label>
-            <button
-              type="button"
-              onClick={handleReset}
-              className="inline-flex items-center gap-2 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground shadow-sm hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            >
-              <HiArrowPath className="size-4" aria-hidden="true" />
-              Reset to Default
-            </button>
+            {/* Resetting discards every customization, so it asks first */}
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-2 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground shadow-sm hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                >
+                  <HiArrowPath className="size-4" aria-hidden="true" />
+                  Reset to Default
+                </button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Reset Theme to Default?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This discards your custom colors, fonts, and spacing. Export your theme first if
+                    you want to keep a copy.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleReset}>Reset Theme</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         </section>
       </div>

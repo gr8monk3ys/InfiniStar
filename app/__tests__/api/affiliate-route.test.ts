@@ -9,6 +9,22 @@ const mockClientIdentifier = jest.fn((_request?: NextRequest) => "127.0.0.1")
 const mockInfo = jest.fn()
 const mockError = jest.fn()
 const mockCreateAffiliateClick = jest.fn()
+// `after()` needs a live request scope. Collect its tasks so each test can run
+// them explicitly, the way the platform does once the response has gone out.
+const mockAfterTasks: Array<() => unknown> = []
+
+jest.mock("next/server", () => ({
+  ...jest.requireActual("next/server"),
+  after: (task: () => unknown) => {
+    mockAfterTasks.push(task)
+  },
+}))
+
+async function flushAfter(): Promise<void> {
+  while (mockAfterTasks.length > 0) {
+    await mockAfterTasks.shift()?.()
+  }
+}
 
 jest.mock("@/app/lib/rate-limit", () => ({
   apiLimiter: {
@@ -125,6 +141,7 @@ describe("GET /api/affiliate/[partnerId]", () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
+    mockAfterTasks.length = 0
     // Save originals and set test defaults via direct mutation (process.env = {} replacement is unreliable in Bun)
     for (const key of managedKeys) {
       savedEnv[key] = process.env[key]
@@ -176,6 +193,9 @@ describe("GET /api/affiliate/[partnerId]", () => {
 
   it("redirects to partner URL with UTM params and logs click metadata", async () => {
     const response = await runGet("Pricing Page")
+    // The redirect is built without waiting on the analytics write.
+    expect(mockCreateAffiliateClick).not.toHaveBeenCalled()
+    await flushAfter()
 
     expect(response.status).toBe(302)
     expect(response.headers.get("cache-control")).toBe("no-store")
@@ -208,6 +228,7 @@ describe("GET /api/affiliate/[partnerId]", () => {
     process.env.NEXT_PUBLIC_AFFILIATE_ANTHROPIC_URL = "not-a-valid-url"
 
     const response = await runGet("pricing")
+    await flushAfter()
     expect(response.status).toBe(500)
     expect(mockError).toHaveBeenCalled()
     expect(mockCreateAffiliateClick).not.toHaveBeenCalled()
@@ -217,6 +238,7 @@ describe("GET /api/affiliate/[partnerId]", () => {
     mockCreateAffiliateClick.mockRejectedValueOnce(new Error("database unavailable"))
 
     const response = await runGet("pricing")
+    await flushAfter()
 
     expect(response.status).toBe(302)
     expect(response.headers.get("location")).toContain("partner.example.com/tool")

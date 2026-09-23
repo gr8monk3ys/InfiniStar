@@ -14,6 +14,8 @@ interface DensitySelectorProps {
   className?: string
 }
 
+const PREVIEW_ROWS = ["first", "second", "third"] as const
+
 const densityOptions: { value: Density; icon: React.ReactNode }[] = [
   { value: "compact", icon: <HiMinus className="size-5" aria-hidden="true" /> },
   { value: "comfortable", icon: <HiViewColumns className="size-5" aria-hidden="true" /> },
@@ -27,6 +29,11 @@ export function DensitySelector({
   onChange,
   className,
 }: DensitySelectorProps) {
+  const previewRowStyle = {
+    height: `${1.5 * densitySpacing[value].base}rem`,
+    padding: `${0.25 * densitySpacing[value].base}rem`,
+  }
+
   return (
     <div className={cn("space-y-3", className)}>
       <div>
@@ -43,7 +50,7 @@ export function DensitySelector({
             aria-checked={value === option.value}
             onClick={() => onChange(option.value)}
             className={cn(
-              "flex flex-1 flex-col items-center gap-1 rounded-lg border-2 px-4 py-3 transition-all",
+              "flex flex-1 flex-col items-center gap-1 rounded-lg border-2 px-4 py-3 transition-colors",
               value === option.value
                 ? "border-primary bg-primary/10 text-primary"
                 : "border-border bg-card text-muted-foreground hover:border-primary/30"
@@ -56,37 +63,19 @@ export function DensitySelector({
       </div>
 
       {/* Visual preview of spacing */}
-      <div className="rounded-md border border-border bg-muted p-3">
+      <div className="rounded-md border border-border bg-muted p-3" aria-hidden="true">
         <p className="mb-2 text-xs text-muted-foreground">Preview</p>
         <div
-          className="space-y-0 transition-all duration-200"
+          className="space-y-0"
           style={{
             gap: `${0.5 * densitySpacing[value].base}rem`,
             display: "flex",
             flexDirection: "column",
           }}
         >
-          <div
-            className="rounded bg-border transition-all duration-200"
-            style={{
-              height: `${1.5 * densitySpacing[value].base}rem`,
-              padding: `${0.25 * densitySpacing[value].base}rem`,
-            }}
-          />
-          <div
-            className="rounded bg-border transition-all duration-200"
-            style={{
-              height: `${1.5 * densitySpacing[value].base}rem`,
-              padding: `${0.25 * densitySpacing[value].base}rem`,
-            }}
-          />
-          <div
-            className="rounded bg-border transition-all duration-200"
-            style={{
-              height: `${1.5 * densitySpacing[value].base}rem`,
-              padding: `${0.25 * densitySpacing[value].base}rem`,
-            }}
-          />
+          {PREVIEW_ROWS.map((row) => (
+            <div key={row} className="rounded bg-border" style={previewRowStyle} />
+          ))}
         </div>
       </div>
     </div>

@@ -9,6 +9,8 @@ import { HiCamera, HiChatBubbleLeftRight, HiGlobeAlt } from "react-icons/hi2"
 import { api, ApiError, createLoadingToast } from "@/app/lib/api-client"
 import { useAppAuth } from "@/app/hooks/useAppAuth"
 
+import { useUnsavedChangesGuard } from "../../hooks/useUnsavedChangesGuard"
+
 // Dynamic imports to avoid build-time Cloudinary validation and defer modal
 const CldUploadButton = dynamic(
   () => import("next-cloudinary").then((mod) => mod.CldUploadButton),
@@ -34,23 +36,33 @@ export function ProfileTabContent() {
   const [bio, setBio] = useState("")
   const [location, setLocation] = useState("")
   const [website, setWebsite] = useState("")
+  // Last values the server accepted for the fields that are not read back from it.
+  const [saved, setSaved] = useState({ bio: "", location: "", website: "" })
 
+  const userName = user?.name
   useEffect(() => {
-    if (isLoaded && user) {
-      setName(user.name || "")
+    if (isLoaded && userName !== undefined) {
+      setName(userName || "")
     }
-  }, [isLoaded, user])
+  }, [isLoaded, userName])
+
+  const isDirty =
+    (isLoaded && user ? name !== (user.name || "") : false) ||
+    bio !== saved.bio ||
+    location !== saved.location ||
+    website !== saved.website
+  useUnsavedChangesGuard(isDirty && !isLoading)
 
   const handleAvatarUpload = useCallback(
     async (result: CloudinaryUploadWidgetResults) => {
       if (!result.info || typeof result.info === "string" || !result.info.secure_url) {
         const { default: toast } = await import("react-hot-toast")
-        toast.error("Failed to upload image")
+        toast.error("Couldn't upload your image. Try again.")
         return
       }
 
       const imageUrl = result.info.secure_url
-      const loader = createLoadingToast("Uploading avatar...")
+      const loader = createLoadingToast("Uploading avatar…")
 
       try {
         await api.patch<{ message: string; user: { image: string } }>(
@@ -62,7 +74,8 @@ export function ProfileTabContent() {
         loader.success("Avatar updated successfully")
         await refresh()
       } catch (error) {
-        const message = error instanceof ApiError ? error.message : "Failed to update avatar"
+        const message =
+          error instanceof ApiError ? error.message : "Couldn't update your avatar. Try again."
         loader.error(message)
       }
     },
@@ -73,7 +86,7 @@ export function ProfileTabContent() {
     e.preventDefault()
     setIsLoading(true)
 
-    const loader = createLoadingToast("Updating profile...")
+    const loader = createLoadingToast("Updating profile…")
 
     try {
       const response = await api.patch<{ message: string; user: { name: string } }>(
@@ -88,9 +101,13 @@ export function ProfileTabContent() {
       )
 
       loader.success(response.message)
+      setSaved({ bio, location, website })
       await refresh()
     } catch (error) {
-      const message = error instanceof ApiError ? error.message : "Failed to update profile"
+      const message =
+        error instanceof ApiError
+          ? error.message
+          : "Couldn't update your profile. Check your connection and try again."
       loader.error(message)
     } finally {
       setIsLoading(false)
@@ -131,10 +148,10 @@ export function ProfileTabContent() {
               </div>
             )}
           </div>
-          <div className="flex flex-col gap-2">
-            <div>
-              <p className="text-sm font-medium text-foreground">{userData?.name}</p>
-              <p className="text-sm text-muted-foreground">{userData?.email}</p>
+          <div className="flex min-w-0 flex-col gap-2">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium text-foreground">{userData?.name}</p>
+              <p className="truncate text-sm text-muted-foreground">{userData?.email}</p>
               {(userData?.customStatus || userData?.customStatusEmoji) && (
                 <p className="mt-1 text-sm text-muted-foreground">
                   {userData.customStatusEmoji && (
@@ -152,7 +169,7 @@ export function ProfileTabContent() {
                   uploadPreset={cloudinaryUploadPreset}
                   className="flex items-center gap-2 rounded-md bg-muted px-3 py-2 text-sm font-medium text-foreground transition hover:bg-muted/80"
                 >
-                  <HiCamera size={16} />
+                  <HiCamera size={16} aria-hidden="true" />
                   Change Avatar
                 </CldUploadButton>
               ) : (
@@ -162,7 +179,7 @@ export function ProfileTabContent() {
                   title="Avatar upload is unavailable until Cloudinary is configured."
                   className="flex cursor-not-allowed items-center gap-2 rounded-md bg-muted px-3 py-2 text-sm font-medium text-muted-foreground opacity-70"
                 >
-                  <HiCamera size={16} />
+                  <HiCamera size={16} aria-hidden="true" />
                   Change Avatar
                 </button>
               )}
@@ -171,7 +188,7 @@ export function ProfileTabContent() {
                 onClick={() => setIsStatusModalOpen(true)}
                 className="flex items-center gap-2 rounded-md bg-muted px-3 py-2 text-sm font-medium text-foreground transition hover:bg-muted/80"
               >
-                <HiChatBubbleLeftRight size={16} />
+                <HiChatBubbleLeftRight size={16} aria-hidden="true" />
                 Set Status
               </button>
             </div>
@@ -185,13 +202,15 @@ export function ProfileTabContent() {
           </label>
           <input
             id="name"
+            name="name"
             type="text"
+            autoComplete="name"
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
             disabled={isLoading}
-            className="mt-1 block w-full rounded-md border border-border bg-background px-3 py-2 text-foreground shadow-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:bg-muted"
-            placeholder="Your name"
+            className="mt-1 block w-full rounded-md border border-border bg-background px-3 py-2 text-foreground shadow-sm focus-visible:border-ring focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:bg-muted"
+            placeholder="Your name…"
             maxLength={100}
           />
         </div>
@@ -203,15 +222,19 @@ export function ProfileTabContent() {
           </label>
           <textarea
             id="bio"
+            name="bio"
+            autoComplete="off"
             value={bio}
             onChange={(e) => setBio(e.target.value)}
             disabled={isLoading}
             rows={4}
-            className="mt-1 block w-full rounded-md border border-border bg-background px-3 py-2 text-foreground shadow-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:bg-muted"
-            placeholder="Tell us about yourself..."
+            className="mt-1 block w-full rounded-md border border-border bg-background px-3 py-2 text-foreground shadow-sm focus-visible:border-ring focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:bg-muted"
+            placeholder="Tell us about yourself…"
             maxLength={500}
           />
-          <p className="mt-1 text-sm text-muted-foreground">{bio.length}/500 characters</p>
+          <p className="mt-1 text-sm tabular-nums text-muted-foreground">
+            {bio.length}/500 characters
+          </p>
         </div>
 
         {/* Location */}
@@ -221,12 +244,14 @@ export function ProfileTabContent() {
           </label>
           <input
             id="location"
+            name="location"
             type="text"
+            autoComplete="off"
             value={location}
             onChange={(e) => setLocation(e.target.value)}
             disabled={isLoading}
-            className="mt-1 block w-full rounded-md border border-border bg-background px-3 py-2 text-foreground shadow-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:bg-muted"
-            placeholder="e.g., San Francisco, CA"
+            className="mt-1 block w-full rounded-md border border-border bg-background px-3 py-2 text-foreground shadow-sm focus-visible:border-ring focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:bg-muted"
+            placeholder="San Francisco, CA…"
             maxLength={100}
           />
         </div>
@@ -242,12 +267,15 @@ export function ProfileTabContent() {
             </div>
             <input
               id="website"
+              name="website"
               type="url"
+              autoComplete="url"
+              spellCheck={false}
               value={website}
               onChange={(e) => setWebsite(e.target.value)}
               disabled={isLoading}
-              className="block w-full rounded-md border border-border bg-background py-2 pl-10 pr-3 text-foreground shadow-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:bg-muted"
-              placeholder="https://yourwebsite.com"
+              className="block w-full rounded-md border border-border bg-background py-2 pl-10 pr-3 text-foreground shadow-sm focus-visible:border-ring focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:bg-muted"
+              placeholder="https://example.com…"
               maxLength={200}
             />
           </div>
@@ -261,7 +289,7 @@ export function ProfileTabContent() {
             aria-busy={isLoading}
             className="rounded-md bg-primary px-4 py-2 text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {isLoading ? "Saving..." : "Save Changes"}
+            {isLoading ? "Saving…" : "Save Changes"}
           </button>
         </div>
       </form>

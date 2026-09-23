@@ -2,6 +2,7 @@
 
 import { useMemo } from "react"
 
+import { formatNumber } from "@/app/lib/intl-format"
 import { cn } from "@/app/lib/utils"
 import { ChartLoadingState, useRechartsModule } from "@/app/components/charts/useRechartsModule"
 
@@ -55,11 +56,24 @@ const MODEL_COLORS: Record<string, string> = {
 
 const DEFAULT_COLORS = ["#8b5cf6", "#f97316", "#06b6d4", "#22c55e", "#ec4899"]
 
+const COST_FORMAT: Intl.NumberFormatOptions = {
+  style: "currency",
+  currency: "USD",
+  minimumFractionDigits: 4,
+  maximumFractionDigits: 4,
+}
+const SHARE_FORMAT: Intl.NumberFormatOptions = {
+  style: "percent",
+  minimumFractionDigits: 1,
+  maximumFractionDigits: 1,
+}
+const LABEL_PERCENT_FORMAT: Intl.NumberFormatOptions = { style: "percent" }
+
 function ModelPieTooltip({ active, payload, metric, total }: ModelPieTooltipProps) {
   if (!active || !payload || payload.length === 0) return null
 
   const item = payload[0].payload
-  const percentage = total > 0 ? ((item.value / total) * 100).toFixed(1) : 0
+  const share = total > 0 ? item.value / total : 0
 
   return (
     <div className="rounded-lg border border-border bg-background p-3 shadow-lg">
@@ -67,22 +81,32 @@ function ModelPieTooltip({ active, payload, metric, total }: ModelPieTooltipProp
       <p className="text-sm text-muted-foreground">
         {metric === "cost" ? (
           <>
-            Cost: <span className="font-medium text-foreground">${item.value.toFixed(4)}</span>
+            Cost:{" "}
+            <span className="font-medium tabular-nums text-foreground">
+              {formatNumber(item.value, COST_FORMAT)}
+            </span>
           </>
         ) : metric === "tokens" ? (
           <>
             Tokens:{" "}
-            <span className="font-medium text-foreground">{item.value.toLocaleString()}</span>
+            <span className="font-medium tabular-nums text-foreground">
+              {formatNumber(item.value)}
+            </span>
           </>
         ) : (
           <>
             Messages:{" "}
-            <span className="font-medium text-foreground">{item.value.toLocaleString()}</span>
+            <span className="font-medium tabular-nums text-foreground">
+              {formatNumber(item.value)}
+            </span>
           </>
         )}
       </p>
       <p className="text-sm text-muted-foreground">
-        Share: <span className="font-medium text-foreground">{percentage}%</span>
+        Share:{" "}
+        <span className="font-medium tabular-nums text-foreground">
+          {formatNumber(share, SHARE_FORMAT)}
+        </span>
       </p>
     </div>
   )
@@ -126,7 +150,7 @@ function renderModelPieLabel({
       dominantBaseline="central"
       className="text-xs font-medium"
     >
-      {`${(percent * 100).toFixed(0)}%`}
+      {formatNumber(percent, LABEL_PERCENT_FORMAT)}
     </text>
   )
 }

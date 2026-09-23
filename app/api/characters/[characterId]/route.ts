@@ -84,16 +84,18 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     )
   }
 
-  const currentUser = await getCurrentUser()
-  if (!currentUser) {
-    return NextResponse.json({ error: "User not found" }, { status: 401 })
-  }
-
+  // CSRF is a synchronous comparison, so it runs before the user lookup — the
+  // ADR-0003 order: a forged request is rejected without a database round trip.
   const headerToken = request.headers.get("X-CSRF-Token")
   const cookieToken = getCsrfTokenFromRequest(request)
 
   if (!verifyCsrfToken(headerToken, cookieToken)) {
     return NextResponse.json({ error: "Invalid CSRF token" }, { status: 403 })
+  }
+
+  const currentUser = await getCurrentUser()
+  if (!currentUser) {
+    return NextResponse.json({ error: "User not found" }, { status: 401 })
   }
 
   const { characterId } = await params
@@ -113,6 +115,20 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
   const data = validation.data
   let slug = existing.slug
+
+  // Checked before moderation: it is synchronous, and moderation may call a
+  // model.
+  //
+  // CONTEXT.md: "the two are separate facts and both are required". This
+  // checked `isAdult` alone, so an account holding `isAdult: true,
+  // nsfwEnabled: false` could publish a Character it was itself filtered out of
+  // seeing — and never checked `adultConfirmedAt` at all.
+  if (data.isNsfw && !matureAccess(currentUser).canAuthor) {
+    return NextResponse.json(
+      { error: "You must confirm you are 18+ to mark NSFW." },
+      { status: 403 }
+    )
+  }
 
   const moderationPayload = [
     data.name ? sanitizePlainText(data.name) : null,
@@ -137,17 +153,6 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         categories: moderationResult.categories,
       },
       { status: 400 }
-    )
-  }
-
-  // CONTEXT.md: "the two are separate facts and both are required". This
-  // checked `isAdult` alone, so an account holding `isAdult: true,
-  // nsfwEnabled: false` could publish a Character it was itself filtered out of
-  // seeing — and never checked `adultConfirmedAt` at all.
-  if (data.isNsfw && !matureAccess(currentUser).canAuthor) {
-    return NextResponse.json(
-      { error: "You must confirm you are 18+ to mark NSFW." },
-      { status: 403 }
     )
   }
 
@@ -206,16 +211,18 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 }
 
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
-  const currentUser = await getCurrentUser()
-  if (!currentUser) {
-    return NextResponse.json({ error: "User not found" }, { status: 401 })
-  }
-
+  // CSRF is a synchronous comparison, so it runs before the user lookup — the
+  // ADR-0003 order: a forged request is rejected without a database round trip.
   const headerToken = request.headers.get("X-CSRF-Token")
   const cookieToken = getCsrfTokenFromRequest(request)
 
   if (!verifyCsrfToken(headerToken, cookieToken)) {
     return NextResponse.json({ error: "Invalid CSRF token" }, { status: 403 })
+  }
+
+  const currentUser = await getCurrentUser()
+  if (!currentUser) {
+    return NextResponse.json({ error: "User not found" }, { status: 401 })
   }
 
   const { characterId } = await params

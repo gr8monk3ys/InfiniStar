@@ -24,7 +24,7 @@ export function CharacterExportButton({ characterId }: { characterId: string }) 
 
       if (!response.ok) {
         const data = (await response.json().catch(() => null)) as { error?: string } | null
-        throw new Error(data?.error || "Failed to export character")
+        throw new Error(data?.error || "Couldn't export the character. Try again.")
       }
 
       // Trigger file download
@@ -44,7 +44,9 @@ export function CharacterExportButton({ characterId }: { characterId: string }) 
 
       toast.success("Character card exported")
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to export character")
+      toast.error(
+        error instanceof Error ? error.message : "Couldn't export the character. Try again."
+      )
     } finally {
       setIsLoading(false)
     }
@@ -52,7 +54,7 @@ export function CharacterExportButton({ characterId }: { characterId: string }) 
 
   return (
     <Button type="button" variant="outline" onClick={handleExport} disabled={isLoading}>
-      {isLoading ? "Exporting..." : "Export"}
+      {isLoading ? "Exporting…" : "Export"}
     </Button>
   )
 }

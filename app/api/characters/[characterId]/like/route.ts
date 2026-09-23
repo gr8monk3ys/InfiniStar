@@ -26,16 +26,19 @@ export async function GET(
   try {
     const { characterId } = await params
 
-    const character = await prisma.character.findUnique({
-      where: { id: characterId },
-      select: { id: true, isPublic: true, isNsfw: true, likeCount: true },
-    })
+    // The character and the viewer are independent reads, so they run together.
+    const [character, currentUser] = await Promise.all([
+      prisma.character.findUnique({
+        where: { id: characterId },
+        select: { id: true, isPublic: true, isNsfw: true, likeCount: true },
+      }),
+      getCurrentUser(),
+    ])
 
     if (!character || !character.isPublic) {
       return NextResponse.json({ error: "Character not found" }, { status: 404 })
     }
 
-    const currentUser = await getCurrentUser()
     if (!currentUser) {
       return NextResponse.json(
         { liked: false, likeCount: character.likeCount },

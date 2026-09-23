@@ -1,6 +1,6 @@
 "use client"
 
-import { memo, useMemo, useState } from "react"
+import { memo, useState } from "react"
 import dynamic from "next/dynamic"
 import Link from "next/link"
 import { HiChevronLeft } from "react-icons/hi"
@@ -73,7 +73,9 @@ const headerButtonClass =
  */
 const Header: React.FC<HeaderProps> = memo(function Header({ conversation, currentUserId }) {
   const otherUser = useOtherUser(conversation)
-  const { members } = useActiveList()
+  // Subscribe to the one derived boolean, not the whole presence list.
+  const otherUserId = otherUser?.id || ""
+  const isActive = useActiveList((state) => state.members.includes(otherUserId))
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [searchModalOpen, setSearchModalOpen] = useState(false)
   const [summaryModalOpen, setSummaryModalOpen] = useState(false)
@@ -85,22 +87,19 @@ const Header: React.FC<HeaderProps> = memo(function Header({ conversation, curre
     conversationName
   )
 
-  const isActive = members.indexOf(otherUser?.id || "") !== -1
-
   // Characters do not have presence: show their tagline or scenario line
   // instead of "Active"/"Offline". Humans and groups keep real presence copy.
-  const statusText = useMemo(() => {
-    if (conversation.isAI) {
-      const line = conversation.character?.tagline || conversation.character?.scenario
-      return line ? line.trim() : "Character chat"
-    }
-
-    if (conversation.isGroup) {
-      return `${conversation.users.length} members`
-    }
-
-    return isActive ? "Active" : "Offline"
-  }, [conversation, isActive])
+  // A cheap string expression, so it is computed inline rather than memoized.
+  const characterLine = conversation.character?.tagline || conversation.character?.scenario
+  const statusText = conversation.isAI
+    ? characterLine
+      ? characterLine.trim()
+      : "Character chat"
+    : conversation.isGroup
+      ? `${conversation.users.length} members`
+      : isActive
+        ? "Active"
+        : "Offline"
 
   return (
     <>
@@ -119,7 +118,7 @@ const Header: React.FC<HeaderProps> = memo(function Header({ conversation, curre
             className="block shrink-0 cursor-pointer text-primary transition hover:text-primary/80 lg:hidden"
             aria-label="Back to conversations"
           >
-            <HiChevronLeft size={32} />
+            <HiChevronLeft size={32} aria-hidden="true" />
           </Link>
           {conversation.isGroup ? (
             <AvatarGroup users={conversation.users} />
@@ -127,7 +126,9 @@ const Header: React.FC<HeaderProps> = memo(function Header({ conversation, curre
             <Avatar user={otherUser} />
           )}
           <div className="flex min-w-0 flex-col">
-            <div className="truncate text-foreground">{conversation.name || otherUser?.name}</div>
+            <h2 className="truncate text-base font-normal text-foreground">
+              {conversation.name || otherUser?.name}
+            </h2>
             <div
               className="truncate text-sm font-light text-muted-foreground"
               title={conversation.isAI ? statusText : undefined}
@@ -145,48 +146,51 @@ const Header: React.FC<HeaderProps> = memo(function Header({ conversation, curre
             />
           )}
           <button
+            type="button"
             onClick={() => setSearchModalOpen(true)}
             className={headerButtonClass}
             title="Search messages"
             aria-label="Search messages"
           >
-            <HiMagnifyingGlass size={22} />
+            <HiMagnifyingGlass size={22} aria-hidden="true" />
           </button>
           <button
+            type="button"
             onClick={() => setDrawerOpen(true)}
             className={headerButtonClass}
             title="Conversation details"
             aria-label="Open conversation details"
           >
-            <HiOutlineInformationCircle size={24} />
+            <HiOutlineInformationCircle size={24} aria-hidden="true" />
           </button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
+                type="button"
                 className={headerButtonClass}
                 title="More actions"
                 aria-label="More conversation actions"
               >
-                <HiEllipsisVertical size={24} />
+                <HiEllipsisVertical size={24} aria-hidden="true" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuItem onSelect={() => setShareDialogOpen(true)}>
                 <HiLink className="mr-2 size-4" aria-hidden="true" />
-                Share conversation
+                Share Conversation
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => setSummaryModalOpen(true)}>
                 <HiOutlineDocumentText className="mr-2 size-4" aria-hidden="true" />
-                Summarize conversation
+                Summarize Conversation
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuSub>
                 <DropdownMenuSubTrigger disabled={isExporting}>
                   <HiOutlineArrowDownTray className="mr-2 size-4" aria-hidden="true" />
-                  {isExporting ? "Exporting..." : "Export conversation"}
+                  {isExporting ? "Exporting…" : "Export Conversation"}
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent className="w-56">
-                  <DropdownMenuLabel>Export as</DropdownMenuLabel>
+                  <DropdownMenuLabel>Export As</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   {exportOptions.map((option) => (
                     <DropdownMenuItem
@@ -199,7 +203,7 @@ const Header: React.FC<HeaderProps> = memo(function Header({ conversation, curre
                         <span className="font-medium">
                           {option.label}
                           {exportingFormat === option.format && (
-                            <span className="ml-2 text-xs text-muted-foreground">Exporting...</span>
+                            <span className="ml-2 text-xs text-muted-foreground">Exporting…</span>
                           )}
                         </span>
                         <span className="text-xs text-muted-foreground">{option.description}</span>

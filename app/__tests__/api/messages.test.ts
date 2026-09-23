@@ -21,6 +21,34 @@ import { POST } from "@/app/api/messages/route"
 
 // ---- Mocks (jest.mock is hoisted, so define inline) ----
 
+// `after()` needs a live request scope. Collect its tasks so a test can run
+// them the way the platform does once the response has gone out.
+const mockAfterTasks: Array<() => unknown> = []
+
+jest.mock("next/server", () => ({
+  ...jest.requireActual("next/server"),
+  after: (task: () => unknown) => {
+    mockAfterTasks.push(task)
+  },
+}))
+
+async function flushAfter(): Promise<void> {
+  while (mockAfterTasks.length > 0) {
+    await mockAfterTasks.shift()?.()
+  }
+}
+
+const mockCaptureServerEvent = jest.fn()
+const mockIsFirstHumanMessage = jest.fn()
+
+jest.mock("@/app/lib/analytics", () => ({
+  captureServerEvent: (...args: unknown[]) => mockCaptureServerEvent(...args),
+}))
+
+jest.mock("@/app/lib/analytics-events", () => ({
+  isFirstHumanMessage: (...args: unknown[]) => mockIsFirstHumanMessage(...args),
+}))
+
 jest.mock("@/app/lib/prismadb", () => ({
   __esModule: true,
   default: {
@@ -92,6 +120,8 @@ const testMessage = {
 
 beforeEach(() => {
   jest.clearAllMocks()
+  mockAfterTasks.length = 0
+  mockIsFirstHumanMessage.mockResolvedValue(false)
   ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(testUser)
   ;(verifyCsrfToken as jest.Mock).mockReturnValue(true)
   ;(apiLimiter.check as jest.Mock).mockReturnValue(true)
@@ -117,6 +147,37 @@ describe("POST /api/messages", () => {
 
     const data = await response.json()
     expect(data.body).toBe("Hello world")
+  })
+
+  it("captures first_message_sent after the response, not before it", async () => {
+    ;(prisma.conversation.findFirst as jest.Mock).mockResolvedValue({ id: "conv-1" })
+    ;(prisma.message.create as jest.Mock).mockResolvedValue(testMessage)
+    ;(prisma.conversation.update as jest.Mock).mockResolvedValue({
+      id: "conv-1",
+      users: [testUser],
+    })
+    mockIsFirstHumanMessage.mockResolvedValue(true)
+
+    const response = await POST(createRequest({ message: "Hello world", conversationId: "conv-1" }))
+
+    expect(response.status).toBe(200)
+    const firstMessageEvents = () =>
+      mockCaptureServerEvent.mock.calls.filter(([, event]) => event === "first_message_sent")
+    expect(firstMessageEvents()).toHaveLength(0)
+    await flushAfter()
+    expect(firstMessageEvents()).toHaveLength(1)
+  })
+
+  it("returns 400 when the reply target is not in the conversation", async () => {
+    ;(prisma.conversation.findFirst as jest.Mock).mockResolvedValue({ id: "conv-1" })
+    ;(prisma.message.findFirst as jest.Mock).mockResolvedValue(null)
+
+    const response = await POST(
+      createRequest({ message: "Hello", conversationId: "conv-1", replyToId: "msg-missing" })
+    )
+
+    expect(response.status).toBe(400)
+    expect(prisma.message.create).not.toHaveBeenCalled()
   })
 
   it("returns 403 for invalid CSRF token", async () => {

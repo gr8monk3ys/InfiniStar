@@ -1,7 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
-import { format } from "date-fns"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import toast from "react-hot-toast"
 import {
   HiClock,
@@ -12,6 +11,18 @@ import {
 } from "react-icons/hi2"
 
 import { api, ApiError, createLoadingToast } from "@/app/lib/api-client"
+import { formatDateTime } from "@/app/lib/intl-format"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/app/components/ui/alert-dialog"
 
 import { AutoDeletePreview } from "./AutoDeletePreview"
 import { RetentionPeriodSelect } from "./RetentionPeriodSelect"
@@ -48,6 +59,13 @@ interface PreviewData {
   settings: AutoDeleteSettingsData
 }
 
+/** Order-insensitive comparison of two tag-id lists, without mutating either. */
+function hasSameIds(a: string[], b: string[]): boolean {
+  if (a.length !== b.length) return false
+  const ids = new Set(a)
+  return b.every((id) => ids.has(id))
+}
+
 export function AutoDeleteSettings() {
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
@@ -69,8 +87,7 @@ export function AutoDeleteSettings() {
   // Preview data
   const [previewData, setPreviewData] = useState<PreviewData | null>(null)
 
-  // Track if settings have been modified
-  const [hasChanges, setHasChanges] = useState(false)
+  // Last saved settings; unsaved changes are derived against these
   const [originalSettings, setOriginalSettings] = useState<AutoDeleteSettingsData | null>(null)
 
   // Fetch settings
@@ -114,19 +131,26 @@ export function AutoDeleteSettings() {
     void loadData()
   }, [fetchSettings, fetchTags])
 
-  // Check for changes
-  useEffect(() => {
-    if (!originalSettings) return
-
-    const changed =
-      enabled !== originalSettings.autoDeleteEnabled ||
+  // Derived during render: no extra state, no effect, and no in-place sort of
+  // the state arrays (the old `.sort()` mutated both of them).
+  const hasChanges =
+    originalSettings !== null &&
+    (enabled !== originalSettings.autoDeleteEnabled ||
       retentionDays !== originalSettings.autoDeleteAfterDays ||
       includeArchived !== originalSettings.autoDeleteArchived ||
-      JSON.stringify(excludedTagIds.sort()) !==
-        JSON.stringify(originalSettings.autoDeleteExcludeTags.sort())
+      !hasSameIds(excludedTagIds, originalSettings.autoDeleteExcludeTags))
 
-    setHasChanges(changed)
-  }, [enabled, retentionDays, includeArchived, excludedTagIds, originalSettings])
+  const excludedTagIdSet = useMemo(() => new Set(excludedTagIds), [excludedTagIds])
+
+  // Warn before leaving the page with unsaved settings
+  useEffect(() => {
+    if (!hasChanges) return
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault()
+    }
+    window.addEventListener("beforeunload", handleBeforeUnload)
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload)
+  }, [hasChanges])
 
   // Save settings
   const handleSave = async () => {
@@ -137,7 +161,7 @@ export function AutoDeleteSettings() {
     }
 
     setIsSaving(true)
-    const loader = createLoadingToast("Saving auto-delete settings...")
+    const loader = createLoadingToast("Saving auto-delete settings…")
 
     try {
       const response = await api.patch<{ message: string; settings: AutoDeleteSettingsData }>(
@@ -155,7 +179,10 @@ export function AutoDeleteSettings() {
       setOriginalSettings(response.settings)
       setShowConfirmation(false)
     } catch (error) {
-      const message = error instanceof ApiError ? error.message : "Failed to save settings"
+      const message =
+        error instanceof ApiError
+          ? error.message
+          : "Couldn't save your settings. Check your connection and try again."
       loader.error(message)
     } finally {
       setIsSaving(false)
@@ -182,7 +209,10 @@ export function AutoDeleteSettings() {
       setPreviewData(response.preview)
       setIsPreviewOpen(true)
     } catch (error) {
-      const message = error instanceof ApiError ? error.message : "Failed to load preview"
+      const message =
+        error instanceof ApiError
+          ? error.message
+          : "Couldn't load the preview. Check your connection and try again."
       toast.error(message)
     } finally {
       setIsPreviewLoading(false)
@@ -192,7 +222,7 @@ export function AutoDeleteSettings() {
   // Run manual cleanup
   const handleRunNow = async () => {
     setIsDeleting(true)
-    const loader = createLoadingToast("Running auto-delete cleanup...")
+    const loader = createLoadingToast("Running auto-delete cleanup…")
 
     try {
       const response = await api.post<{
@@ -208,7 +238,10 @@ export function AutoDeleteSettings() {
       // Refresh settings to get updated last run date
       await fetchSettings()
     } catch (error) {
-      const message = error instanceof ApiError ? error.message : "Failed to run auto-delete"
+      const message =
+        error instanceof ApiError
+          ? error.message
+          : "Couldn't run auto-delete. Check your connection and try again."
       loader.error(message)
     } finally {
       setIsDeleting(false)
@@ -246,7 +279,7 @@ export function AutoDeleteSettings() {
       {/* Enable/Disable Toggle */}
       <div className="rounded-lg border border-border bg-muted p-4">
         <div className="flex items-center justify-between">
-          <div className="flex-1">
+          <div className="min-w-0 flex-1">
             <label
               htmlFor="autoDeleteEnabled"
               className="block text-sm font-medium text-foreground"
@@ -263,9 +296,9 @@ export function AutoDeleteSettings() {
             id="autoDeleteEnabled"
             role="switch"
             aria-checked={enabled}
-            onClick={() => setEnabled(!enabled)}
+            onClick={() => setEnabled((current) => !current)}
             disabled={isSaving}
-            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
+            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
               enabled ? "bg-primary" : "bg-muted-foreground/30"
             }`}
           >
@@ -283,14 +316,18 @@ export function AutoDeleteSettings() {
       {showConfirmation && (
         <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4">
           <div className="flex items-start gap-3">
-            <HiExclamationTriangle className="mt-0.5 size-5 shrink-0 text-yellow-600" />
-            <div className="flex-1">
+            <HiExclamationTriangle
+              className="mt-0.5 size-5 shrink-0 text-yellow-600"
+              aria-hidden="true"
+            />
+            <div className="min-w-0 flex-1">
               <h4 className="text-sm font-medium text-yellow-800">
                 Confirm Auto-Delete Activation
               </h4>
               <p className="mt-1 text-sm text-yellow-700">
                 Enabling auto-delete will permanently remove conversations older than{" "}
-                <strong>{retentionDays} days</strong>. This action cannot be undone.
+                <strong className="tabular-nums">{retentionDays} days</strong>. This action cannot
+                be undone.
               </p>
               <p className="mt-2 text-sm text-yellow-700">
                 We recommend previewing what would be deleted before confirming.
@@ -300,24 +337,24 @@ export function AutoDeleteSettings() {
                   type="button"
                   onClick={handlePreview}
                   disabled={isPreviewLoading || isSaving}
-                  className="inline-flex items-center gap-2 rounded-md border border-yellow-300 bg-card px-3 py-1.5 text-sm font-medium text-yellow-800 hover:bg-yellow-50 focus:outline-none focus:ring-2 focus:ring-yellow-500 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex items-center gap-2 rounded-md border border-yellow-300 bg-card px-3 py-1.5 text-sm font-medium text-yellow-800 hover:bg-yellow-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-500 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  <HiEye className="size-4" />
-                  Preview
+                  <HiEye className="size-4" aria-hidden="true" />
+                  Preview Deletions
                 </button>
                 <button
                   type="button"
                   onClick={handleSave}
                   disabled={isSaving}
-                  className="inline-flex items-center rounded-md bg-yellow-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-yellow-500 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex items-center rounded-md bg-yellow-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-yellow-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-500 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {isSaving ? "Saving..." : "Confirm & Enable"}
+                  {isSaving ? "Saving…" : "Confirm & Enable"}
                 </button>
                 <button
                   type="button"
                   onClick={handleCancelConfirmation}
                   disabled={isSaving}
-                  className="inline-flex items-center rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex items-center rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Cancel
                 </button>
@@ -340,6 +377,7 @@ export function AutoDeleteSettings() {
             </p>
             <div className="mt-2 max-w-xs">
               <RetentionPeriodSelect
+                id="retentionPeriod"
                 value={retentionDays}
                 onChange={setRetentionDays}
                 disabled={isSaving}
@@ -349,7 +387,7 @@ export function AutoDeleteSettings() {
 
           {/* Include Archived */}
           <div className="flex items-center justify-between rounded-lg border border-border p-4">
-            <div className="flex-1">
+            <div className="min-w-0 flex-1">
               <label
                 htmlFor="includeArchived"
                 className="block text-sm font-medium text-foreground"
@@ -366,9 +404,9 @@ export function AutoDeleteSettings() {
               id="includeArchived"
               role="switch"
               aria-checked={includeArchived}
-              onClick={() => setIncludeArchived(!includeArchived)}
+              onClick={() => setIncludeArchived((current) => !current)}
               disabled={isSaving || !enabled}
-              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
+              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
                 includeArchived && enabled ? "bg-primary" : "bg-muted-foreground/30"
               }`}
             >
@@ -383,23 +421,23 @@ export function AutoDeleteSettings() {
 
           {/* Exclude Tags */}
           {tags.length > 0 && (
-            <div>
-              <label className="block text-sm font-medium text-foreground">
+            <div role="group" aria-labelledby="excludeTagsLabel" aria-describedby="excludeTagsHint">
+              <p id="excludeTagsLabel" className="block text-sm font-medium text-foreground">
                 Exclude Tagged Conversations
-              </label>
-              <p className="mt-1 text-sm text-muted-foreground">
+              </p>
+              <p id="excludeTagsHint" className="mt-1 text-sm text-muted-foreground">
                 Conversations with these tags will never be auto-deleted.
               </p>
               <div className="mt-3 flex flex-wrap gap-2">
                 {tags.map((tag) => {
-                  const isExcluded = excludedTagIds.includes(tag.id)
+                  const isExcluded = excludedTagIdSet.has(tag.id)
                   return (
                     <button
                       key={tag.id}
                       type="button"
                       onClick={() => handleTagToggle(tag.id)}
                       disabled={isSaving || !enabled}
-                      className={`inline-flex items-center rounded-full px-3 py-1.5 text-sm font-medium transition-all focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
+                      className={`inline-flex max-w-full items-center rounded-full px-3 py-1.5 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
                         isExcluded
                           ? "bg-primary/10 text-primary-accent ring-2 ring-primary"
                           : "bg-muted text-foreground hover:bg-muted/80"
@@ -407,17 +445,22 @@ export function AutoDeleteSettings() {
                       aria-pressed={isExcluded}
                     >
                       <span
-                        className="mr-1.5 size-2 rounded-full"
+                        className="mr-1.5 size-2 shrink-0 rounded-full"
                         style={{ backgroundColor: tag.color }}
+                        aria-hidden="true"
                       />
-                      {tag.name}
-                      {isExcluded && <span className="ml-1.5 text-primary">&#10003;</span>}
+                      <span className="truncate">{tag.name}</span>
+                      {isExcluded ? (
+                        <span className="ml-1.5 text-primary" aria-hidden="true">
+                          &#10003;
+                        </span>
+                      ) : null}
                     </button>
                   )
                 })}
               </div>
               {excludedTagIds.length > 0 && (
-                <p className="mt-2 text-xs text-muted-foreground">
+                <p className="mt-2 text-xs tabular-nums text-muted-foreground">
                   {excludedTagIds.length} tag{excludedTagIds.length === 1 ? "" : "s"} excluded from
                   auto-delete
                 </p>
@@ -428,17 +471,18 @@ export function AutoDeleteSettings() {
           {/* Last Run Info */}
           {lastRunDate && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <HiClock className="size-4" />
-              <span>
-                Last auto-delete run: {format(new Date(lastRunDate), "MMM d, yyyy 'at' h:mm a")}
-              </span>
+              <HiClock className="size-4" aria-hidden="true" />
+              <span>Last auto-delete run: {formatDateTime(lastRunDate)}</span>
             </div>
           )}
 
           {/* Info Box */}
           <div className="rounded-lg border border-primary/20 bg-primary/10 p-4">
             <div className="flex items-start gap-3">
-              <HiInformationCircle className="mt-0.5 size-5 shrink-0 text-primary" />
+              <HiInformationCircle
+                className="mt-0.5 size-5 shrink-0 text-primary"
+                aria-hidden="true"
+              />
               <div className="text-sm text-primary-accent">
                 <p className="font-medium">How Auto-Delete Works</p>
                 <ul className="mt-2 list-inside list-disc space-y-1">
@@ -466,20 +510,43 @@ export function AutoDeleteSettings() {
                 type="button"
                 onClick={handlePreview}
                 disabled={isPreviewLoading || isSaving}
-                className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-foreground shadow-sm hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-foreground shadow-sm hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <HiEye className="size-4" />
-                {isPreviewLoading ? "Loading..." : "Preview"}
+                <HiEye className="size-4" aria-hidden="true" />
+                {isPreviewLoading ? "Loading…" : "Preview Deletions"}
               </button>
-              <button
-                type="button"
-                onClick={handleRunNow}
-                disabled={isDeleting || isSaving}
-                className="inline-flex items-center gap-2 rounded-md border border-destructive/30 bg-card px-4 py-2 text-sm font-medium text-destructive shadow-sm hover:bg-destructive/10 focus:outline-none focus:ring-2 focus:ring-destructive focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <HiTrash className="size-4" />
-                {isDeleting ? "Deleting..." : "Run Now"}
-              </button>
+              {/* Deleting is permanent, so running it asks first */}
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <button
+                    type="button"
+                    disabled={isDeleting || isSaving}
+                    className="inline-flex items-center gap-2 rounded-md border border-destructive/30 bg-card px-4 py-2 text-sm font-medium text-destructive shadow-sm hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <HiTrash className="size-4" aria-hidden="true" />
+                    {isDeleting ? "Deleting…" : "Run Now"}
+                  </button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Run Auto-Delete Now?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This permanently deletes every conversation that matches your saved
+                      auto-delete settings. You can&apos;t undo this. Preview the deletions first if
+                      you&apos;re not sure.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => void handleRunNow()}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      Delete Conversations
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </>
           )}
         </div>
@@ -489,9 +556,9 @@ export function AutoDeleteSettings() {
             onClick={handleSave}
             disabled={isSaving || !hasChanges}
             aria-busy={isSaving}
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {isSaving ? "Saving..." : "Save Changes"}
+            {isSaving ? "Saving…" : "Save Changes"}
           </button>
         )}
       </div>

@@ -79,7 +79,7 @@ export function useMessageSubmit({
               setPendingImage(queuedImage)
             }
             const message =
-              error instanceof ApiError ? error.message : "Failed to send message to AI"
+              error instanceof ApiError ? error.message : "Couldn't send your message. Try again."
             toast.error(message)
           } finally {
             setIsLoading(false)
@@ -94,7 +94,8 @@ export function useMessageSubmit({
             { retries: 1, showErrorToast: false }
           )
         } catch (error) {
-          const message = error instanceof ApiError ? error.message : "Failed to send message"
+          const message =
+            error instanceof ApiError ? error.message : "Couldn't send your message. Try again."
           toast.error(message)
         } finally {
           setIsLoading(false)
@@ -137,7 +138,8 @@ export function useMessageSubmit({
               { retries: 1, showErrorToast: false }
             )
             .catch((error: unknown) => {
-              const message = error instanceof ApiError ? error.message : "Failed to upload image"
+              const message =
+                error instanceof ApiError ? error.message : "Couldn't send the image. Try again."
               toast.error(message)
             })
         }

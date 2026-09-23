@@ -30,10 +30,10 @@ export default function MarketingError({
             onClick={reset}
             className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
           >
-            Try again
+            Try Again
           </button>
           <Link href="/" className="text-sm text-muted-foreground hover:text-foreground">
-            Go to homepage
+            Go to Homepage
           </Link>
         </div>
       </div>

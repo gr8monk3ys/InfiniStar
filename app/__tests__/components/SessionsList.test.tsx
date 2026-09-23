@@ -116,11 +116,11 @@ describe("SessionsList", () => {
       })
     })
 
-    it('should show "Current session" badge for current session', async () => {
+    it('should show "Current Session" badge for current session', async () => {
       render(<SessionsList />)
 
       await waitFor(() => {
-        expect(screen.getByText("Current session")).toBeInTheDocument()
+        expect(screen.getByText("Current Session")).toBeInTheDocument()
       })
     })
 

@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useEffectEvent, useState } from "react"
 
 import { api, createLoadingToast } from "@/app/lib/api-client"
 import { TEMPLATE_CATEGORIES, type MessageTemplateType, type TemplateVariables } from "@/app/types"
@@ -229,7 +229,7 @@ export function useTemplates() {
    */
   const createTemplate = useCallback(
     async (data: CreateTemplateData): Promise<MessageTemplateType | null> => {
-      const loader = createLoadingToast("Creating template...")
+      const loader = createLoadingToast("Creating template…")
 
       try {
         const response = await api.post<TemplateResponse>("/api/templates", data, {
@@ -259,7 +259,7 @@ export function useTemplates() {
    */
   const updateTemplate = useCallback(
     async (templateId: string, data: UpdateTemplateData): Promise<MessageTemplateType | null> => {
-      const loader = createLoadingToast("Updating template...")
+      const loader = createLoadingToast("Updating template…")
 
       try {
         const response = await api.patch<TemplateResponse>(`/api/templates/${templateId}`, data, {
@@ -285,7 +285,7 @@ export function useTemplates() {
    * Delete a template
    */
   const deleteTemplate = useCallback(async (templateId: string): Promise<boolean> => {
-    const loader = createLoadingToast("Deleting template...")
+    const loader = createLoadingToast("Deleting template…")
 
     try {
       const response = await api.delete<{ success: boolean; limitInfo: TemplateLimitInfo }>(
@@ -374,6 +374,9 @@ export function useTemplates() {
   }
 }
 
+/** An input that is only a template shortcut: "/" then letters, digits, "_" or "-". */
+const SHORTCUT_INPUT_PATTERN = /^\/([a-zA-Z0-9_-]*)$/
+
 /**
  * Hook for shortcut detection in message input
  */
@@ -384,13 +387,16 @@ export function useShortcutDetection(
 ) {
   const { searchByShortcut } = useTemplates()
   const [isSearching, setIsSearching] = useState(false)
+  // Latest callback without making it a dependency: an inline callback would
+  // otherwise re-run the effect (and re-report "no shortcut") every render.
+  const reportShortcut = useEffectEvent(onShortcutDetected)
 
   useEffect(() => {
     // Check if input starts with / and has more characters
-    const shortcutMatch = inputValue.match(/^\/([a-zA-Z0-9_-]*)$/)
+    const shortcutMatch = SHORTCUT_INPUT_PATTERN.exec(inputValue)
 
     if (!shortcutMatch) {
-      onShortcutDetected("", [])
+      reportShortcut("", [])
       return
     }
 
@@ -403,7 +409,7 @@ export function useShortcutDetection(
       setIsSearching(true)
       void searchByShortcut(shortcut)
         .then((templates) => {
-          onShortcutDetected(shortcut, templates)
+          reportShortcut(shortcut, templates)
         })
         .catch(() => {
           // Shortcut lookup is advisory; leave the previous suggestions in place.
@@ -414,7 +420,7 @@ export function useShortcutDetection(
     }, debounceMs)
 
     return () => clearTimeout(timeoutId)
-  }, [inputValue, searchByShortcut, onShortcutDetected, debounceMs])
+  }, [inputValue, searchByShortcut, debounceMs])
 
   return { isSearching }
 }

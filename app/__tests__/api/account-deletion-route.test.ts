@@ -21,6 +21,23 @@ import { DELETE as accountDELETE } from "@/app/api/account/route"
 
 // ---- Mocks ----
 
+// `after()` needs a live request scope. Collect its tasks so a test can run
+// them the way the platform does once the response has gone out.
+const mockAfterTasks: Array<() => unknown> = []
+
+jest.mock("next/server", () => ({
+  ...jest.requireActual("next/server"),
+  after: (task: () => unknown) => {
+    mockAfterTasks.push(task)
+  },
+}))
+
+async function flushAfter(): Promise<void> {
+  while (mockAfterTasks.length > 0) {
+    await mockAfterTasks.shift()?.()
+  }
+}
+
 jest.mock("@/app/lib/prismadb", () => ({
   __esModule: true,
   default: {
@@ -86,6 +103,7 @@ function makeCancelRequest(): NextRequest {
 // ---- Tests ----
 
 beforeEach(() => {
+  mockAfterTasks.length = 0
   jest.clearAllMocks()
   ;(getCurrentUser as jest.Mock).mockResolvedValue(baseUser)
   ;(verifyCsrfToken as jest.Mock).mockReturnValue(true)
@@ -186,7 +204,12 @@ describe("DELETE /api/account", () => {
   })
 
   it("sends a pending email notification after creating deletion request", async () => {
-    await accountDELETE(makeDELETERequest({ confirmationText: "DELETE" }))
+    const response = await accountDELETE(makeDELETERequest({ confirmationText: "DELETE" }))
+
+    // The response does not wait on the email provider.
+    expect(response.status).toBe(200)
+    expect(sendAccountDeletionPendingEmail).not.toHaveBeenCalled()
+    await flushAfter()
 
     expect(sendAccountDeletionPendingEmail).toHaveBeenCalledWith(
       "user@example.com",
@@ -291,6 +314,8 @@ describe("POST /api/account/cancel-deletion", () => {
     })
 
     await cancelPOST(makeCancelRequest())
+    expect(sendAccountDeletionCancelledEmail).not.toHaveBeenCalled()
+    await flushAfter()
 
     expect(sendAccountDeletionCancelledEmail).toHaveBeenCalledWith("user@example.com", "Alice")
   })

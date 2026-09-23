@@ -1,8 +1,9 @@
 "use client"
 
 import { useMemo } from "react"
-import { format, parseISO } from "date-fns"
+import { parseISO } from "date-fns"
 
+import { formatDate, formatNumber } from "@/app/lib/intl-format"
 import { cn } from "@/app/lib/utils"
 import { ChartLoadingState, useRechartsModule } from "@/app/components/charts/useRechartsModule"
 
@@ -37,14 +38,24 @@ const METRIC_LABELS = {
   cost: "Cost ($)",
 }
 
+const SHORT_DATE_FORMAT: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" }
+const TOOLTIP_COST_FORMAT: Intl.NumberFormatOptions = {
+  style: "currency",
+  currency: "USD",
+  minimumFractionDigits: 4,
+  maximumFractionDigits: 4,
+}
+const AXIS_COST_FORMAT: Intl.NumberFormatOptions = { style: "currency", currency: "USD" }
+const COMPACT_FORMAT: Intl.NumberFormatOptions = { notation: "compact", maximumFractionDigits: 1 }
+
 function formatUsageTooltipValue(value: number, name: string) {
   if (name === "cost") {
-    return [`$${value.toFixed(4)}`, "Cost"]
+    return [formatNumber(value, TOOLTIP_COST_FORMAT), "Cost"]
   }
   if (name === "tokens") {
-    return [value.toLocaleString(), "Tokens"]
+    return [formatNumber(value), "Tokens"]
   }
-  return [value.toString(), "Requests"]
+  return [formatNumber(value), "Requests"]
 }
 
 function UsageTooltip({ active, payload, label }: UsageTooltipProps) {
@@ -56,7 +67,7 @@ function UsageTooltip({ active, payload, label }: UsageTooltipProps) {
       {payload.map((entry) => {
         const [formattedValue, formattedName] = formatUsageTooltipValue(entry.value, entry.name)
         return (
-          <p key={entry.name} className="text-sm" style={{ color: entry.color }}>
+          <p key={entry.name} className="text-sm tabular-nums" style={{ color: entry.color }}>
             {formattedName}: {formattedValue}
           </p>
         )
@@ -77,7 +88,8 @@ export function UsageLineChart({ data, className, metric = "requests" }: UsageLi
 
     return data.map((item) => ({
       date: item.date,
-      formattedDate: format(parseISO(item.date), "MMM d"),
+      // parseISO keeps a bare "yyyy-MM-dd" in local time, so the day never shifts.
+      formattedDate: formatDate(parseISO(item.date), SHORT_DATE_FORMAT),
       requests: item.requests,
       tokens: item.tokens,
       cost: item.cost / 100, // Convert cents to dollars
@@ -134,12 +146,8 @@ export function UsageLineChart({ data, className, metric = "requests" }: UsageLi
             className="fill-muted-foreground"
             tickLine={false}
             axisLine={false}
-            tickFormatter={(value) =>
-              metric === "cost"
-                ? `$${value.toFixed(2)}`
-                : value >= 1000
-                  ? `${(value / 1000).toFixed(1)}k`
-                  : value.toString()
+            tickFormatter={(value: number) =>
+              formatNumber(value, metric === "cost" ? AXIS_COST_FORMAT : COMPACT_FORMAT)
             }
           />
           <Tooltip content={<UsageTooltip />} />

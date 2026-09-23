@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useReducer } from "react"
+import { useCallback, useEffect, useMemo, useReducer, useState } from "react"
 import dynamic from "next/dynamic"
 import clsx from "clsx"
 import { BsPinAngleFill } from "react-icons/bs"
@@ -122,6 +122,17 @@ function conversationListReducer(
   }
 }
 
+// Static, so created once rather than on every render.
+const pinnedSectionIcon = <BsPinAngleFill size={12} className="text-primary" aria-hidden="true" />
+
+function lastMessageTime(item: FullConversationType): number {
+  return new Date(item.lastMessageAt).getTime()
+}
+
+function byMostRecent(a: FullConversationType, b: FullConversationType): number {
+  return lastMessageTime(b) - lastMessageTime(a)
+}
+
 interface ConversationListHeaderProps {
   title: string
   onOpenSearch: () => void
@@ -141,7 +152,7 @@ function ConversationListHeader({
 }: ConversationListHeaderProps) {
   return (
     <div className="mb-4 flex justify-between pt-4">
-      <div className="text-2xl font-bold text-foreground">{title}</div>
+      <h2 className="text-2xl font-bold text-foreground">{title}</h2>
       <div className="flex gap-2">
         <button
           onClick={onOpenSearch}
@@ -149,7 +160,7 @@ function ConversationListHeader({
           title="Search (Cmd+K)"
           aria-label="Search conversations and messages (Cmd+K or Ctrl+K)"
         >
-          <HiMagnifyingGlass size={20} />
+          <HiMagnifyingGlass size={20} aria-hidden="true" />
         </button>
         <button
           onClick={onOpenNewConversation}
@@ -157,7 +168,7 @@ function ConversationListHeader({
           title="New character chat"
           aria-label="Start new character chat"
         >
-          <HiSparkles size={20} />
+          <HiSparkles size={20} aria-hidden="true" />
         </button>
         <button
           onClick={onOpenSceneChat}
@@ -165,7 +176,7 @@ function ConversationListHeader({
           title="New scene: a chat with several characters at once"
           aria-label="Create new scene, a chat with several characters at once"
         >
-          <HiChatBubbleLeftRight size={20} />
+          <HiChatBubbleLeftRight size={20} aria-hidden="true" />
         </button>
         {showGroupChat && (
           <button
@@ -174,7 +185,7 @@ function ConversationListHeader({
             title="New Group Chat"
             aria-label="Create new Group Chat"
           >
-            <MdOutlineGroupAdd size={20} />
+            <MdOutlineGroupAdd size={20} aria-hidden="true" />
           </button>
         )}
       </div>
@@ -200,11 +211,15 @@ function ArchiveToggleButton({ archivedCount, showArchived, onToggle }: ArchiveT
       aria-label={showArchived ? "Show active conversations" : "Show archived conversations"}
     >
       <div className="flex items-center gap-2">
-        {showArchived ? <HiArchiveBoxXMark size={18} /> : <HiArchiveBox size={18} />}
+        {showArchived ? (
+          <HiArchiveBoxXMark size={18} aria-hidden="true" />
+        ) : (
+          <HiArchiveBox size={18} aria-hidden="true" />
+        )}
         <span>{showArchived ? "Show Active" : "Show Archived"}</span>
       </div>
       {!showArchived && (
-        <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+        <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium tabular-nums text-muted-foreground">
           {archivedCount}
         </span>
       )}
@@ -234,7 +249,7 @@ function ConversationTagFilter({
       {selectedTag ? (
         <div className="flex items-center justify-between rounded-lg border border-border bg-secondary px-3 py-2">
           <div className="flex items-center gap-2 text-sm">
-            <HiOutlineTag size={16} className="text-muted-foreground" />
+            <HiOutlineTag size={16} className="text-muted-foreground" aria-hidden="true" />
             <span className="text-muted-foreground">Filtering by:</span>
             <TagBadge tag={selectedTag} size="sm" />
           </div>
@@ -244,7 +259,7 @@ function ConversationTagFilter({
             aria-label="Clear tag filter"
             title="Clear filter"
           >
-            <HiXMark size={16} />
+            <HiXMark size={16} aria-hidden="true" />
           </button>
         </div>
       ) : (
@@ -256,22 +271,22 @@ function ConversationTagFilter({
               aria-label="Filter by tag"
             >
               <div className="flex items-center gap-2">
-                <HiOutlineTag size={18} />
+                <HiOutlineTag size={18} aria-hidden="true" />
                 <span>Filter by Tag</span>
               </div>
-              <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+              <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium tabular-nums text-muted-foreground">
                 {userTags.length}
               </span>
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuLabel>Filter by tag</DropdownMenuLabel>
+            <DropdownMenuLabel>Filter by Tag</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onSelect={() => onSelectTag(null)}
               className={!selectedTagId ? "font-medium" : ""}
             >
-              All conversations
+              All Conversations
             </DropdownMenuItem>
             {userTags.map((tag) => {
               const colorScheme = TAG_COLORS[tag.color as TagColor] || TAG_COLORS.gray
@@ -282,6 +297,7 @@ function ConversationTagFilter({
                   className={selectedTagId === tag.id ? "font-medium" : ""}
                 >
                   <span
+                    aria-hidden="true"
                     className={clsx(
                       "mr-2 size-3 shrink-0 rounded-full border",
                       colorScheme.bg,
@@ -289,7 +305,7 @@ function ConversationTagFilter({
                     )}
                   />
                   <span className="truncate">{tag.name}</span>
-                  <span className="ml-auto text-xs text-muted-foreground">
+                  <span className="ml-auto text-xs tabular-nums text-muted-foreground">
                     {tag.conversationCount}
                   </span>
                 </DropdownMenuItem>
@@ -329,11 +345,11 @@ function ConversationItemsSection({
 
   return (
     <div className={indexOffset === 0 ? "mb-2" : ""}>
-      <div className="mb-2 flex items-center gap-2 px-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+      <h3 className="mb-2 flex items-center gap-2 px-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
         {icon}
         <span>{heading}</span>
         {counter}
-      </div>
+      </h3>
       {items.map((item, index) => (
         <ConversationBox
           key={item.id}
@@ -382,9 +398,13 @@ const ConversationList: React.FC<ConversationListProps> = ({
     []
   )
 
-  useEffect(() => {
+  // A new server list (router.refresh) replaces the local one. Adjusted during
+  // render rather than in an effect, so the stale list is never painted.
+  const [syncedInitialItems, setSyncedInitialItems] = useState(initialItems)
+  if (syncedInitialItems !== initialItems) {
+    setSyncedInitialItems(initialItems)
     dispatch({ type: "sync_items", items: initialItems })
-  }, [initialItems])
+  }
 
   usePusherConversationSync({
     currentUserId,
@@ -393,29 +413,48 @@ const ConversationList: React.FC<ConversationListProps> = ({
     notificationPrefs,
   })
 
-  const filteredItems = useMemo(() => {
-    if (!currentUserId) return state.items
+  // One pass over the list: archive count, filter, and the pinned/unpinned split.
+  // Pinned conversations come first, each group newest-first.
+  const { filteredItems, pinnedItems, unpinnedItems, archivedCount } = useMemo(() => {
+    if (!currentUserId) {
+      return {
+        filteredItems: state.items,
+        pinnedItems: [] as FullConversationType[],
+        unpinnedItems: state.items,
+        archivedCount: 0,
+      }
+    }
 
-    const filtered = state.items.filter((item) => {
+    const pinned: FullConversationType[] = []
+    const unpinned: FullConversationType[] = []
+    let archived = 0
+
+    for (const item of state.items) {
       const isArchived = item.archivedBy?.includes(currentUserId) || false
+      if (isArchived) archived++
+
       const archiveMatch = state.showArchived ? isArchived : !isArchived
       const tagMatch = state.selectedTagId
         ? item.tags?.some((tag: { id: string }) => tag.id === state.selectedTagId) || false
         : true
+      if (!archiveMatch || !tagMatch) continue
 
-      return archiveMatch && tagMatch
-    })
-
-    return filtered.sort((a, b) => {
-      const aIsPinned = a.pinnedBy?.includes(currentUserId) || false
-      const bIsPinned = b.pinnedBy?.includes(currentUserId) || false
-
-      if (aIsPinned === bIsPinned) {
-        return new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime()
+      if (item.pinnedBy?.includes(currentUserId)) {
+        pinned.push(item)
+      } else {
+        unpinned.push(item)
       }
+    }
 
-      return aIsPinned ? -1 : 1
-    })
+    pinned.sort(byMostRecent)
+    unpinned.sort(byMostRecent)
+
+    return {
+      filteredItems: [...pinned, ...unpinned],
+      pinnedItems: pinned,
+      unpinnedItems: unpinned,
+      archivedCount: archived,
+    }
   }, [state.items, currentUserId, state.showArchived, state.selectedTagId])
 
   const selectedTag = useMemo(() => {
@@ -423,25 +462,11 @@ const ConversationList: React.FC<ConversationListProps> = ({
     return userTags.find((tag) => tag.id === state.selectedTagId) || null
   }, [state.selectedTagId, userTags])
 
-  const archivedCount = useMemo(() => {
-    if (!currentUserId) return 0
-    return state.items.filter((item) => item.archivedBy?.includes(currentUserId)).length
-  }, [state.items, currentUserId])
-
-  const pinnedItems = useMemo(() => {
-    if (!currentUserId) return []
-    return filteredItems.filter((item) => item.pinnedBy?.includes(currentUserId))
-  }, [filteredItems, currentUserId])
-
-  const unpinnedItems = useMemo(() => {
-    if (!currentUserId) return filteredItems
-    return filteredItems.filter((item) => !item.pinnedBy?.includes(currentUserId))
-  }, [filteredItems, currentUserId])
-
-  const selectedConversationHref = useMemo(() => {
-    const selectedConversation = filteredItems[selectedConversationIndex]
-    return selectedConversation ? `/dashboard/conversations/${selectedConversation.id}` : null
-  }, [filteredItems, selectedConversationIndex])
+  // A cheap string expression, so not memoized.
+  const selectedConversation = filteredItems[selectedConversationIndex]
+  const selectedConversationHref = selectedConversation
+    ? `/dashboard/conversations/${selectedConversation.id}`
+    : null
 
   useEffect(() => {
     setConversationCount(filteredItems.length)
@@ -467,7 +492,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
   }, [conversationId, filteredItems, selectedConversationIndex, setSelectedConversationIndex])
 
   const emptyStateMessage = state.selectedTagId
-    ? `No conversations with this tag${state.showArchived ? " in archived" : ""}`
+    ? `No ${state.showArchived ? "archived " : ""}conversations with this tag`
     : state.showArchived
       ? "No archived conversations"
       : "No active conversations"
@@ -489,6 +514,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
         />
       )}
       <aside
+        aria-label="Conversations"
         className={clsx(
           "fixed inset-y-0 overflow-y-auto border-r border-border bg-background pb-20 lg:left-20 lg:block lg:w-80 lg:pb-0",
           isOpen ? "hidden" : "left-0 block w-full"
@@ -529,18 +555,20 @@ const ConversationList: React.FC<ConversationListProps> = ({
                 selectedConversationId={conversationId}
                 selectedConversationIndex={selectedConversationIndex}
                 currentUserId={currentUserId}
-                icon={<BsPinAngleFill size={12} className="text-primary" />}
+                icon={pinnedSectionIcon}
                 counter={
-                  <span className="text-xs text-muted-foreground">({pinnedItems.length}/5)</span>
+                  <span className="text-xs tabular-nums text-muted-foreground">
+                    ({pinnedItems.length}/5)
+                  </span>
                 }
               />
 
               {unpinnedItems.length > 0 && (
                 <div className={pinnedItems.length > 0 ? "mt-4" : ""}>
                   {pinnedItems.length > 0 && (
-                    <div className="mb-2 px-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                    <h3 className="mb-2 px-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                       All Conversations
-                    </div>
+                    </h3>
                   )}
                   {unpinnedItems.map((item, index) => (
                     <ConversationBox

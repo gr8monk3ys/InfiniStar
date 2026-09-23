@@ -53,7 +53,14 @@ describe("MobileItem accessibility", () => {
       <MobileItem label="Logout" href="#" icon={HiUser} separated onClick={() => {}} />
     )
 
-    expect(container.querySelector("a")?.className).toContain("border-l")
+    expect(container.querySelector("button")?.className).toContain("border-l")
+  })
+
+  it("renders an action (onClick) as a button, not a link to #", () => {
+    render(<MobileItem label="Logout" href="#" icon={HiUser} onClick={() => {}} />)
+
+    expect(screen.getByRole("button", { name: "Logout" })).toBeInTheDocument()
+    expect(screen.queryByRole("link", { name: "Logout" })).not.toBeInTheDocument()
   })
 
   it("keeps a visible focus ring for keyboard users", () => {

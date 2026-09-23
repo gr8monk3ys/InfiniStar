@@ -38,13 +38,15 @@ export async function GET(
   const limit = Math.min(parseInt(parsedQuery.data.limit || "20", 10), 50)
   const cursor = parsedQuery.data.cursor || undefined
 
-  const currentUser = await getCurrentUser()
+  // The viewer and the character are independent reads, so they run together.
+  const [currentUser, character] = await Promise.all([
+    getCurrentUser(),
+    prisma.character.findUnique({
+      where: { id: characterId },
+      select: { id: true, isPublic: true, isNsfw: true, createdById: true },
+    }),
+  ])
   const allowNsfw = canAccessNsfw(currentUser)
-
-  const character = await prisma.character.findUnique({
-    where: { id: characterId },
-    select: { id: true, isPublic: true, isNsfw: true, createdById: true },
-  })
 
   if (!character || !character.isPublic) {
     return NextResponse.json({ error: "Character not found" }, { status: 404 })

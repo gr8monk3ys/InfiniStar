@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useMemo, useState, type ReactElement } from "react"
+import { useCallback, useId, useMemo, useState, type ReactElement } from "react"
 import { HiCheck, HiChevronUpDown, HiLanguage } from "react-icons/hi2"
 
 import { cn } from "@/app/lib/utils"
@@ -52,6 +52,7 @@ export function VoiceLanguageSelector({
   const [isOpen, setIsOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [highlightedIndex, setHighlightedIndex] = useState(-1)
+  const labelId = useId()
 
   // Filter languages based on allowed list and search query
   const filteredLanguages = useMemo(() => {
@@ -59,7 +60,8 @@ export function VoiceLanguageSelector({
 
     // Apply allowed languages filter
     if (allowedLanguages && allowedLanguages.length > 0) {
-      languages = languages.filter((lang) => allowedLanguages.includes(lang.code))
+      const allowed = new Set(allowedLanguages)
+      languages = languages.filter((lang) => allowed.has(lang.code))
     }
 
     // Apply search filter
@@ -164,19 +166,17 @@ export function VoiceLanguageSelector({
         disabled={disabled}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
-        aria-labelledby="voice-language-label"
+        aria-labelledby={labelId}
         className={cn(
           "flex w-full items-center justify-between gap-2 rounded-md border border-input bg-background px-3 py-2 text-sm",
-          "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
           "hover:bg-accent hover:text-accent-foreground",
           disabled && "cursor-not-allowed opacity-50"
         )}
       >
         <span className="flex items-center gap-2">
           <HiLanguage className="size-4 text-muted-foreground" aria-hidden="true" />
-          <span id="voice-language-label">
-            {selectedLang ? getDisplayText(selectedLang) : placeholder}
-          </span>
+          <span id={labelId}>{selectedLang ? getDisplayText(selectedLang) : placeholder}</span>
         </span>
         <HiChevronUpDown className="size-4 text-muted-foreground" aria-hidden="true" />
       </button>
@@ -191,18 +191,21 @@ export function VoiceLanguageSelector({
         >
           {/* Search input */}
           <div className="border-b border-border p-2">
+            {/* autoFocus: the list was just opened on purpose; search is its only field. */}
             <input
-              type="text"
+              type="search"
+              name="languageSearch"
+              autoComplete="off"
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value)
                 setHighlightedIndex(0)
               }}
-              placeholder="Search languages..."
+              placeholder="Search languages…"
               className={cn(
                 "w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm",
                 "placeholder:text-muted-foreground",
-                "focus:outline-none focus:ring-1 focus:ring-ring"
+                "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               )}
               aria-label="Search languages"
               autoFocus
@@ -210,7 +213,7 @@ export function VoiceLanguageSelector({
           </div>
 
           {/* Language list */}
-          <ul className="max-h-60 overflow-y-auto p-1">
+          <ul className="max-h-60 overflow-y-auto overscroll-contain p-1">
             {filteredLanguages.length === 0 ? (
               <li className="px-3 py-2 text-sm text-muted-foreground">No languages found</li>
             ) : (
@@ -276,8 +279,16 @@ export function VoiceLanguageSelectorCompact({
     [onLanguageChange]
   )
 
+  // Escape closes the list; options are real buttons, so Tab/Enter/Space work natively.
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === "Escape") {
+      e.preventDefault()
+      setIsOpen(false)
+    }
+  }, [])
+
   return (
-    <div className={cn("relative", className)}>
+    <div className={cn("relative", className)} onKeyDown={handleKeyDown}>
       <button
         type="button"
         onClick={() => !disabled && setIsOpen((prev) => !prev)}
@@ -289,7 +300,7 @@ export function VoiceLanguageSelectorCompact({
           "flex size-8 items-center justify-center rounded-full",
           "bg-secondary text-muted-foreground",
           "hover:bg-secondary/80 hover:text-foreground",
-          "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
           disabled && "cursor-not-allowed opacity-50"
         )}
       >
@@ -297,27 +308,31 @@ export function VoiceLanguageSelectorCompact({
       </button>
 
       {isOpen && (
-        <div
-          className="absolute bottom-full right-0 z-50 mb-2 w-48 rounded-md border border-border bg-popover shadow-lg"
-          role="listbox"
-        >
-          <ul className="max-h-48 overflow-y-auto p-1">
+        <div className="absolute bottom-full right-0 z-50 mb-2 w-48 rounded-md border border-border bg-popover shadow-lg">
+          <ul
+            className="max-h-48 overflow-y-auto overscroll-contain p-1"
+            role="listbox"
+            aria-label="Voice recognition language"
+          >
             {VOICE_LANGUAGES.map((lang) => (
-              <li
-                key={lang.code}
-                role="option"
-                aria-selected={lang.code === selectedLanguage}
-                className={cn(
-                  "flex cursor-pointer items-center justify-between rounded-sm px-3 py-1.5 text-sm",
-                  "hover:bg-accent hover:text-accent-foreground",
-                  lang.code === selectedLanguage && "bg-accent/50 font-medium"
-                )}
-                onClick={() => handleSelect(lang)}
-              >
-                <span>{lang.name}</span>
-                {lang.code === selectedLanguage && (
-                  <HiCheck className="size-3 text-primary" aria-hidden="true" />
-                )}
+              <li key={lang.code} role="none">
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={lang.code === selectedLanguage}
+                  className={cn(
+                    "flex w-full cursor-pointer items-center justify-between rounded-sm px-3 py-1.5 text-left text-sm",
+                    "hover:bg-accent hover:text-accent-foreground",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+                    lang.code === selectedLanguage && "bg-accent/50 font-medium"
+                  )}
+                  onClick={() => handleSelect(lang)}
+                >
+                  <span>{lang.name}</span>
+                  {lang.code === selectedLanguage && (
+                    <HiCheck className="size-3 text-primary" aria-hidden="true" />
+                  )}
+                </button>
               </li>
             ))}
           </ul>

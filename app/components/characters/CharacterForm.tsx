@@ -97,7 +97,7 @@ function personalityTemplate(name: string): string {
 
 function exampleDialoguePlaceholder(name: string): string {
   const who = name.trim() || "Nova"
-  return `Mia: How are you today?\n${who}: *adjusts glasses* Oh, splendid! I was just cataloguing some rare specimens.`
+  return `Mia: How are you today?\n${who}: *adjusts glasses* Oh, splendid! I was just cataloguing some rare specimens…`
 }
 
 export function CharacterForm({ initial, mode }: CharacterFormProps) {
@@ -123,9 +123,10 @@ export function CharacterForm({ initial, mode }: CharacterFormProps) {
     category: initial?.category || "general",
   }))
 
-  const initialSnapshot = useRef(JSON.stringify(form))
+  // Lazy: the snapshot is taken once, not re-stringified on every keystroke's render.
+  const [initialSnapshot] = useState(() => JSON.stringify(form))
   const savedRef = useRef(false)
-  const isDirty = JSON.stringify(form) !== initialSnapshot.current
+  const isDirty = JSON.stringify(form) !== initialSnapshot
 
   // Unsaved-changes guard: only while something has changed and we have not just saved.
   useEffect(() => {
@@ -206,14 +207,16 @@ export function CharacterForm({ initial, mode }: CharacterFormProps) {
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || "Couldn't save the character")
+        throw new Error(data.error || "Couldn't save the character. Try again.")
       }
 
       savedRef.current = true
       toast.success(mode === "create" ? `${data.name} is ready` : "Changes saved")
       router.push(`/characters/${data.slug}`)
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Couldn't save the character")
+      toast.error(
+        error instanceof Error ? error.message : "Couldn't save the character. Try again."
+      )
     } finally {
       setIsSubmitting(false)
     }
@@ -235,14 +238,16 @@ export function CharacterForm({ initial, mode }: CharacterFormProps) {
 
       const data = await response.json()
       if (!response.ok) {
-        throw new Error(data.error || "Couldn't delete the character")
+        throw new Error(data.error || "Couldn't delete the character. Try again.")
       }
 
       savedRef.current = true
       toast.success(`${initial.name || "Character"} deleted`)
       router.push("/dashboard/characters")
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Couldn't delete the character")
+      toast.error(
+        error instanceof Error ? error.message : "Couldn't delete the character. Try again."
+      )
     } finally {
       setIsDeleting(false)
       setShowDeleteDialog(false)
@@ -255,7 +260,7 @@ export function CharacterForm({ initial, mode }: CharacterFormProps) {
     <div className="mx-auto w-full max-w-6xl">
       <header className="mb-6">
         <h1 className="text-2xl font-semibold tracking-tight">
-          {mode === "create" ? "Create a character" : `Edit ${initial?.name || "character"}`}
+          {mode === "create" ? "Create a Character" : `Edit ${initial?.name || "Character"}`}
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Give them a face, a voice and a world. You can change everything later.
@@ -272,9 +277,11 @@ export function CharacterForm({ initial, mode }: CharacterFormProps) {
             <Field label="Name" htmlFor="name" required>
               <Input
                 id="name"
+                name="name"
+                autoComplete="off"
                 value={form.name}
                 onChange={(event) => handleChange("name", event.target.value)}
-                placeholder="e.g. Nova the Storyteller"
+                placeholder="e.g. Nova the Storyteller…"
                 maxLength={60}
                 required
               />
@@ -287,9 +294,11 @@ export function CharacterForm({ initial, mode }: CharacterFormProps) {
             >
               <Input
                 id="tagline"
+                name="tagline"
+                autoComplete="off"
                 value={form.tagline}
                 onChange={(event) => handleChange("tagline", event.target.value)}
-                placeholder="A retired star-navigator who still reads the sky"
+                placeholder="A retired star-navigator who still reads the sky…"
                 maxLength={120}
               />
             </Field>
@@ -328,9 +337,11 @@ export function CharacterForm({ initial, mode }: CharacterFormProps) {
             >
               <Textarea
                 id="greeting"
+                name="greeting"
+                autoComplete="off"
                 value={form.greeting}
                 onChange={(event) => handleChange("greeting", event.target.value)}
-                placeholder="*looks up from a worn star-chart* You're late. Sit. I'll tell you why the sky went quiet."
+                placeholder="*looks up from a worn star-chart* You're late. Sit. I'll tell you why the sky went quiet…"
                 maxLength={500}
                 rows={3}
               />
@@ -355,12 +366,14 @@ export function CharacterForm({ initial, mode }: CharacterFormProps) {
                   disabled={form.systemPrompt.trim().length > 0}
                   onClick={() => handleChange("systemPrompt", personalityTemplate(form.name))}
                 >
-                  Start from example
+                  Start from Example
                 </Button>
               }
             >
               <Textarea
                 id="systemPrompt"
+                name="systemPrompt"
+                autoComplete="off"
                 value={form.systemPrompt}
                 onChange={(event) => handleChange("systemPrompt", event.target.value)}
                 placeholder={personalityTemplate(form.name)}
@@ -377,6 +390,8 @@ export function CharacterForm({ initial, mode }: CharacterFormProps) {
             >
               <Textarea
                 id="exampleDialogues"
+                name="exampleDialogues"
+                autoComplete="off"
                 value={form.exampleDialogues}
                 onChange={(event) => handleChange("exampleDialogues", event.target.value)}
                 placeholder={exampleDialoguePlaceholder(form.name)}
@@ -395,9 +410,11 @@ export function CharacterForm({ initial, mode }: CharacterFormProps) {
             >
               <Textarea
                 id="scenario"
+                name="scenario"
+                autoComplete="off"
                 value={form.scenario}
                 onChange={(event) => handleChange("scenario", event.target.value)}
-                placeholder="A lighthouse on the last night before the fog season. The lamp has just gone out."
+                placeholder="A lighthouse on the last night before the fog season. The lamp has just gone out…"
                 maxLength={2000}
                 rows={3}
               />
@@ -410,9 +427,11 @@ export function CharacterForm({ initial, mode }: CharacterFormProps) {
             >
               <Textarea
                 id="description"
+                name="description"
+                autoComplete="off"
                 value={form.description}
                 onChange={(event) => handleChange("description", event.target.value)}
-                placeholder="Nova spent forty years charting stars for an empire that no longer exists..."
+                placeholder="Nova spent forty years charting stars for an empire that no longer exists…"
                 maxLength={2000}
                 rows={4}
               />
@@ -471,7 +490,7 @@ export function CharacterForm({ initial, mode }: CharacterFormProps) {
 
           <div className="flex flex-wrap items-center gap-3">
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Saving..." : mode === "create" ? "Create character" : "Save changes"}
+              {isSubmitting ? "Saving…" : mode === "create" ? "Create Character" : "Save Changes"}
             </Button>
             {isDirty && !isSubmitting && (
               <span className="text-xs text-muted-foreground">Unsaved changes</span>
@@ -484,7 +503,7 @@ export function CharacterForm({ initial, mode }: CharacterFormProps) {
                 onClick={() => setShowDeleteDialog(true)}
                 disabled={isDeleting}
               >
-                {isDeleting ? "Deleting..." : "Delete character"}
+                {isDeleting ? "Deleting…" : "Delete Character"}
               </Button>
             )}
           </div>
@@ -529,7 +548,7 @@ export function CharacterForm({ initial, mode }: CharacterFormProps) {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Keep character</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting}>Keep Character</AlertDialogCancel>
             <AlertDialogAction
               onClick={(event) => {
                 event.preventDefault()
@@ -538,7 +557,7 @@ export function CharacterForm({ initial, mode }: CharacterFormProps) {
               disabled={isDeleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {isDeleting ? "Deleting..." : `Delete ${deleteName}`}
+              {isDeleting ? "Deleting…" : `Delete ${deleteName}`}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -623,6 +642,7 @@ function ToggleRow({
     >
       <input
         id={id}
+        name={id}
         type="checkbox"
         className="mt-0.5 size-4 shrink-0 accent-primary"
         checked={checked}
@@ -727,15 +747,19 @@ function ImageField({
             aria-controls={`${id}-url`}
             onClick={() => setShowUrlInput((open) => !open)}
           >
-            {showUrlInput ? "Hide image URL" : "or paste an image URL"}
+            {showUrlInput ? "Hide Image URL" : "Or Paste an Image URL"}
           </button>
           {showUrlInput && (
             <Input
               id={id}
+              name={id}
               type="url"
+              inputMode="url"
+              autoComplete="off"
+              spellCheck={false}
               value={value}
               onChange={(event) => onChange(event.target.value)}
-              placeholder="https://..."
+              placeholder="https://…"
               aria-label={`${label} URL`}
               className="h-9"
             />
@@ -812,11 +836,13 @@ function TagInput({
       <input
         ref={inputRef}
         id={id}
+        name={id}
+        autoComplete="off"
         value={draft}
         onChange={(event) => setDraft(event.target.value)}
         onKeyDown={handleKeyDown}
         onBlur={commitDraft}
-        placeholder={atLimit ? "" : value.length === 0 ? "fantasy, mentor, slow burn" : ""}
+        placeholder={atLimit ? "" : value.length === 0 ? "fantasy, mentor, slow burn…" : ""}
         disabled={atLimit}
         maxLength={MAX_TAG_LENGTH}
         className="min-w-[8rem] flex-1 bg-transparent py-0.5 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed"

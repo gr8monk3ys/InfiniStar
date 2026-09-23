@@ -66,16 +66,16 @@ export async function GET(request: NextRequest) {
 
     const { category, includeExpired } = queryResult.data
 
-    // Get memories
-    const memories = await getUserMemories(currentUser.id, {
-      category,
-      includeExpired,
-      orderBy: "importance",
-      order: "desc",
-    })
-
-    // Get capacity info
-    const capacityInfo = await canCreateMemory(currentUser.id)
+    // The list and the capacity are independent reads, so they run together.
+    const [memories, capacityInfo] = await Promise.all([
+      getUserMemories(currentUser.id, {
+        category,
+        includeExpired,
+        orderBy: "importance",
+        order: "desc",
+      }),
+      canCreateMemory(currentUser.id),
+    ])
 
     return NextResponse.json({
       memories,

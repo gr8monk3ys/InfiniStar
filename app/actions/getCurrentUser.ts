@@ -1,4 +1,6 @@
+import { cache } from "react"
 import { cookies } from "next/headers"
+import { after } from "next/server"
 
 import { ATTRIBUTION_COOKIE_NAME } from "@/app/lib/attribution"
 import { persistAttributionForUser } from "@/app/lib/attribution-persist"
@@ -20,7 +22,14 @@ const slimSelect = {
 
 export type SlimUser = NonNullable<Awaited<ReturnType<typeof getCurrentUserSlim>>>
 
-export async function getCurrentUserSlim() {
+/**
+ * Wrapped in `React.cache` so every server component in one render shares a
+ * single auth + user lookup. A conversation page reached the viewer through the
+ * page, the conversations layout, `getConversations` and `getConversationById`
+ * — four identical round trips per request before this. Outside a React render
+ * (route handlers, tests) `cache` is a pass-through.
+ */
+export const getCurrentUserSlim = cache(async () => {
   try {
     const session = await getAuthSession()
     if (!session?.user?.id) {
@@ -34,9 +43,22 @@ export async function getCurrentUserSlim() {
   } catch {
     return null
   }
+})
+
+/**
+ * Schedules work to run after the response is sent. `after` needs a request
+ * scope; where there is none (a test, a script) the work still runs, just not
+ * deferred. The attribution write is best-effort and never throws.
+ */
+function runAfterResponse(task: () => Promise<void>) {
+  try {
+    after(task)
+  } catch {
+    void task()
+  }
 }
 
-const getCurrentUser = async () => {
+const getCurrentUser = cache(async () => {
   try {
     const session = await getAuthSession()
     if (!session?.user?.id) {
@@ -56,26 +78,26 @@ const getCurrentUser = async () => {
 
     if (user) {
       // First-authenticated-request enrichment: capture first-touch attribution
-      // from the visitor cookie and fire signup_completed. Fire-and-forget.
+      // from the visitor cookie and fire signup_completed. Deferred until after
+      // the response so it neither delays the request nor is dropped when a
+      // serverless instance freezes on a bare fire-and-forget promise.
       const cookieStore = await cookies()
       const rawAttribution = cookieStore.get(ATTRIBUTION_COOKIE_NAME)?.value
-      void persistAttributionForUser(
-        {
-          id: user.id,
-          utmSource: user.utmSource,
-          utmMedium: user.utmMedium,
-          utmCampaign: user.utmCampaign,
-          referralSource: user.referralSource,
-          firstTouchAt: user.firstTouchAt,
-        },
-        rawAttribution
-      )
+      const attributionRow = {
+        id: user.id,
+        utmSource: user.utmSource,
+        utmMedium: user.utmMedium,
+        utmCampaign: user.utmCampaign,
+        referralSource: user.referralSource,
+        firstTouchAt: user.firstTouchAt,
+      }
+      runAfterResponse(() => persistAttributionForUser(attributionRow, rawAttribution))
     }
 
     return user
   } catch {
     return null
   }
-}
+})
 
 export default getCurrentUser

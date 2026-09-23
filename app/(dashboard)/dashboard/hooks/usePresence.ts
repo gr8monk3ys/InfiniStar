@@ -94,8 +94,10 @@ export default function usePresence() {
     void resetAwayTimer()
 
     // Add event listeners
+    // Passive: these only reset a timer and never call preventDefault, so they must
+    // not hold up scrolling or touch handling.
     activityEvents.forEach((event) => {
-      window.addEventListener(event, handleActivity)
+      window.addEventListener(event, handleActivity, { passive: true })
     })
     document.addEventListener("visibilitychange", handleVisibilityChange)
 

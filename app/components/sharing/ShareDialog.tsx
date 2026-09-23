@@ -20,6 +20,7 @@ import { ShareInviteForm } from "./ShareInviteForm"
 import { ShareLinkCopy } from "./ShareLinkCopy"
 import {
   ShareSettings,
+  toDateTimeLocalValue,
   type SharePermission,
   type ShareSettingsData,
   type ShareType,
@@ -42,15 +43,33 @@ const defaultSettings: ShareSettingsData = {
   name: "",
 }
 
+/**
+ * The dialog content only mounts while open, so every open starts from the
+ * list view with fresh shares and cleared forms — no effect has to watch
+ * `isOpen` and reset each piece of state.
+ */
 export function ShareDialog({
   conversationId,
   conversationName,
   isOpen,
   onClose,
 }: ShareDialogProps) {
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto overscroll-contain sm:max-w-lg">
+        <ShareDialogBody conversationId={conversationId} conversationName={conversationName} />
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function ShareDialogBody({
+  conversationId,
+  conversationName,
+}: Pick<ShareDialogProps, "conversationId" | "conversationName">) {
   const [view, setView] = useState<View>("list")
   const [shares, setShares] = useState<ShareItem[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(Boolean(conversationId))
   const [isCreating, setIsCreating] = useState(false)
   const [settings, setSettings] = useState<ShareSettingsData>(defaultSettings)
   const [inviteEmails, setInviteEmails] = useState<string[]>([])
@@ -77,20 +96,13 @@ export function ShareDialog({
   }, [conversationId])
 
   useEffect(() => {
-    if (isOpen) {
-      void fetchShares()
-      setView("list")
-      setCreatedShareUrl(null)
-      setSettings(defaultSettings)
-      setInviteEmails([])
-      setEditingShare(null)
-    }
-  }, [isOpen, fetchShares])
+    void fetchShares()
+  }, [fetchShares])
 
   // Create a new share
   const handleCreate = async () => {
     if (settings.shareType === "INVITE" && inviteEmails.length === 0) {
-      toast.error("Please add at least one email address for invite-only shares")
+      toast.error("Add at least one email address to create an invite-only link.")
       return
     }
 
@@ -119,7 +131,8 @@ export function ShareDialog({
       toast.success("Share link created")
     } catch (error) {
       console.error("Failed to create share:", error)
-      const message = error instanceof Error ? error.message : "Failed to create share link"
+      const message =
+        error instanceof Error ? error.message : "Couldn't create the share link. Try again."
       toast.error(message)
     } finally {
       setIsCreating(false)
@@ -154,7 +167,7 @@ export function ShareDialog({
     setSettings({
       shareType: share.shareType as ShareType,
       permission: share.permission as SharePermission,
-      expiresAt: share.expiresAt ? new Date(share.expiresAt).toISOString().slice(0, 16) : null,
+      expiresAt: share.expiresAt ? toDateTimeLocalValue(new Date(share.expiresAt)) : null,
       maxUses: share.maxUses,
       name: share.name || "",
     })
@@ -190,7 +203,8 @@ export function ShareDialog({
       setEditingShare(null)
     } catch (error) {
       console.error("Failed to update share:", error)
-      const message = error instanceof Error ? error.message : "Failed to update share link"
+      const message =
+        error instanceof Error ? error.message : "Couldn't update the share link. Try again."
       toast.error(message)
     } finally {
       setIsCreating(false)
@@ -206,106 +220,109 @@ export function ShareDialog({
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Link className="size-5" />
-            {view === "list" && "Share Conversation"}
-            {view === "create" && "Create Share Link"}
-            {view === "edit" && "Edit Share Link"}
-          </DialogTitle>
-          <DialogDescription>
-            {conversationName
-              ? `Share "${conversationName}" with others`
-              : "Share this conversation with others"}
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <DialogHeader>
+        <DialogTitle className="flex items-center gap-2">
+          <Link className="size-5" aria-hidden="true" />
+          {view === "list" && "Share Conversation"}
+          {view === "create" && "Create Share Link"}
+          {view === "edit" && "Edit Share Link"}
+        </DialogTitle>
+        <DialogDescription>
+          {conversationName
+            ? `Share “${conversationName}” with others`
+            : "Share this conversation with others"}
+        </DialogDescription>
+      </DialogHeader>
 
-        {view === "list" && (
-          <>
+      {view === "list" && (
+        <>
+          <div className="space-y-4">
+            <Button onClick={() => setView("create")} className="w-full gap-2">
+              <Plus className="size-4" aria-hidden="true" />
+              Create Share Link
+            </Button>
+
+            <Separator />
+
+            <div>
+              <h3 className="mb-3 flex items-center gap-2 text-sm font-medium">
+                <Settings className="size-4" aria-hidden="true" />
+                Active Share Links
+              </h3>
+              <ActiveShares
+                shares={shares}
+                onDelete={handleDelete}
+                onEdit={handleEdit}
+                onToggleActive={handleToggleActive}
+                isLoading={isLoading}
+              />
+            </div>
+          </div>
+        </>
+      )}
+
+      {(view === "create" || view === "edit") && (
+        <div className="space-y-6">
+          {createdShareUrl ? (
             <div className="space-y-4">
-              <Button onClick={() => setView("create")} className="w-full gap-2">
-                <Plus className="size-4" />
-                Create Share Link
-              </Button>
-
-              <Separator />
-
-              <div>
-                <h3 className="mb-3 flex items-center gap-2 text-sm font-medium">
-                  <Settings className="size-4" />
-                  Active Share Links
-                </h3>
-                <ActiveShares
-                  shares={shares}
-                  onDelete={handleDelete}
-                  onEdit={handleEdit}
-                  onToggleActive={handleToggleActive}
-                  isLoading={isLoading}
-                />
+              <div
+                className="rounded-lg border border-green-200 bg-green-50 p-4 dark:border-green-900 dark:bg-green-950"
+                role="status"
+              >
+                <p className="mb-2 font-medium text-green-800 dark:text-green-200">
+                  Share link created successfully!
+                </p>
+                <p className="text-sm text-green-700 dark:text-green-300">
+                  Copy the link below to share with others.
+                </p>
+              </div>
+              <ShareLinkCopy shareUrl={createdShareUrl} />
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={handleBack}>
+                  Back to Shares
+                </Button>
+                <Button
+                  onClick={() => {
+                    setCreatedShareUrl(null)
+                    setSettings(defaultSettings)
+                    setInviteEmails([])
+                  }}
+                >
+                  Create Another Link
+                </Button>
               </div>
             </div>
-          </>
-        )}
+          ) : (
+            <>
+              <ShareSettings settings={settings} onChange={setSettings} />
 
-        {(view === "create" || view === "edit") && (
-          <div className="space-y-6">
-            {createdShareUrl ? (
-              <div className="space-y-4">
-                <div className="rounded-lg border border-green-200 bg-green-50 p-4 dark:border-green-900 dark:bg-green-950">
-                  <p className="mb-2 font-medium text-green-800 dark:text-green-200">
-                    Share link created successfully!
-                  </p>
-                  <p className="text-sm text-green-700 dark:text-green-300">
-                    Copy the link below to share with others.
-                  </p>
-                </div>
-                <ShareLinkCopy shareUrl={createdShareUrl} />
-                <div className="flex justify-end gap-2">
-                  <Button variant="outline" onClick={handleBack}>
-                    Back to Shares
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      setCreatedShareUrl(null)
-                      setSettings(defaultSettings)
-                      setInviteEmails([])
-                    }}
-                  >
-                    Create Another
-                  </Button>
-                </div>
+              {settings.shareType === "INVITE" && (
+                <>
+                  <Separator />
+                  <ShareInviteForm emails={inviteEmails} onChange={setInviteEmails} />
+                </>
+              )}
+
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={handleBack}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={view === "edit" ? handleUpdate : handleCreate}
+                  disabled={isCreating}
+                >
+                  {isCreating && (
+                    <Loader2 className="mr-2 size-4 animate-spin" aria-hidden="true" />
+                  )}
+                  {view === "edit" ? "Update Share" : "Create Share"}
+                </Button>
               </div>
-            ) : (
-              <>
-                <ShareSettings settings={settings} onChange={setSettings} />
-
-                {settings.shareType === "INVITE" && (
-                  <>
-                    <Separator />
-                    <ShareInviteForm emails={inviteEmails} onChange={setInviteEmails} />
-                  </>
-                )}
-
-                <div className="flex justify-end gap-2">
-                  <Button variant="outline" onClick={handleBack}>
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={view === "edit" ? handleUpdate : handleCreate}
-                    disabled={isCreating}
-                  >
-                    {isCreating && <Loader2 className="mr-2 size-4 animate-spin" />}
-                    {view === "edit" ? "Update Share" : "Create Share"}
-                  </Button>
-                </div>
-              </>
-            )}
-          </div>
-        )}
-      </DialogContent>
-    </Dialog>
+            </>
+          )}
+        </div>
+      )}
+    </>
   )
 }
 

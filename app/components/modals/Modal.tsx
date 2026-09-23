@@ -26,7 +26,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children }) => {
           <div className="fixed inset-0 bg-scrim/70 transition-opacity" />
         </Transition.Child>
 
-        <div className="fixed inset-0 z-10 overflow-y-auto">
+        <div className="fixed inset-0 z-10 overflow-y-auto overscroll-contain">
           <div className="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
             <Transition.Child
               as={Fragment}
@@ -45,7 +45,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children }) => {
                     onClick={onClose}
                   >
                     <span className="sr-only">Close</span>
-                    <IoClose className="size-6" />
+                    <IoClose className="size-6" aria-hidden="true" />
                   </button>
                 </div>
                 {children}

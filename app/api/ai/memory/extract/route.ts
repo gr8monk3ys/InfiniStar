@@ -108,13 +108,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get existing memories for context
-    const existingMemories = await getUserMemories(currentUser.id)
-
-    const grant = await requestAiAccess({
-      userId: currentUser.id,
-      requestType: "memory-extract",
-    })
+    // Existing memories (context for the extractor) and the access decision are
+    // independent reads, so they run together. Access is still checked before
+    // the model is called.
+    const [existingMemories, grant] = await Promise.all([
+      getUserMemories(currentUser.id),
+      requestAiAccess({
+        userId: currentUser.id,
+        requestType: "memory-extract",
+      }),
+    ])
     if (!grant.ok) return grant.response
 
     // Extract memories using AI
@@ -138,9 +141,8 @@ export async function POST(request: NextRequest) {
     if (autoSave) {
       // Check capacity before saving
       const capacityInfo = await canCreateMemory(currentUser.id)
-      const newMemoriesCount = extractedMemories.filter(
-        (m) => !existingMemories.some((em) => em.key === m.key)
-      ).length
+      const existingKeys = new Set(existingMemories.map((memory) => memory.key))
+      const newMemoriesCount = extractedMemories.filter((m) => !existingKeys.has(m.key)).length
 
       if (newMemoriesCount > capacityInfo.limit - capacityInfo.current) {
         return NextResponse.json(

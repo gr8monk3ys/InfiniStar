@@ -58,11 +58,14 @@ const LABELS = [
 
 const KNOWN_LABELS: ReadonlySet<string> = new Set(LABELS)
 
+/** Qualifiers that escalate a flagged label from review to block. */
+const BLOCKING_QUALIFIERS = ["minors", "threatening", "graphic", "instructions"] as const
+
 function severityFromFlaggedKeys(keys: string[]): ModerationSeverity {
-  const normalized = keys.map((key) => key.toLowerCase())
-  const shouldBlock = normalized.some((key) =>
-    ["minors", "threatening", "graphic", "instructions"].some((token) => key.includes(token))
-  )
+  const shouldBlock = keys.some((key) => {
+    const normalized = key.toLowerCase()
+    return BLOCKING_QUALIFIERS.some((token) => normalized.includes(token))
+  })
   return shouldBlock ? "block" : "review"
 }
 

@@ -57,13 +57,13 @@ describe("CharacterForm", () => {
     render(<CharacterForm mode="create" />)
 
     fireEvent.change(screen.getByLabelText(/^Name/), { target: { value: "Nova" } })
-    const start = screen.getByRole("button", { name: "Start from example" })
+    const start = screen.getByRole("button", { name: "Start from Example" })
     expect(start).toBeEnabled()
 
     fireEvent.click(start)
     const prompt = screen.getByLabelText(/Personality & rules/) as HTMLTextAreaElement
     expect(prompt.value).toMatch(/^You are Nova, /)
-    expect(screen.getByRole("button", { name: "Start from example" })).toBeDisabled()
+    expect(screen.getByRole("button", { name: "Start from Example" })).toBeDisabled()
   })
 
   it("turns typed tags into chips and submits them as an array", async () => {
@@ -90,7 +90,7 @@ describe("CharacterForm", () => {
     expect(screen.queryByRole("button", { name: "Remove tag slow burn" })).not.toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Remove tag fantasy" })).toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole("button", { name: "Create character" }))
+    fireEvent.click(screen.getByRole("button", { name: "Create Character" }))
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
     const [url, init] = fetchMock.mock.calls[0]
@@ -133,7 +133,7 @@ describe("CharacterForm", () => {
       />
     )
 
-    fireEvent.click(screen.getByRole("button", { name: "Delete character" }))
+    fireEvent.click(screen.getByRole("button", { name: "Delete Character" }))
 
     const dialog = await screen.findByRole("alertdialog")
     expect(dialog).toHaveTextContent("Delete Nova?")

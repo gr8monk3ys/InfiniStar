@@ -15,7 +15,7 @@ export function MainNav({ items }: MainNavProps) {
     <div className="flex gap-6 md:gap-10">
       <Link href="/" className="flex items-center space-x-2">
         <Icons.logo className="size-6" aria-hidden="true" />
-        <span className="gradient-text inline-block font-heading text-lg font-bold">
+        <span className="gradient-text inline-block font-heading text-lg font-bold" translate="no">
           {siteConfig.name}
         </span>
       </Link>

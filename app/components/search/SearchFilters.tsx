@@ -52,6 +52,8 @@ const SORT_OPTIONS: { value: SearchSortBy; label: string }[] = [
   { value: "messageCount", label: "Most Messages" },
 ]
 
+const RESULT_TYPES: SearchResultType[] = ["all", "conversations", "messages"]
+
 /**
  * SearchFilters Component
  *
@@ -112,6 +114,9 @@ export function SearchFilters({
     [filters.tagIds, onFiltersChange]
   )
 
+  // Membership is checked once per tag chip below
+  const selectedTagIds = new Set(filters.tagIds)
+
   // Clear date range
   const handleClearDateRange = useCallback(() => {
     onFiltersChange({ dateFrom: undefined, dateTo: undefined })
@@ -122,10 +127,10 @@ export function SearchFilters({
       {/* Header with filter count and clear button */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <HiAdjustmentsHorizontal className="size-4 text-muted-foreground" />
+          <HiAdjustmentsHorizontal className="size-4 text-muted-foreground" aria-hidden="true" />
           <span className="text-sm font-medium text-foreground">Filters</span>
           {activeFilterCount > 0 && (
-            <span className="flex size-5 items-center justify-center rounded-full bg-primary/10 text-xs font-medium text-primary-accent">
+            <span className="flex size-5 items-center justify-center rounded-full bg-primary/10 text-xs font-medium tabular-nums text-primary-accent">
               {activeFilterCount}
             </span>
           )}
@@ -138,19 +143,19 @@ export function SearchFilters({
             className="flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-50"
             aria-label="Clear all filters"
           >
-            <HiOutlineXMark className="size-3.5" />
-            Clear all
+            <HiOutlineXMark className="size-3.5" aria-hidden="true" />
+            Clear All
           </button>
         )}
       </div>
 
       {/* Result type tabs */}
-      <div>
-        <label className="mb-1.5 block text-xs font-medium text-foreground">
+      <fieldset>
+        <legend className="mb-1.5 block text-xs font-medium text-foreground">
           Show results from
-        </label>
+        </legend>
         <div className="flex rounded-lg border border-border p-0.5">
-          {(["all", "conversations", "messages"] as SearchResultType[]).map((type) => (
+          {RESULT_TYPES.map((type) => (
             <button
               key={type}
               type="button"
@@ -167,13 +172,13 @@ export function SearchFilters({
             </button>
           ))}
         </div>
-      </div>
+      </fieldset>
 
       {/* AI/Human toggle */}
-      <div>
-        <label className="mb-1.5 block text-xs font-medium text-foreground">
+      <fieldset>
+        <legend className="mb-1.5 block text-xs font-medium text-foreground">
           Conversation type
-        </label>
+        </legend>
         <div className="flex gap-2">
           <button
             type="button"
@@ -199,7 +204,7 @@ export function SearchFilters({
             } disabled:opacity-50`}
             aria-pressed={filters.isAI === true}
           >
-            <HiSparkles className="size-3.5" />
+            <HiSparkles className="size-3.5" aria-hidden="true" />
             AI
           </button>
           <button
@@ -213,11 +218,11 @@ export function SearchFilters({
             } disabled:opacity-50`}
             aria-pressed={filters.isAI === false}
           >
-            <HiUser className="size-3.5" />
+            <HiUser className="size-3.5" aria-hidden="true" />
             Human
           </button>
         </div>
-      </div>
+      </fieldset>
 
       {/* AI Personality dropdown (only when AI filter is active) */}
       {filters.isAI === true && (
@@ -230,6 +235,7 @@ export function SearchFilters({
           </label>
           <select
             id="personality-filter"
+            name="personality"
             value={filters.personality || ""}
             onChange={(e) =>
               onFiltersChange({
@@ -250,8 +256,8 @@ export function SearchFilters({
       )}
 
       {/* Date range picker */}
-      <div>
-        <label className="mb-1.5 block text-xs font-medium text-foreground">Date range</label>
+      <fieldset>
+        <legend className="mb-1.5 block text-xs font-medium text-foreground">Date range</legend>
         <DateRangePicker
           dateFrom={filters.dateFrom || ""}
           dateTo={filters.dateTo || ""}
@@ -259,19 +265,19 @@ export function SearchFilters({
           onDateToChange={(date) => onFiltersChange({ dateTo: date || undefined })}
           onClear={handleClearDateRange}
         />
-      </div>
+      </fieldset>
 
       {/* Tag filter */}
       {tags.length > 0 && (
-        <div>
-          <label className="mb-1.5 flex items-center gap-1 text-xs font-medium text-foreground">
-            <HiOutlineTag className="size-3.5" />
+        <fieldset>
+          <legend className="mb-1.5 flex items-center gap-1 text-xs font-medium text-foreground">
+            <HiOutlineTag className="size-3.5" aria-hidden="true" />
             Tags
-          </label>
+          </legend>
           <div className="flex flex-wrap gap-1.5">
             {tags.map((tag) => {
               const colorScheme = TAG_COLORS[tag.color as TagColor] || TAG_COLORS.gray
-              const isSelected = filters.tagIds?.includes(tag.id)
+              const isSelected = selectedTagIds.has(tag.id)
               return (
                 <button
                   key={tag.id}
@@ -289,13 +295,15 @@ export function SearchFilters({
                 >
                   {tag.name}
                   {tag.conversationCount > 0 && (
-                    <span className="text-xs opacity-70">({tag.conversationCount})</span>
+                    <span className="text-xs tabular-nums opacity-70">
+                      ({tag.conversationCount})
+                    </span>
                   )}
                 </button>
               )
             })}
           </div>
-        </div>
+        </fieldset>
       )}
 
       {/* Additional filters */}
@@ -312,8 +320,8 @@ export function SearchFilters({
           } disabled:opacity-50`}
           aria-pressed={filters.hasAttachments}
         >
-          <HiOutlinePhoto className="size-3.5" />
-          Has images
+          <HiOutlinePhoto className="size-3.5" aria-hidden="true" />
+          Has Images
         </button>
 
         {/* Include archived toggle */}
@@ -328,8 +336,8 @@ export function SearchFilters({
           } disabled:opacity-50`}
           aria-pressed={filters.archived}
         >
-          <HiOutlineArchiveBox className="size-3.5" />
-          Include archived
+          <HiOutlineArchiveBox className="size-3.5" aria-hidden="true" />
+          Include Archived
         </button>
       </div>
 
@@ -340,6 +348,7 @@ export function SearchFilters({
         </label>
         <select
           id="sort-filter"
+          name="sortBy"
           value={filters.sortBy}
           onChange={(e) => onFiltersChange({ sortBy: e.target.value as SearchSortBy })}
           disabled={isLoading}

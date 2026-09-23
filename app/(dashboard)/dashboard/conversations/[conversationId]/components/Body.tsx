@@ -77,6 +77,9 @@ const Body: React.FC<BodyProps> = memo(function Body({
           return (
             <div
               key={virtualItem.key}
+              // Registers the row so its real height is measured; without it every
+              // message is laid out at the 100px estimate and rows overlap.
+              ref={virtualizer.measureElement}
               data-index={virtualItem.index}
               style={{
                 position: "absolute",

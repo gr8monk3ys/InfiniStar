@@ -10,10 +10,14 @@ interface TwoFactorBackupCodesProps {
 }
 
 export function TwoFactorBackupCodes({ backupCodes, onDone }: TwoFactorBackupCodesProps) {
-  const copyBackupCodes = useCallback(() => {
+  const copyBackupCodes = useCallback(async () => {
     const codesText = backupCodes.join("\n")
-    void navigator.clipboard.writeText(codesText)
-    toast.success("Backup codes copied to clipboard")
+    try {
+      await navigator.clipboard.writeText(codesText)
+      toast.success("Backup codes copied to clipboard")
+    } catch {
+      toast.error("Couldn't copy the codes. Select them and copy manually, or download them.")
+    }
   }, [backupCodes])
 
   const downloadBackupCodes = useCallback(() => {
@@ -39,7 +43,7 @@ export function TwoFactorBackupCodes({ backupCodes, onDone }: TwoFactorBackupCod
     <div className="space-y-6">
       <div className="text-center">
         <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-green-100">
-          <HiShieldCheck className="size-6 text-green-600" />
+          <HiShieldCheck className="size-6 text-green-600" aria-hidden="true" />
         </div>
         <h3 className="mt-4 text-lg font-semibold text-foreground">Save Your Backup Codes</h3>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -57,7 +61,8 @@ export function TwoFactorBackupCodes({ backupCodes, onDone }: TwoFactorBackupCod
         {backupCodes.map((code) => (
           <code
             key={code}
-            className="rounded bg-background px-3 py-2 font-mono text-sm text-foreground"
+            translate="no"
+            className="rounded bg-background px-3 py-2 font-mono text-sm tabular-nums text-foreground"
           >
             {code}
           </code>
@@ -66,23 +71,26 @@ export function TwoFactorBackupCodes({ backupCodes, onDone }: TwoFactorBackupCod
 
       <div className="flex justify-center gap-4">
         <button
+          type="button"
           onClick={copyBackupCodes}
           className="inline-flex items-center gap-2 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground"
         >
-          <HiDocumentDuplicate className="size-4" />
-          Copy
+          <HiDocumentDuplicate className="size-4" aria-hidden="true" />
+          Copy Codes
         </button>
         <button
+          type="button"
           onClick={downloadBackupCodes}
           className="inline-flex items-center gap-2 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground"
         >
-          <HiArrowDownTray className="size-4" />
-          Download
+          <HiArrowDownTray className="size-4" aria-hidden="true" />
+          Download Codes
         </button>
       </div>
 
       <div className="flex justify-center">
         <button
+          type="button"
           onClick={onDone}
           className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
         >

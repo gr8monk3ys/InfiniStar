@@ -43,7 +43,7 @@ export default function useImageGeneration({
     }
 
     setIsGeneratingImage(true)
-    const loader = toast.loading("Generating image...")
+    const loader = toast.loading("Generating image…")
 
     try {
       const res = await fetch("/api/ai/image/generate", {
@@ -57,14 +57,16 @@ export default function useImageGeneration({
 
       const data = (await res.json().catch(() => null)) as { error?: string } | null
       if (!res.ok) {
-        throw new Error(data?.error || "Failed to generate image")
+        throw new Error(data?.error || "Couldn't generate the image. Try again.")
       }
 
       toast.success("Image sent")
       setImageGenOpen(false)
       setImageGenPrompt("")
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to generate image")
+      toast.error(
+        error instanceof Error ? error.message : "Couldn't generate the image. Try again."
+      )
     } finally {
       toast.dismiss(loader)
       setIsGeneratingImage(false)

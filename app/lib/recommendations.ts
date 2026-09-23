@@ -108,46 +108,51 @@ export async function getRecommendationSignalsForUser(
     }),
   ])
 
-  const likedCharacters = likes
-    .map((entry) => entry.character)
-    .filter((character): character is { id: string; category: string; createdById: string } =>
-      Boolean(character)
-    )
-    .map((character) => ({
-      id: character.id,
-      category: character.category,
-      createdById: character.createdById,
-      weight: 1,
-    }))
+  const likedCharacters: CharacterPreferenceInput[] = likes.flatMap(({ character }) =>
+    character
+      ? [
+          {
+            id: character.id,
+            category: character.category,
+            createdById: character.createdById,
+            weight: 1,
+          },
+        ]
+      : []
+  )
 
-  const interactedCharacters = recentConversations
-    .map((conversation) => {
+  const now = Date.now()
+  const interactedCharacters: CharacterPreferenceInput[] = recentConversations.flatMap(
+    (conversation) => {
       if (!conversation.character) {
-        return null
+        return []
       }
       const ageInDays = Math.max(
         0,
-        (Date.now() - new Date(conversation.lastMessageAt).getTime()) / ONE_DAY_MS
+        (now - new Date(conversation.lastMessageAt).getTime()) / ONE_DAY_MS
       )
       const recencyWeight = Math.max(0.25, 1.4 - ageInDays / 30)
 
-      return {
-        id: conversation.character.id,
-        category: conversation.character.category,
-        createdById: conversation.character.createdById,
-        weight: recencyWeight,
-      }
-    })
-    .filter((character): character is CharacterPreferenceInput => Boolean(character))
+      return [
+        {
+          id: conversation.character.id,
+          category: conversation.character.category,
+          createdById: conversation.character.createdById,
+          weight: recencyWeight,
+        },
+      ]
+    }
+  )
 
   return createRecommendationSignals(likedCharacters, interactedCharacters)
 }
 
 function scoreCharacter(
   character: RecommendationCharacter,
-  signals: RecommendationSignals
+  signals: RecommendationSignals,
+  now: number
 ): number {
-  const ageInDays = Math.max(0, (Date.now() - new Date(character.createdAt).getTime()) / ONE_DAY_MS)
+  const ageInDays = Math.max(0, (now - new Date(character.createdAt).getTime()) / ONE_DAY_MS)
   const freshnessScore = Math.max(0, 10 - ageInDays / 4)
   const popularityScore =
     Math.log10(Math.max(1, character.usageCount) + 1) * 22 +
@@ -173,11 +178,18 @@ export function rankCharactersForUser<T extends RecommendationCharacter>(
   characters: T[],
   signals: RecommendationSignals
 ): T[] {
-  return [...characters].sort((a, b) => {
-    const scoreDiff = scoreCharacter(b, signals) - scoreCharacter(a, signals)
-    if (scoreDiff !== 0) {
-      return scoreDiff
-    }
-    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  })
+  // Score each character once, not once per comparison: the comparator runs
+  // O(n log n) times. One clock reading also keeps the comparator consistent —
+  // a score that drifted with `Date.now()` between comparisons is not a valid
+  // sort key.
+  const now = Date.now()
+  const ranked = characters.map((character) => ({
+    character,
+    score: scoreCharacter(character, signals, now),
+    createdAt: new Date(character.createdAt).getTime(),
+  }))
+
+  ranked.sort((a, b) => b.score - a.score || b.createdAt - a.createdAt)
+
+  return ranked.map((entry) => entry.character)
 }

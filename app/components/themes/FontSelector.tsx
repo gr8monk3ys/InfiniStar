@@ -39,7 +39,11 @@ export function FontSelector({
         <label htmlFor={id} className="block text-sm font-medium text-foreground">
           {label}
         </label>
-        {description && <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>}
+        {description && (
+          <p id={`${id}-description`} className="mt-0.5 text-xs text-muted-foreground">
+            {description}
+          </p>
+        )}
       </div>
       <select
         id={id}
@@ -60,7 +64,9 @@ export function FontSelector({
         style={{ fontFamily: fontFamilyValues[value] }}
       >
         <p className="text-foreground">The quick brown fox jumps over the lazy dog.</p>
-        <p className="mt-1 text-xs text-muted-foreground">ABCDEFGHIJKLMNOPQRSTUVWXYZ 0123456789</p>
+        <p className="mt-1 text-xs text-muted-foreground" translate="no">
+          ABCDEFGHIJKLMNOPQRSTUVWXYZ 0123456789
+        </p>
       </div>
     </div>
   )

@@ -1,8 +1,8 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
+import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
-import { formatDistanceToNow } from "date-fns"
 import {
   AlertCircle,
   Calendar,
@@ -17,6 +17,7 @@ import {
 import toast from "react-hot-toast"
 
 import { api } from "@/app/lib/api-client"
+import { formatRelative } from "@/app/lib/intl-format"
 import { Badge } from "@/app/components/ui/badge"
 import { Button } from "@/app/components/ui/button"
 import {
@@ -45,6 +46,7 @@ export default function JoinPageClient() {
   const { isSignedIn, isLoaded } = useAppAuth()
   const token = params.token as string
   const isAuthenticated = Boolean(isLoaded && isSignedIn)
+  const signInHref = `/sign-in?redirect_url=${encodeURIComponent(`/join/${token}`)}`
 
   const [shareInfo, setShareInfo] = useState<ShareInfo | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -64,7 +66,10 @@ export default function JoinPageClient() {
       })
       setShareInfo(response.shareInfo)
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Failed to load share information"
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : "Couldn't load this invite. Check your connection and reload the page."
       setError(errorMessage)
     } finally {
       setIsLoading(false)
@@ -78,8 +83,7 @@ export default function JoinPageClient() {
   // Handle join
   const handleJoin = async () => {
     if (!isAuthenticated) {
-      const redirectUrl = encodeURIComponent(`/join/${token}`)
-      router.push(`/sign-in?redirect_url=${redirectUrl}`)
+      router.push(signInHref)
       return
     }
 
@@ -95,17 +99,14 @@ export default function JoinPageClient() {
         router.push(`/dashboard/conversations/${response.conversationId}`)
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Failed to join conversation"
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : "Couldn't join the conversation. Check your connection and try again."
       toast.error(errorMessage)
     } finally {
       setIsJoining(false)
     }
-  }
-
-  // Handle login redirect
-  const handleLogin = () => {
-    const redirectUrl = encodeURIComponent(`/join/${token}`)
-    router.push(`/sign-in?redirect_url=${redirectUrl}`)
   }
 
   // Loading state
@@ -113,9 +114,9 @@ export default function JoinPageClient() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <Card className="w-full max-w-md">
-          <CardContent className="flex flex-col items-center py-12">
-            <Loader2 className="size-8 animate-spin text-primary" />
-            <p className="mt-4 text-muted-foreground">Loading share information...</p>
+          <CardContent className="flex flex-col items-center py-12" role="status">
+            <Loader2 className="size-8 animate-spin text-primary" aria-hidden="true" />
+            <p className="mt-4 text-muted-foreground">Loading share information…</p>
           </CardContent>
         </Card>
       </div>
@@ -129,14 +130,14 @@ export default function JoinPageClient() {
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-destructive/10">
-              <AlertCircle className="size-8 text-destructive" />
+              <AlertCircle className="size-8 text-destructive" aria-hidden="true" />
             </div>
             <CardTitle>Unable to Load Share</CardTitle>
-            <CardDescription>{error}</CardDescription>
+            <CardDescription className="break-words">{error}</CardDescription>
           </CardHeader>
           <CardFooter className="justify-center">
-            <Button variant="outline" onClick={() => router.push("/")}>
-              Go to Home
+            <Button variant="outline" asChild>
+              <Link href="/">Go to Home</Link>
             </Button>
           </CardFooter>
         </Card>
@@ -151,16 +152,20 @@ export default function JoinPageClient() {
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-yellow-100 dark:bg-yellow-900/20">
-              <LinkIcon className="size-8 text-yellow-600 dark:text-yellow-400" />
+              <LinkIcon
+                className="size-8 text-yellow-600 dark:text-yellow-400"
+                aria-hidden="true"
+              />
             </div>
             <CardTitle>Share Not Found</CardTitle>
             <CardDescription>
-              This share link may have expired, been revoked, or does not exist.
+              This share link may have expired, been revoked, or does not exist. Ask the person who
+              shared it for a new link.
             </CardDescription>
           </CardHeader>
           <CardFooter className="justify-center">
-            <Button variant="outline" onClick={() => router.push("/")}>
-              Go to Home
+            <Button variant="outline" asChild>
+              <Link href="/">Go to Home</Link>
             </Button>
           </CardFooter>
         </Card>
@@ -173,9 +178,9 @@ export default function JoinPageClient() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-primary/10">
-            <MessageSquare className="size-8 text-primary" />
+            <MessageSquare className="size-8 text-primary" aria-hidden="true" />
           </div>
-          <CardTitle className="text-xl">{shareInfo.conversationName}</CardTitle>
+          <CardTitle className="break-words text-xl">{shareInfo.conversationName}</CardTitle>
           <CardDescription>You have been invited to join this conversation</CardDescription>
         </CardHeader>
 
@@ -184,22 +189,24 @@ export default function JoinPageClient() {
           <div className="rounded-lg border p-4">
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div className="flex items-center gap-2">
-                <MessageSquare className="size-4 text-muted-foreground" />
+                <MessageSquare className="size-4 text-muted-foreground" aria-hidden="true" />
                 <span className="text-muted-foreground">Messages</span>
               </div>
-              <div className="text-right font-medium">{shareInfo.messageCount}</div>
+              <div className="text-right font-medium tabular-nums">{shareInfo.messageCount}</div>
 
               <div className="flex items-center gap-2">
-                <Users className="size-4 text-muted-foreground" />
+                <Users className="size-4 text-muted-foreground" aria-hidden="true" />
                 <span className="text-muted-foreground">Participants</span>
               </div>
-              <div className="text-right font-medium">{shareInfo.participantCount}</div>
+              <div className="text-right font-medium tabular-nums">
+                {shareInfo.participantCount}
+              </div>
 
               <div className="flex items-center gap-2">
                 {shareInfo.permission === "VIEW" ? (
-                  <Eye className="size-4 text-muted-foreground" />
+                  <Eye className="size-4 text-muted-foreground" aria-hidden="true" />
                 ) : (
-                  <Pencil className="size-4 text-muted-foreground" />
+                  <Pencil className="size-4 text-muted-foreground" aria-hidden="true" />
                 )}
                 <span className="text-muted-foreground">Permission</span>
               </div>
@@ -212,13 +219,11 @@ export default function JoinPageClient() {
               {shareInfo.expiresAt && (
                 <>
                   <div className="flex items-center gap-2">
-                    <Calendar className="size-4 text-muted-foreground" />
+                    <Calendar className="size-4 text-muted-foreground" aria-hidden="true" />
                     <span className="text-muted-foreground">Expires</span>
                   </div>
                   <div className="text-right text-muted-foreground">
-                    {formatDistanceToNow(new Date(shareInfo.expiresAt), {
-                      addSuffix: true,
-                    })}
+                    {formatRelative(shareInfo.expiresAt)}
                   </div>
                 </>
               )}
@@ -252,21 +257,23 @@ export default function JoinPageClient() {
             <Button onClick={handleJoin} disabled={isJoining} className="w-full" size="lg">
               {isJoining ? (
                 <>
-                  <Loader2 className="mr-2 size-4 animate-spin" />
-                  Joining...
+                  <Loader2 className="mr-2 size-4 animate-spin" aria-hidden="true" />
+                  Joining…
                 </>
               ) : (
                 <>
-                  <Users className="mr-2 size-4" />
+                  <Users className="mr-2 size-4" aria-hidden="true" />
                   Join Conversation
                 </>
               )}
             </Button>
           ) : (
             <>
-              <Button onClick={handleLogin} className="w-full" size="lg">
-                <LogIn className="mr-2 size-4" />
-                Log in to Join
+              <Button asChild className="w-full" size="lg">
+                <Link href={signInHref}>
+                  <LogIn className="mr-2 size-4" aria-hidden="true" />
+                  Log In to Join
+                </Link>
               </Button>
               <p className="text-center text-xs text-muted-foreground">
                 You need to be logged in to join this conversation

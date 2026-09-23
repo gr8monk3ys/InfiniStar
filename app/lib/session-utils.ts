@@ -1,6 +1,8 @@
 import crypto from "crypto"
 import { UAParser } from "ua-parser-js"
 
+import { formatDate, formatRelative } from "@/app/lib/intl-format"
+
 /**
  * Session Utilities
  *
@@ -163,36 +165,32 @@ export function isSessionExpired(expiresAt: Date): boolean {
   return new Date() > new Date(expiresAt)
 }
 
+const ONE_MINUTE_MS = 60 * 1000
+const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000
+
 /**
- * Format a date for display in relative terms
+ * Format a date for display in relative terms, in the viewer's locale.
+ *
+ * Under a minute reads as "now", under a week as "5 minutes ago" / "2 days
+ * ago", and anything older as a medium date ("Sep 23, 2026"). Built on `Intl`
+ * rather than hand-assembled English and a hardcoded "en-US" date.
  *
  * @param date - The date to format
+ * @param locale - BCP 47 locale; the runtime default when omitted
  * @returns Human-readable relative time string
  */
-export function formatRelativeTime(date: Date): string {
-  const now = new Date()
-  const diff = now.getTime() - new Date(date).getTime()
+export function formatRelativeTime(date: Date, locale?: string): string {
+  const now = Date.now()
+  const value = new Date(date)
+  const diff = now - value.getTime()
 
-  const seconds = Math.floor(diff / 1000)
-  const minutes = Math.floor(seconds / 60)
-  const hours = Math.floor(minutes / 60)
-  const days = Math.floor(hours / 24)
-
-  if (seconds < 60) {
-    return "Just now"
-  } else if (minutes < 60) {
-    return `${minutes} minute${minutes === 1 ? "" : "s"} ago`
-  } else if (hours < 24) {
-    return `${hours} hour${hours === 1 ? "" : "s"} ago`
-  } else if (days < 7) {
-    return `${days} day${days === 1 ? "" : "s"} ago`
-  } else {
-    return new Date(date).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    })
+  if (diff < ONE_MINUTE_MS) {
+    return formatRelative(now, now, locale)
   }
+  if (diff < ONE_WEEK_MS) {
+    return formatRelative(value, now, locale)
+  }
+  return formatDate(value, { dateStyle: "medium" }, locale)
 }
 
 /**

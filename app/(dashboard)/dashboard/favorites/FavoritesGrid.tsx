@@ -15,6 +15,8 @@ interface FavoriteCharacter {
   category: string
   usageCount: number
   likeCount: number
+  commentCount?: number
+  isNsfw?: boolean
   likedAt: Date
   createdBy: {
     id: string
@@ -33,9 +35,15 @@ export default function FavoritesGrid({ characters: initialCharacters }: Favorit
 
   const handleUnlike = useCallback(
     async (characterId: string): Promise<void> => {
-      // Optimistic removal
-      const prevCharacters = characters
-      setCharacters((current) => current.filter((c) => c.id !== characterId))
+      // Optimistic removal. The removed card and its position are captured from the
+      // updater so the callback does not depend on (and re-create with) the list.
+      let removed: { character: FavoriteCharacter; index: number } | null = null
+      setCharacters((current) => {
+        const index = current.findIndex((c) => c.id === characterId)
+        if (index === -1) return current
+        removed = { character: current[index], index }
+        return current.filter((c) => c.id !== characterId)
+      })
 
       try {
         const res = await fetch(`/api/characters/${characterId}/like`, {
@@ -49,17 +57,26 @@ export default function FavoritesGrid({ characters: initialCharacters }: Favorit
 
         if (!res.ok) {
           const data = await res.json()
-          throw new Error(data.error || "Failed to unlike")
+          throw new Error(data.error || "Couldn't remove from favorites. Try again.")
         }
 
         toast.success("Removed from favorites")
       } catch (error) {
-        // Revert on error
-        setCharacters(prevCharacters)
-        toast.error(error instanceof Error ? error.message : "Failed to remove favorite")
+        // Revert on error: put the card back where it was.
+        const restore = removed as { character: FavoriteCharacter; index: number } | null
+        if (restore) {
+          setCharacters((current) =>
+            current.some((c) => c.id === restore.character.id)
+              ? current
+              : current.toSpliced(restore.index, 0, restore.character)
+          )
+        }
+        toast.error(
+          error instanceof Error ? error.message : "Couldn't remove from favorites. Try again."
+        )
       }
     },
-    [characters, token]
+    [token]
   )
 
   if (characters.length === 0) {
@@ -73,12 +90,13 @@ export default function FavoritesGrid({ characters: initialCharacters }: Favorit
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {characters.map((character) => (
-        <CharacterCard
+        // The list is unbounded: let the browser skip off-screen cards.
+        <div
           key={character.id}
-          character={character}
-          isLiked={true}
-          onUnlike={handleUnlike}
-        />
+          className="[contain-intrinsic-size:auto_320px] [content-visibility:auto]"
+        >
+          <CharacterCard character={character} isLiked={true} onUnlike={handleUnlike} />
+        </div>
       ))}
     </div>
   )

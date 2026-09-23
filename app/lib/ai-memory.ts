@@ -70,6 +70,9 @@ export const MEMORY_CATEGORIES: Record<
   },
 }
 
+/** Checked once per extracted memory, so a Set rather than an array scan. */
+const VALID_MEMORY_CATEGORIES: ReadonlySet<string> = new Set(Object.keys(MEMORY_CATEGORIES))
+
 export interface MemoryWithMeta extends AIMemory {
   isExpired?: boolean
 }
@@ -429,9 +432,7 @@ If there's nothing notable to remember, return an empty array.
           memory.key &&
           memory.content &&
           memory.category &&
-          ["PREFERENCE", "FACT", "CONTEXT", "INSTRUCTION", "RELATIONSHIP"].includes(
-            memory.category
-          ) &&
+          VALID_MEMORY_CATEGORIES.has(memory.category) &&
           memory.importance >= 1 &&
           memory.importance <= 5 &&
           memory.content.length <= MAX_MEMORY_CONTENT_LENGTH

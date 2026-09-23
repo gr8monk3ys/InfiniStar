@@ -18,7 +18,7 @@ const Avatar: FC<AvatarProps> = ({ user, className, showPresence = true }) => {
 
   // Get presence status
   const presence = user?.id ? getPresence(user.id) : null
-  const isOnline = members.indexOf(user?.id!) !== -1
+  const isOnline = user?.id ? members.includes(user.id) : false
   const presenceStatus = presence?.presenceStatus || (isOnline ? "online" : "offline")
 
   // Determine presence indicator color
@@ -46,6 +46,7 @@ const Avatar: FC<AvatarProps> = ({ user, className, showPresence = true }) => {
       {showPresence && user && (
         <span
           className={`absolute bottom-0 right-0 block size-3 rounded-full ring-2 ring-white ${getPresenceColor()}`}
+          role="img"
           title={presenceStatus.charAt(0).toUpperCase() + presenceStatus.slice(1)}
           aria-label={`${presenceStatus} status`}
         />

@@ -85,9 +85,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<I
       await publishParticipantJoined({
         conversationId: conversation.id,
         users: conversation.users,
-        notify: conversation.users
-          .filter((user) => user.id !== currentUser.id)
-          .map((user) => user.id),
+        notify: conversation.users.flatMap((user) => (user.id === currentUser.id ? [] : [user.id])),
       })
     }
 

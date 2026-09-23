@@ -18,27 +18,30 @@ interface TwoFactorSetupProps {
   onCancel: () => void
 }
 
+const CODE_LENGTH = 6
+const SINGLE_DIGIT = /^\d$/
+const FULL_CODE = /^\d{6}$/
+
+function createEmptyCode(): string[] {
+  return Array<string>(CODE_LENGTH).fill("")
+}
+
 export function TwoFactorSetup({ setupData, onVerified, onCancel }: TwoFactorSetupProps) {
   const [phase, setPhase] = useState<"scanning" | "verifying">("scanning")
   const [showSecret, setShowSecret] = useState(false)
-  const [verificationCode, setVerificationCode] = useState<string[]>(Array(6).fill(""))
+  const [verificationCode, setVerificationCode] = useState<string[]>(createEmptyCode)
   const [isLoading, setIsLoading] = useState(false)
   const inputRefs = useRef<(HTMLInputElement | null)[]>([])
 
-  const handleCodeChange = useCallback(
-    (index: number, value: string) => {
-      if (value && !/^\d$/.test(value)) return
+  const handleCodeChange = useCallback((index: number, value: string) => {
+    if (value && !SINGLE_DIGIT.test(value)) return
 
-      const newCode = [...verificationCode]
-      newCode[index] = value
-      setVerificationCode(newCode)
+    setVerificationCode((current) => current.with(index, value))
 
-      if (value && index < 5) {
-        inputRefs.current[index + 1]?.focus()
-      }
-    },
-    [verificationCode]
-  )
+    if (value && index < CODE_LENGTH - 1) {
+      inputRefs.current[index + 1]?.focus()
+    }
+  }, [])
 
   const handleKeyDown = useCallback(
     (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -53,24 +56,26 @@ export function TwoFactorSetup({ setupData, onVerified, onCancel }: TwoFactorSet
     [verificationCode]
   )
 
+  // Only take over the paste when it is a whole code; anything else falls
+  // through to the input's own paste handling instead of being swallowed.
   const handlePaste = useCallback((e: React.ClipboardEvent) => {
-    e.preventDefault()
     const pastedData = e.clipboardData.getData("text").trim()
-    if (/^\d{6}$/.test(pastedData)) {
+    if (FULL_CODE.test(pastedData)) {
+      e.preventDefault()
       setVerificationCode(pastedData.split(""))
-      inputRefs.current[5]?.focus()
+      inputRefs.current[CODE_LENGTH - 1]?.focus()
     }
   }, [])
 
   const handleVerifySetup = useCallback(async () => {
     const code = verificationCode.join("")
-    if (code.length !== 6) {
+    if (code.length !== CODE_LENGTH) {
       toast.error("Please enter all 6 digits")
       return
     }
 
     setIsLoading(true)
-    const loader = createLoadingToast("Verifying code...")
+    const loader = createLoadingToast("Verifying code…")
 
     try {
       const response = await api.post<{ backupCodes: string[] }>(
@@ -82,7 +87,10 @@ export function TwoFactorSetup({ setupData, onVerified, onCancel }: TwoFactorSet
       loader.success("Two-factor authentication enabled!")
       onVerified(response.backupCodes)
     } catch (error) {
-      const message = error instanceof ApiError ? error.message : "Failed to verify code"
+      const message =
+        error instanceof ApiError
+          ? error.message
+          : "Couldn't verify the code. Check your connection and try again."
       loader.error(message)
     } finally {
       setIsLoading(false)
@@ -117,44 +125,57 @@ export function TwoFactorSetup({ setupData, onVerified, onCancel }: TwoFactorSet
             Cannot scan the code? Enter this key manually:
           </p>
           <div className="flex items-center gap-2">
-            <code className="flex-1 rounded bg-background px-3 py-2 font-mono text-sm text-foreground">
+            <code
+              translate="no"
+              className="min-w-0 flex-1 break-all rounded bg-background px-3 py-2 font-mono text-sm text-foreground"
+            >
               {showSecret ? setupData.secret : "••••••••••••••••"}
             </code>
             <button
-              onClick={() => setShowSecret(!showSecret)}
+              type="button"
+              onClick={() => setShowSecret((current) => !current)}
               className="p-2 text-muted-foreground hover:text-foreground"
               aria-label={showSecret ? "Hide secret key" : "Show secret key"}
             >
-              {showSecret ? <HiEyeSlash className="size-5" /> : <HiEye className="size-5" />}
+              {showSecret ? (
+                <HiEyeSlash className="size-5" aria-hidden="true" />
+              ) : (
+                <HiEye className="size-5" aria-hidden="true" />
+              )}
             </button>
             <button
+              type="button"
               onClick={() => {
-                void navigator.clipboard.writeText(setupData.secret)
-                toast.success("Secret key copied")
+                navigator.clipboard.writeText(setupData.secret).then(
+                  () => toast.success("Secret key copied"),
+                  () => toast.error("Couldn't copy the key. Show it and type it in manually.")
+                )
               }}
               className="p-2 text-muted-foreground hover:text-foreground"
               aria-label="Copy secret key"
             >
-              <HiDocumentDuplicate className="size-5" />
+              <HiDocumentDuplicate className="size-5" aria-hidden="true" />
             </button>
           </div>
         </div>
 
         <div className="flex justify-between">
           <button
+            type="button"
             onClick={onCancel}
             className="text-sm text-muted-foreground hover:text-foreground"
           >
             Cancel
           </button>
           <button
+            type="button"
             onClick={() => {
               setPhase("verifying")
               setTimeout(() => inputRefs.current[0]?.focus(), 100)
             }}
             className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
           >
-            Continue
+            Continue to Verification
           </button>
         </div>
       </div>
@@ -186,6 +207,8 @@ export function TwoFactorSetup({ setupData, onVerified, onCancel }: TwoFactorSet
             }}
             type="text"
             inputMode="numeric"
+            name={`code-digit-${index + 1}`}
+            autoComplete={index === 0 ? "one-time-code" : "off"}
             maxLength={1}
             value={digit}
             onChange={(e) => handleCodeChange(index, e.target.value)}
@@ -200,6 +223,7 @@ export function TwoFactorSetup({ setupData, onVerified, onCancel }: TwoFactorSet
 
       <div className="flex justify-between">
         <button
+          type="button"
           onClick={() => setPhase("scanning")}
           disabled={isLoading}
           className="text-sm text-muted-foreground hover:text-foreground"
@@ -207,11 +231,12 @@ export function TwoFactorSetup({ setupData, onVerified, onCancel }: TwoFactorSet
           Back
         </button>
         <button
+          type="button"
           onClick={handleVerifySetup}
           disabled={isLoading || verificationCode.some((d) => !d)}
           className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {isLoading ? "Verifying..." : "Verify"}
+          {isLoading ? "Verifying…" : "Verify Code"}
         </button>
       </div>
     </div>

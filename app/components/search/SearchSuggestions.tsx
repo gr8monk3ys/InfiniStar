@@ -77,8 +77,12 @@ export function SearchSuggestions({
 }: SearchSuggestionsProps) {
   if (isLoading) {
     return (
-      <div className={`rounded-lg border border-border bg-popover p-2 shadow-lg ${className}`}>
-        <div className="space-y-2">
+      <div
+        className={`rounded-lg border border-border bg-popover p-2 shadow-lg ${className}`}
+        role="status"
+      >
+        <span className="sr-only">Loading suggestions…</span>
+        <div className="space-y-2" aria-hidden="true">
           {[1, 2, 3].map((i) => (
             <div key={i} className="flex items-center gap-3 px-3 py-2">
               <div className="size-4 animate-pulse rounded bg-muted" />
@@ -100,7 +104,7 @@ export function SearchSuggestions({
       role="listbox"
       aria-label="Search suggestions"
     >
-      <ul className="max-h-64 overflow-y-auto py-1">
+      <ul className="max-h-64 overflow-y-auto overscroll-contain py-1">
         {suggestions.map((suggestion, index) => (
           <li key={suggestion.id}>
             <button
@@ -115,7 +119,9 @@ export function SearchSuggestions({
               aria-selected={index === selectedIndex}
             >
               {/* Icon */}
-              <span className="shrink-0">{getSuggestionIcon(suggestion.type)}</span>
+              <span className="shrink-0" aria-hidden="true">
+                {getSuggestionIcon(suggestion.type)}
+              </span>
 
               {/* Text content */}
               <div className="min-w-0 flex-1">

@@ -91,16 +91,13 @@ export async function GET(request: NextRequest): Promise<NextResponse<AdvancedSe
       )
     }
 
-    // Perform search
-    const results = await advancedSearch(currentUser.id, filters)
-
-    // Include facets if requested
+    // The results and the (optional) facets are independent reads, so they run
+    // together.
     const includeFacets = searchParams.get("includeFacets") === "true"
-    let facets = undefined
-
-    if (includeFacets) {
-      facets = await getSearchFacets(currentUser.id, filters.query)
-    }
+    const [results, facets] = await Promise.all([
+      advancedSearch(currentUser.id, filters),
+      includeFacets ? getSearchFacets(currentUser.id, filters.query) : Promise.resolve(undefined),
+    ])
 
     return NextResponse.json({
       success: true,
@@ -119,6 +116,28 @@ export async function GET(request: NextRequest): Promise<NextResponse<AdvancedSe
   }
 }
 
+// Allowed values, hoisted so each request checks membership in a Set rather
+// than rebuilding and scanning an array.
+const VALID_RESULT_TYPES: ReadonlySet<string> = new Set<SearchResultType>([
+  "all",
+  "conversations",
+  "messages",
+])
+const VALID_PERSONALITIES: ReadonlySet<string> = new Set<AIPersonality>([
+  "helpful",
+  "concise",
+  "creative",
+  "analytical",
+  "empathetic",
+  "professional",
+  "custom",
+])
+const VALID_SORT_OPTIONS: ReadonlySet<string> = new Set<SearchSortBy>([
+  "relevance",
+  "date",
+  "messageCount",
+])
+
 /**
  * Parse and validate search filters from query parameters
  * Supports both new and legacy parameter formats
@@ -130,9 +149,7 @@ function parseSearchFilters(params: URLSearchParams): AdvancedSearchFilters {
   // Type filter
   const typeParam = params.get("type") as SearchResultType | null
   const type: SearchResultType =
-    typeParam && ["all", "conversations", "messages"].includes(typeParam)
-      ? typeParam
-      : DEFAULT_SEARCH_FILTERS.type
+    typeParam && VALID_RESULT_TYPES.has(typeParam) ? typeParam : DEFAULT_SEARCH_FILTERS.type
 
   // Date filters
   const dateFrom = params.get("dateFrom") || undefined
@@ -155,17 +172,8 @@ function parseSearchFilters(params: URLSearchParams): AdvancedSearchFilters {
 
   // Personality filter
   const personalityParam = params.get("personality") as AIPersonality | null
-  const validPersonalities: AIPersonality[] = [
-    "helpful",
-    "concise",
-    "creative",
-    "analytical",
-    "empathetic",
-    "professional",
-    "custom",
-  ]
   const personality =
-    personalityParam && validPersonalities.includes(personalityParam) ? personalityParam : undefined
+    personalityParam && VALID_PERSONALITIES.has(personalityParam) ? personalityParam : undefined
 
   // Tag filter - support comma-separated list or single tagId
   const tagIdsParam = params.get("tagIds")
@@ -186,11 +194,8 @@ function parseSearchFilters(params: URLSearchParams): AdvancedSearchFilters {
 
   // Sort filter
   const sortByParam = params.get("sortBy") as SearchSortBy | null
-  const validSortOptions: SearchSortBy[] = ["relevance", "date", "messageCount"]
   const sortBy =
-    sortByParam && validSortOptions.includes(sortByParam)
-      ? sortByParam
-      : DEFAULT_SEARCH_FILTERS.sortBy
+    sortByParam && VALID_SORT_OPTIONS.has(sortByParam) ? sortByParam : DEFAULT_SEARCH_FILTERS.sortBy
 
   // Pagination - support both 'page' and legacy 'offset'
   const pageParam = params.get("page")

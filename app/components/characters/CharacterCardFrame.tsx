@@ -51,7 +51,7 @@ export function CharacterCardFrame({
       href={`/characters/${character.slug}`}
       className={cn(
         "group relative flex flex-col overflow-hidden rounded-xl border border-border/50",
-        "bg-card transition-all duration-300",
+        "bg-card transition duration-300",
         "hover:-translate-y-1 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/10"
       )}
     >
@@ -70,6 +70,7 @@ export function CharacterCardFrame({
           <div
             className="grain relative flex h-full w-full items-center justify-center"
             style={{ backgroundImage: portrait.backgroundImage }}
+            aria-hidden="true"
           >
             <span className="font-heading text-5xl font-bold text-white/90">
               {portrait.initial}
@@ -77,7 +78,10 @@ export function CharacterCardFrame({
           </div>
         )}
 
-        <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/60 to-transparent" />
+        <div
+          className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/60 to-transparent"
+          aria-hidden="true"
+        />
 
         {character.isNsfw && (
           <span className="absolute left-2 top-2 rounded-full bg-red-600/80 px-2 py-0.5 text-xs font-semibold text-white backdrop-blur-sm">
@@ -88,18 +92,21 @@ export function CharacterCardFrame({
         <div className="absolute bottom-2 left-2 flex items-center gap-2">
           {hasEngagement ? (
             <>
-              <span className="flex items-center gap-1 rounded-full bg-black/50 px-2 py-0.5 text-xs text-white/90 backdrop-blur-sm">
-                <HiChatBubbleLeftRight className="size-3" />
+              <span className="flex items-center gap-1 rounded-full bg-black/50 px-2 py-0.5 text-xs tabular-nums text-white/90 backdrop-blur-sm">
+                <HiChatBubbleLeftRight className="size-3" aria-hidden="true" />
                 {character.usageCount}
+                <span className="sr-only"> chats</span>
               </span>
-              <span className="flex items-center gap-1 rounded-full bg-black/50 px-2 py-0.5 text-xs text-white/90 backdrop-blur-sm">
-                <HiHeart className="size-3" />
+              <span className="flex items-center gap-1 rounded-full bg-black/50 px-2 py-0.5 text-xs tabular-nums text-white/90 backdrop-blur-sm">
+                <HiHeart className="size-3" aria-hidden="true" />
                 {character.likeCount}
+                <span className="sr-only"> likes</span>
               </span>
               {typeof character.commentCount === "number" && (
-                <span className="flex items-center gap-1 rounded-full bg-black/50 px-2 py-0.5 text-xs text-white/90 backdrop-blur-sm">
-                  <HiChatBubbleBottomCenterText className="size-3" />
+                <span className="flex items-center gap-1 rounded-full bg-black/50 px-2 py-0.5 text-xs tabular-nums text-white/90 backdrop-blur-sm">
+                  <HiChatBubbleBottomCenterText className="size-3" aria-hidden="true" />
                   {character.commentCount}
+                  <span className="sr-only"> comments</span>
                 </span>
               )}
             </>

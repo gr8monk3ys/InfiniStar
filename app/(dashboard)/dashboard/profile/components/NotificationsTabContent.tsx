@@ -200,7 +200,7 @@ export function NotificationsTabContent() {
     e.preventDefault()
     setIsLoading(true)
 
-    const loader = createLoadingToast("Saving notification preferences...")
+    const loader = createLoadingToast("Saving notification preferences…")
 
     try {
       const response = await api.patch<{ message: string }>(
@@ -226,7 +226,9 @@ export function NotificationsTabContent() {
       }
     } catch (error) {
       const message =
-        error instanceof ApiError ? error.message : "Failed to save notification preferences"
+        error instanceof ApiError
+          ? error.message
+          : "Couldn't save your notification preferences. Try again."
       loader.error(message)
     } finally {
       setIsLoading(false)
@@ -240,9 +242,10 @@ export function NotificationsTabContent() {
       aria-label="Notification preferences form"
     >
       <div>
-        <h3 className="text-lg font-medium text-foreground">Notification Preferences</h3>
+        <h2 className="text-lg font-medium text-foreground">Notification Preferences</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Control how and when you receive notifications from InfiniStar.
+          Control how and when you receive notifications from <span translate="no">InfiniStar</span>
+          .
         </p>
       </div>
 
@@ -275,13 +278,15 @@ export function NotificationsTabContent() {
               }
 
               if (typeof window === "undefined" || !("Notification" in window)) {
-                toast.error("Browser notifications are not supported on this device.")
+                toast.error("This browser doesn't support notifications. Try a different browser.")
                 return
               }
 
               const permission = await Notification.requestPermission()
               if (permission !== "granted") {
-                toast.error("Notification permission not granted.")
+                toast.error(
+                  "Allow notifications for this site in your browser settings, then try again."
+                )
                 setBrowserNotifications(false)
                 return
               }
@@ -289,7 +294,7 @@ export function NotificationsTabContent() {
               setBrowserNotifications(true)
             }}
             disabled={isLoading}
-            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
+            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
               browserNotifications ? "bg-primary" : "bg-input"
             }`}
           >
@@ -307,14 +312,14 @@ export function NotificationsTabContent() {
       <div className="rounded-lg border border-border bg-muted p-4">
         <div className="flex items-center justify-between gap-4">
           <div className="flex-1">
-            <h4 className="text-sm font-medium text-foreground">Background Push (Beta)</h4>
+            <h3 className="text-sm font-medium text-foreground">Background Push (Beta)</h3>
             <p className="mt-1 text-sm text-muted-foreground">
               Receive notifications even when the app is closed (requires service worker support).
             </p>
-            <p className="mt-2 text-xs text-muted-foreground">
+            <p className="mt-2 text-xs text-muted-foreground" aria-live="polite">
               Status:{" "}
               {pushStatusLoading
-                ? "Checking..."
+                ? "Checking…"
                 : !pushSupported
                   ? "Not supported on this browser"
                   : pushConfigured === false
@@ -341,7 +346,7 @@ export function NotificationsTabContent() {
             onClick={async () => {
               if (pushTestLoading || isLoading) return
               setPushTestLoading(true)
-              const loader = createLoadingToast("Sending test push...")
+              const loader = createLoadingToast("Sending test push…")
               try {
                 await api.post(
                   "/api/notifications/push/test",
@@ -350,7 +355,8 @@ export function NotificationsTabContent() {
                 )
                 loader.success("Test push sent (check your notifications).")
               } catch (error) {
-                const message = error instanceof Error ? error.message : "Failed to send test push"
+                const message =
+                  error instanceof Error ? error.message : "Couldn't send a test push. Try again."
                 loader.error(message)
               } finally {
                 setPushTestLoading(false)
@@ -358,7 +364,7 @@ export function NotificationsTabContent() {
             }}
             className="rounded-md bg-primary px-3 py-2 text-sm text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {pushTestLoading ? "Sending..." : "Send Test"}
+            {pushTestLoading ? "Sending…" : "Send Test Push"}
           </button>
         </div>
       </div>
@@ -382,9 +388,9 @@ export function NotificationsTabContent() {
             id="emailNotifications"
             role="switch"
             aria-checked={emailNotifications}
-            onClick={() => setEmailNotifications(!emailNotifications)}
+            onClick={() => setEmailNotifications((prev) => !prev)}
             disabled={isLoading}
-            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
+            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
               emailNotifications ? "bg-primary" : "bg-input"
             }`}
           >
@@ -408,10 +414,12 @@ export function NotificationsTabContent() {
         </p>
         <select
           id="emailDigest"
+          name="emailDigest"
+          autoComplete="off"
           value={emailDigest}
           onChange={(e) => setEmailDigest(e.target.value as "none" | "daily" | "weekly")}
           disabled={isLoading || !emailNotifications}
-          className="mt-2 block w-full rounded-md border border-border bg-background px-3 py-2 shadow-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
+          className="mt-2 block w-full rounded-md border border-border bg-background px-3 py-2 shadow-sm focus-visible:border-ring focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
         >
           <option value="none">No digest</option>
           <option value="daily">Daily summary</option>
@@ -421,7 +429,7 @@ export function NotificationsTabContent() {
 
       {/* Notification Type Toggles */}
       <div className="space-y-4">
-        <h4 className="text-sm font-medium text-foreground">Notification Types</h4>
+        <h3 className="text-sm font-medium text-foreground">Notification Types</h3>
 
         {/* New Message Notifications */}
         <div className="flex items-center justify-between rounded-lg border border-border p-4">
@@ -441,9 +449,9 @@ export function NotificationsTabContent() {
             id="notifyOnNewMessage"
             role="switch"
             aria-checked={notifyOnNewMessage}
-            onClick={() => setNotifyOnNewMessage(!notifyOnNewMessage)}
+            onClick={() => setNotifyOnNewMessage((prev) => !prev)}
             disabled={isLoading}
-            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
+            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
               notifyOnNewMessage ? "bg-primary" : "bg-input"
             }`}
           >
@@ -471,9 +479,9 @@ export function NotificationsTabContent() {
             id="notifyOnMention"
             role="switch"
             aria-checked={notifyOnMention}
-            onClick={() => setNotifyOnMention(!notifyOnMention)}
+            onClick={() => setNotifyOnMention((prev) => !prev)}
             disabled={isLoading}
-            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
+            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
               notifyOnMention ? "bg-primary" : "bg-input"
             }`}
           >
@@ -504,9 +512,9 @@ export function NotificationsTabContent() {
             id="notifyOnAIComplete"
             role="switch"
             aria-checked={notifyOnAIComplete}
-            onClick={() => setNotifyOnAIComplete(!notifyOnAIComplete)}
+            onClick={() => setNotifyOnAIComplete((prev) => !prev)}
             disabled={isLoading}
-            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
+            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
               notifyOnAIComplete ? "bg-primary" : "bg-input"
             }`}
           >
@@ -522,7 +530,7 @@ export function NotificationsTabContent() {
 
       {/* Muted Conversations Info */}
       <div className="rounded-lg border border-border bg-muted p-4">
-        <h4 className="text-sm font-medium text-foreground">Muted Conversations</h4>
+        <h3 className="text-sm font-medium text-foreground">Muted Conversations</h3>
         <p className="mt-1 text-sm text-muted-foreground">
           You can mute individual conversations to stop receiving notifications from them. To mute a
           conversation, open it and click the mute button in the conversation settings.
@@ -537,7 +545,7 @@ export function NotificationsTabContent() {
           aria-busy={isLoading}
           className="rounded-md bg-primary px-4 py-2 text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {isLoading ? "Saving..." : "Save Preferences"}
+          {isLoading ? "Saving…" : "Save Preferences"}
         </button>
       </div>
     </form>

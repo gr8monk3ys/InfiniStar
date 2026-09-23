@@ -68,12 +68,12 @@ export function QuickReplyBar({
       <div className="flex items-center gap-1 whitespace-nowrap text-xs text-muted-foreground">
         {showType === "recent" ? (
           <>
-            <Clock className="size-3" />
+            <Clock className="size-3" aria-hidden="true" />
             <span>Recent:</span>
           </>
         ) : (
           <>
-            <TrendingUp className="size-3" />
+            <TrendingUp className="size-3" aria-hidden="true" />
             <span>Quick:</span>
           </>
         )}
@@ -84,6 +84,7 @@ export function QuickReplyBar({
         {templates.map((template) => (
           <Button
             key={template.id}
+            type="button"
             variant="outline"
             size="sm"
             onClick={() => handleSelectTemplate(template)}
@@ -92,7 +93,11 @@ export function QuickReplyBar({
           >
             {template.name}
             {template.shortcut && (
-              <Badge variant="secondary" className="ml-1.5 px-1 py-0 font-mono text-xs">
+              <Badge
+                variant="secondary"
+                className="ml-1.5 px-1 py-0 font-mono text-xs"
+                translate="no"
+              >
                 {template.shortcut}
               </Badge>
             )}
@@ -146,11 +151,12 @@ export function QuickReplyChips({
       {popularTemplates.map((template) => (
         <button
           key={template.id}
+          type="button"
           onClick={() => handleSelectTemplate(template)}
           className="inline-flex items-center rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted/80 hover:text-foreground"
           title={template.content}
         >
-          {template.shortcut || template.name}
+          {template.shortcut ? <span translate="no">{template.shortcut}</span> : template.name}
         </button>
       ))}
     </div>

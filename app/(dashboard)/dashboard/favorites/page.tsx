@@ -12,26 +12,6 @@ import FavoritesGrid from "./FavoritesGrid"
 
 export const dynamic = "force-dynamic"
 
-interface CharacterLikeWithCharacter {
-  createdAt: Date
-  character: {
-    id: string
-    slug: string
-    name: string
-    tagline: string | null
-    avatarUrl: string | null
-    category: string
-    usageCount: number
-    likeCount: number
-    createdBy: {
-      id: string
-      name: string | null
-      image: string | null
-    } | null
-    [key: string]: unknown
-  }
-}
-
 export const metadata: Metadata = {
   title: "Favorites | InfiniStar",
   description: "Your favorite AI characters",
@@ -41,11 +21,24 @@ export default async function FavoritesPage() {
   const currentUser = await getCurrentUser()
   if (!currentUser) redirect("/sign-in")
 
+  // Select only what the card renders: everything here is serialized into the
+  // client payload for FavoritesGrid (the full row would include system prompts).
   const likes = await prisma.characterLike.findMany({
     where: { userId: currentUser.id },
-    include: {
+    select: {
+      createdAt: true,
       character: {
-        include: {
+        select: {
+          id: true,
+          slug: true,
+          name: true,
+          tagline: true,
+          avatarUrl: true,
+          category: true,
+          usageCount: true,
+          likeCount: true,
+          commentCount: true,
+          isNsfw: true,
           createdBy: {
             select: { id: true, name: true, image: true },
           },
@@ -55,7 +48,7 @@ export default async function FavoritesPage() {
     orderBy: { createdAt: "desc" },
   })
 
-  const characters = likes.map((like: CharacterLikeWithCharacter) => ({
+  const characters = likes.map((like) => ({
     ...like.character,
     likedAt: like.createdAt,
   }))
@@ -66,9 +59,8 @@ export default async function FavoritesPage() {
         <div className="mb-6 flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold">Favorites</h1>
-            <p className="text-sm text-muted-foreground">
-              {characters.length} character
-              {characters.length !== 1 ? "s" : ""}
+            <p className="text-sm tabular-nums text-muted-foreground">
+              {characters.length} {characters.length === 1 ? "character" : "characters"}
             </p>
           </div>
           <Link href="/explore" className={cn(buttonVariants({ variant: "outline" }))}>
@@ -79,10 +71,10 @@ export default async function FavoritesPage() {
         {characters.length === 0 ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center">
             <div className="rounded-full bg-muted p-6">
-              <HiOutlineHeart className="size-12 text-muted-foreground" />
+              <HiOutlineHeart className="size-12 text-muted-foreground" aria-hidden="true" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold">No favorites yet</h2>
+              <h2 className="text-lg font-semibold">No Favorites Yet</h2>
               <p className="text-sm text-muted-foreground">
                 Like characters to save them here for quick access.
               </p>

@@ -24,12 +24,13 @@ export async function POST(
       return NextResponse.json({ error: "Invalid CSRF token" }, { status: 403 })
     }
 
-    const currentUser = await getCurrentUser()
-
-    // Rate limiting
+    // Rate limiting runs before the user lookup (ADR-0003), so a flood is
+    // rejected without paying for auth and a database round trip.
     if (!(await Promise.resolve(apiLimiter.check(getClientIdentifier(request))))) {
       return NextResponse.json({ error: "Too many requests" }, { status: 429 })
     }
+
+    const currentUser = await getCurrentUser()
     const { conversationId } = await params
 
     if (!currentUser?.id || !currentUser?.email) {

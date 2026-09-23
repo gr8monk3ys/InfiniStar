@@ -30,7 +30,7 @@ export default async function CharactersPage() {
     <div className="flex flex-col gap-6 p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Your characters</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Your Characters</h1>
           <p className="text-sm text-muted-foreground">
             Each card here looks exactly the way it does on Explore.
           </p>
@@ -43,7 +43,7 @@ export default async function CharactersPage() {
             Import
           </Link>
           <Link href="/dashboard/characters/new" className={cn(buttonVariants())}>
-            New character
+            New Character
           </Link>
         </div>
       </div>
@@ -58,13 +58,17 @@ export default async function CharactersPage() {
             href="/dashboard/characters/new"
             className={cn(buttonVariants({ size: "sm" }), "mt-4")}
           >
-            Create a character
+            Create a Character
           </Link>
         </div>
       ) : (
         <ul className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
           {characters.map((character) => (
-            <li key={character.id} className="flex flex-col gap-2">
+            // Unbounded list: let the browser skip layout/paint for off-screen cards.
+            <li
+              key={character.id}
+              className="flex flex-col gap-2 [contain-intrinsic-size:auto_360px] [content-visibility:auto]"
+            >
               <CharacterCardFrame
                 character={{
                   id: character.id,
@@ -87,7 +91,7 @@ export default async function CharactersPage() {
                 }
               />
               <div className="flex items-center justify-between gap-2 px-0.5">
-                <span className="text-xs text-muted-foreground">
+                <span className="text-xs tabular-nums text-muted-foreground">
                   {character.isPublic ? "Public" : "Private"} · {character.usageCount}{" "}
                   {character.usageCount === 1 ? "chat" : "chats"}
                 </span>

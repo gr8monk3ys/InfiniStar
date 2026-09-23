@@ -1,8 +1,7 @@
 "use client"
 
-import { Fragment, memo, useMemo, useState } from "react"
+import { Fragment, memo, useState } from "react"
 import { Dialog, Transition } from "@headlessui/react"
-import { format } from "date-fns"
 import toast from "react-hot-toast"
 import { BsPinAngle, BsPinAngleFill } from "react-icons/bs"
 import {
@@ -16,6 +15,7 @@ import {
 import { IoClose, IoTrash } from "react-icons/io5"
 
 import { api, ApiError } from "@/app/lib/api-client"
+import { formatDate } from "@/app/lib/intl-format"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -70,58 +70,39 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = memo(function ProfileDrawer(
   const { token: csrfToken } = useCsrfToken()
   const otherUser = useOtherUser(data)
 
-  const joinedDate = useMemo(() => {
-    if (!otherUser) return null
-    return format(new Date(otherUser.createdAt), "PP")
-  }, [otherUser])
+  // Locale-aware (Intl). This drawer is client-only (ssr: false), so there is
+  // no server/client hydration difference to guard.
+  const joinedAt = otherUser ? new Date(otherUser.createdAt) : null
+  const joinedDate = joinedAt ? formatDate(joinedAt) : null
 
-  const title = useMemo(() => {
-    return data.title || otherUser?.name || "AI Character"
-  }, [data.title, otherUser?.name])
+  // Cheap primitive expressions: computed inline rather than memoized.
+  const title = data.title || otherUser?.name || "AI Character"
 
-  const { members, getPresence } = useActiveList()
-  const isActive = otherUser?.id ? members.includes(otherUser.id) : false
-  const presence = otherUser?.id ? getPresence(otherUser.id) : null
+  // Subscribe only to this participant's presence, not the whole list.
+  const otherUserId = otherUser?.id ?? ""
+  const isActive = useActiveList((state) =>
+    otherUserId ? state.members.includes(otherUserId) : false
+  )
+  const presence = useActiveList((state) =>
+    otherUserId ? state.presenceMap.get(otherUserId) : undefined
+  )
 
-  const statusText = useMemo(() => {
-    if (data.isGroup) {
-      return `${data.users.length} members`
-    }
-
+  let statusText: string
+  if (data.isGroup) {
+    statusText = `${data.users.length} members`
+  } else if (presence?.customStatus) {
     // Show custom status if available
-    if (presence?.customStatus) {
-      const emoji = presence.customStatusEmoji || ""
-      return `${emoji} ${presence.customStatus}`.trim()
-    }
-
+    statusText = `${presence.customStatusEmoji || ""} ${presence.customStatus}`.trim()
+  } else {
     // Show presence status
     const presenceStatus = presence?.presenceStatus || (isActive ? "online" : "offline")
+    statusText =
+      presenceStatus === "online" ? "Active" : presenceStatus === "away" ? "Away" : "Offline"
+  }
 
-    switch (presenceStatus) {
-      case "online":
-        return "Active"
-      case "away":
-        return "Away"
-      case "offline":
-      default:
-        return "Offline"
-    }
-  }, [data, isActive, presence])
-
-  const isArchived = useMemo(() => {
-    if (!currentUserId) return false
-    return data.archivedBy?.includes(currentUserId) || false
-  }, [data.archivedBy, currentUserId])
-
-  const isPinned = useMemo(() => {
-    if (!currentUserId) return false
-    return data.pinnedBy?.includes(currentUserId) || false
-  }, [data.pinnedBy, currentUserId])
-
-  const isMuted = useMemo(() => {
-    if (!currentUserId) return false
-    return data.mutedBy?.includes(currentUserId) || false
-  }, [data.mutedBy, currentUserId])
+  const isArchived = currentUserId ? data.archivedBy?.includes(currentUserId) || false : false
+  const isPinned = currentUserId ? data.pinnedBy?.includes(currentUserId) || false : false
+  const isMuted = currentUserId ? data.mutedBy?.includes(currentUserId) || false : false
 
   const handleArchiveToggle = async () => {
     if (!csrfToken) {
@@ -142,7 +123,8 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = memo(function ProfileDrawer(
         toast.success("Conversation archived")
       }
     } catch (error) {
-      const message = error instanceof ApiError ? error.message : "Failed to update archive status"
+      const message =
+        error instanceof ApiError ? error.message : "Couldn't update the archive status. Try again."
       toast.error(message)
     } finally {
       setIsArchiving(false)
@@ -168,7 +150,8 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = memo(function ProfileDrawer(
         toast.success("Conversation pinned")
       }
     } catch (error) {
-      const message = error instanceof ApiError ? error.message : "Failed to update pin status"
+      const message =
+        error instanceof ApiError ? error.message : "Couldn't update the pin. Try again."
       toast.error(message)
     } finally {
       setIsPinning(false)
@@ -194,7 +177,8 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = memo(function ProfileDrawer(
         toast.success("Conversation muted")
       }
     } catch (error) {
-      const message = error instanceof ApiError ? error.message : "Failed to update mute status"
+      const message =
+        error instanceof ApiError ? error.message : "Couldn't update the mute setting. Try again."
       toast.error(message)
     } finally {
       setIsMuting(false)
@@ -218,7 +202,8 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = memo(function ProfileDrawer(
       )
       toast.success("User blocked")
     } catch (error) {
-      const message = error instanceof ApiError ? error.message : "Failed to block user"
+      const message =
+        error instanceof ApiError ? error.message : "Couldn't block this user. Try again."
       toast.error(message)
     } finally {
       setShowBlockDialog(false)
@@ -245,7 +230,8 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = memo(function ProfileDrawer(
       )
       toast.success("Report submitted")
     } catch (error) {
-      const message = error instanceof ApiError ? error.message : "Failed to submit report"
+      const message =
+        error instanceof ApiError ? error.message : "Couldn't submit the report. Try again."
       toast.error(message)
     } finally {
       setShowReportDialog(false)
@@ -267,11 +253,14 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = memo(function ProfileDrawer(
             </AlertDialogDescription>
           </AlertDialogHeader>
           <textarea
+            name="blockReason"
+            autoComplete="off"
+            aria-label="Reason for blocking (optional)"
             className="w-full rounded-md border border-border bg-background p-2 text-sm text-foreground"
             rows={3}
             value={blockReason}
             onChange={(e) => setBlockReason(e.target.value)}
-            placeholder="Reason (optional)..."
+            placeholder="Reason (optional)…"
             maxLength={500}
           />
           <AlertDialogFooter>
@@ -291,11 +280,14 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = memo(function ProfileDrawer(
             </AlertDialogDescription>
           </AlertDialogHeader>
           <textarea
+            name="reportReason"
+            autoComplete="off"
+            aria-label="Reason for reporting"
             className="w-full rounded-md border border-border bg-background p-2 text-sm text-foreground"
             rows={3}
             value={reportReason}
             onChange={(e) => setReportReason(e.target.value)}
-            placeholder="Describe the issue..."
+            placeholder="Describe the issue…"
             maxLength={500}
           />
           <AlertDialogFooter>
@@ -339,7 +331,7 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = memo(function ProfileDrawer(
                   leaveTo="translate-x-full"
                 >
                   <Dialog.Panel className="pointer-events-auto w-screen max-w-md">
-                    <div className="flex h-full flex-col overflow-y-scroll bg-background py-6 shadow-xl">
+                    <div className="flex h-full flex-col overflow-y-scroll overscroll-contain bg-background py-6 shadow-xl">
                       <div className="px-4 sm:px-6">
                         <div className="flex items-start justify-end">
                           <div className="ml-3 flex h-7 items-center">
@@ -364,7 +356,9 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = memo(function ProfileDrawer(
                               <Avatar user={otherUser ?? undefined} />
                             )}
                           </div>
-                          <h2 className="text-base font-semibold text-foreground">{title}</h2>
+                          <h2 className="max-w-full break-words text-center text-base font-semibold text-foreground">
+                            {title}
+                          </h2>
                           <div className="text-sm text-muted-foreground">{statusText}</div>
                           <div className="my-8 flex gap-10">
                             <button
@@ -378,7 +372,11 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = memo(function ProfileDrawer(
                               aria-disabled={isPinning}
                             >
                               <div className="flex size-10 items-center justify-center rounded-full bg-muted">
-                                {isPinned ? <BsPinAngleFill size={20} /> : <BsPinAngle size={20} />}
+                                {isPinned ? (
+                                  <BsPinAngleFill size={20} aria-hidden="true" />
+                                ) : (
+                                  <BsPinAngle size={20} aria-hidden="true" />
+                                )}
                               </div>
                               <div className="text-sm font-light text-muted-foreground">
                                 {isPinned ? "Unpin" : "Pin"}
@@ -396,9 +394,9 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = memo(function ProfileDrawer(
                             >
                               <div className="flex size-10 items-center justify-center rounded-full bg-muted">
                                 {isMuted ? (
-                                  <HiOutlineBell size={20} />
+                                  <HiOutlineBell size={20} aria-hidden="true" />
                                 ) : (
-                                  <HiOutlineBellSlash size={20} />
+                                  <HiOutlineBellSlash size={20} aria-hidden="true" />
                                 )}
                               </div>
                               <div className="text-sm font-light text-muted-foreground">
@@ -419,9 +417,9 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = memo(function ProfileDrawer(
                             >
                               <div className="flex size-10 items-center justify-center rounded-full bg-muted">
                                 {isArchived ? (
-                                  <HiArchiveBoxXMark size={20} />
+                                  <HiArchiveBoxXMark size={20} aria-hidden="true" />
                                 ) : (
-                                  <HiArchiveBox size={20} />
+                                  <HiArchiveBox size={20} aria-hidden="true" />
                                 )}
                               </div>
                               <div className="text-sm font-light text-muted-foreground">
@@ -435,7 +433,7 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = memo(function ProfileDrawer(
                               aria-label="Delete conversation"
                             >
                               <div className="flex size-10 items-center justify-center rounded-full bg-muted">
-                                <IoTrash size={20} />
+                                <IoTrash size={20} aria-hidden="true" />
                               </div>
                               <div className="text-sm font-light text-muted-foreground">Delete</div>
                             </button>
@@ -443,17 +441,19 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = memo(function ProfileDrawer(
                           {!data.isGroup && otherUser && (
                             <div className="flex items-center justify-center gap-3 pb-6">
                               <button
+                                type="button"
                                 onClick={() => setShowBlockDialog(true)}
                                 className="flex items-center gap-2 rounded-md border border-border px-3 py-2 text-xs text-muted-foreground hover:border-foreground hover:text-foreground"
                               >
-                                <HiOutlineShieldExclamation className="size-4" />
+                                <HiOutlineShieldExclamation className="size-4" aria-hidden="true" />
                                 Block
                               </button>
                               <button
+                                type="button"
                                 onClick={() => setShowReportDialog(true)}
                                 className="flex items-center gap-2 rounded-md border border-border px-3 py-2 text-xs text-muted-foreground hover:border-foreground hover:text-foreground"
                               >
-                                <HiOutlineFlag className="size-4" />
+                                <HiOutlineFlag className="size-4" aria-hidden="true" />
                                 Report
                               </button>
                             </div>
@@ -468,7 +468,7 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = memo(function ProfileDrawer(
                                       Joined
                                     </dt>
                                     <dd className="mt-1 text-sm text-foreground sm:col-span-2">
-                                      <time dateTime={joinedDate}>{joinedDate}</time>
+                                      <time dateTime={joinedAt?.toISOString()}>{joinedDate}</time>
                                     </dd>
                                   </div>
                                 </>

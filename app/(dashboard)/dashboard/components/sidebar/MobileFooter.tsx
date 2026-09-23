@@ -18,7 +18,8 @@ const MobileFooter = () => {
   }
 
   return (
-    <div
+    <nav
+      aria-label="Dashboard"
       className="
         fixed
         bottom-0
@@ -47,13 +48,15 @@ const MobileFooter = () => {
       ))}
       {/* Keyboard shortcuts help button */}
       <button
+        type="button"
         onClick={openHelp}
+        aria-label="Keyboard shortcuts and help"
         className="group flex w-full cursor-pointer flex-col items-center justify-center gap-y-1 px-1 py-2.5 font-medium leading-6 text-muted-foreground transition hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
       >
         <HiOutlineQuestionMarkCircle size={24} aria-hidden="true" />
         <span className="max-w-full truncate text-xs leading-none">Help</span>
       </button>
-    </div>
+    </nav>
   )
 }
 

@@ -110,7 +110,7 @@ const ConversationContainer: React.FC<ConversationContainerProps> = ({
         setUpgradeModal({ reason: details.code, limits: details.limits })
         return
       }
-      toast.error(`Regeneration failed: ${error}`)
+      toast.error(`Regeneration failed: ${error}. Try again.`)
     },
   })
 
@@ -118,7 +118,7 @@ const ConversationContainer: React.FC<ConversationContainerProps> = ({
   const handleRegenerate = useCallback(
     (messageId: string) => {
       if (isRegenerating) {
-        toast.error("Already regenerating a response")
+        toast.error("Already regenerating a reply. Wait for it to finish.")
         return
       }
       void regenerate(messageId)
@@ -132,6 +132,17 @@ const ConversationContainer: React.FC<ConversationContainerProps> = ({
     api
       .post(`/api/conversations/${conversationId}/seen`, {}, { showErrorToast: false })
       .catch(() => {})
+  })
+
+  // Reads the latest names without making them subscription dependencies.
+  const announceIncomingMessage = useEffectEvent((message: FullMessageType) => {
+    // Announce incoming messages from others to screen readers
+    if (message.sender?.id !== currentUserId) {
+      const senderName = message.isAI
+        ? (characterName ?? "AI")
+        : (message.sender?.name ?? "Someone")
+      setAnnouncement(`New message from ${senderName}`)
+    }
   })
 
   // Subscribe to Pusher events for real-time updates
@@ -149,14 +160,7 @@ const ConversationContainer: React.FC<ConversationContainerProps> = ({
       }, 1000)
 
       dispatchMessages({ type: "append_if_missing", message })
-
-      // Announce incoming messages from others to screen readers
-      if (message.sender?.id !== currentUserId) {
-        const senderName = message.isAI
-          ? (characterName ?? "AI")
-          : (message.sender?.name ?? "Someone")
-        setAnnouncement(`New message from ${senderName}`)
-      }
+      announceIncomingMessage(message)
 
       bottomRef?.current?.scrollIntoView()
     }
@@ -188,9 +192,9 @@ const ConversationContainer: React.FC<ConversationContainerProps> = ({
         clearTimeout(seenDebounceRef.current)
       }
     }
-    // csrfToken is intentionally excluded — it is read via csrfTokenRef so handlers
-    // never go stale and the subscription is not torn down when the token resolves.
-  }, [conversationId, markConversationSeen])
+    // Effect Events (markConversationSeen, announceIncomingMessage) are deliberately
+    // not dependencies: they always see the latest values and must not re-subscribe.
+  }, [conversationId])
 
   return (
     <>
@@ -200,7 +204,7 @@ const ConversationContainer: React.FC<ConversationContainerProps> = ({
       <div aria-live="polite" aria-atomic="true" className="sr-only">
         {announcement}
         {typingUsers.length > 0
-          ? ` ${typingUsers.join(", ")} is typing`
+          ? ` ${typingUsers.join(", ")} ${typingUsers.length === 1 ? "is" : "are"} typing`
           : isAI && isAITyping
             ? ` ${characterName ?? "AI"} is writing`
             : ""}

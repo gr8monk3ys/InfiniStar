@@ -20,19 +20,8 @@ const MobileItem: React.FC<MobileItemProps> = ({
   onClick,
   separated,
 }) => {
-  const handleClick = () => {
-    if (onClick) {
-      return onClick()
-    }
-  }
-
-  return (
-    <Link
-      onClick={handleClick}
-      href={href}
-      aria-current={active ? "page" : undefined}
-      className={clsx(
-        `
+  const className = clsx(
+    `
         group
         flex
         w-full
@@ -52,12 +41,28 @@ const MobileItem: React.FC<MobileItemProps> = ({
         focus-visible:ring-inset
         focus-visible:ring-ring
       `,
-        separated && "border-l border-border",
-        active && "bg-accent text-foreground"
-      )}
-    >
+    separated && "border-l border-border",
+    active && "bg-accent text-foreground"
+  )
+  const content = (
+    <>
       <Icon className="size-6 shrink-0" aria-hidden="true" />
       <span className="max-w-full truncate text-xs leading-none">{label}</span>
+    </>
+  )
+
+  // An action (e.g. Logout) is a real button, not a link to "#".
+  if (onClick) {
+    return (
+      <button type="button" onClick={onClick} className={className}>
+        {content}
+      </button>
+    )
+  }
+
+  return (
+    <Link href={href} aria-current={active ? "page" : undefined} className={className}>
+      {content}
     </Link>
   )
 }

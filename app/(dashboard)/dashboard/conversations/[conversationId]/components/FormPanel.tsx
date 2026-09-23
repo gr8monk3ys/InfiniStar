@@ -98,9 +98,8 @@ export function FormPanel({
   onImageGenerate,
 }: FormPanelProps) {
   return (
-    <div
+    <section
       className="w-full border-t border-border bg-background"
-      role="region"
       aria-label="Message input area"
     >
       {shouldShowSuggestions && (
@@ -158,6 +157,6 @@ export function FormPanel({
           isStreaming={isStreaming}
         />
       )}
-    </div>
+    </section>
   )
 }

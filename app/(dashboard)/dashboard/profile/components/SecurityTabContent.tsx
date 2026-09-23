@@ -35,15 +35,15 @@ export function SecurityTabContent() {
   }, [checkHasPassword])
 
   return (
-    <div className="space-y-6" aria-label="Security settings section">
+    <section className="space-y-6" aria-label="Security settings section">
       <div>
-        <h3 className="text-lg font-medium text-foreground">Two-Factor Authentication</h3>
+        <h2 className="text-lg font-medium text-foreground">Two-Factor Authentication</h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Add an extra layer of security to your account by requiring a verification code in
           addition to your password when signing in.
         </p>
       </div>
       <TwoFactorSettings hasPassword={hasPassword} />
-    </div>
+    </section>
   )
 }

@@ -13,6 +13,7 @@ import {
 } from "react-icons/hi2"
 
 import { api, ApiError, createLoadingToast } from "@/app/lib/api-client"
+import { formatDate, formatRelative } from "@/app/lib/intl-format"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,12 +29,19 @@ import type { UserSessionInfo } from "@/app/types"
 // Session token storage key
 const SESSION_TOKEN_KEY = "infinistar_session_token"
 
+// localStorage throws in private mode, over quota, or when storage is
+// blocked; every access is guarded so the list still loads without it.
+
 /**
  * Get session token from localStorage
  */
 function getStoredSessionToken(): string | null {
   if (typeof window === "undefined") return null
-  return localStorage.getItem(SESSION_TOKEN_KEY)
+  try {
+    return localStorage.getItem(SESSION_TOKEN_KEY)
+  } catch {
+    return null
+  }
 }
 
 /**
@@ -41,7 +49,11 @@ function getStoredSessionToken(): string | null {
  */
 function storeSessionToken(token: string): void {
   if (typeof window === "undefined") return
-  localStorage.setItem(SESSION_TOKEN_KEY, token)
+  try {
+    localStorage.setItem(SESSION_TOKEN_KEY, token)
+  } catch {
+    // Storage unavailable: the session is re-registered on the next load.
+  }
 }
 
 /**
@@ -49,36 +61,24 @@ function storeSessionToken(token: string): void {
  */
 function removeSessionToken(): void {
   if (typeof window === "undefined") return
-  localStorage.removeItem(SESSION_TOKEN_KEY)
+  try {
+    localStorage.removeItem(SESSION_TOKEN_KEY)
+  } catch {
+    // Storage unavailable: nothing to remove.
+  }
 }
 
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000
+
 /**
- * Format relative time for display
+ * Locale-aware "3 hours ago" for the last week, a date after that
  */
-function formatRelativeTime(date: Date): string {
-  const now = new Date()
-  const diff = now.getTime() - new Date(date).getTime()
-
-  const seconds = Math.floor(diff / 1000)
-  const minutes = Math.floor(seconds / 60)
-  const hours = Math.floor(minutes / 60)
-  const days = Math.floor(hours / 24)
-
-  if (seconds < 60) {
-    return "Just now"
-  } else if (minutes < 60) {
-    return `${minutes} minute${minutes === 1 ? "" : "s"} ago`
-  } else if (hours < 24) {
-    return `${hours} hour${hours === 1 ? "" : "s"} ago`
-  } else if (days < 7) {
-    return `${days} day${days === 1 ? "" : "s"} ago`
-  } else {
-    return new Date(date).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    })
+function formatRelativeTime(date: Date | string): string {
+  const time = new Date(date).getTime()
+  if (Date.now() - time < WEEK_MS) {
+    return formatRelative(time)
   }
+  return formatDate(time)
 }
 
 /**
@@ -119,38 +119,41 @@ function SessionItem({ session, onRevoke, isRevoking }: SessionItemProps) {
 
   return (
     <>
-      <div
-        className="flex items-center justify-between rounded-lg border border-border bg-card p-4"
-        role="listitem"
+      <li
+        className="flex items-center justify-between gap-3 rounded-lg border border-border bg-card p-4"
+        data-current-session={session.isCurrentSession ? "true" : undefined}
       >
-        <div className="flex items-start gap-4">
-          <div className="mt-1 flex size-12 items-center justify-center rounded-full bg-muted">
+        <div className="flex min-w-0 items-start gap-4">
+          <div className="mt-1 flex size-12 shrink-0 items-center justify-center rounded-full bg-muted">
             <DeviceIcon deviceType={session.deviceType} />
           </div>
-          <div className="flex flex-col">
-            <div className="flex items-center gap-2">
-              <span className="font-medium text-foreground">
+          <div className="flex min-w-0 flex-col">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="break-words font-medium text-foreground">
                 {session.browser || "Unknown browser"}
               </span>
               {session.isCurrentSession && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
                   <HiShieldCheck className="size-3" aria-hidden="true" />
-                  Current session
+                  Current Session
                 </span>
               )}
             </div>
-            <span className="text-sm text-muted-foreground">{session.os || "Unknown OS"}</span>
-            <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
-              <span>IP: {session.ipAddress}</span>
-              <span aria-label={`Last active ${formatRelativeTime(session.lastActiveAt)}`}>
-                Active {formatRelativeTime(session.lastActiveAt)}
+            <span className="break-words text-sm text-muted-foreground">
+              {session.os || "Unknown OS"}
+            </span>
+            <div className="mt-1 flex flex-wrap items-center gap-x-3 text-xs text-muted-foreground">
+              <span className="tabular-nums" translate="no">
+                IP: {session.ipAddress}
               </span>
+              <span>Active {formatRelativeTime(session.lastActiveAt)}</span>
             </div>
           </div>
         </div>
 
         {!session.isCurrentSession && (
           <button
+            type="button"
             onClick={() => setShowConfirmDialog(true)}
             disabled={isRevoking}
             className="rounded-md border border-destructive/30 bg-background px-3 py-2 text-sm font-medium text-destructive transition hover:bg-destructive/10 disabled:cursor-not-allowed disabled:opacity-50"
@@ -161,7 +164,7 @@ function SessionItem({ session, onRevoke, isRevoking }: SessionItemProps) {
             Revoke
           </button>
         )}
-      </div>
+      </li>
 
       {/* Confirmation Dialog */}
       <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
@@ -210,7 +213,6 @@ export default function SessionsList() {
   const [isLoading, setIsLoading] = useState(true)
   const [isRevoking, setIsRevoking] = useState(false)
   const [showRevokeAllDialog, setShowRevokeAllDialog] = useState(false)
-  const [, setSessionToken] = useState<string | null>(null)
 
   /**
    * Register a new session (called on first load if no token exists)
@@ -223,7 +225,6 @@ export default function SessionsList() {
         { showErrorToast: false }
       )
       storeSessionToken(response.sessionToken)
-      setSessionToken(response.sessionToken)
       return response.sessionToken
     } catch (error) {
       console.error("Failed to register session:", error)
@@ -250,7 +251,10 @@ export default function SessionsList() {
       })
       setSessions(response.sessions)
     } catch (error) {
-      const message = error instanceof ApiError ? error.message : "Failed to load sessions"
+      const message =
+        error instanceof ApiError
+          ? error.message
+          : "Couldn't load your sessions. Check your connection and try again."
       toast.error(message)
     } finally {
       setIsLoading(false)
@@ -262,7 +266,7 @@ export default function SessionsList() {
    */
   const revokeSession = useCallback(async (sessionId: string) => {
     setIsRevoking(true)
-    const loader = createLoadingToast("Revoking session...")
+    const loader = createLoadingToast("Revoking session…")
 
     try {
       const token = getStoredSessionToken()
@@ -286,7 +290,10 @@ export default function SessionsList() {
       // Remove from local state
       setSessions((prev) => prev.filter((s) => s.id !== sessionId))
     } catch (error) {
-      const message = error instanceof ApiError ? error.message : "Failed to revoke session"
+      const message =
+        error instanceof ApiError
+          ? error.message
+          : "Couldn't revoke that session. Check your connection and try again."
       loader.error(message)
     } finally {
       setIsRevoking(false)
@@ -299,13 +306,13 @@ export default function SessionsList() {
   const revokeAllOtherSessions = useCallback(async () => {
     setShowRevokeAllDialog(false)
     setIsRevoking(true)
-    const loader = createLoadingToast("Revoking all other sessions...")
+    const loader = createLoadingToast("Revoking all other sessions…")
 
     try {
       const token = getStoredSessionToken()
 
       if (!token) {
-        loader.error("No current session found")
+        loader.error("Couldn't identify this device's session. Reload the page and try again.")
         return
       }
 
@@ -322,7 +329,10 @@ export default function SessionsList() {
       // Keep only current session in local state
       setSessions((prev) => prev.filter((s) => s.isCurrentSession))
     } catch (error) {
-      const message = error instanceof ApiError ? error.message : "Failed to revoke other sessions"
+      const message =
+        error instanceof ApiError
+          ? error.message
+          : "Couldn't revoke your other sessions. Check your connection and try again."
       loader.error(message)
     } finally {
       setIsRevoking(false)
@@ -341,7 +351,7 @@ export default function SessionsList() {
     return (
       <div className="flex items-center justify-center py-12">
         <div className="size-8 animate-spin rounded-full border-4 border-muted border-t-primary" />
-        <span className="sr-only">Loading sessions...</span>
+        <span className="sr-only">Loading sessions…</span>
       </div>
     )
   }
@@ -351,18 +361,19 @@ export default function SessionsList() {
       {/* Header with action */}
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm tabular-nums text-muted-foreground">
             {sessions.length} active session{sessions.length !== 1 ? "s" : ""}
           </p>
         </div>
         {otherSessionsCount > 0 && (
           <button
+            type="button"
             onClick={() => setShowRevokeAllDialog(true)}
             disabled={isRevoking}
             className="flex items-center gap-2 rounded-md border border-destructive/30 bg-background px-3 py-2 text-sm font-medium text-destructive transition hover:bg-destructive/10 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <HiTrash className="size-4" aria-hidden="true" />
-            Revoke all other sessions
+            Revoke All Other Sessions
           </button>
         )}
       </div>
@@ -374,7 +385,7 @@ export default function SessionsList() {
           <p className="mt-2 text-muted-foreground">No active sessions found</p>
         </div>
       ) : (
-        <div className="space-y-3" role="list" aria-label="Active sessions">
+        <ul className="space-y-3" aria-label="Active sessions">
           {sessions.map((session) => (
             <SessionItem
               key={session.id}
@@ -383,7 +394,7 @@ export default function SessionsList() {
               isRevoking={isRevoking}
             />
           ))}
-        </div>
+        </ul>
       )}
 
       {/* Security note */}

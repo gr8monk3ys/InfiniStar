@@ -189,6 +189,22 @@ async function loadRecentHistory(
 }
 
 /**
+ * The chatter's memories rendered for the prompt, or "" when there are none.
+ *
+ * Memory is what makes a relationship accumulate rather than reset, so a
+ * failure to read it degrades the Turn rather than failing it.
+ */
+async function recallMemoryContext(userId: string, conversationId: string): Promise<string> {
+  try {
+    const memories = await getRelevantMemories(userId)
+    return memories.length > 0 ? buildMemoryContext(memories) : ""
+  } catch (error) {
+    aiLogger.warn({ err: error, conversationId }, "Failed to fetch memories")
+    return ""
+  }
+}
+
+/**
  * Assembles everything the model is asked with, for one Turn.
  *
  * The system prompt is split for prompt caching: the character-and-persona
@@ -226,18 +242,16 @@ export async function assembleTurn({
 
   let volatileContext = renderSummaryForPrompt(conversation.summary)
 
-  // Memory is what makes a relationship accumulate rather than reset, so a
-  // failure to read it degrades the Turn rather than failing it.
-  try {
-    const memories = await getRelevantMemories(userId)
-    if (memories.length > 0) {
-      volatileContext = volatileContext + "\n" + buildMemoryContext(memories)
-    }
-  } catch (error) {
-    aiLogger.warn({ err: error, conversationId: conversation.id }, "Failed to fetch memories")
+  // The memory and history reads are independent, so they run together.
+  const [memoryContext, messages] = await Promise.all([
+    recallMemoryContext(userId, conversation.id),
+    loadRecentHistory(conversation.id, asOf),
+  ])
+
+  if (memoryContext) {
+    volatileContext = volatileContext + "\n" + memoryContext
   }
 
-  const messages = await loadRecentHistory(conversation.id, asOf)
   if (input) {
     messages.push({ role: "user", content: input })
   }

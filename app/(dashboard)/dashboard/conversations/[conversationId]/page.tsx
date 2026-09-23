@@ -22,9 +22,17 @@ export default async function ChatPage({
   params: Promise<{ conversationId: string }>
 }) {
   const { conversationId } = await params
-  // The viewer is resolved first because both reads are scoped to them; neither
-  // may be issued on a conversation id alone.
-  const currentUser = await getCurrentUser()
+  // Both reads are scoped to the viewer; neither is issued on a conversation id
+  // alone. getConversationById resolves the viewer itself, so it starts at once
+  // alongside the viewer lookup; getMessages chains off it. (Previously the
+  // conversation read waited for the page's own viewer lookup to finish.)
+  const currentUserPromise = getCurrentUser()
+  const [currentUser, conversation, messages] = await Promise.all([
+    currentUserPromise,
+    getConversationById(conversationId),
+    currentUserPromise.then((viewer) => (viewer?.id ? getMessages(conversationId, viewer.id) : [])),
+  ])
+
   if (!currentUser?.id) {
     return (
       <div className="h-full lg:pl-80">
@@ -34,11 +42,6 @@ export default async function ChatPage({
       </div>
     )
   }
-
-  const [conversation, messages] = await Promise.all([
-    getConversationById(conversationId),
-    getMessages(conversationId, currentUser.id),
-  ])
 
   if (!conversation) {
     return (

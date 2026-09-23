@@ -217,9 +217,7 @@ if (hasE2EAuthCredentials) {
       await expect.poll(() => capturedCsrfHeader, { timeout: 10000 }).toBe("sentinel-csrf-value")
     })
 
-    test("should show Redirecting... label while checkout request is in-flight", async ({
-      page,
-    }) => {
+    test("should show Redirecting… label while checkout request is in-flight", async ({ page }) => {
       // Delay the checkout response long enough to observe the loading label.
       await page.route("**/api/csrf", async (route) => {
         await route.fulfill({
@@ -248,7 +246,7 @@ if (hasE2EAuthCredentials) {
       await expect(upgradeButton).toBeVisible()
       await upgradeButton.click()
 
-      // The button label should change to "Redirecting..." while the request is pending.
+      // The button label should change to "Redirecting…" while the request is pending.
       await expect(page.getByRole("button", { name: /redirecting/i })).toBeVisible({
         timeout: 3000,
       })

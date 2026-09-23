@@ -88,11 +88,14 @@ export async function publishNewMessage({
   message,
   notify,
 }: NewMessageArgs): Promise<void> {
-  await publish(getPusherConversationChannel(conversationId), "messages:new", message)
-  await publishToEach(notify, "conversation:update", {
-    id: conversationId,
-    messages: [message],
-  })
+  // Different channels, no ordering between them: publish both halves at once.
+  await Promise.all([
+    publish(getPusherConversationChannel(conversationId), "messages:new", message),
+    publishToEach(notify, "conversation:update", {
+      id: conversationId,
+      messages: [message],
+    }),
+  ])
 }
 
 interface MessageChangeArgs {
@@ -140,11 +143,13 @@ export async function publishMessageSeen({
   message,
   viewerId,
 }: MessageSeenArgs): Promise<void> {
-  await publishToEach([viewerId], "conversation:update", {
-    id: conversationId,
-    messages: [message],
-  })
-  await publish(getPusherConversationChannel(conversationId), "message:update", message)
+  await Promise.all([
+    publishToEach([viewerId], "conversation:update", {
+      id: conversationId,
+      messages: [message],
+    }),
+    publish(getPusherConversationChannel(conversationId), "message:update", message),
+  ])
 }
 
 interface ParticipantJoinedArgs {

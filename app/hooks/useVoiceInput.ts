@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react"
 
 /**
  * Voice input states
@@ -177,6 +177,15 @@ export function isVoiceInputSupported(): boolean {
   return getSpeechRecognition() !== null
 }
 
+// Support never changes during a page's life; there is nothing to subscribe to.
+function subscribeToSupport(): () => void {
+  return () => {}
+}
+
+function getServerSupportSnapshot(): boolean {
+  return false
+}
+
 /**
  * Get browser support info for display
  */
@@ -327,12 +336,22 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}): UseVoiceInput
   const recognitionRef = useRef<SpeechRecognition | null>(null)
   const silenceTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const isListeningRef = useRef(false)
+  // The current state for recognition callbacks, which outlive the render
+  // that created them (reading `state` there saw the value at start time).
+  const stateRef = useRef<VoiceInputState>("idle")
 
-  const isSupported = typeof window !== "undefined" && getSpeechRecognition() !== null
+  // `false` on the server and during hydration, the browser's answer after,
+  // so the server HTML and the first client render agree.
+  const isSupported = useSyncExternalStore(
+    subscribeToSupport,
+    isVoiceInputSupported,
+    getServerSupportSnapshot
+  )
 
   // Update state and notify callback
   const updateState = useCallback(
     (newState: VoiceInputState) => {
+      stateRef.current = newState
       setState(newState)
       onStateChange?.(newState)
     },
@@ -396,7 +415,7 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}): UseVoiceInput
     recognition.onend = () => {
       isListeningRef.current = false
       clearSilenceTimeout()
-      if (state !== "error") {
+      if (stateRef.current !== "error") {
         updateState("idle")
       }
     }
@@ -456,7 +475,6 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}): UseVoiceInput
     clearSilenceTimeout,
     handleError,
     onTranscript,
-    state,
     updateState,
   ])
 

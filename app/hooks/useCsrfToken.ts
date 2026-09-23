@@ -15,7 +15,7 @@ import { getClientCsrfToken } from "@/app/lib/csrf-client"
  * @example
  * const { token, loading } = useCsrfToken();
  *
- * if (loading) return <div>Loading...</div>;
+ * if (loading) return <div>Loading…</div>;
  *
  * // Use token in API calls
  * fetch('/api/messages', {

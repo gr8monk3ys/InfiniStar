@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState, type ReactElement } from "react"
+import { useEffect, useRef, type ReactElement } from "react"
 
 import { cn } from "@/app/lib/utils"
 import type { VoiceInputState } from "@/app/hooks/useVoiceInput"
@@ -45,6 +45,17 @@ export interface VoiceWaveformProps {
  * />
  * ```
  */
+/** Resting bar height (fraction of full height) when not listening. */
+const IDLE_LEVEL = 0.2
+/** Steady height used instead of the random animation under reduced motion. */
+const REDUCED_MOTION_LEVEL = 0.6
+/** The simulated waveform refreshes at roughly 10fps. */
+const SIMULATED_FRAME_MS = 100
+
+function toScale(level: number): string {
+  return `scaleY(${Math.max(IDLE_LEVEL, Math.min(level, 1))})`
+}
+
 export function VoiceWaveform({
   state,
   barCount = 5,
@@ -56,87 +67,69 @@ export function VoiceWaveform({
   realAudioEnabled = false,
   className,
 }: VoiceWaveformProps): ReactElement {
-  const [audioLevels, setAudioLevels] = useState<number[]>(Array(barCount).fill(0.2))
-  const animationFrameRef = useRef<number | null>(null)
-  const analyserRef = useRef<AnalyserNode | null>(null)
-  const audioContextRef = useRef<AudioContext | null>(null)
-  const streamRef = useRef<MediaStream | null>(null)
+  // Bar heights change up to 60 times a second. They are written straight to the
+  // bars' transforms through refs, so the component does not re-render per frame.
+  const barRefs = useRef<(HTMLDivElement | null)[]>([])
 
-  // Generate simulated waveform animation
-  const generateSimulatedWaveform = useCallback(() => {
+  useEffect(() => {
+    const setBar = (index: number, level: number) => {
+      const bar = barRefs.current[index]
+      if (bar) bar.style.transform = toScale(level)
+    }
+    const setAllBars = (level: number) => {
+      for (let i = 0; i < barCount; i++) setBar(i, level)
+    }
+
     if (state !== "listening") {
-      setAudioLevels(Array(barCount).fill(0.15))
+      setAllBars(IDLE_LEVEL)
       return
     }
 
-    const animate = () => {
-      const newLevels = Array(barCount)
-        .fill(0)
-        .map(() => {
-          // Generate random levels with some smoothing
-          return 0.2 + Math.random() * 0.8
-        })
-      setAudioLevels(newLevels)
-      animationFrameRef.current = requestAnimationFrame(animate)
+    let cancelled = false
+    let frameId: number | null = null
+    let timerId: ReturnType<typeof setTimeout> | null = null
+    let stream: MediaStream | null = null
+    let audioContext: AudioContext | null = null
+
+    const runSimulated = () => {
+      // A decorative loop: under reduced motion, hold the bars still instead.
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        setAllBars(REDUCED_MOTION_LEVEL)
+        return
+      }
+      const tick = () => {
+        if (cancelled) return
+        for (let i = 0; i < barCount; i++) setBar(i, 0.2 + Math.random() * 0.8)
+        timerId = setTimeout(tick, SIMULATED_FRAME_MS)
+      }
+      tick()
     }
 
-    // Slow down animation to roughly 10fps for performance
-    const slowAnimate = () => {
-      animate()
-      setTimeout(() => {
-        if (state === "listening") {
-          slowAnimate()
+    const runRealAudio = async () => {
+      try {
+        const micStream = await navigator.mediaDevices.getUserMedia({ audio: true })
+        if (cancelled) {
+          micStream.getTracks().forEach((track) => track.stop())
+          return
         }
-      }, 100)
-    }
+        stream = micStream
 
-    slowAnimate()
-  }, [state, barCount])
+        const context = new AudioContext()
+        audioContext = context
 
-  // Initialize real audio from microphone
-  const initializeRealAudio = useCallback(async () => {
-    if (state !== "listening") {
-      // Cleanup when not listening
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((track) => track.stop())
-        streamRef.current = null
-      }
-      if (audioContextRef.current) {
-        void audioContextRef.current.close()
-        audioContextRef.current = null
-      }
-      setAudioLevels(Array(barCount).fill(0.15))
-      return
-    }
+        const analyser = context.createAnalyser()
+        analyser.fftSize = 32 // Small FFT size for fewer frequency bands
+        context.createMediaStreamSource(micStream).connect(analyser)
 
-    try {
-      // Get microphone stream
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      streamRef.current = stream
-
-      // Create audio context and analyser
-      const audioContext = new AudioContext()
-      audioContextRef.current = audioContext
-
-      const analyser = audioContext.createAnalyser()
-      analyser.fftSize = 32 // Small FFT size for fewer frequency bands
-      analyserRef.current = analyser
-
-      const source = audioContext.createMediaStreamSource(stream)
-      source.connect(analyser)
-
-      const dataArray = new Uint8Array(analyser.frequencyBinCount)
-
-      const updateLevels = () => {
-        if (!analyserRef.current || state !== "listening") return
-
-        analyserRef.current.getByteFrequencyData(dataArray)
-
-        // Map frequency data to bar count
+        const dataArray = new Uint8Array(analyser.frequencyBinCount)
         const step = Math.floor(dataArray.length / barCount)
-        const newLevels = Array(barCount)
-          .fill(0)
-          .map((_, i) => {
+
+        const updateLevels = () => {
+          if (cancelled) return
+          analyser.getByteFrequencyData(dataArray)
+
+          // Map frequency data to bar count
+          for (let i = 0; i < barCount; i++) {
             const start = i * step
             const end = start + step
             let sum = 0
@@ -144,43 +137,34 @@ export function VoiceWaveform({
               sum += dataArray[j]
             }
             // Normalize to 0-1 range with minimum height
-            return Math.max(0.15, (sum / step / 255) * 1.2)
-          })
+            setBar(i, Math.max(0.15, (sum / step / 255) * 1.2))
+          }
 
-        setAudioLevels(newLevels)
-        animationFrameRef.current = requestAnimationFrame(updateLevels)
+          frameId = requestAnimationFrame(updateLevels)
+        }
+
+        updateLevels()
+      } catch (err) {
+        console.error("Failed to access microphone for waveform:", err)
+        // Fall back to simulated waveform
+        if (!cancelled) runSimulated()
       }
-
-      updateLevels()
-    } catch (err) {
-      console.error("Failed to access microphone for waveform:", err)
-      // Fall back to simulated waveform
-      generateSimulatedWaveform()
     }
-  }, [state, barCount, generateSimulatedWaveform])
 
-  // Initialize waveform based on mode
-  useEffect(() => {
     if (realAudioEnabled) {
-      void initializeRealAudio()
+      void runRealAudio()
     } else {
-      generateSimulatedWaveform()
+      runSimulated()
     }
 
     return () => {
-      // Cleanup animation frame
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current)
-      }
-      // Cleanup audio resources
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((track) => track.stop())
-      }
-      if (audioContextRef.current) {
-        void audioContextRef.current.close()
-      }
+      cancelled = true
+      if (frameId !== null) cancelAnimationFrame(frameId)
+      if (timerId !== null) clearTimeout(timerId)
+      stream?.getTracks().forEach((track) => track.stop())
+      void audioContext?.close()
     }
-  }, [realAudioEnabled, initializeRealAudio, generateSimulatedWaveform])
+  }, [state, barCount, realAudioEnabled])
 
   // Calculate total width
   const totalWidth = barCount * barWidth + (barCount - 1) * barGap
@@ -193,20 +177,17 @@ export function VoiceWaveform({
       aria-label={state === "listening" ? "Audio waveform - recording" : "Audio waveform - idle"}
       aria-live="polite"
     >
-      {audioLevels.map((level, index) => (
+      {Array.from({ length: barCount }, (_, index) => (
         <div
-          // eslint-disable-next-line react/no-array-index-key -- Waveform bars are visual elements without unique IDs
           key={`waveform-bar-${index}`}
+          ref={(el) => {
+            barRefs.current[index] = el
+          }}
           className={cn(
-            "rounded-full transition-all duration-100",
+            "h-full rounded-full transition-[transform,background-color] duration-100",
             state === "listening" ? activeColor : idleColor
           )}
-          style={{
-            width: barWidth,
-            height: `${Math.max(20, level * 100)}%`,
-            minHeight: 4,
-            transitionProperty: "height, background-color",
-          }}
+          style={{ width: barWidth, transform: toScale(IDLE_LEVEL) }}
           aria-hidden="true"
         />
       ))}
@@ -234,7 +215,7 @@ export function VoiceWaveformDots({
         <div
           key={`waveform-dot-${index}`}
           className={cn(
-            "size-2 rounded-full transition-all duration-300",
+            "size-2 rounded-full transition-colors duration-300",
             state === "listening" ? "animate-pulse bg-red-500" : "bg-muted-foreground",
             state === "listening" && index === 1 && "animation-delay-150",
             state === "listening" && index === 2 && "animation-delay-300"

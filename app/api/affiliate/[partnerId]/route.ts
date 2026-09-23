@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from "next/server"
+import { after, NextResponse, type NextRequest } from "next/server"
 
 import { apiLogger } from "@/app/lib/logger"
 import {
@@ -65,30 +65,36 @@ export async function GET(request: NextRequest, { params }: RouteParams): Promis
     "Affiliate link click"
   )
 
-  try {
-    await prisma.affiliateClick.create({
-      data: {
-        partnerId: partner.id,
-        source,
-        destinationUrl: destinationUrl.toString(),
-        destinationHost: destinationUrl.host,
-        referrer: request.headers.get("referer")?.slice(0, 1024) ?? null,
-        userAgent: request.headers.get("user-agent")?.slice(0, 512) ?? null,
-        clientIp: identifier.slice(0, 128),
-      },
-    })
-  } catch (error) {
-    apiLogger.error(
-      {
-        event: "affiliate_click_persist_failed",
-        partnerId: partner.id,
-        source,
-        destinationHost: destinationUrl.host,
-        err: error,
-      },
-      "Failed to persist affiliate click analytics"
-    )
-  }
+  // Click analytics must never delay the redirect: the row is written after the
+  // response is sent, and a failed write is logged, never surfaced.
+  const referrer = request.headers.get("referer")?.slice(0, 1024) ?? null
+  const userAgent = request.headers.get("user-agent")?.slice(0, 512) ?? null
+  after(async () => {
+    try {
+      await prisma.affiliateClick.create({
+        data: {
+          partnerId: partner.id,
+          source,
+          destinationUrl: destinationUrl.toString(),
+          destinationHost: destinationUrl.host,
+          referrer,
+          userAgent,
+          clientIp: identifier.slice(0, 128),
+        },
+      })
+    } catch (error) {
+      apiLogger.error(
+        {
+          event: "affiliate_click_persist_failed",
+          partnerId: partner.id,
+          source,
+          destinationHost: destinationUrl.host,
+          err: error,
+        },
+        "Failed to persist affiliate click analytics"
+      )
+    }
+  })
 
   const response = NextResponse.redirect(destinationUrl.toString(), 302)
   response.headers.set("Cache-Control", "no-store")

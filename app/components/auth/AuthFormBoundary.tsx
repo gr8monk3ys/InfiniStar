@@ -95,7 +95,7 @@ function ReloadButton() {
       className={cn(buttonVariants({ size: "sm" }), "gap-2")}
     >
       <HiArrowPath className={cn("size-4", isReloading && "animate-spin")} aria-hidden={true} />
-      {isReloading ? "Retrying…" : "Try again"}
+      {isReloading ? "Retrying…" : "Try Again"}
     </button>
   )
 }
@@ -105,7 +105,7 @@ function AuthFormErrorActions() {
     <>
       <ReloadButton />
       <Link href="/explore" className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
-        Browse characters
+        Browse Characters
       </Link>
     </>
   )

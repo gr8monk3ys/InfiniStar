@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useRef } from "react"
+import { useEffect, useEffectEvent, useMemo, useRef } from "react"
 import { HiOutlineXMark } from "react-icons/hi2"
 
 import { shortcuts, type ShortcutAction, type ShortcutGroup } from "@/app/lib/shortcuts"
@@ -74,9 +74,7 @@ function CategorySection({ group }: { group: ShortcutGroup }) {
         <h3 className="text-sm font-semibold uppercase tracking-wide text-foreground/80">
           {group.label}
         </h3>
-        {group.description && (
-          <p className="text-xs text-muted-foreground">{group.description}</p>
-        )}
+        {group.description && <p className="text-xs text-muted-foreground">{group.description}</p>}
       </div>
       <div className="divide-y divide-border rounded-lg border border-border bg-card">
         <div className="px-4">
@@ -106,20 +104,21 @@ const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({ isOpen,
   // Shortcuts grouped by category, already ordered for display
   const groups = useMemo(() => shortcuts.groups().filter((g) => g.shortcuts.length > 0), [])
 
-  // Handle escape key to close
+  // Handle escape key to close. The latest onClose is read through an Effect
+  // Event, so a new callback identity from the parent does not re-subscribe.
+  const handleEscape = useEffectEvent((event: KeyboardEvent) => {
+    if (event.key === "Escape") {
+      event.preventDefault()
+      onClose()
+    }
+  })
+
   useEffect(() => {
     if (!isOpen) return
 
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        event.preventDefault()
-        onClose()
-      }
-    }
-
-    document.addEventListener("keydown", handleKeyDown)
-    return () => document.removeEventListener("keydown", handleKeyDown)
-  }, [isOpen, onClose])
+    document.addEventListener("keydown", handleEscape)
+    return () => document.removeEventListener("keydown", handleEscape)
+  }, [isOpen])
 
   // Focus trap and initial focus
   useEffect(() => {
@@ -148,7 +147,7 @@ const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({ isOpen,
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-scrim/70 pt-16"
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-contain bg-scrim/70 pt-16"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
@@ -177,12 +176,12 @@ const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({ isOpen,
             className="rounded-md p-2 text-muted-foreground/70 transition hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             aria-label="Close keyboard shortcuts panel"
           >
-            <HiOutlineXMark size={20} />
+            <HiOutlineXMark size={20} aria-hidden="true" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="max-h-[60vh] overflow-y-auto p-4">
+        <div className="max-h-[60vh] overflow-y-auto overscroll-contain p-4">
           {groups.map((group) => (
             <CategorySection key={group.category} group={group} />
           ))}
@@ -191,7 +190,7 @@ const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({ isOpen,
         {/* Footer */}
         <div className="border-t border-border bg-muted px-4 py-3">
           <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <p>Shortcuts are disabled when typing in text fields</p>
+            <p>Shortcuts pause while you type in a text field</p>
             <p className="flex items-center gap-1">
               <KeyboardKey>Esc</KeyboardKey>
               <span>to close</span>

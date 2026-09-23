@@ -1,9 +1,12 @@
 "use server"
 
+import { z } from "zod"
+
 import { getModelForUser } from "@/app/lib/ai-model-routing"
 import {
   getDefaultPersonality,
   getPersonality,
+  isValidPersonality,
   type PersonalityType,
 } from "@/app/lib/ai-personalities"
 import { PARTICIPANT_SELECT } from "@/app/lib/conversation-select"
@@ -13,11 +16,30 @@ import { isProSubscription } from "@/app/lib/subscription"
 
 import getCurrentUser from "./getCurrentUser"
 
+/**
+ * A Server Action is a public endpoint: its arguments arrive from the network,
+ * not from the typed modal that normally calls it, so they are checked here.
+ * The custom prompt shares the bound a Character's system prompt has.
+ */
+const argsSchema = z.object({
+  aiModel: z.string().max(100).optional(),
+  personality: z
+    .string()
+    .refine((value) => isValidPersonality(value))
+    .optional(),
+  customPrompt: z.string().max(4000).optional(),
+})
+
 export default async function createAIConversation(
   aiModel?: string,
   personality?: PersonalityType,
   customPrompt?: string
 ) {
+  const parsedArgs = argsSchema.safeParse({ aiModel, personality, customPrompt })
+  if (!parsedArgs.success) {
+    return null
+  }
+
   const currentUser = await getCurrentUser()
 
   if (!currentUser?.id || !currentUser?.email) {

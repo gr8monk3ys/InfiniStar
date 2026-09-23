@@ -21,9 +21,9 @@ import {
 import { CHARACTER_CATEGORIES } from "@/app/lib/character-categories"
 import { cn } from "@/app/lib/utils"
 import { buttonVariants } from "@/app/components/ui/button"
+import type { RecentCharacterChat } from "@/app/actions/getRecentCharacterChats"
 import { CharacterCard } from "@/app/components/characters/CharacterCard"
 import { ContinueChattingRail } from "@/app/components/characters/ContinueChattingRail"
-import type { RecentCharacterChat } from "@/app/actions/getRecentCharacterChats"
 import { useCsrfToken, withCsrfHeader } from "@/app/hooks/useCsrfToken"
 
 interface CharacterData {
@@ -63,19 +63,19 @@ const VALID_TAB_IDS = new Set(TABS.map((tab) => tab.id))
 const STARTER_ARCHETYPES = [
   {
     label: "Companion",
-    title: "Late-night confidant",
+    title: "Late-Night Confidant",
     description:
       "A warm, emotionally present character for check-ins, flirting, and longer personal chats.",
   },
   {
     label: "Roleplay",
-    title: "Questline architect",
+    title: "Questline Architect",
     description:
       "A worldbuilding partner who can keep the lore straight while moving the scene forward.",
   },
   {
     label: "Tutor",
-    title: "Sharp study coach",
+    title: "Sharp Study Coach",
     description:
       "A helper with enough backbone to challenge your thinking instead of praising every draft.",
   },
@@ -94,7 +94,7 @@ interface ExploreCategoryTabsProps {
 
 interface CharacterGridProps {
   characters: CharacterData[]
-  likedIds: string[]
+  likedIds: ReadonlySet<string>
   onLike: (characterId: string) => Promise<void>
   onUnlike: (characterId: string) => Promise<void>
   className: string
@@ -137,7 +137,7 @@ function ExploreHeroSection({ searchQuery, onSearchChange, resultCount }: Explor
         <input
           type="search"
           name="character-search"
-          placeholder="Search characters…"
+          placeholder="Search characters, e.g. “space pirate”…"
           value={searchQuery}
           onChange={(event) => onSearchChange(event.target.value)}
           className={cn(
@@ -153,10 +153,7 @@ function ExploreHeroSection({ searchQuery, onSearchChange, resultCount }: Explor
         />
       </div>
 
-      <p
-        className="text-sm tabular-nums text-muted-foreground md:ml-auto"
-        aria-live="polite"
-      >
+      <p className="text-sm tabular-nums text-muted-foreground md:ml-auto" aria-live="polite">
         {resultCount} {resultCount === 1 ? "character" : "characters"}
       </p>
     </section>
@@ -196,7 +193,7 @@ function CharacterGrid({ characters, likedIds, onLike, onUnlike, className }: Ch
         <CharacterCard
           key={character.id}
           character={character}
-          isLiked={likedIds.includes(character.id)}
+          isLiked={likedIds.has(character.id)}
           onLike={onLike}
           onUnlike={onUnlike}
         />
@@ -235,10 +232,10 @@ function CharacterSection({
 function EmptyResultsState({ searchQuery, onClearFilters }: EmptyResultsStateProps) {
   return (
     <div className="rounded-2xl border border-dashed px-6 py-12 text-center">
-      <h3 className="text-lg font-semibold">No matches found</h3>
-      <p className="mx-auto mt-3 max-w-lg text-sm text-muted-foreground">
+      <h3 className="text-lg font-semibold">No Matches Found</h3>
+      <p className="mx-auto mt-3 max-w-lg break-words text-sm text-muted-foreground">
         No characters found
-        {searchQuery ? ` matching "${searchQuery}"` : " in this category"}. Try widening the search,
+        {searchQuery ? ` matching “${searchQuery}”` : " in this category"}. Try widening the search,
         or clear the filters and browse what is already getting traction.
       </p>
       <div className="mt-6 flex flex-wrap justify-center gap-3">
@@ -247,10 +244,10 @@ function EmptyResultsState({ searchQuery, onClearFilters }: EmptyResultsStatePro
           onClick={onClearFilters}
           className={cn(buttonVariants({ variant: "outline" }))}
         >
-          Clear filters
+          Clear Filters
         </button>
         <Link href="/feed" className={cn(buttonVariants({ variant: "ghost" }))}>
-          Visit creator feed
+          Visit Creator Feed
         </Link>
       </div>
     </div>
@@ -295,7 +292,7 @@ function EmptyMarketplaceState() {
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             <Link href="/dashboard/characters/new" className={cn(buttonVariants({ size: "lg" }))}>
               <HiOutlineRocketLaunch className="mr-2 size-5" aria-hidden="true" />
-              Create the first character
+              Create the First Character
             </Link>
             <Link
               href="/feed"
@@ -311,7 +308,7 @@ function EmptyMarketplaceState() {
       <section>
         <div className="mb-6 flex items-center gap-2">
           <HiOutlineSparkles className="size-5 text-primary" aria-hidden="true" />
-          <h2 className="text-xl font-bold">Character ideas to start with</h2>
+          <h2 className="text-xl font-bold">Character Ideas to Start With</h2>
         </div>
         <div className="grid gap-4 md:grid-cols-3">
           {STARTER_ARCHETYPES.map((archetype) => (
@@ -332,27 +329,27 @@ function EmptyMarketplaceState() {
       </section>
 
       <section className="rounded-3xl border border-border/50 bg-muted/30 px-6 py-12 text-center md:px-12">
-        <h2 className="text-2xl font-bold md:text-3xl">Why publish early?</h2>
+        <h2 className="text-2xl font-bold md:text-3xl">Why Publish Early?</h2>
         <p className="mx-auto mt-3 max-w-2xl text-muted-foreground">
           Early creators do not just add inventory. They define what this place feels like when new
           users arrive.
         </p>
         <div className="mt-8 grid gap-4 md:grid-cols-3">
           <div className="rounded-2xl border border-border/50 bg-background/80 p-5">
-            <p className="text-sm font-semibold text-foreground">Own the first impression</p>
+            <p className="text-sm font-semibold text-foreground">Own the First Impression</p>
             <p className="mt-2 text-sm text-muted-foreground">
               New visitors remember the first memorable character more than any marketing copy.
             </p>
           </div>
           <div className="rounded-2xl border border-border/50 bg-background/80 p-5">
-            <p className="text-sm font-semibold text-foreground">Set a quality bar</p>
+            <p className="text-sm font-semibold text-foreground">Set a Quality Bar</p>
             <p className="mt-2 text-sm text-muted-foreground">
               Strong public examples teach later creators what “good” looks like on the platform.
             </p>
           </div>
           <div className="rounded-2xl border border-border/50 bg-background/80 p-5">
             <p className="text-sm font-semibold text-foreground">
-              Build your creator profile early
+              Build Your Creator Profile Early
             </p>
             <p className="mt-2 text-sm text-muted-foreground">
               You get more room to establish your tone before the marketplace gets crowded.
@@ -406,6 +403,7 @@ export default function ExploreClient({
   const [activeCategory, setActiveCategory] = useState(() => normalizeCategory(initialCategory))
   const [searchQuery, setSearchQuery] = useState(() => normalizeSearchQuery(initialSearchQuery))
   const [likedIds, setLikedIds] = useState<string[]>(initialLikedIds)
+  const likedIdSet = useMemo(() => new Set(likedIds), [likedIds])
   const deferredSearchQuery = useDeferredValue(searchQuery)
   const { token } = useCsrfToken()
   const hasAnyCharacters = featured.length > 0 || trending.length > 0 || all.length > 0
@@ -467,18 +465,8 @@ export default function ExploreClient({
     window.history.replaceState(window.history.state, "", nextUrl)
   }, [activeCategory, deferredSearchQuery])
 
-  useEffect(() => {
-    setActiveCategory((currentCategory) =>
-      currentCategory === normalizeCategory(initialCategory)
-        ? currentCategory
-        : normalizeCategory(initialCategory)
-    )
-    setSearchQuery((currentQuery) =>
-      currentQuery === normalizeSearchQuery(initialSearchQuery)
-        ? currentQuery
-        : normalizeSearchQuery(initialSearchQuery)
-    )
-  }, [initialCategory, initialSearchQuery])
+  // New `initialCategory` / `initialSearchQuery` from a navigation arrive as a
+  // new `key` from the page (a remount), not as props synced into state here.
 
   const filteredAll = useMemo(() => {
     let items = all
@@ -529,12 +517,12 @@ export default function ExploreClient({
         })
         if (!res.ok) {
           setLikedIds((prev) => prev.filter((id) => id !== characterId))
-          const data = await res.json()
-          toast.error(data.error || "Failed to like character")
+          const data = (await res.json().catch(() => null)) as { error?: string } | null
+          toast.error(data?.error || "Couldn’t like this character. Try again.")
         }
       } catch {
         setLikedIds((prev) => prev.filter((id) => id !== characterId))
-        toast.error("Failed to like character")
+        toast.error("Couldn’t like this character. Check your connection and try again.")
       }
     },
     [token]
@@ -551,13 +539,13 @@ export default function ExploreClient({
           }),
         })
         if (!res.ok) {
-          setLikedIds((prev) => [...prev, characterId])
-          const data = await res.json()
-          toast.error(data.error || "Failed to unlike character")
+          setLikedIds((prev) => (prev.includes(characterId) ? prev : [...prev, characterId]))
+          const data = (await res.json().catch(() => null)) as { error?: string } | null
+          toast.error(data?.error || "Couldn’t unlike this character. Try again.")
         }
       } catch {
-        setLikedIds((prev) => [...prev, characterId])
-        toast.error("Failed to unlike character")
+        setLikedIds((prev) => (prev.includes(characterId) ? prev : [...prev, characterId]))
+        toast.error("Couldn’t unlike this character. Check your connection and try again.")
       }
     },
     [token]
@@ -608,7 +596,7 @@ export default function ExploreClient({
           icon={HiOutlineSparkles}
           iconClassName="text-yellow-500"
           characters={filteredFeatured}
-          likedIds={likedIds}
+          likedIds={likedIdSet}
           onLike={handleLike}
           onUnlike={handleUnlike}
           className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
@@ -621,7 +609,7 @@ export default function ExploreClient({
           icon={HiOutlineFire}
           iconClassName="text-orange-500"
           characters={filteredTrending}
-          likedIds={likedIds}
+          likedIds={likedIdSet}
           onLike={handleLike}
           onUnlike={handleUnlike}
           className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
@@ -632,7 +620,9 @@ export default function ExploreClient({
         <div className="mb-6">
           <h2 className="text-xl font-bold">
             {activeCategoryLabel}{" "}
-            <span className="font-normal text-muted-foreground">({filteredAll.length})</span>
+            <span className="font-normal tabular-nums text-muted-foreground">
+              ({filteredAll.length})
+            </span>
           </h2>
         </div>
 
@@ -641,7 +631,7 @@ export default function ExploreClient({
         ) : (
           <CharacterGrid
             characters={filteredAll}
-            likedIds={likedIds}
+            likedIds={likedIdSet}
             onLike={handleLike}
             onUnlike={handleUnlike}
             className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"

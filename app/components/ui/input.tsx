@@ -32,6 +32,8 @@ const Input: React.FC<InputProps> = ({
           id={id}
           type={type}
           autoComplete={id}
+          spellCheck={type === "email" ? false : undefined}
+          aria-invalid={errors[id] ? true : undefined}
           disabled={disabled}
           {...register(id, { required })}
           className={clsx(

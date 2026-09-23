@@ -1,10 +1,10 @@
 "use client"
 
-import { useCallback, useState } from "react"
-import { useRouter } from "next/navigation"
+import { useCallback, useRef, useState } from "react"
+import Link from "next/link"
 import toast from "react-hot-toast"
 
-import { Button } from "@/app/components/ui/button"
+import { Button, buttonVariants } from "@/app/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/app/components/ui/card"
 import { useCsrfToken } from "@/app/hooks/useCsrfToken"
 
@@ -17,8 +17,8 @@ interface ImportResult {
 }
 
 export default function ImportCharacterPage() {
-  const router = useRouter()
   const { token } = useCsrfToken()
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [state, setState] = useState<ImportState>("idle")
   const [dragActive, setDragActive] = useState(false)
   const [result, setResult] = useState<ImportResult | null>(null)
@@ -45,7 +45,7 @@ export default function ImportCharacterPage() {
         const data = await response.json()
 
         if (!response.ok) {
-          throw new Error(data.error || "Import failed")
+          throw new Error(data.error || "Import failed. Check the file and try again.")
         }
 
         setState("success")
@@ -53,7 +53,8 @@ export default function ImportCharacterPage() {
         toast.success(data.message || "Character imported")
       } catch (err) {
         setState("idle")
-        const message = err instanceof Error ? err.message : "Import failed"
+        const message =
+          err instanceof Error ? err.message : "Import failed. Check the file and try again."
         setError(message)
         toast.error(message)
       }
@@ -128,17 +129,18 @@ export default function ImportCharacterPage() {
               </div>
 
               <div className="flex items-center gap-3">
-                <Button
-                  onClick={() => router.push(`/dashboard/characters/${result.character.id}/edit`)}
+                <Link
+                  href={`/dashboard/characters/${result.character.id}/edit`}
+                  className={buttonVariants()}
                 >
                   Edit Character
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => router.push(`/characters/${result.character.slug}`)}
+                </Link>
+                <Link
+                  href={`/characters/${result.character.slug}`}
+                  className={buttonVariants({ variant: "outline" })}
                 >
                   View Character
-                </Button>
+                </Link>
                 <Button
                   variant="ghost"
                   onClick={() => {
@@ -152,49 +154,53 @@ export default function ImportCharacterPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              <div
+              <input
+                ref={fileInputRef}
+                id="file-input"
+                name="file"
+                type="file"
+                accept=".json,.png"
+                onChange={handleFileSelect}
+                className="hidden"
+                aria-hidden="true"
+                tabIndex={-1}
+              />
+              <button
+                type="button"
                 onDrop={handleDrop}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
-                className={`flex min-h-[200px] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-8 text-center transition-colors ${
+                onClick={() => fileInputRef.current?.click()}
+                disabled={state === "loading"}
+                className={`flex min-h-[200px] w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-8 text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 ${
                   dragActive
                     ? "border-primary bg-primary/5"
                     : "border-muted-foreground/25 hover:border-muted-foreground/50"
-                } ${state === "loading" ? "pointer-events-none opacity-50" : ""}`}
-                onClick={() => document.getElementById("file-input")?.click()}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault()
-                    document.getElementById("file-input")?.click()
-                  }
-                }}
+                }`}
                 aria-label="Drop a character card file here or click to browse"
+                aria-describedby={error ? "import-error" : undefined}
               >
-                <input
-                  id="file-input"
-                  type="file"
-                  accept=".json,.png"
-                  onChange={handleFileSelect}
-                  className="hidden"
-                  aria-hidden="true"
-                />
-
                 {state === "loading" ? (
-                  <p className="text-sm text-muted-foreground">Importing character...</p>
+                  <span className="text-sm text-muted-foreground" aria-live="polite">
+                    Importing character…
+                  </span>
                 ) : (
                   <>
-                    <p className="text-lg font-medium">Drop a character card here</p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      or click to browse — accepts .json and .png files
-                    </p>
+                    <span className="text-lg font-medium">Drop a character card here</span>
+                    <span className="mt-1 text-sm text-muted-foreground">
+                      or click to browse — accepts <span translate="no">.json</span> and{" "}
+                      <span translate="no">.png</span> files
+                    </span>
                   </>
                 )}
-              </div>
+              </button>
 
               {error && (
-                <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-900 dark:border-red-800 dark:bg-red-950 dark:text-red-100">
+                <div
+                  id="import-error"
+                  role="alert"
+                  className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-900 dark:border-red-800 dark:bg-red-950 dark:text-red-100"
+                >
                   {error}
                 </div>
               )}
@@ -214,7 +220,9 @@ export default function ImportCharacterPage() {
                     <strong>V1 Character Card</strong> — Legacy format (auto-detected)
                   </li>
                 </ul>
-                <p>Imported characters are created as private by default. Max file size: 10 MB.</p>
+                <p>
+                  Imported characters are created as private by default. Max file size: 10&nbsp;MB.
+                </p>
               </div>
             </div>
           )}

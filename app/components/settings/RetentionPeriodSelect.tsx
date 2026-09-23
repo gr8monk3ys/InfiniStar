@@ -20,12 +20,15 @@ const RETENTION_OPTIONS = [
 ] as const
 
 interface RetentionPeriodSelectProps {
+  /** Lets a visible `<label htmlFor>` name the trigger. */
+  id?: string
   value: number
   onChange: (value: number) => void
   disabled?: boolean
 }
 
 export function RetentionPeriodSelect({
+  id,
   value,
   onChange,
   disabled = false,
@@ -36,7 +39,11 @@ export function RetentionPeriodSelect({
       onValueChange={(val) => onChange(parseInt(val, 10))}
       disabled={disabled}
     >
-      <SelectTrigger className="w-full" aria-label="Select retention period">
+      <SelectTrigger
+        id={id}
+        className="w-full"
+        aria-label={id ? undefined : "Select retention period"}
+      >
         <SelectValue placeholder="Select retention period" />
       </SelectTrigger>
       <SelectContent>

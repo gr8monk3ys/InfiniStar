@@ -52,14 +52,16 @@ export function TemplateSelector({
     }
   }, [isOpen, fetchTemplates, fetchPopularTemplates])
 
-  // Filter templates based on search
-  const filteredTemplates = templates.filter(
-    (template) =>
-      !searchQuery ||
-      template.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      template.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (template.shortcut && template.shortcut.toLowerCase().includes(searchQuery.toLowerCase()))
-  )
+  // Filter templates based on search (query lower-cased once, not per template)
+  const lowerQuery = searchQuery.toLowerCase()
+  const filteredTemplates = lowerQuery
+    ? templates.filter(
+        (template) =>
+          template.name.toLowerCase().includes(lowerQuery) ||
+          template.content.toLowerCase().includes(lowerQuery) ||
+          template.shortcut?.toLowerCase().includes(lowerQuery)
+      )
+    : templates
 
   const handleSelectTemplate = useCallback(
     async (template: MessageTemplateType) => {
@@ -92,7 +94,7 @@ export function TemplateSelector({
             className={cn("gap-1.5", triggerClassName)}
             aria-label="Insert template"
           >
-            <FileText className="size-4" />
+            <FileText className="size-4" aria-hidden="true" />
             {showLabel && <span>Templates</span>}
           </Button>
         </DropdownMenuTrigger>
@@ -100,11 +102,17 @@ export function TemplateSelector({
           {/* Search */}
           <div className="p-2">
             <div className="relative">
-              <Search className="absolute left-2 top-2 size-4 text-muted-foreground" />
+              <Search
+                className="absolute left-2 top-2 size-4 text-muted-foreground"
+                aria-hidden="true"
+              />
               <input
-                type="text"
+                type="search"
+                name="templateSearch"
+                autoComplete="off"
+                aria-label="Search templates"
                 className="flex h-8 w-full rounded-md border border-input bg-background py-1 pl-8 pr-3 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                placeholder="Search templates..."
+                placeholder="Search templates…"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onClick={(e) => e.stopPropagation()}
@@ -129,7 +137,11 @@ export function TemplateSelector({
                   <div className="flex w-full items-center gap-2">
                     <span className="truncate text-sm font-medium">{template.name}</span>
                     {template.shortcut && (
-                      <Badge variant="secondary" className="ml-auto font-mono text-xs">
+                      <Badge
+                        variant="secondary"
+                        className="ml-auto font-mono text-xs"
+                        translate="no"
+                      >
                         {template.shortcut}
                       </Badge>
                     )}
@@ -148,9 +160,9 @@ export function TemplateSelector({
             {searchQuery ? "Search Results" : "All Templates"}
           </DropdownMenuLabel>
 
-          <div className="max-h-48 overflow-auto">
+          <div className="max-h-48 overflow-auto overscroll-contain">
             {isLoading ? (
-              <div className="p-4 text-center text-sm text-muted-foreground">Loading...</div>
+              <div className="p-4 text-center text-sm text-muted-foreground">Loading…</div>
             ) : filteredTemplates.length === 0 ? (
               <div className="p-4 text-center text-sm text-muted-foreground">
                 {templates.length === 0 ? "No templates yet" : "No templates found"}
@@ -165,7 +177,11 @@ export function TemplateSelector({
                   <div className="flex w-full items-center gap-2">
                     <span className="truncate text-sm font-medium">{template.name}</span>
                     {template.shortcut && (
-                      <Badge variant="secondary" className="ml-auto font-mono text-xs">
+                      <Badge
+                        variant="secondary"
+                        className="ml-auto font-mono text-xs"
+                        translate="no"
+                      >
                         {template.shortcut}
                       </Badge>
                     )}
@@ -182,7 +198,7 @@ export function TemplateSelector({
 
           {/* Manage Templates */}
           <DropdownMenuItem onClick={handleOpenManager}>
-            <Settings className="mr-2 size-4" />
+            <Settings className="mr-2 size-4" aria-hidden="true" />
             Manage Templates
           </DropdownMenuItem>
         </DropdownMenuContent>

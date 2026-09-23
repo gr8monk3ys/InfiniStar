@@ -24,9 +24,6 @@ export function PricingCtaButton({
   pending = false,
   className,
 }: PricingCtaButtonProps) {
-  const { token: csrfToken, loading: csrfLoading } = useCsrfToken()
-  const [isLoading, setIsLoading] = useState(false)
-
   if (!isSignedIn) {
     return (
       <Link href="/sign-up" className={cn(buttonVariants({ size: "lg" }), className)}>
@@ -34,6 +31,22 @@ export function PricingCtaButton({
       </Link>
     )
   }
+
+  return <CheckoutButton isPro={isPro} pending={pending} className={className} />
+}
+
+/**
+ * The signed-in button. Split out so the CSRF token is fetched only for a
+ * visitor who can use it: the pricing page is public and prerendered, and a
+ * signed-out visitor only ever gets the sign-up link above.
+ */
+function CheckoutButton({
+  isPro,
+  pending,
+  className,
+}: Pick<PricingCtaButtonProps, "isPro" | "pending" | "className">) {
+  const { token: csrfToken, loading: csrfLoading } = useCsrfToken()
+  const [isLoading, setIsLoading] = useState(false)
 
   const redirectToStripeUrl = async (endpoint: "/api/stripe/checkout" | "/api/stripe/portal") => {
     if (!csrfToken) {
@@ -101,7 +114,7 @@ export function PricingCtaButton({
       disabled={pending || csrfLoading || isLoading}
       className={className}
     >
-      {isLoading ? "Redirecting..." : isPro ? "Manage Billing" : "Upgrade to PRO"}
+      {isLoading ? "Redirecting…" : isPro ? "Manage Billing" : "Upgrade to PRO"}
     </Button>
   )
 }

@@ -62,50 +62,52 @@ export default function MessageActionsMenu({
         onClick={onToggle}
         className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         aria-label="More message actions"
-        aria-haspopup="menu"
         aria-expanded={open}
         title="More"
       >
-        <HiEllipsisVertical size={16} />
+        <HiEllipsisVertical size={16} aria-hidden="true" />
       </button>
 
       {open && (
+        // A plain group of buttons (Tab-navigable) rather than role="menu", which
+        // promises arrow-key navigation this popover does not implement.
         <div
-          role="menu"
+          role="group"
+          aria-label="Message actions"
           className="absolute right-0 z-10 mt-1 w-44 rounded-md border border-border bg-popover py-1 shadow-lg"
         >
           {onCopy && (
-            <button type="button" role="menuitem" onClick={onCopy} className={itemClass}>
+            <button type="button" onClick={onCopy} className={itemClass}>
               <HiOutlineClipboardDocument size={16} aria-hidden="true" />
-              Copy text
+              Copy Text
             </button>
           )}
           {onReadAloud && (
-            <button type="button" role="menuitem" onClick={onReadAloud} className={itemClass}>
+            <button type="button" onClick={onReadAloud} className={itemClass}>
               {isSpeaking ? (
                 <HiStopCircle size={16} aria-hidden="true" />
               ) : (
                 <HiSpeakerWave size={16} aria-hidden="true" />
               )}
-              {isSpeaking ? "Stop reading aloud" : "Read aloud"}
+              {isSpeaking ? "Stop Reading Aloud" : "Read Aloud"}
             </button>
           )}
           {onBranch && (
             <button
               type="button"
-              role="menuitem"
+
               onClick={onBranch}
               disabled={isBranching}
               className={itemClass}
             >
               <HiOutlineSquare2Stack size={16} aria-hidden="true" />
-              {isBranching ? "Branching..." : "Branch from here"}
+              {isBranching ? "Branching…" : "Branch from Here"}
             </button>
           )}
           {onEdit && (
             <button
               type="button"
-              role="menuitem"
+
               onClick={onEdit}
               className={itemClass}
               disabled={isDeleting}
@@ -117,13 +119,13 @@ export default function MessageActionsMenu({
           {onDelete && (
             <button
               type="button"
-              role="menuitem"
+
               onClick={onDelete}
               className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-destructive hover:bg-destructive/10 disabled:opacity-60"
               disabled={isDeleting}
             >
               <HiTrash size={16} aria-hidden="true" />
-              {isDeleting ? "Deleting..." : "Delete"}
+              {isDeleting ? "Deleting…" : "Delete"}
             </button>
           )}
         </div>

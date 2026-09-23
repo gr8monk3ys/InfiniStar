@@ -91,9 +91,10 @@ export async function generateConversationSummary(options: {
     })
     .join("\n\n")
 
-  const participantNames = conversation.users
-    .map((user) => user.name || user.email || "Unknown")
-    .filter((name, index, self) => self.indexOf(name) === index)
+  // Distinct names, first-seen order.
+  const participantNames = [
+    ...new Set(conversation.users.map((user) => user.name || user.email || "Unknown")),
+  ]
 
   const startTime = Date.now()
   const response = await anthropic.messages.create({
@@ -128,25 +129,27 @@ export async function generateConversationSummary(options: {
     summary.participants = participantNames
   }
 
-  await trackAiUsage({
-    userId,
-    conversationId,
-    model,
-    inputTokens: response.usage.input_tokens,
-    outputTokens: response.usage.output_tokens,
-    requestType,
-    latencyMs,
-  })
-
+  // The usage row and the stored summary are independent writes.
   const generatedAt = new Date()
-  await prisma.conversation.update({
-    where: { id: conversationId },
-    data: {
-      summary: JSON.stringify(summary),
-      summaryGeneratedAt: generatedAt,
-      summaryMessageCount: totalMessageCount,
-    },
-  })
+  await Promise.all([
+    trackAiUsage({
+      userId,
+      conversationId,
+      model,
+      inputTokens: response.usage.input_tokens,
+      outputTokens: response.usage.output_tokens,
+      requestType,
+      latencyMs,
+    }),
+    prisma.conversation.update({
+      where: { id: conversationId },
+      data: {
+        summary: JSON.stringify(summary),
+        summaryGeneratedAt: generatedAt,
+        summaryMessageCount: totalMessageCount,
+      },
+    }),
+  ])
 
   return { summary, messageCount: totalMessageCount, generatedAt }
 }

@@ -218,6 +218,9 @@ describe("POST /api/moderation/blocks", () => {
     mockVerifyCsrfToken.mockReturnValue(false)
     const res = await POST(makePostRequest({ blockedUserId: TARGET_USER_ID }))
     expect(res.status).toBe(403)
+    // A forged request is rejected before the session or user lookup.
+    expect(mockAuth).not.toHaveBeenCalled()
+    expect(mockUserFindUnique).not.toHaveBeenCalled()
   })
 
   it("returns 400 when attempting to block yourself", async () => {
@@ -313,6 +316,8 @@ describe("DELETE /api/moderation/blocks", () => {
     mockVerifyCsrfToken.mockReturnValue(false)
     const res = await DELETE(makeDeleteRequest({ blockedUserId: TARGET_USER_ID }))
     expect(res.status).toBe(403)
+    expect(mockAuth).not.toHaveBeenCalled()
+    expect(mockUserFindUnique).not.toHaveBeenCalled()
   })
 
   it("unblocks a user successfully and returns success", async () => {

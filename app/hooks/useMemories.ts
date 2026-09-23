@@ -129,7 +129,7 @@ export function useMemories(options?: UseMemoriesOptions): UseMemoriesReturn {
         expiresAt?: string | null
       }
     ): Promise<AIMemory | null> => {
-      const loader = createLoadingToast("Saving memory...")
+      const loader = createLoadingToast("Saving memory…")
 
       try {
         const response = await api.post<MemoryResponse>(
@@ -156,14 +156,16 @@ export function useMemories(options?: UseMemoriesOptions): UseMemoriesReturn {
         } else {
           // Add new memory to state
           setMemories((prev) => [...prev, { ...newMemory, isExpired: false }])
-          // Update capacity
-          if (capacity) {
-            setCapacity({
-              ...capacity,
-              current: capacity.current + 1,
-              remaining: capacity.remaining - 1,
-            })
-          }
+          // Update capacity from the latest value, not this callback's closure
+          setCapacity((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  current: prev.current + 1,
+                  remaining: prev.remaining - 1,
+                }
+              : null
+          )
         }
 
         loader.success(response.message || "Memory saved")
@@ -174,7 +176,7 @@ export function useMemories(options?: UseMemoriesOptions): UseMemoriesReturn {
         return null
       }
     },
-    [capacity]
+    []
   )
 
   const updateMemory = useCallback(
@@ -187,7 +189,7 @@ export function useMemories(options?: UseMemoriesOptions): UseMemoriesReturn {
         expiresAt?: string | null
       }
     ): Promise<AIMemory | null> => {
-      const loader = createLoadingToast("Updating memory...")
+      const loader = createLoadingToast("Updating memory…")
 
       try {
         const response = await api.patch<MemoryResponse>(
@@ -214,7 +216,7 @@ export function useMemories(options?: UseMemoriesOptions): UseMemoriesReturn {
   )
 
   const deleteMemory = useCallback(async (key: string): Promise<boolean> => {
-    const loader = createLoadingToast("Deleting memory...")
+    const loader = createLoadingToast("Deleting memory…")
 
     try {
       await api.delete(`/api/ai/memory/${encodeURIComponent(key)}`, {
@@ -242,7 +244,7 @@ export function useMemories(options?: UseMemoriesOptions): UseMemoriesReturn {
 
   const extractMemories = useCallback(
     async (conversationId: string, autoSave = false): Promise<ExtractedMemory[] | null> => {
-      const loader = createLoadingToast("Analyzing conversation...")
+      const loader = createLoadingToast("Analyzing conversation…")
 
       try {
         const response = await api.post<ExtractResponse>(

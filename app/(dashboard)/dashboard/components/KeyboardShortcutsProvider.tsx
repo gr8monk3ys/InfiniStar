@@ -225,7 +225,11 @@ export function KeyboardShortcutsProvider({ children }: KeyboardShortcutsProvide
   const [state, dispatch] = useReducer(keyboardShortcutsReducer, initialKeyboardShortcutsState)
 
   // Get global search context
-  const searchContext = useGlobalSearchContext()
+  const {
+    toggle: toggleSearch,
+    isOpen: isSearchOpen,
+    close: closeSearch,
+  } = useGlobalSearchContext()
 
   // Modal controls
   const openHelp = useCallback(() => dispatch({ type: "open_help" }), [])
@@ -261,7 +265,7 @@ export function KeyboardShortcutsProvider({ children }: KeyboardShortcutsProvide
       // Navigation shortcuts
       {
         id: "globalSearch",
-        action: searchContext.toggle,
+        action: toggleSearch,
       },
       {
         id: "showHelp",
@@ -276,8 +280,8 @@ export function KeyboardShortcutsProvider({ children }: KeyboardShortcutsProvide
         action: () => {
           if (state.isHelpOpen) {
             closeHelp()
-          } else if (searchContext.isOpen) {
-            searchContext.close()
+          } else if (isSearchOpen) {
+            closeSearch()
           } else if (state.isNewAIConversationOpen) {
             closeNewAIConversation()
           }
@@ -328,15 +332,18 @@ export function KeyboardShortcutsProvider({ children }: KeyboardShortcutsProvide
       {
         id: "scrollToBottom",
         action: () => {
+          const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches
           state.messageContainerRef?.current?.scrollTo({
             top: state.messageContainerRef.current.scrollHeight,
-            behavior: "smooth",
+            behavior: prefersReducedMotion ? "auto" : "smooth",
           })
         },
       },
     ],
     [
-      searchContext,
+      toggleSearch,
+      isSearchOpen,
+      closeSearch,
       toggleHelp,
       state.isHelpOpen,
       closeHelp,

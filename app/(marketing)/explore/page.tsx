@@ -5,7 +5,11 @@ import { CHARACTER_SELECT } from "@/app/lib/character-select"
 import { dbLogger } from "@/app/lib/logger"
 import { matureAccess } from "@/app/lib/nsfw"
 import prisma from "@/app/lib/prismadb"
-import { getRecommendationSignalsForUser, rankCharactersForUser } from "@/app/lib/recommendations"
+import {
+  getRecommendationSignalsForUser,
+  rankCharactersForUser,
+  type RecommendationSignals,
+} from "@/app/lib/recommendations"
 import { cn } from "@/app/lib/utils"
 import { buttonVariants } from "@/app/components/ui/button"
 import getCurrentUser from "@/app/actions/getCurrentUser"
@@ -63,21 +67,56 @@ function getFirstSearchParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value
 }
 
+/**
+ * Only the fields a card renders. `createdAt`, `createdById` and `featured`
+ * feed the ranking on the server and would otherwise be serialized into the
+ * page payload for every card.
+ */
+function toCardData(character: ExploreCharacter) {
+  return {
+    id: character.id,
+    slug: character.slug,
+    name: character.name,
+    tagline: character.tagline,
+    avatarUrl: character.avatarUrl,
+    category: character.category,
+    usageCount: character.usageCount,
+    likeCount: character.likeCount,
+    commentCount: character.commentCount,
+    isNsfw: character.isNsfw,
+    createdBy: character.createdBy,
+  }
+}
+
 export default async function ExplorePage({ searchParams }: ExplorePageProps) {
-  const resolvedSearchParams = (await searchParams) ?? {}
-  const currentUser = await getCurrentUser()
+  const [resolvedSearchParams = {}, currentUser] = await Promise.all([
+    searchParams,
+    getCurrentUser(),
+  ])
+  const userId = currentUser?.id
   const access = matureAccess(currentUser)
   const publicCharacterWhere = { isPublic: true, ...access.visibilityFilter }
+
+  // Started alongside the catalog and allowed to fail quietly. The rail is an
+  // improvement to the page, not the page — a returning chatter losing their
+  // shortcut is a worse day, but a catalog that will not render because of it
+  // is a broken product.
+  const recentChatsPromise: Promise<RecentCharacterChat[]> = getRecentCharacterChats(userId).catch(
+    (error: unknown) => {
+      dbLogger.error({ err: error }, "EXPLORE_RECENT_CHATS_FAILED")
+      return []
+    }
+  )
 
   let featuredRaw: ExploreCharacter[] = []
   let trendingRaw: ExploreCharacter[] = []
   let allRaw: ExploreCharacter[] = []
   let likedRecords: Array<{ characterId: string }> = []
-  let recommendationSignals = null
+  let recommendationSignals: RecommendationSignals | null = null
   let catalogError = false
 
   try {
-    ;[featuredRaw, trendingRaw, allRaw, likedRecords] = await Promise.all([
+    ;[featuredRaw, trendingRaw, allRaw, likedRecords, recommendationSignals] = await Promise.all([
       prisma.character.findMany({
         where: { ...publicCharacterWhere, featured: true },
         orderBy: { usageCount: "desc" },
@@ -96,17 +135,14 @@ export default async function ExplorePage({ searchParams }: ExplorePageProps) {
         take: 120,
         select: CHARACTER_SELECT,
       }),
-      currentUser?.id
+      userId
         ? prisma.characterLike.findMany({
-            where: { userId: currentUser.id },
+            where: { userId },
             select: { characterId: true },
           })
         : Promise.resolve([]),
+      userId ? getRecommendationSignalsForUser(userId) : Promise.resolve(null),
     ])
-
-    recommendationSignals = currentUser?.id
-      ? await getRecommendationSignalsForUser(currentUser.id)
-      : null
   } catch (error) {
     // Same rule as the feed: a failed query must not render as an empty catalog.
     catalogError = true
@@ -126,16 +162,7 @@ export default async function ExplorePage({ searchParams }: ExplorePageProps) {
     ? rankCharactersForUser(allRaw, recommendationSignals).slice(0, 24)
     : allRaw.slice(0, 24)
 
-  // Fetched on its own and allowed to fail quietly. The rail is an
-  // improvement to the page, not the page — a returning chatter losing their
-  // shortcut is a worse day, but a catalog that will not render because of it
-  // is a broken product.
-  let recentChats: RecentCharacterChat[] = []
-  try {
-    recentChats = await getRecentCharacterChats(currentUser?.id)
-  } catch (error) {
-    dbLogger.error({ err: error }, "EXPLORE_RECENT_CHATS_FAILED")
-  }
+  const recentChats = await recentChatsPromise
 
   const likedIds = likedRecords.map((r: { characterId: string }) => r.characterId)
   const initialCategory = getFirstSearchParam(resolvedSearchParams.category)
@@ -152,7 +179,7 @@ export default async function ExplorePage({ searchParams }: ExplorePageProps) {
             <>
               <RetryButton />
               <Link href="/feed" className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
-                Visit the creator feed
+                Visit the Creator Feed
               </Link>
             </>
           }
@@ -164,9 +191,12 @@ export default async function ExplorePage({ searchParams }: ExplorePageProps) {
   return (
     <section className="container py-8 md:py-12 lg:py-16">
       <ExploreClient
-        featured={featured}
-        trending={trending}
-        all={all}
+        // A navigation that lands on different filters remounts the client
+        // with the server's state instead of syncing props into state.
+        key={`${initialCategory ?? ""}|${initialSearchQuery ?? ""}`}
+        featured={featured.map(toCardData)}
+        trending={trending.map(toCardData)}
+        all={all.map(toCardData)}
         likedIds={likedIds}
         recentChats={recentChats}
         initialCategory={initialCategory}

@@ -113,6 +113,7 @@ const DropdownMenuCheckboxItem = React.forwardRef<
           strokeLinecap="round"
           strokeLinejoin="round"
           className="size-4"
+          aria-hidden="true"
         >
           <polyline points="20 6 9 17 4 12" />
         </svg>
@@ -142,6 +143,7 @@ const DropdownMenuRadioItem = React.forwardRef<
           viewBox="0 0 24 24"
           fill="currentColor"
           className="size-2"
+          aria-hidden="true"
         >
           <circle cx="12" cy="12" r="6" />
         </svg>

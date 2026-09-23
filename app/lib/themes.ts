@@ -6,14 +6,7 @@
 export type BorderRadius = "none" | "small" | "medium" | "large" | "full"
 export type Density = "compact" | "comfortable" | "spacious"
 export type FontFamily =
-  | "system"
-  | "inter"
-  | "roboto"
-  | "open-sans"
-  | "lato"
-  | "poppins"
-  | "source-sans"
-  | "nunito"
+  "system" | "inter" | "roboto" | "open-sans" | "lato" | "poppins" | "source-sans" | "nunito"
 
 export interface ThemeColors {
   // Core colors (HSL format without hsl() wrapper, e.g., "222.2 47.4% 11.2%")
@@ -653,26 +646,59 @@ export function themeToCssVariables(theme: Theme, mode: "light" | "dark"): Recor
   }
 }
 
-// Local storage key for theme preference
-export const THEME_STORAGE_KEY = "infinistar-theme-preference"
+// Local storage key for theme preference. Versioned because the value is a
+// JSON document (`UserThemePreference`): a future change to its shape takes a
+// new key rather than misreading old data.
+export const THEME_STORAGE_KEY = "infinistar-theme-preference:v1"
+// What shipped before versioning. Read once, moved to the current key, removed.
+const LEGACY_THEME_STORAGE_KEY = "infinistar-theme-preference"
 
-// Save theme preference to localStorage
+// Save theme preference to localStorage. Only the two fields the provider
+// reads are written, whatever else the object carries.
 export function saveThemePreference(preference: UserThemePreference): void {
   if (typeof window === "undefined") return
   try {
-    localStorage.setItem(THEME_STORAGE_KEY, JSON.stringify(preference))
+    const minimal: UserThemePreference = { themeId: preference.themeId }
+    if (preference.customTheme) {
+      minimal.customTheme = preference.customTheme
+    }
+    localStorage.setItem(THEME_STORAGE_KEY, JSON.stringify(minimal))
   } catch (error) {
     console.error("Failed to save theme preference", error)
   }
+}
+
+function isThemePreference(value: unknown): value is UserThemePreference {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    typeof (value as UserThemePreference).themeId === "string"
+  )
+}
+
+// Moves a preference saved under the pre-versioning key to the current one and
+// returns it. A failed move still returns the legacy copy, so the chatter keeps
+// their theme this session and the move is retried on the next load.
+function migrateLegacyThemePreference(): string | null {
+  const legacy = localStorage.getItem(LEGACY_THEME_STORAGE_KEY)
+  if (legacy === null) return null
+  try {
+    localStorage.setItem(THEME_STORAGE_KEY, legacy)
+    localStorage.removeItem(LEGACY_THEME_STORAGE_KEY)
+  } catch {
+    // Keep reading the legacy copy until the move succeeds.
+  }
+  return legacy
 }
 
 // Load theme preference from localStorage
 export function loadThemePreference(): UserThemePreference | null {
   if (typeof window === "undefined") return null
   try {
-    const stored = localStorage.getItem(THEME_STORAGE_KEY)
+    const stored = localStorage.getItem(THEME_STORAGE_KEY) ?? migrateLegacyThemePreference()
     if (stored) {
-      return JSON.parse(stored) as UserThemePreference
+      const parsed: unknown = JSON.parse(stored)
+      return isThemePreference(parsed) ? parsed : null
     }
   } catch (error) {
     console.error("Failed to load theme preference", error)

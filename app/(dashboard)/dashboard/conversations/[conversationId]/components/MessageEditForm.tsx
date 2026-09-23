@@ -16,11 +16,15 @@ export default function MessageEditForm({
   return (
     <div className="flex w-full flex-col gap-2">
       <textarea
+        name="body"
+        autoComplete="off"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         aria-label="Edit message"
         className="w-full rounded-lg border border-border bg-background p-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         rows={3}
+        // Justified: this field only appears after the user chose "Edit", so moving
+        // focus into it is the expected result of that action (on mobile too).
         autoFocus
         onKeyDown={(e) => {
           if (e.key === "Enter" && !e.shiftKey) {
@@ -34,12 +38,14 @@ export default function MessageEditForm({
       />
       <div className="flex gap-2">
         <button
+          type="button"
           onClick={onSave}
           className="rounded-lg bg-primary px-3 py-1 text-sm text-primary-foreground hover:bg-primary/90"
         >
-          Save
+          Save Changes
         </button>
         <button
+          type="button"
           onClick={onCancel}
           className="rounded border border-border px-3 py-1 text-sm text-secondary-foreground hover:bg-accent"
         >

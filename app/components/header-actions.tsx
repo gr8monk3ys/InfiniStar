@@ -57,7 +57,7 @@ export function HeaderActions() {
   const isSignedIn = state === "signed-in"
 
   return (
-    <nav className="flex items-center space-x-2">
+    <nav className="flex items-center space-x-2" aria-label="Account">
       <ThemeToggleCompact />
       {isSignedIn ? (
         <Link href="/dashboard" className={buttonVariants({ size: "sm", variant: "gradient" })}>

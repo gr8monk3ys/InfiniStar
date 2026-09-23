@@ -3,7 +3,8 @@ import type { Metadata } from "next"
 import JoinPageClient from "./JoinPageClient"
 
 export const metadata: Metadata = {
-  title: "Join Conversation | Infinistar",
+  // The root layout template appends " - InfiniStar".
+  title: "Join Conversation",
   description: "Review a shared conversation invite and join with your account.",
   robots: {
     index: false,

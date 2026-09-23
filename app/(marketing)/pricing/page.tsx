@@ -2,6 +2,7 @@ import Link from "next/link"
 import { HiCheck, HiOutlineBolt, HiOutlineShieldCheck } from "react-icons/hi2"
 
 import { freePlan, proPlan } from "@/config/subscriptions"
+import { formatNumber } from "@/app/lib/intl-format"
 import { FreePlanCta, ProPlanCta } from "@/app/(marketing)/pricing/PricingCta"
 
 export const metadata = {
@@ -21,6 +22,15 @@ export const metadata = {
 // resolve "signed in" and "PRO" on the client (see PricingCta.tsx); the
 // server used to await the user and the subscription row for them, which
 // made every visit a cold render.
+/** "$0", "$9.99": whole prices drop the cents, others keep two places. */
+function formatPrice(price: number) {
+  return formatNumber(price, {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: Number.isInteger(price) ? 0 : 2,
+  })
+}
+
 export default function PricingPage() {
   return (
     <section className="container flex flex-col gap-8 py-10 md:max-w-6xl md:py-14 lg:py-20">
@@ -40,11 +50,11 @@ export default function PricingPage() {
           50 messages every month on free
         </span>
         <span className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background px-4 py-2">
-          <HiOutlineBolt className="size-4 text-primary" />
+          <HiOutlineBolt className="size-4 text-primary" aria-hidden="true" />
           Faster and deeper model access on PRO
         </span>
         <span className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background px-4 py-2">
-          <HiOutlineShieldCheck className="size-4 text-primary" />
+          <HiOutlineShieldCheck className="size-4 text-primary" aria-hidden="true" />
           Billing through Stripe with cancel-anytime control
         </span>
       </div>
@@ -60,7 +70,7 @@ export default function PricingPage() {
 
           <div className="mb-6">
             <div className="flex items-baseline gap-1">
-              <span className="text-5xl font-bold">${freePlan.price}</span>
+              <span className="text-5xl font-bold tabular-nums">{formatPrice(freePlan.price)}</span>
               <span className="text-muted-foreground">/month</span>
             </div>
           </div>
@@ -68,7 +78,7 @@ export default function PricingPage() {
           <ul className="mb-8 grow space-y-3">
             {freePlan.features.map((feature) => (
               <li key={feature} className="flex items-start gap-3 text-sm">
-                <HiCheck className="mt-0.5 size-5 shrink-0 text-green-500" />
+                <HiCheck className="mt-0.5 size-5 shrink-0 text-green-500" aria-hidden="true" />
                 <span>{feature}</span>
               </li>
             ))}
@@ -92,7 +102,7 @@ export default function PricingPage() {
 
           <div className="mb-6">
             <div className="flex items-baseline gap-1">
-              <span className="text-5xl font-bold">${proPlan.price}</span>
+              <span className="text-5xl font-bold tabular-nums">{formatPrice(proPlan.price)}</span>
               <span className="text-muted-foreground">/month</span>
             </div>
           </div>
@@ -100,7 +110,7 @@ export default function PricingPage() {
           <ul className="mb-8 grow space-y-3">
             {proPlan.features.map((feature) => (
               <li key={feature} className="flex items-start gap-3 text-sm">
-                <HiCheck className="mt-0.5 size-5 shrink-0 text-primary" />
+                <HiCheck className="mt-0.5 size-5 shrink-0 text-primary" aria-hidden="true" />
                 <span>{feature}</span>
               </li>
             ))}

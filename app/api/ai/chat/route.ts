@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from "next/server"
+import { after, NextResponse, type NextRequest } from "next/server"
 import { z } from "zod"
 
 import { claimAllowanceSlot, releaseAllowanceClaim, type AllowanceClaim } from "@/app/lib/ai-access"
@@ -301,30 +301,34 @@ export async function POST(request: NextRequest) {
       aiLogger.warn({ err }, "Auto summary failed")
     })
 
-    // Best-effort background push (web push) for AI completion.
-    try {
-      const prefs = await prisma.user.findUnique({
-        where: { id: currentUser.id },
-        select: {
-          browserNotifications: true,
-          notifyOnAIComplete: true,
-        },
-      })
-
-      const isMuted = (conversation.mutedBy || []).includes(currentUser.id)
-      if (prefs?.browserNotifications && prefs.notifyOnAIComplete && !isMuted) {
-        const title = conversation.name || conversation.character?.name || "AI reply"
-        const preview = aiMessage.body ? aiMessage.body.slice(0, 160) : "AI response complete"
-        await sendWebPushToUser(currentUser.id, {
-          title,
-          body: `AI: ${preview}`,
-          url: `/dashboard/conversations/${conversationId}`,
-          tag: conversationId,
+    // Best-effort web push for AI completion, sent after the response so the
+    // reply never waits on a preferences read and a push-service round trip.
+    // Failures were already logged and swallowed; nothing below feeds the body.
+    after(async () => {
+      try {
+        const prefs = await prisma.user.findUnique({
+          where: { id: currentUser.id },
+          select: {
+            browserNotifications: true,
+            notifyOnAIComplete: true,
+          },
         })
+
+        const isMuted = (conversation.mutedBy || []).includes(currentUser.id)
+        if (prefs?.browserNotifications && prefs.notifyOnAIComplete && !isMuted) {
+          const title = conversation.name || conversation.character?.name || "AI reply"
+          const preview = aiMessage.body ? aiMessage.body.slice(0, 160) : "AI response complete"
+          await sendWebPushToUser(currentUser.id, {
+            title,
+            body: `AI: ${preview}`,
+            url: `/dashboard/conversations/${conversationId}`,
+            tag: conversationId,
+          })
+        }
+      } catch (error) {
+        aiLogger.error({ err: error }, "WEB_PUSH_AI_COMPLETE_ERROR")
       }
-    } catch (error) {
-      aiLogger.error({ err: error }, "WEB_PUSH_AI_COMPLETE_ERROR")
-    }
+    })
 
     return NextResponse.json({
       userMessage,

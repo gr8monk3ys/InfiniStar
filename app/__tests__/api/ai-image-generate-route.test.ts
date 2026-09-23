@@ -19,6 +19,15 @@ jest.mock("@/app/lib/ai-access", () => ({
   requestAiAccess: async () => ({ ok: true, isPro: false, limits: {} }),
 }))
 
+// Never reach a real moderation provider from a unit test.
+jest.mock("@/app/lib/moderation", () => ({
+  moderateTextModelAssisted: async () => ({
+    shouldBlock: false,
+    shouldReview: false,
+    categories: [],
+  }),
+}))
+
 jest.mock("@/app/lib/prismadb", () => ({
   __esModule: true,
   default: {
@@ -89,5 +98,23 @@ describe("/api/ai/image/generate", () => {
     expect(res.status).toBe(501)
     const json = (await res.json()) as { error?: string }
     expect(json.error).toMatch(/not configured/i)
+    // The synchronous config check answers before any database round trip.
+    expect(mockFindFirst).not.toHaveBeenCalled()
+  })
+
+  it("returns 403 for a conversation the caller is not in, once configured", async () => {
+    process.env.OPENAI_API_KEY = "sk-test"
+    mockFindFirst.mockResolvedValue(null)
+
+    const { POST } = await import("@/app/api/ai/image/generate/route")
+    const res = await POST(
+      createRequest({
+        conversationId: "11111111-1111-1111-8111-111111111111",
+        prompt: "A cozy cabin in the woods at sunrise",
+        size: "1024x1024",
+      })
+    )
+
+    expect(res.status).toBe(403)
   })
 })

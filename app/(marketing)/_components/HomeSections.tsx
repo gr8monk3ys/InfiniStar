@@ -111,7 +111,9 @@ export function ModelsSection() {
                     {model.badge}
                   </div>
                   <div>
-                    <div className="font-semibold">{model.name}</div>
+                    <div className="font-semibold" translate="no">
+                      {model.name}
+                    </div>
                     <div className="text-sm text-muted-foreground">{model.desc}</div>
                   </div>
                 </div>
@@ -128,7 +130,9 @@ export function ModelsSection() {
                 </div>
                 <div>
                   <div className="font-heading font-semibold">Creative AI</div>
-                  <div className="text-xs text-muted-foreground">Claude Sonnet 4.6</div>
+                  <div className="text-xs text-muted-foreground" translate="no">
+                    Claude Sonnet 4.6
+                  </div>
                 </div>
               </div>
               <div className="space-y-3 text-sm">

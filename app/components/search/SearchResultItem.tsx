@@ -2,7 +2,6 @@
 
 import { useMemo } from "react"
 import Image from "next/image"
-import { format, formatDistanceToNow } from "date-fns"
 import {
   HiOutlineArchiveBox,
   HiOutlineChatBubbleLeftRight,
@@ -11,28 +10,23 @@ import {
   HiUser,
 } from "react-icons/hi2"
 
+import { formatDateTime, formatRelative } from "@/app/lib/intl-format"
 import { TAG_COLORS, type TagColor } from "@/app/types"
 import type { ConversationSearchResult, MessageSearchResult } from "@/app/types/search"
 
 /**
- * Simple avatar component for search results
+ * Simple avatar component for search results. Decorative: every result names
+ * the person next to it, so the picture adds nothing for a screen reader.
  */
 interface AvatarProps {
-  name: string | null
-  email: string | null
   image: string | null
   className?: string
   size?: "sm" | "md"
 }
 
-function Avatar({ name, email, image, className = "", size = "md" }: AvatarProps) {
+function Avatar({ image, className = "", size = "md" }: AvatarProps) {
   const sizeClasses = size === "sm" ? "size-8" : "size-10"
   const imageSizes = size === "sm" ? "32px" : "40px"
-  const altText = name
-    ? `${name}'s profile picture`
-    : email
-      ? `${email}'s profile picture`
-      : "User profile picture"
 
   return (
     <div className={`relative shrink-0 overflow-hidden rounded-full ${sizeClasses} ${className}`}>
@@ -40,7 +34,7 @@ function Avatar({ name, email, image, className = "", size = "md" }: AvatarProps
         fill
         sizes={imageSizes}
         src={image || "/icon-192.png"}
-        alt={altText}
+        alt=""
         className="object-cover"
       />
     </div>
@@ -131,7 +125,7 @@ export function ConversationResultItem({
 
   const timeAgo = useMemo(() => {
     try {
-      return formatDistanceToNow(new Date(conversation.lastMessageAt), { addSuffix: true })
+      return formatRelative(conversation.lastMessageAt)
     } catch {
       return ""
     }
@@ -151,17 +145,13 @@ export function ConversationResultItem({
       {/* Icon/Avatar */}
       <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted">
         {conversation.isAI ? (
-          <HiSparkles className="size-5 text-primary" />
+          <HiSparkles className="size-5 text-primary" aria-hidden="true" />
         ) : conversation.isGroup ? (
-          <HiOutlineChatBubbleLeftRight className="size-5 text-primary" />
+          <HiOutlineChatBubbleLeftRight className="size-5 text-primary" aria-hidden="true" />
         ) : conversation.users[0] ? (
-          <Avatar
-            name={conversation.users[0].name}
-            email={conversation.users[0].email}
-            image={conversation.users[0].image}
-          />
+          <Avatar image={conversation.users[0].image} />
         ) : (
-          <HiUser className="size-5 text-muted-foreground/70" />
+          <HiUser className="size-5 text-muted-foreground/70" aria-hidden="true" />
         )}
       </div>
 
@@ -181,16 +171,21 @@ export function ConversationResultItem({
             </span>
           )}
           {conversation.isArchived && (
-            <HiOutlineArchiveBox
-              className="size-4 shrink-0 text-muted-foreground/70"
-              title="Archived"
-            />
+            <>
+              <HiOutlineArchiveBox
+                className="size-4 shrink-0 text-muted-foreground/70"
+                title="Archived"
+                aria-hidden="true"
+              />
+              <span className="sr-only">Archived</span>
+            </>
           )}
         </div>
 
         {/* Meta info */}
         <p className="text-xs text-muted-foreground">
-          {conversation.messageCount} messages · {timeAgo}
+          {conversation.messageCount} {conversation.messageCount === 1 ? "message" : "messages"} ·{" "}
+          {timeAgo}
         </p>
 
         {/* Tags */}
@@ -254,7 +249,7 @@ export function MessageResultItem({
 }: MessageResultProps) {
   const formattedDate = useMemo(() => {
     try {
-      return format(new Date(message.createdAt), "MMM d, yyyy 'at' h:mm a")
+      return formatDateTime(message.createdAt)
     } catch {
       return ""
     }
@@ -278,17 +273,13 @@ export function MessageResultItem({
       aria-selected={isSelected}
     >
       {/* Sender avatar */}
-      <Avatar
-        name={message.sender.name}
-        email={message.sender.email}
-        image={message.sender.image}
-      />
+      <Avatar image={message.sender.image} />
 
       {/* Content */}
       <div className="min-w-0 flex-1">
         {/* Header */}
         <div className="flex items-center gap-2">
-          <p className="text-sm font-medium text-foreground">
+          <p className="min-w-0 truncate text-sm font-medium text-foreground">
             {message.sender.name || message.sender.email}
           </p>
           {message.isAI && (
@@ -297,9 +288,16 @@ export function MessageResultItem({
             </span>
           )}
           {message.hasImage && (
-            <HiOutlinePhoto className="size-4 shrink-0 text-amber-500" title="Has image" />
+            <>
+              <HiOutlinePhoto
+                className="size-4 shrink-0 text-amber-500"
+                title="Has image"
+                aria-hidden="true"
+              />
+              <span className="sr-only">Has image</span>
+            </>
           )}
-          <span className="text-xs text-muted-foreground/70">{formattedDate}</span>
+          <span className="shrink-0 text-xs text-muted-foreground/70">{formattedDate}</span>
         </div>
 
         {/* Conversation context */}
@@ -316,8 +314,8 @@ export function MessageResultItem({
         {/* Context preview */}
         {message.context && (message.context.before || message.context.after) && (
           <div className="mt-1.5 rounded border border-border/50 bg-muted/50 px-2 py-1 text-xs text-muted-foreground/70">
-            {message.context.before && <p className="line-clamp-1">...{message.context.before}</p>}
-            {message.context.after && <p className="line-clamp-1">{message.context.after}...</p>}
+            {message.context.before && <p className="line-clamp-1">…{message.context.before}</p>}
+            {message.context.after && <p className="line-clamp-1">{message.context.after}…</p>}
           </div>
         )}
       </div>

@@ -26,7 +26,7 @@ export function PendingImagePreview({ pendingImage, onRemove }: PendingImagePrev
           onClick={onRemove}
           aria-label="Remove pending image"
         >
-          <HiXMark size={16} />
+          <HiXMark size={16} aria-hidden="true" />
         </button>
       </div>
     </div>

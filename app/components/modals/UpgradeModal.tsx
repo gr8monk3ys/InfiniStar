@@ -6,6 +6,7 @@ import posthog from "posthog-js"
 import { HiCheck, HiOutlineSparkles } from "react-icons/hi2"
 
 import { config } from "@/app/lib/config"
+import { formatNumber } from "@/app/lib/intl-format"
 import { cn } from "@/app/lib/utils"
 import { Button, buttonVariants } from "@/app/components/ui/button"
 import {
@@ -26,7 +27,8 @@ export type UpgradeModalReason = "FREE_TIER_MESSAGE_LIMIT_REACHED" | "PRO_TIER_C
 // Copy mirrors `proPlan` in config/subscriptions.ts. We cannot import that
 // module here: it reads server-only env (STRIPE_PRO_MONTHLY_PLAN_ID) at module
 // init, which throws in client bundles. Keep these in sync with the config.
-export const PRO_PRICE_PER_MONTH = "$9.99/month"
+/** PRO monthly price in US dollars; formatted for the viewer's locale at render. */
+export const PRO_PRICE_USD = 9.99
 export const PRO_HIGHLIGHTS = [
   "High monthly limits (fair use cap applies)",
   "Claude Sonnet 4.6 + Haiku 4.5",
@@ -80,6 +82,8 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({
       ? `You've used all ${messageLimit} free messages this month`
       : "You've used all your free messages this month"
 
+  const pricePerMonth = `${formatNumber(PRO_PRICE_USD, { style: "currency", currency: "USD" })}/month`
+
   const description = isCostCap
     ? "PRO includes high monthly limits with a fair-use cap to keep things sustainable for everyone. Contact support and we'll help increase your limits."
     : "Your free messages reset at the start of next month. Upgrade to PRO to keep the conversation going without interruption."
@@ -116,7 +120,7 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({
 
         <DialogFooter className="gap-2 sm:gap-0">
           <Button type="button" variant="ghost" onClick={onClose}>
-            Maybe later
+            Maybe Later
           </Button>
           {isCostCap ? (
             <a
@@ -138,7 +142,7 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({
                 onClose()
               }}
             >
-              Upgrade to PRO — {PRO_PRICE_PER_MONTH}
+              Upgrade to PRO — {pricePerMonth}
             </Link>
           )}
         </DialogFooter>

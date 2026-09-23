@@ -24,7 +24,7 @@ export function ThemePreview({ theme, isSelected, onClick }: ThemePreviewProps) 
       type="button"
       onClick={onClick}
       className={cn(
-        "relative flex flex-col overflow-hidden rounded-lg border-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2",
+        "relative flex flex-col overflow-hidden rounded-lg border-2 transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
         isSelected
           ? "border-primary ring-2 ring-ring ring-offset-2"
           : "border-border hover:border-primary/30"
@@ -34,6 +34,7 @@ export function ThemePreview({ theme, isSelected, onClick }: ThemePreviewProps) 
     >
       {/* Theme preview card */}
       <div
+        aria-hidden="true"
         className="relative aspect-[4/3] w-full p-3"
         style={{ backgroundColor: `hsl(${colors.background})` }}
       >

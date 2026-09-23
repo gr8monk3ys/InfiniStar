@@ -27,12 +27,13 @@ export function ContextStrip({ personaName }: ContextStripProps) {
   return (
     <div
       className="flex flex-wrap items-center gap-2 px-3 pt-2 sm:px-4"
+      role="group"
       aria-label="Conversation context"
     >
       {personaName && (
         <span className={chipClass}>
           <HiOutlineUserCircle className="size-3.5" aria-hidden="true" />
-          <span>
+          <span className="min-w-0 truncate">
             You are <span className="text-foreground">{personaName}</span>
           </span>
         </span>

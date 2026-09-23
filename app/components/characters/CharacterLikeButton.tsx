@@ -60,8 +60,8 @@ export function CharacterLikeButton({
     // Optimistic update
     const prevLiked = liked
     const prevCount = count
-    setLiked(!liked)
-    setCount(liked ? count - 1 : count + 1)
+    setLiked((current) => !current)
+    setCount((current) => (prevLiked ? current - 1 : current + 1))
 
     try {
       const method = prevLiked ? "DELETE" : "POST"
@@ -75,14 +75,14 @@ export function CharacterLikeButton({
       })
 
       if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error || "Failed")
+        const data = (await res.json().catch(() => null)) as { error?: string } | null
+        throw new Error(data?.error || "Couldn't update your like. Try again.")
       }
     } catch (error) {
       // Revert optimistic update on error
       setLiked(prevLiked)
       setCount(prevCount)
-      toast.error(error instanceof Error ? error.message : "Failed to update like")
+      toast.error(error instanceof Error ? error.message : "Couldn't update your like. Try again.")
     } finally {
       setIsLoading(false)
     }
@@ -90,14 +90,19 @@ export function CharacterLikeButton({
 
   return (
     <button
+      type="button"
       onClick={handleToggle}
       disabled={isLoading}
       className="flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-colors hover:bg-accent disabled:opacity-50"
       aria-label={liked ? "Unlike character" : "Like character"}
       aria-pressed={liked}
     >
-      {liked ? <HiHeart className="size-5 text-red-500" /> : <HiOutlineHeart className="size-5" />}
-      <span>{count}</span>
+      {liked ? (
+        <HiHeart className="size-5 text-red-500" aria-hidden="true" />
+      ) : (
+        <HiOutlineHeart className="size-5" aria-hidden="true" />
+      )}
+      <span className="tabular-nums">{count}</span>
     </button>
   )
 }
