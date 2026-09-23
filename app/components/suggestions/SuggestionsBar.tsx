@@ -117,7 +117,7 @@ export function SuggestionsBar({
           className={cn(
             "flex items-center gap-1 rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground",
             "hover:bg-accent hover:text-foreground",
-            "focus:outline-none focus:ring-2 focus:ring-ring"
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           )}
           aria-label="Show suggestions"
         >

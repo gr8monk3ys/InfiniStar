@@ -345,7 +345,7 @@ export const TokenUsageCompact = memo(function TokenUsageCompact({
           className={cn(
             "flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors",
             "hover:ring-2 hover:ring-ring hover:ring-offset-2",
-            "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
             getBadgeColor()
           )}
           aria-label="View token usage details"

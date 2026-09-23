@@ -267,7 +267,7 @@ const MemoryManager: React.FC<MemoryManagerProps> = ({ className }) => {
                 }
                 onKeyDown={handleKeyDown}
                 placeholder="e.g., preferred_language, current_project"
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 maxLength={100}
                 autoFocus
                 disabled={!!editingMemory}
@@ -291,7 +291,7 @@ const MemoryManager: React.FC<MemoryManagerProps> = ({ className }) => {
                 onChange={(e) => setFormContent(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="What should the AI remember?"
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 rows={3}
                 maxLength={500}
               />

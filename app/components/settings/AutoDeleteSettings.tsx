@@ -265,7 +265,7 @@ export function AutoDeleteSettings() {
             aria-checked={enabled}
             onClick={() => setEnabled(!enabled)}
             disabled={isSaving}
-            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
+            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
               enabled ? "bg-primary" : "bg-muted-foreground/30"
             }`}
           >
@@ -300,7 +300,7 @@ export function AutoDeleteSettings() {
                   type="button"
                   onClick={handlePreview}
                   disabled={isPreviewLoading || isSaving}
-                  className="inline-flex items-center gap-2 rounded-md border border-yellow-300 bg-card px-3 py-1.5 text-sm font-medium text-yellow-800 hover:bg-yellow-50 focus:outline-none focus:ring-2 focus:ring-yellow-500 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex items-center gap-2 rounded-md border border-yellow-300 bg-card px-3 py-1.5 text-sm font-medium text-yellow-800 hover:bg-yellow-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-500 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <HiEye className="size-4" />
                   Preview
@@ -309,7 +309,7 @@ export function AutoDeleteSettings() {
                   type="button"
                   onClick={handleSave}
                   disabled={isSaving}
-                  className="inline-flex items-center rounded-md bg-yellow-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-yellow-500 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex items-center rounded-md bg-yellow-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-yellow-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-500 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {isSaving ? "Saving..." : "Confirm & Enable"}
                 </button>
@@ -317,7 +317,7 @@ export function AutoDeleteSettings() {
                   type="button"
                   onClick={handleCancelConfirmation}
                   disabled={isSaving}
-                  className="inline-flex items-center rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex items-center rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Cancel
                 </button>
@@ -368,7 +368,7 @@ export function AutoDeleteSettings() {
               aria-checked={includeArchived}
               onClick={() => setIncludeArchived(!includeArchived)}
               disabled={isSaving || !enabled}
-              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
+              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
                 includeArchived && enabled ? "bg-primary" : "bg-muted-foreground/30"
               }`}
             >
@@ -399,7 +399,7 @@ export function AutoDeleteSettings() {
                       type="button"
                       onClick={() => handleTagToggle(tag.id)}
                       disabled={isSaving || !enabled}
-                      className={`inline-flex items-center rounded-full px-3 py-1.5 text-sm font-medium transition-all focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
+                      className={`inline-flex items-center rounded-full px-3 py-1.5 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
                         isExcluded
                           ? "bg-primary/10 text-primary-accent ring-2 ring-primary"
                           : "bg-muted text-foreground hover:bg-muted/80"
@@ -466,7 +466,7 @@ export function AutoDeleteSettings() {
                 type="button"
                 onClick={handlePreview}
                 disabled={isPreviewLoading || isSaving}
-                className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-foreground shadow-sm hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-foreground shadow-sm hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <HiEye className="size-4" />
                 {isPreviewLoading ? "Loading..." : "Preview"}
@@ -475,7 +475,7 @@ export function AutoDeleteSettings() {
                 type="button"
                 onClick={handleRunNow}
                 disabled={isDeleting || isSaving}
-                className="inline-flex items-center gap-2 rounded-md border border-destructive/30 bg-card px-4 py-2 text-sm font-medium text-destructive shadow-sm hover:bg-destructive/10 focus:outline-none focus:ring-2 focus:ring-destructive focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-md border border-destructive/30 bg-card px-4 py-2 text-sm font-medium text-destructive shadow-sm hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <HiTrash className="size-4" />
                 {isDeleting ? "Deleting..." : "Run Now"}
@@ -489,7 +489,7 @@ export function AutoDeleteSettings() {
             onClick={handleSave}
             disabled={isSaving || !hasChanges}
             aria-busy={isSaving}
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isSaving ? "Saving..." : "Save Changes"}
           </button>

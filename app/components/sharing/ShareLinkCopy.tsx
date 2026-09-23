@@ -44,13 +44,13 @@ export function ShareLinkCopy({ shareUrl, className, variant = "default" }: Shar
 
   return (
     <div className={cn("flex items-center gap-2", className)}>
-      <div className="flex flex-1 items-center gap-2 rounded-md border bg-muted/50 px-3 py-2">
+      <div className="flex flex-1 items-center gap-2 rounded-md border bg-muted/50 px-3 py-2 focus-within:ring-2 focus-within:ring-ring">
         <Link className="size-4 shrink-0 text-muted-foreground" />
         <input
           type="text"
           value={shareUrl}
           readOnly
-          className="flex-1 bg-transparent text-sm focus:outline-none"
+          className="flex-1 bg-transparent text-sm focus-visible:outline-none"
           aria-label="Share URL"
         />
       </div>

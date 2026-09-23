@@ -119,7 +119,7 @@ const ConversationBox: React.FC<ConversationBoxProps> = ({
     >
       {data.isGroup ? <AvatarGroup users={data.users} /> : <Avatar user={otherUser} />}
       <div className="min-w-0 flex-1">
-        <div className="focus:outline-none">
+        <div>
           <span className="absolute inset-0" aria-hidden="true" />
           <div className="mb-1 flex items-center justify-between">
             <div className="flex items-center gap-2">

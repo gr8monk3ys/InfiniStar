@@ -73,7 +73,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
         aria-label={ariaLabel ?? "Message"}
-        className="w-full rounded-full bg-secondary px-4 py-2 font-light text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+        className="w-full rounded-full bg-secondary px-4 py-2 font-light text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         aria-describedby={`${id}-shortcut-hint`}
       />
       <span id={`${id}-shortcut-hint`} className="sr-only">

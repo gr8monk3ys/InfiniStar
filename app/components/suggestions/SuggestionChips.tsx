@@ -190,7 +190,7 @@ export function SuggestionChips({
               aria-label={`Suggestion: ${suggestion.text}`}
               className={cn(
                 "shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition-all",
-                "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
                 "border-border bg-secondary text-secondary-foreground",
                 "hover:bg-accent hover:text-accent-foreground",
                 disabled && "cursor-not-allowed opacity-50",
@@ -224,7 +224,7 @@ export function SuggestionChips({
           className={cn(
             "shrink-0 rounded p-1 text-muted-foreground transition-colors",
             "hover:bg-accent hover:text-foreground",
-            "focus:outline-none focus:ring-2 focus:ring-ring",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
             disabled && "cursor-not-allowed opacity-50"
           )}
           aria-label="Refresh suggestions"
@@ -241,7 +241,7 @@ export function SuggestionChips({
           className={cn(
             "shrink-0 rounded p-1 text-muted-foreground transition-colors",
             "hover:bg-accent hover:text-foreground",
-            "focus:outline-none focus:ring-2 focus:ring-ring"
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           )}
           aria-label="Dismiss suggestions"
         >

@@ -66,8 +66,8 @@ const TagBadge: React.FC<TagBadgeProps> = ({
           type="button"
           onClick={handleRemove}
           className={cn(
-            "ml-0.5 rounded-full p-0.5 hover:bg-black/10 focus:outline-none focus:ring-1 focus:ring-offset-1",
-            "focus:ring-current"
+            "ml-0.5 rounded-full p-0.5 hover:bg-black/10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-offset-1",
+            "focus-visible:ring-current"
           )}
           aria-label={`Remove tag ${tag.name}`}
         >

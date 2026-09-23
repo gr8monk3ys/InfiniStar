@@ -64,7 +64,7 @@ export function PasswordTabContent() {
           onChange={(e) => setCurrentPassword(e.target.value)}
           required
           disabled={isLoading}
-          className="mt-1 block w-full rounded-md border border-border bg-background px-3 py-2 text-foreground shadow-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:bg-muted"
+          className="mt-1 block w-full rounded-md border border-border bg-background px-3 py-2 text-foreground shadow-sm focus-visible:border-ring focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:bg-muted"
           placeholder="Enter current password"
           aria-required="true"
         />
@@ -82,7 +82,7 @@ export function PasswordTabContent() {
           onChange={(e) => setNewPassword(e.target.value)}
           required
           disabled={isLoading}
-          className="mt-1 block w-full rounded-md border border-border bg-background px-3 py-2 text-foreground shadow-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:bg-muted"
+          className="mt-1 block w-full rounded-md border border-border bg-background px-3 py-2 text-foreground shadow-sm focus-visible:border-ring focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:bg-muted"
           placeholder="Enter new password"
           minLength={8}
           aria-required="true"
@@ -105,7 +105,7 @@ export function PasswordTabContent() {
           onChange={(e) => setConfirmPassword(e.target.value)}
           required
           disabled={isLoading}
-          className="mt-1 block w-full rounded-md border border-border bg-background px-3 py-2 text-foreground shadow-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:bg-muted"
+          className="mt-1 block w-full rounded-md border border-border bg-background px-3 py-2 text-foreground shadow-sm focus-visible:border-ring focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:bg-muted"
           placeholder="Confirm new password"
           minLength={8}
           aria-required="true"

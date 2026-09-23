@@ -49,7 +49,7 @@ export const authAppearance = {
     dividerText: "text-xs uppercase tracking-[0.2em] text-muted-foreground",
     formFieldLabel: "text-sm font-medium text-foreground",
     formFieldInput:
-      "h-11 rounded-xl border border-input bg-background text-foreground shadow-none focus:border-primary focus:ring-2 focus:ring-primary/20",
+      "h-11 rounded-xl border border-input bg-background text-foreground shadow-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20",
     formButtonPrimary:
       "h-11 rounded-xl gradient-bg-cta text-sm font-semibold text-white shadow-lg shadow-primary/25 hover:opacity-90",
     footerActionLink: "font-medium text-primary hover:text-primary/80",
@@ -58,7 +58,7 @@ export const authAppearance = {
     alert: "rounded-xl border border-amber-500/30 bg-amber-500/10 text-foreground",
     alertText: "text-sm",
     otpCodeFieldInput:
-      "h-11 rounded-xl border border-input bg-background text-foreground shadow-none focus:border-primary focus:ring-2 focus:ring-primary/20",
+      "h-11 rounded-xl border border-input bg-background text-foreground shadow-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20",
   },
 } as const
 

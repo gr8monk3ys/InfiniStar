@@ -56,7 +56,7 @@ const ReplyPreview: React.FC<ReplyPreviewProps> = ({
             e.stopPropagation()
             onClose()
           }}
-          className="rounded-md text-muted-foreground/70 hover:text-foreground focus:outline-none"
+          className="rounded-md text-muted-foreground/70 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <HiOutlineXMark size={20} />
         </button>

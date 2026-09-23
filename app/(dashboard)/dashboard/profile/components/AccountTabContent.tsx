@@ -113,7 +113,7 @@ export function AccountTabContent() {
                     onClick={handleCancelDeletion}
                     disabled={isDeletionLoading}
                     aria-busy={isDeletionLoading}
-                    className="inline-flex items-center rounded-md bg-yellow-600 px-4 py-2 text-sm font-medium text-white hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-yellow-700 dark:hover:bg-yellow-600"
+                    className="inline-flex items-center rounded-md bg-yellow-600 px-4 py-2 text-sm font-medium text-white hover:bg-yellow-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-yellow-700 dark:hover:bg-yellow-600"
                   >
                     {isDeletionLoading ? "Cancelling..." : "Cancel Deletion Request"}
                   </button>
@@ -151,7 +151,7 @@ export function AccountTabContent() {
               <div className="mt-6">
                 <button
                   onClick={() => setIsDeleteModalOpen(true)}
-                  className="inline-flex items-center gap-2 rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground hover:bg-destructive/90 focus:outline-none focus:ring-2 focus:ring-destructive focus:ring-offset-2"
+                  className="inline-flex items-center gap-2 rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground hover:bg-destructive/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-2"
                 >
                   <HiTrash size={16} />
                   Delete My Account

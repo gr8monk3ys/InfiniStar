@@ -117,7 +117,7 @@ const StatusModal: React.FC<StatusModalProps> = ({ isOpen, onClose }) => {
             <button
               type="button"
               onClick={onClose}
-              className="rounded-md text-muted-foreground transition hover:text-foreground focus:outline-none"
+              className="rounded-md text-muted-foreground transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <HiOutlineXMark size={24} />
             </button>
@@ -167,7 +167,7 @@ const StatusModal: React.FC<StatusModalProps> = ({ isOpen, onClose }) => {
                 value={customStatus}
                 onChange={(e) => setCustomStatus(e.target.value)}
                 disabled={isLoading}
-                className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-foreground shadow-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:bg-muted"
+                className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-foreground shadow-sm focus-visible:border-ring focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:bg-muted"
                 placeholder="e.g., In a meeting, Working from home, On vacation..."
                 maxLength={100}
               />

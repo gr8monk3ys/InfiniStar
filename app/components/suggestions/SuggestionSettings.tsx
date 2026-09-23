@@ -111,7 +111,7 @@ export function SuggestionSettings({ onSettingsChange, className }: SuggestionSe
           onClick={handleToggleEnabled}
           className={cn(
             "relative h-6 w-11 rounded-full transition-colors",
-            "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
             preferences.enabled ? "bg-primary" : "bg-muted"
           )}
         >
@@ -142,7 +142,7 @@ export function SuggestionSettings({ onSettingsChange, className }: SuggestionSe
               onClick={handleToggleAutoShow}
               className={cn(
                 "relative h-6 w-11 rounded-full transition-colors",
-                "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                 preferences.autoShow ? "bg-primary" : "bg-muted"
               )}
             >
@@ -166,7 +166,7 @@ export function SuggestionSettings({ onSettingsChange, className }: SuggestionSe
                   onClick={() => handleMaxSuggestionsChange(num)}
                   className={cn(
                     "size-8 rounded-md text-sm font-medium transition-colors",
-                    "focus:outline-none focus:ring-2 focus:ring-ring",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                     preferences.maxSuggestions === num
                       ? "bg-primary text-primary-foreground"
                       : "bg-muted text-muted-foreground hover:bg-accent hover:text-foreground"
@@ -196,7 +196,7 @@ export function SuggestionSettings({ onSettingsChange, className }: SuggestionSe
                     disabled={isOnlyEnabled}
                     className={cn(
                       "flex w-full items-center gap-3 rounded-md border p-2 text-left transition-colors",
-                      "focus:outline-none focus:ring-2 focus:ring-ring",
+                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                       isEnabled
                         ? "border-primary bg-primary/5"
                         : "border-border hover:border-muted-foreground/50",

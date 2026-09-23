@@ -54,7 +54,7 @@ export function ImageGenerationDialog({
             value={prompt}
             onChange={(e) => onPromptChange(e.target.value)}
             placeholder="Describe the image you want..."
-            className="min-h-28 w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            className="min-h-28 w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             maxLength={2000}
             disabled={isGenerating || isStreaming}
           />
@@ -66,7 +66,7 @@ export function ImageGenerationDialog({
             id="image-size"
             value={size}
             onChange={(e) => onSizeChange(e.target.value as ImageSize)}
-            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             disabled={isGenerating || isStreaming}
           >
             <option value="512x512">512x512</option>

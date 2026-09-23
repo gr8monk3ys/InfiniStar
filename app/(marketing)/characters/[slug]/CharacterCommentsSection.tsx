@@ -198,7 +198,7 @@ export default function CharacterCommentsSection({
             placeholder="Share your thoughts..."
             className={cn(
               "min-h-[84px] w-full resize-y rounded-xl border bg-background px-3 py-2 text-sm",
-              "focus:outline-none focus:ring-2 focus:ring-primary/40"
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
             )}
             maxLength={1000}
           />

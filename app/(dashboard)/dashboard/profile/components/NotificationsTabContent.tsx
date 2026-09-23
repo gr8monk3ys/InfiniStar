@@ -289,7 +289,7 @@ export function NotificationsTabContent() {
               setBrowserNotifications(true)
             }}
             disabled={isLoading}
-            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
+            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
               browserNotifications ? "bg-primary" : "bg-input"
             }`}
           >
@@ -384,7 +384,7 @@ export function NotificationsTabContent() {
             aria-checked={emailNotifications}
             onClick={() => setEmailNotifications(!emailNotifications)}
             disabled={isLoading}
-            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
+            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
               emailNotifications ? "bg-primary" : "bg-input"
             }`}
           >
@@ -411,7 +411,7 @@ export function NotificationsTabContent() {
           value={emailDigest}
           onChange={(e) => setEmailDigest(e.target.value as "none" | "daily" | "weekly")}
           disabled={isLoading || !emailNotifications}
-          className="mt-2 block w-full rounded-md border border-border bg-background px-3 py-2 shadow-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
+          className="mt-2 block w-full rounded-md border border-border bg-background px-3 py-2 shadow-sm focus-visible:border-ring focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
         >
           <option value="none">No digest</option>
           <option value="daily">Daily summary</option>
@@ -443,7 +443,7 @@ export function NotificationsTabContent() {
             aria-checked={notifyOnNewMessage}
             onClick={() => setNotifyOnNewMessage(!notifyOnNewMessage)}
             disabled={isLoading}
-            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
+            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
               notifyOnNewMessage ? "bg-primary" : "bg-input"
             }`}
           >
@@ -473,7 +473,7 @@ export function NotificationsTabContent() {
             aria-checked={notifyOnMention}
             onClick={() => setNotifyOnMention(!notifyOnMention)}
             disabled={isLoading}
-            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
+            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
               notifyOnMention ? "bg-primary" : "bg-input"
             }`}
           >
@@ -506,7 +506,7 @@ export function NotificationsTabContent() {
             aria-checked={notifyOnAIComplete}
             onClick={() => setNotifyOnAIComplete(!notifyOnAIComplete)}
             disabled={isLoading}
-            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
+            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
               notifyOnAIComplete ? "bg-primary" : "bg-input"
             }`}
           >

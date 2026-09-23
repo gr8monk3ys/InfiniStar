@@ -83,7 +83,7 @@ export function SafetyTabContent() {
               if (!next) setNsfwEnabled(false)
             }}
             disabled={isLoading}
-            className="mt-1 size-4 rounded border-border text-primary focus:ring-ring disabled:cursor-not-allowed"
+            className="mt-1 size-4 rounded border-border text-primary focus-visible:ring-ring disabled:cursor-not-allowed"
           />
           <span className="flex-1">
             <span className="block text-sm font-medium text-foreground">I confirm I am 18+</span>
@@ -101,7 +101,7 @@ export function SafetyTabContent() {
             checked={nsfwEnabled}
             onChange={(e) => setNsfwEnabled(e.target.checked)}
             disabled={isLoading || !isAdult}
-            className="mt-1 size-4 rounded border-border text-primary focus:ring-ring disabled:cursor-not-allowed"
+            className="mt-1 size-4 rounded border-border text-primary focus-visible:ring-ring disabled:cursor-not-allowed"
           />
           <span className="flex-1">
             <span className="block text-sm font-medium text-foreground">Enable NSFW content</span>

@@ -196,7 +196,7 @@ const TagSelector: React.FC<TagSelectorProps> = ({
                   onChange={(e) => setNewTagName(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder="Tag name"
-                  className="mb-2 w-full rounded-md border border-input bg-background px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                  className="mb-2 w-full rounded-md border border-input bg-background px-2 py-1 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                   maxLength={30}
                   autoFocus
                 />

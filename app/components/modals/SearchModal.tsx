@@ -122,7 +122,7 @@ const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose, conversation
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md text-muted-foreground/70 hover:text-muted-foreground focus:outline-none"
+            className="rounded-md text-muted-foreground/70 hover:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <HiOutlineXMark size={24} />
           </button>

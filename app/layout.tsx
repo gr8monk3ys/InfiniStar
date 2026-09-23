@@ -66,7 +66,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
       <body className={cn("min-h-screen bg-background antialiased")}>
         <a
           href="#main-content"
-          className="sr-only fixed left-4 top-4 z-[100] rounded-md bg-background px-4 py-2 text-sm font-medium text-foreground shadow-lg focus:not-sr-only focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+          className="sr-only fixed left-4 top-4 z-[100] rounded-md bg-background px-4 py-2 text-sm font-medium text-foreground shadow-lg focus:not-sr-only focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
         >
           Skip to content
         </a>
@@ -74,7 +74,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
           <ClientShell />
           <div className="theme-transition-bg relative flex min-h-screen flex-col">
             <SiteHeader />
-            <main id="main-content" tabIndex={-1} className="flex-1 focus:outline-none">
+            <main id="main-content" tabIndex={-1} className="flex-1 focus-visible:outline-none">
               {children}
             </main>
           </div>

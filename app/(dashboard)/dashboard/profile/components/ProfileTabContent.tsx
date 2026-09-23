@@ -190,7 +190,7 @@ export function ProfileTabContent() {
             onChange={(e) => setName(e.target.value)}
             required
             disabled={isLoading}
-            className="mt-1 block w-full rounded-md border border-border bg-background px-3 py-2 text-foreground shadow-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:bg-muted"
+            className="mt-1 block w-full rounded-md border border-border bg-background px-3 py-2 text-foreground shadow-sm focus-visible:border-ring focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:bg-muted"
             placeholder="Your name"
             maxLength={100}
           />
@@ -207,7 +207,7 @@ export function ProfileTabContent() {
             onChange={(e) => setBio(e.target.value)}
             disabled={isLoading}
             rows={4}
-            className="mt-1 block w-full rounded-md border border-border bg-background px-3 py-2 text-foreground shadow-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:bg-muted"
+            className="mt-1 block w-full rounded-md border border-border bg-background px-3 py-2 text-foreground shadow-sm focus-visible:border-ring focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:bg-muted"
             placeholder="Tell us about yourself..."
             maxLength={500}
           />
@@ -225,7 +225,7 @@ export function ProfileTabContent() {
             value={location}
             onChange={(e) => setLocation(e.target.value)}
             disabled={isLoading}
-            className="mt-1 block w-full rounded-md border border-border bg-background px-3 py-2 text-foreground shadow-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:bg-muted"
+            className="mt-1 block w-full rounded-md border border-border bg-background px-3 py-2 text-foreground shadow-sm focus-visible:border-ring focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:bg-muted"
             placeholder="e.g., San Francisco, CA"
             maxLength={100}
           />
@@ -246,7 +246,7 @@ export function ProfileTabContent() {
               value={website}
               onChange={(e) => setWebsite(e.target.value)}
               disabled={isLoading}
-              className="block w-full rounded-md border border-border bg-background py-2 pl-10 pr-3 text-foreground shadow-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:bg-muted"
+              className="block w-full rounded-md border border-border bg-background py-2 pl-10 pr-3 text-foreground shadow-sm focus-visible:border-ring focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:bg-muted"
               placeholder="https://yourwebsite.com"
               maxLength={200}
             />

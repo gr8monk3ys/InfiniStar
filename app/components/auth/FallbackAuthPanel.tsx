@@ -87,7 +87,7 @@ export function FallbackAuthPanel({ mode, redirectPath }: FallbackAuthPanelProps
               value={name}
               onChange={(event) => setName(event.target.value)}
               required
-              className="h-11 w-full rounded-xl border border-input bg-background px-3 text-foreground shadow-none focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              className="h-11 w-full rounded-xl border border-input bg-background px-3 text-foreground shadow-none focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
               maxLength={100}
             />
           </div>
@@ -104,7 +104,7 @@ export function FallbackAuthPanel({ mode, redirectPath }: FallbackAuthPanelProps
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             required
-            className="h-11 w-full rounded-xl border border-input bg-background px-3 text-foreground shadow-none focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="h-11 w-full rounded-xl border border-input bg-background px-3 text-foreground shadow-none focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
           />
         </div>
 
@@ -120,7 +120,7 @@ export function FallbackAuthPanel({ mode, redirectPath }: FallbackAuthPanelProps
             onChange={(event) => setPassword(event.target.value)}
             required
             minLength={8}
-            className="h-11 w-full rounded-xl border border-input bg-background px-3 text-foreground shadow-none focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="h-11 w-full rounded-xl border border-input bg-background px-3 text-foreground shadow-none focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
           />
         </div>
 

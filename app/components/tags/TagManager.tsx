@@ -146,7 +146,7 @@ const TagManager: React.FC<TagManagerProps> = ({ className }) => {
                 onChange={(e) => setFormName(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="e.g., Work, Personal, Important"
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 maxLength={30}
                 autoFocus
               />
