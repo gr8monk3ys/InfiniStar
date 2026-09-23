@@ -1,16 +1,21 @@
 import { ImageResponse } from "next/og"
+import { readFile } from "node:fs/promises"
+import { join } from "node:path"
 
 import { config } from "@/app/lib/config"
 
-export const runtime = "edge"
+// Node.js runtime, not edge. On edge this route shipped as its own Edge
+// Function, and after the 2026-09-20 dependency bump (#99) that bundle
+// reached 1.18 MB against the Hobby plan's 1 MB cap. Vercel built the app and
+// then refused to deploy it, so master stopped reaching production. On Node
+// nothing here is request-dependent, so Next prerenders the card at build
+// time and no function ships for it at all.
 export const alt = "InfiniStar — Chat with AI Characters"
 export const size = { width: 1200, height: 630 }
 export const contentType = "image/png"
 
 export default async function Image() {
-  const headingFont = await fetch(
-    new URL("./fonts/bricolage-grotesque-bold.ttf", import.meta.url)
-  ).then((res) => res.arrayBuffer())
+  const headingFont = await readFile(join(process.cwd(), "app/fonts/bricolage-grotesque-bold.ttf"))
 
   return new ImageResponse(
     <div
