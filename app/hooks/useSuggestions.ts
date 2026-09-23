@@ -97,6 +97,13 @@ interface UseSuggestionsReturn {
  * // Fetch continue suggestions with partial input
  * await fetchSuggestions('continue', 'What do you think about');
  */
+function findLastAiMessageId(messages: FullMessageType[]): string | null {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i].isAI) return messages[i].id
+  }
+  return null
+}
+
 export function useSuggestions(options: UseSuggestionsOptions): UseSuggestionsReturn {
   const {
     conversationId,
@@ -115,11 +122,16 @@ export function useSuggestions(options: UseSuggestionsOptions): UseSuggestionsRe
   const [error, setError] = useState<string | null>(null)
   const [suggestionType, setSuggestionType] = useState<SuggestionType | null>(null)
   const [isCached, setIsCached] = useState(false)
-  const [isEnabled, setEnabled] = useState(initialEnabled)
+  // The caller's `enabled` (preferences, dismissal) and the local toggle both
+  // have to allow it. Derived, so a caller turning it off takes effect.
+  const [isLocallyEnabled, setEnabled] = useState(true)
+  const isEnabled = initialEnabled && isLocallyEnabled
 
-  // Track last request to handle race conditions
+  // Track last request to handle race conditions. A counter, not a
+  // timestamp: two requests in the same millisecond must not share an id.
   const lastRequestRef = useRef<number>(0)
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const autoFetchTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   // Track the last AI message ID to detect new AI responses
   const lastAiMessageIdRef = useRef<string | null>(null)
@@ -133,7 +145,7 @@ export function useSuggestions(options: UseSuggestionsOptions): UseSuggestionsRe
         return
       }
 
-      const requestId = Date.now()
+      const requestId = lastRequestRef.current + 1
       lastRequestRef.current = requestId
 
       setIsLoading(true)
@@ -250,6 +262,19 @@ export function useSuggestions(options: UseSuggestionsOptions): UseSuggestionsRe
   }, [suggestionType, fetchSuggestionsCore])
 
   /**
+   * Remember the AI message already on screen at mount, so only a reply that
+   * arrives later triggers suggestions (not the initial load). Declared before
+   * the auto-fetch effect so it runs first in the same commit.
+   */
+  const hasInitializedRef = useRef(false)
+
+  useEffect(() => {
+    if (hasInitializedRef.current) return
+    lastAiMessageIdRef.current = findLastAiMessageId(messages)
+    hasInitializedRef.current = true
+  }, [messages])
+
+  /**
    * Auto-fetch reply suggestions when AI responds
    */
   useEffect(() => {
@@ -257,35 +282,23 @@ export function useSuggestions(options: UseSuggestionsOptions): UseSuggestionsRe
       return
     }
 
-    // Find the last AI message
-    const lastAiMessage = [...messages].reverse().find((m) => m.isAI)
+    const lastAiMessageId = findLastAiMessageId(messages)
 
-    if (lastAiMessage && lastAiMessage.id !== lastAiMessageIdRef.current) {
-      lastAiMessageIdRef.current = lastAiMessage.id
+    if (lastAiMessageId && lastAiMessageId !== lastAiMessageIdRef.current) {
+      lastAiMessageIdRef.current = lastAiMessageId
 
-      // Only fetch if this is actually a new message (not initial load)
-      if (lastAiMessageIdRef.current !== null) {
-        // Small delay to ensure the message is rendered
-        setTimeout(() => {
-          void fetchSuggestionsCore("reply")
-        }, 100)
+      // Small delay to ensure the message is rendered. Kept in a ref rather
+      // than cleared by this effect's cleanup: `messages` changes again while
+      // a reply renders, and that must not cancel the fetch for it.
+      if (autoFetchTimerRef.current) {
+        clearTimeout(autoFetchTimerRef.current)
       }
+      autoFetchTimerRef.current = setTimeout(() => {
+        autoFetchTimerRef.current = null
+        void fetchSuggestionsCore("reply")
+      }, 100)
     }
   }, [messages, autoFetchOnAiResponse, isEnabled, fetchSuggestionsCore])
-
-  /**
-   * Initialize last AI message ID on first render
-   */
-  const hasInitializedRef = useRef(false)
-
-  useEffect(() => {
-    if (hasInitializedRef.current) return
-    const lastAiMessage = [...messages].reverse().find((m) => m.isAI)
-    if (lastAiMessage) {
-      lastAiMessageIdRef.current = lastAiMessage.id
-    }
-    hasInitializedRef.current = true
-  }, [messages])
 
   /**
    * Cleanup on unmount
@@ -294,6 +307,9 @@ export function useSuggestions(options: UseSuggestionsOptions): UseSuggestionsRe
     return () => {
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current)
+      }
+      if (autoFetchTimerRef.current) {
+        clearTimeout(autoFetchTimerRef.current)
       }
     }
   }, [])
@@ -312,48 +328,96 @@ export function useSuggestions(options: UseSuggestionsOptions): UseSuggestionsRe
   }
 }
 
+interface SuggestionPreferences {
+  enabled: boolean
+  preferredTypes: SuggestionType[]
+  maxSuggestions: number
+  autoShow: boolean
+}
+
+const DEFAULT_SUGGESTION_PREFERENCES: SuggestionPreferences = {
+  enabled: true,
+  preferredTypes: ["reply", "question"],
+  maxSuggestions: 4,
+  autoShow: true,
+}
+
+// Versioned so a future shape change can migrate instead of mis-reading. The
+// unversioned key is what earlier builds wrote; it is read once and moved.
+const SUGGESTION_PREFERENCES_KEY = "infinistar-suggestion-preferences:v1"
+const LEGACY_SUGGESTION_PREFERENCES_KEY = "infinistar-suggestion-preferences"
+const SUGGESTION_TYPES = new Set<SuggestionType>(["continue", "reply", "question", "rephrase"])
+
+/** Keep only known fields with the right types; anything else falls back to defaults. */
+function parseSuggestionPreferences(raw: string): Partial<SuggestionPreferences> {
+  const parsed: unknown = JSON.parse(raw)
+  if (!parsed || typeof parsed !== "object") return {}
+  const value = parsed as Record<string, unknown>
+  const result: Partial<SuggestionPreferences> = {}
+  if (typeof value.enabled === "boolean") result.enabled = value.enabled
+  if (typeof value.autoShow === "boolean") result.autoShow = value.autoShow
+  if (typeof value.maxSuggestions === "number") result.maxSuggestions = value.maxSuggestions
+  if (Array.isArray(value.preferredTypes)) {
+    result.preferredTypes = value.preferredTypes.filter((type): type is SuggestionType =>
+      SUGGESTION_TYPES.has(type as SuggestionType)
+    )
+  }
+  return result
+}
+
+function readStoredSuggestionPreferences(): Partial<SuggestionPreferences> {
+  try {
+    const stored = localStorage.getItem(SUGGESTION_PREFERENCES_KEY)
+    if (stored) return parseSuggestionPreferences(stored)
+
+    const legacy = localStorage.getItem(LEGACY_SUGGESTION_PREFERENCES_KEY)
+    if (!legacy) return {}
+    const migrated = parseSuggestionPreferences(legacy)
+    localStorage.setItem(SUGGESTION_PREFERENCES_KEY, JSON.stringify(migrated))
+    localStorage.removeItem(LEGACY_SUGGESTION_PREFERENCES_KEY)
+    return migrated
+  } catch {
+    // Unavailable storage (private mode, quota) or bad JSON: use defaults.
+    return {}
+  }
+}
+
+function writeStoredSuggestionPreferences(preferences: SuggestionPreferences): void {
+  try {
+    localStorage.setItem(SUGGESTION_PREFERENCES_KEY, JSON.stringify(preferences))
+  } catch {
+    // Ignore storage errors
+  }
+}
+
 /**
  * Hook for managing suggestion preferences in localStorage
  */
 export function useSuggestionPreferences() {
-  const STORAGE_KEY = "infinistar-suggestion-preferences"
+  const [preferences, setPreferencesState] = useState<SuggestionPreferences>(
+    DEFAULT_SUGGESTION_PREFERENCES
+  )
+  // The latest value, so the setter can merge and persist outside a state
+  // updater (updaters must stay pure; React may call them twice).
+  const preferencesRef = useRef(preferences)
 
-  const [preferences, setPreferencesState] = useState<{
-    enabled: boolean
-    preferredTypes: SuggestionType[]
-    maxSuggestions: number
-    autoShow: boolean
-  }>({
-    enabled: true,
-    preferredTypes: ["reply", "question"],
-    maxSuggestions: 4,
-    autoShow: true,
-  })
-
-  // Load preferences from localStorage on mount
+  // Load preferences from localStorage after mount. Not a lazy initializer:
+  // this hook also renders on the server, where storage does not exist, and
+  // the first client render has to match that HTML.
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY)
-      if (stored) {
-        const parsed = JSON.parse(stored)
-        setPreferencesState((prev) => ({ ...prev, ...parsed }))
-      }
-    } catch {
-      // Ignore errors, use defaults
-    }
+    const stored = readStoredSuggestionPreferences()
+    if (Object.keys(stored).length === 0) return
+    const loaded = { ...preferencesRef.current, ...stored }
+    preferencesRef.current = loaded
+    setPreferencesState(loaded)
   }, [])
 
   // Save preferences to localStorage
-  const setPreferences = useCallback((updates: Partial<typeof preferences>) => {
-    setPreferencesState((prev) => {
-      const updated = { ...prev, ...updates }
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
-      } catch {
-        // Ignore storage errors
-      }
-      return updated
-    })
+  const setPreferences = useCallback((updates: Partial<SuggestionPreferences>) => {
+    const updated = { ...preferencesRef.current, ...updates }
+    preferencesRef.current = updated
+    setPreferencesState(updated)
+    writeStoredSuggestionPreferences(updated)
   }, [])
 
   return {

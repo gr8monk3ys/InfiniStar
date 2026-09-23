@@ -209,9 +209,29 @@ export function useSearch() {
 
   const totalVisible = visibleConversations.length + visibleMessages.length
 
+  // The filter fields a search actually sends. `state.filters` itself is
+  // rebuilt on every keystroke (SET_QUERY copies the query into it), so
+  // depending on the object re-ran the search effect per keystroke with the
+  // old debounced query; these only change when a filter does.
+  const {
+    type: filterType,
+    sortBy: filterSortBy,
+    page: filterPage,
+    limit: filterLimit,
+    dateFrom: filterDateFrom,
+    dateTo: filterDateTo,
+    isAI: filterIsAI,
+    personality: filterPersonality,
+    tagIds: filterTagIds,
+    hasAttachments: filterHasAttachments,
+    archived: filterArchived,
+  } = state.filters
+
   // Perform search
   const performSearch = useCallback(async () => {
     if (!debouncedQuery || debouncedQuery.length < MIN_QUERY_LENGTH) {
+      // A search still in flight for the longer query must not land after this
+      abortControllerRef.current?.abort()
       dispatch({
         type: "SET_RESULTS",
         payload: {
@@ -230,7 +250,8 @@ export function useSearch() {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort()
     }
-    abortControllerRef.current = new AbortController()
+    const controller = new AbortController()
+    abortControllerRef.current = controller
 
     dispatch({ type: "SET_SEARCHING", payload: true })
     dispatch({ type: "SET_ERROR", payload: null })
@@ -239,38 +260,43 @@ export function useSearch() {
     try {
       const params = new URLSearchParams({
         query: debouncedQuery,
-        type: state.filters.type,
-        sortBy: state.filters.sortBy,
-        page: String(state.filters.page),
-        limit: String(state.filters.limit),
+        type: filterType,
+        sortBy: filterSortBy,
+        page: String(filterPage),
+        limit: String(filterLimit),
         includeFacets: "true",
       })
 
-      if (state.filters.dateFrom) {
-        params.append("dateFrom", state.filters.dateFrom)
+      if (filterDateFrom) {
+        params.append("dateFrom", filterDateFrom)
       }
-      if (state.filters.dateTo) {
-        params.append("dateTo", state.filters.dateTo)
+      if (filterDateTo) {
+        params.append("dateTo", filterDateTo)
       }
-      if (state.filters.isAI !== undefined) {
-        params.append("isAI", String(state.filters.isAI))
+      if (filterIsAI !== undefined) {
+        params.append("isAI", String(filterIsAI))
       }
-      if (state.filters.personality) {
-        params.append("personality", state.filters.personality)
+      if (filterPersonality) {
+        params.append("personality", filterPersonality)
       }
-      if (state.filters.tagIds && state.filters.tagIds.length > 0) {
-        params.append("tagIds", state.filters.tagIds.join(","))
+      if (filterTagIds && filterTagIds.length > 0) {
+        params.append("tagIds", filterTagIds.join(","))
       }
-      if (state.filters.hasAttachments) {
+      if (filterHasAttachments) {
         params.append("hasAttachments", "true")
       }
-      if (state.filters.archived) {
+      if (filterArchived) {
         params.append("archived", "true")
       }
 
       const response = await api.get<AdvancedSearchResponse>(`/api/search?${params.toString()}`, {
         showErrorToast: false,
       })
+
+      // A newer search started while this one was in flight; its results win.
+      if (controller.signal.aborted) {
+        return
+      }
 
       if (response.success && response.data) {
         dispatch({
@@ -297,7 +323,7 @@ export function useSearch() {
         dispatch({ type: "SET_SEARCHING", payload: false })
       }
     } catch (error) {
-      if ((error as Error).name !== "AbortError") {
+      if ((error as Error).name !== "AbortError" && !controller.signal.aborted) {
         dispatch({
           type: "SET_ERROR",
           payload: "Failed to search. Please try again.",
@@ -305,7 +331,20 @@ export function useSearch() {
         dispatch({ type: "SET_SEARCHING", payload: false })
       }
     }
-  }, [debouncedQuery, state.filters])
+  }, [
+    debouncedQuery,
+    filterType,
+    filterSortBy,
+    filterPage,
+    filterLimit,
+    filterDateFrom,
+    filterDateTo,
+    filterIsAI,
+    filterPersonality,
+    filterTagIds,
+    filterHasAttachments,
+    filterArchived,
+  ])
 
   // Fetch suggestions
   const fetchSuggestions = useCallback(async () => {
@@ -318,7 +357,8 @@ export function useSearch() {
     if (suggestionsAbortRef.current) {
       suggestionsAbortRef.current.abort()
     }
-    suggestionsAbortRef.current = new AbortController()
+    const controller = new AbortController()
+    suggestionsAbortRef.current = controller
 
     dispatch({ type: "SET_SUGGESTIONS_LOADING", payload: true })
 
@@ -329,35 +369,28 @@ export function useSearch() {
         { showErrorToast: false }
       )
 
+      // Suggestions for an older query arriving late must not replace these.
+      if (controller.signal.aborted) {
+        return
+      }
+
       if (response.success && response.suggestions) {
         dispatch({ type: "SET_SUGGESTIONS", payload: response.suggestions })
       } else {
         dispatch({ type: "SET_SUGGESTIONS", payload: [] })
       }
     } catch (error) {
-      if ((error as Error).name !== "AbortError") {
+      if ((error as Error).name !== "AbortError" && !controller.signal.aborted) {
         dispatch({ type: "SET_SUGGESTIONS", payload: [] })
       }
     }
   }, [state.query])
 
-  // Trigger search when debounced query or filters change
+  // Trigger search when debounced query or filters change (performSearch's
+  // identity tracks exactly those)
   useEffect(() => {
     void performSearch()
-  }, [
-    performSearch,
-    debouncedQuery,
-    state.filters.type,
-    state.filters.dateFrom,
-    state.filters.dateTo,
-    state.filters.isAI,
-    state.filters.personality,
-    state.filters.tagIds,
-    state.filters.hasAttachments,
-    state.filters.archived,
-    state.filters.sortBy,
-    state.filters.page,
-  ])
+  }, [performSearch])
 
   // Fetch suggestions when query changes (faster than debounced)
   useEffect(() => {

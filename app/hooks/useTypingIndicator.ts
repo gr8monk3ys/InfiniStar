@@ -1,16 +1,10 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 import { getClientCsrfToken } from "@/app/lib/csrf-client"
 import { getPusherConversationChannel } from "@/app/lib/pusher-channels"
 import { pusherClient } from "@/app/lib/pusher-client"
-
-interface TypingUser {
-  userId: string
-  userName: string
-  timeoutId: NodeJS.Timeout
-}
 
 interface TypingPayload {
   userId: string
@@ -61,17 +55,32 @@ interface UseTypingIndicatorReturn {
 export function useTypingIndicator(options: UseTypingIndicatorOptions): UseTypingIndicatorReturn {
   const { conversationId, currentUserId, timeoutMs = 3000, initialAITyping = false } = options
 
-  const [typingUsersMap, setTypingUsersMap] = useState<Map<string, TypingUser>>(new Map())
+  // userId -> display name. The auto-clear timers live in a ref beside it:
+  // scheduling or clearing a timer is a side effect, and state updaters must
+  // stay pure (React may run them twice).
+  const [typingUsersMap, setTypingUsersMap] = useState<Map<string, string>>(() => new Map())
+  const typingTimeoutsRef = useRef<Map<string, NodeJS.Timeout>>(new Map())
   const [isAITyping, setIsAITyping] = useState(initialAITyping)
   const emitTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const lastEmitRef = useRef<boolean>(false)
 
-  // Convert map to array of names for the component
-  const typingUsers = Array.from(typingUsersMap.values()).map((user) => user.userName)
+  // Names for the component; a stable array until someone starts or stops.
+  const typingUsers = useMemo(() => Array.from(typingUsersMap.values()), [typingUsersMap])
 
   // Handle incoming typing events
   useEffect(() => {
     if (!conversationId) return
+
+    const timeouts = typingTimeoutsRef.current
+
+    const removeTypingUser = (userId: string) => {
+      setTypingUsersMap((current) => {
+        if (!current.has(userId)) return current
+        const updated = new Map(current)
+        updated.delete(userId)
+        return updated
+      })
+    }
 
     const handleTyping = (payload: TypingPayload) => {
       const { userId, userName, isTyping } = payload
@@ -79,36 +88,33 @@ export function useTypingIndicator(options: UseTypingIndicatorOptions): UseTypin
       // Ignore typing events from the current user
       if (userId === currentUserId) return
 
-      setTypingUsersMap((prev) => {
-        const newMap = new Map(prev)
+      // Clear the pending auto-clear whether they keep typing or stopped
+      const existingTimeout = timeouts.get(userId)
+      if (existingTimeout) {
+        clearTimeout(existingTimeout)
+        timeouts.delete(userId)
+      }
 
-        if (isTyping) {
-          // Clear existing timeout if user was already typing
-          const existingUser = newMap.get(userId)
-          if (existingUser) {
-            clearTimeout(existingUser.timeoutId)
-          }
+      if (!isTyping) {
+        // User stopped typing - clear immediately
+        removeTypingUser(userId)
+        return
+      }
 
-          // Set new timeout to auto-clear typing status
-          const timeoutId = setTimeout(() => {
-            setTypingUsersMap((current) => {
-              const updated = new Map(current)
-              updated.delete(userId)
-              return updated
-            })
-          }, timeoutMs)
+      // Auto-clear the typing status if no further event arrives
+      timeouts.set(
+        userId,
+        setTimeout(() => {
+          timeouts.delete(userId)
+          removeTypingUser(userId)
+        }, timeoutMs)
+      )
 
-          newMap.set(userId, { userId, userName, timeoutId })
-        } else {
-          // User stopped typing - clear immediately
-          const existingUser = newMap.get(userId)
-          if (existingUser) {
-            clearTimeout(existingUser.timeoutId)
-          }
-          newMap.delete(userId)
-        }
-
-        return newMap
+      setTypingUsersMap((current) => {
+        if (current.get(userId) === userName) return current
+        const updated = new Map(current)
+        updated.set(userId, userName)
+        return updated
       })
     }
 
@@ -117,12 +123,10 @@ export function useTypingIndicator(options: UseTypingIndicatorOptions): UseTypin
     channel.bind("user:typing", handleTyping)
 
     return () => {
-      // Cleanup: clear all timeouts and unbind
-      // Using setTypingUsersMap to access current state in cleanup
-      setTypingUsersMap((current) => {
-        current.forEach((user) => clearTimeout(user.timeoutId))
-        return new Map()
-      })
+      // Cleanup: clear all timeouts, reset the list and unbind
+      timeouts.forEach((timeoutId) => clearTimeout(timeoutId))
+      timeouts.clear()
+      setTypingUsersMap(new Map())
       channel.unbind("user:typing", handleTyping)
       // Note: We don't unsubscribe from the channel here because
       // other components (Body.tsx) may also be subscribed to it

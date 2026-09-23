@@ -156,14 +156,16 @@ export function useMemories(options?: UseMemoriesOptions): UseMemoriesReturn {
         } else {
           // Add new memory to state
           setMemories((prev) => [...prev, { ...newMemory, isExpired: false }])
-          // Update capacity
-          if (capacity) {
-            setCapacity({
-              ...capacity,
-              current: capacity.current + 1,
-              remaining: capacity.remaining - 1,
-            })
-          }
+          // Update capacity from the latest value, not this callback's closure
+          setCapacity((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  current: prev.current + 1,
+                  remaining: prev.remaining - 1,
+                }
+              : null
+          )
         }
 
         loader.success(response.message || "Memory saved")
@@ -174,7 +176,7 @@ export function useMemories(options?: UseMemoriesOptions): UseMemoriesReturn {
         return null
       }
     },
-    [capacity]
+    []
   )
 
   const updateMemory = useCallback(

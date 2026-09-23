@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useEffectEvent, useMemo, useState } from "react"
 
 import {
   shortcuts as registry,
@@ -99,10 +99,14 @@ export function useKeyboardShortcuts({
     return registry.isEnabled() && enabledProp
   })
 
-  // Update enabled state when prop changes
-  useEffect(() => {
+  // Re-derive when the prop changes, during render rather than in an effect
+  // (no extra commit with the stale value). `setEnabled` can still override
+  // it until the prop next changes, as before.
+  const [prevEnabledProp, setPrevEnabledProp] = useState(enabledProp)
+  if (prevEnabledProp !== enabledProp) {
+    setPrevEnabledProp(enabledProp)
     setEnabledState(registry.isEnabled() && enabledProp)
-  }, [enabledProp])
+  }
 
   // Set enabled state and persist to localStorage
   const setEnabled = useCallback((newEnabled: boolean) => {
@@ -122,31 +126,31 @@ export function useKeyboardShortcuts({
     []
   )
 
-  // Handle keydown events
-  const handleKeyDown = useCallback(
-    (event: KeyboardEvent) => {
-      if (!enabled) return
+  // Handle keydown events. An Effect Event reads the latest `handlers` and
+  // `enabled`, so callers can pass a fresh array every render without the
+  // document listener being removed and re-added each time.
+  const handleKeyDown = useEffectEvent((event: KeyboardEvent) => {
+    if (!enabled) return
 
-      // The registry decides which action a key event belongs to; handlers are
-      // offered in registration order and carry their own overrides.
-      const actionId = registry.resolve(event, { among: handlers })
-      if (!actionId) return
+    // The registry decides which action a key event belongs to; handlers are
+    // offered in registration order and carry their own overrides.
+    const actionId = registry.resolve(event, { among: handlers })
+    if (!actionId) return
 
-      const handler = handlers.find((h) => h.id === actionId && h.enabled !== false)
-      if (!handler) return
+    const handler = handlers.find((h) => h.id === actionId && h.enabled !== false)
+    if (!handler) return
 
-      event.preventDefault()
-      event.stopPropagation()
-      handler.action()
-    },
-    [enabled, handlers]
-  )
+    event.preventDefault()
+    event.stopPropagation()
+    handler.action()
+  })
 
-  // Register keyboard event listener
+  // Register keyboard event listener once
   useEffect(() => {
-    document.addEventListener("keydown", handleKeyDown)
-    return () => document.removeEventListener("keydown", handleKeyDown)
-  }, [handleKeyDown])
+    const onKeyDown = (event: KeyboardEvent) => handleKeyDown(event)
+    document.addEventListener("keydown", onKeyDown)
+    return () => document.removeEventListener("keydown", onKeyDown)
+  }, [])
 
   // Memoized values
   const groups = useMemo(() => registry.groups(), [])
@@ -321,41 +325,40 @@ export function useLegacyKeyboardShortcuts({
   shortcuts,
   enabled = true,
 }: LegacyUseKeyboardShortcutsOptions): void {
-  const handleKeyDown = useCallback(
-    (event: KeyboardEvent) => {
-      if (!enabled) return
+  // Latest `shortcuts` without re-subscribing: callers build the array inline.
+  const handleKeyDown = useEffectEvent((event: KeyboardEvent) => {
+    if (!enabled) return
 
-      for (const shortcut of shortcuts) {
-        // Skip disabled shortcuts
-        if (shortcut.enabled === false) continue
+    for (const shortcut of shortcuts) {
+      // Skip disabled shortcuts
+      if (shortcut.enabled === false) continue
 
-        // These shortcuts are component-local and not registry actions, so
-        // match them as a binding rather than resolving an action id.
-        const binding: ShortcutBinding = {
-          key: shortcut.key,
-          modifiers: [
-            ...(shortcut.modifierKey ? (["meta"] as const) : []),
-            ...(shortcut.shiftKey ? (["shift"] as const) : []),
-            ...(shortcut.altKey ? (["alt"] as const) : []),
-          ],
-        }
-
-        if (!registry.matches(event, binding, { allowInInput: shortcut.allowInInput })) continue
-
-        // All conditions met - execute the action
-        event.preventDefault()
-        event.stopPropagation()
-        shortcut.action()
-        return
+      // These shortcuts are component-local and not registry actions, so
+      // match them as a binding rather than resolving an action id.
+      const binding: ShortcutBinding = {
+        key: shortcut.key,
+        modifiers: [
+          ...(shortcut.modifierKey ? (["meta"] as const) : []),
+          ...(shortcut.shiftKey ? (["shift"] as const) : []),
+          ...(shortcut.altKey ? (["alt"] as const) : []),
+        ],
       }
-    },
-    [shortcuts, enabled]
-  )
+
+      if (!registry.matches(event, binding, { allowInInput: shortcut.allowInInput })) continue
+
+      // All conditions met - execute the action
+      event.preventDefault()
+      event.stopPropagation()
+      shortcut.action()
+      return
+    }
+  })
 
   useEffect(() => {
-    document.addEventListener("keydown", handleKeyDown)
-    return () => document.removeEventListener("keydown", handleKeyDown)
-  }, [handleKeyDown])
+    const onKeyDown = (event: KeyboardEvent) => handleKeyDown(event)
+    document.addEventListener("keydown", onKeyDown)
+    return () => document.removeEventListener("keydown", onKeyDown)
+  }, [])
 }
 
 export default useKeyboardShortcuts

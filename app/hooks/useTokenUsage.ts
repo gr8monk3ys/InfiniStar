@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { create } from "zustand"
 
+import { formatNumber } from "@/app/lib/intl-format"
+
 /**
  * Token usage data for a single message
  */
@@ -86,14 +88,11 @@ export const useTokenUsageStore = create<TokenUsageState>((set) => ({
  * Hook to get the latest token usage for a specific conversation
  */
 export function useLatestTokenUsage(conversationId: string): TokenUsage | null {
-  const { latestUsage, conversationId: storeConversationId } = useTokenUsageStore()
-
-  // Only return usage if it's for the current conversation
-  if (storeConversationId === conversationId) {
-    return latestUsage
-  }
-
-  return null
+  // Subscribe to the derived value only: usage for another conversation (or a
+  // store update that leaves this one's usage untouched) does not re-render.
+  return useTokenUsageStore((state) =>
+    state.conversationId === conversationId ? state.latestUsage : null
+  )
 }
 
 /**
@@ -138,7 +137,7 @@ export function useTokenUsage(
 
       try {
         const response = await fetch(
-          `/api/ai/usage?conversationId=${conversationId}&period=${period}`,
+          `/api/ai/usage?conversationId=${encodeURIComponent(conversationId)}&period=${period}`,
           { signal }
         )
 
@@ -161,7 +160,11 @@ export function useTokenUsage(
         const message = err instanceof Error ? err.message : "Failed to fetch token usage"
         setError(message)
       } finally {
-        setIsLoading(false)
+        // A request superseded by a newer one leaves the flag to that request;
+        // otherwise (done, failed, or cancelled outright) it clears it.
+        if (!signal || abortControllerRef.current?.signal === signal) {
+          setIsLoading(false)
+        }
       }
     },
     [conversationId, enabled, period]
@@ -221,25 +224,25 @@ export function useTokenUsage(
 }
 
 /**
- * Format a number for display (e.g., 1234 -> "1.2K", 1234567 -> "1.2M")
+ * Format a number for display (e.g., 1234 -> "1.2K", 1234567 -> "1.2M" in
+ * English), in the viewer's locale.
  */
 export function formatTokenCount(num: number): string {
-  if (num >= 1_000_000) {
-    return `${(num / 1_000_000).toFixed(1)}M`
-  }
-  if (num >= 1_000) {
-    return `${(num / 1_000).toFixed(1)}K`
-  }
-  return num.toString()
+  return formatNumber(num, { notation: "compact", maximumFractionDigits: 1 })
 }
 
 /**
- * Format cost in cents to a readable dollar amount
+ * Format cost in cents to a readable dollar amount, in the viewer's locale.
  */
 export function formatCost(cents: number): string {
   const dollars = cents / 100
   if (dollars < 0.01) {
-    return "<$0.01"
+    return `<${formatNumber(0.01, { style: "currency", currency: "USD" })}`
   }
-  return `$${dollars.toFixed(4)}`
+  return formatNumber(dollars, {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 4,
+    maximumFractionDigits: 4,
+  })
 }
