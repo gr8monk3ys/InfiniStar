@@ -107,21 +107,29 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     const { tagId } = validationResult.data
 
-    // Find the conversation and verify user is a participant
-    const conversation = await prisma.conversation.findUnique({
-      where: {
-        id: conversationId,
-      },
-      select: {
-        id: true,
-        users: {
-          select: { id: true },
+    // The conversation and the tag are independent reads, so they run
+    // together. Their checks still run in the original order.
+    const [conversation, tag] = await Promise.all([
+      prisma.conversation.findUnique({
+        where: {
+          id: conversationId,
         },
-        tags: {
-          select: { id: true },
+        select: {
+          id: true,
+          users: {
+            select: { id: true },
+          },
+          tags: {
+            select: { id: true },
+          },
         },
-      },
-    })
+      }),
+      prisma.tag.findUnique({
+        where: {
+          id: tagId,
+        },
+      }),
+    ])
 
     if (!conversation) {
       return NextResponse.json({ error: "Conversation not found" }, { status: 404 })
@@ -133,12 +141,6 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     // Verify the tag exists and belongs to the user
-    const tag = await prisma.tag.findUnique({
-      where: {
-        id: tagId,
-      },
-    })
-
     if (!tag) {
       return NextResponse.json({ error: "Tag not found" }, { status: 404 })
     }

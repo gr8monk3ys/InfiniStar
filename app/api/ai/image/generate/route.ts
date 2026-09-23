@@ -75,7 +75,37 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid prompt" }, { status: 400 })
     }
 
-    const moderationResult = await moderateTextModelAssisted(sanitizedPrompt)
+    // Configuration is a synchronous check, so it runs before anything that
+    // costs a round trip: an unconfigured deploy answers 501 without first
+    // paying for moderation and a conversation lookup.
+    const openAiKey = process.env.OPENAI_API_KEY
+    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
+    const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET
+
+    if (!openAiKey) {
+      return NextResponse.json({ error: "Image generation is not configured." }, { status: 501 })
+    }
+    if (!cloudName || !uploadPreset) {
+      return NextResponse.json({ error: "Cloudinary is not configured." }, { status: 501 })
+    }
+
+    // Moderation and the membership lookup are independent, so they run
+    // together; their results are checked in the original order.
+    const [moderationResult, conversation] = await Promise.all([
+      moderateTextModelAssisted(sanitizedPrompt),
+      prisma.conversation.findFirst({
+        where: {
+          id: validation.data.conversationId,
+          users: { some: { id: currentUser.id } },
+        },
+        select: {
+          id: true,
+          isAI: true,
+          character: { select: { isNsfw: true } },
+        },
+      }),
+    ])
+
     if (moderationResult.shouldBlock) {
       return NextResponse.json(
         {
@@ -87,18 +117,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const conversation = await prisma.conversation.findFirst({
-      where: {
-        id: validation.data.conversationId,
-        users: { some: { id: currentUser.id } },
-      },
-      select: {
-        id: true,
-        isAI: true,
-        character: { select: { isNsfw: true } },
-      },
-    })
-
     if (!conversation) {
       return NextResponse.json({ error: "Not authorized for this conversation" }, { status: 403 })
     }
@@ -109,17 +127,6 @@ export async function POST(request: NextRequest) {
 
     if (conversation.character?.isNsfw && !allowNsfw) {
       return NextResponse.json({ error: "NSFW content is not enabled." }, { status: 403 })
-    }
-
-    const openAiKey = process.env.OPENAI_API_KEY
-    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
-    const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET
-
-    if (!openAiKey) {
-      return NextResponse.json({ error: "Image generation is not configured." }, { status: 501 })
-    }
-    if (!cloudName || !uploadPreset) {
-      return NextResponse.json({ error: "Cloudinary is not configured." }, { status: 501 })
     }
 
     const openAiModel = process.env.OPENAI_IMAGE_MODEL || "dall-e-3"

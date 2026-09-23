@@ -387,11 +387,27 @@ export async function POST(request: NextRequest) {
       // Always include the creator and de-duplicate client-supplied member IDs
       const memberIds = [...new Set([...members, currentUser.id])]
 
-      // Only connect IDs that belong to real users — never trust client-supplied IDs
-      const existingUsers = await prisma.user.findMany({
-        where: { id: { in: memberIds } },
-        select: { id: true },
-      })
+      const otherMemberIds = memberIds.filter((id) => id !== currentUser.id)
+
+      // Both checks read only the member list, so they run together. Their
+      // results are still checked in the original order.
+      const [existingUsers, block] = await Promise.all([
+        // Only connect IDs that belong to real users — never trust client-supplied IDs
+        prisma.user.findMany({
+          where: { id: { in: memberIds } },
+          select: { id: true },
+        }),
+        // Respect blocks in either direction between the creator and any member
+        prisma.userBlock.findFirst({
+          where: {
+            OR: [
+              { blockerId: currentUser.id, blockedId: { in: otherMemberIds } },
+              { blockerId: { in: otherMemberIds }, blockedId: currentUser.id },
+            ],
+          },
+          select: { id: true },
+        }),
+      ])
 
       if (existingUsers.length !== memberIds.length) {
         return NextResponse.json(
@@ -399,18 +415,6 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         )
       }
-
-      // Respect blocks in either direction between the creator and any member
-      const otherMemberIds = memberIds.filter((id) => id !== currentUser.id)
-      const block = await prisma.userBlock.findFirst({
-        where: {
-          OR: [
-            { blockerId: currentUser.id, blockedId: { in: otherMemberIds } },
-            { blockerId: { in: otherMemberIds }, blockedId: currentUser.id },
-          ],
-        },
-        select: { id: true },
-      })
 
       if (block) {
         return NextResponse.json(

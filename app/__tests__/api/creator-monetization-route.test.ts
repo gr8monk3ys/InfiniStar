@@ -457,12 +457,16 @@ describe("POST /api/creators/[creatorId]/subscription", () => {
     mockCreatorPaymentLimiterCheck.mockReturnValue(false)
     const res = await callSubPost(CREATOR.id, VALID_PLAN_BODY)
     expect(res.status).toBe(429)
+    expect(mockGetCurrentUser).not.toHaveBeenCalled()
   })
 
   it("returns 403 when CSRF token is invalid", async () => {
     mockVerifyCsrfToken.mockReturnValue(false)
     const res = await callSubPost(CREATOR.id, VALID_PLAN_BODY)
     expect(res.status).toBe(403)
+    // Rejected before either user lookup runs.
+    expect(mockGetCurrentUser).not.toHaveBeenCalled()
+    expect(mockUserFindUnique).not.toHaveBeenCalled()
   })
 
   it("returns 400 when user tries to subscribe to themselves", async () => {
@@ -581,6 +585,7 @@ describe("DELETE /api/creators/[creatorId]/subscription", () => {
     mockVerifyCsrfToken.mockReturnValue(false)
     const res = await callSubDelete(CREATOR.id)
     expect(res.status).toBe(403)
+    expect(mockGetCurrentUser).not.toHaveBeenCalled()
   })
 
   it("returns 404 when no subscription exists between supporter and creator", async () => {

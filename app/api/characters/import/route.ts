@@ -36,16 +36,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     )
   }
 
-  const currentUser = await getCurrentUser()
-  if (!currentUser) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
-  // CSRF
+  // CSRF is a synchronous comparison, so it runs before the user lookup — the
+  // ADR-0003 order: a forged request is rejected without a database round trip.
   const headerToken = request.headers.get("X-CSRF-Token")
   const cookieToken = getCsrfTokenFromRequest(request)
   if (!verifyCsrfToken(headerToken, cookieToken)) {
     return NextResponse.json({ error: "Invalid CSRF token" }, { status: 403 })
+  }
+
+  const currentUser = await getCurrentUser()
+  if (!currentUser) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
   try {

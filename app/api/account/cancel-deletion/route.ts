@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from "next/server"
+import { after, NextResponse, type NextRequest } from "next/server"
 
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
 import { sendAccountDeletionCancelledEmail } from "@/app/lib/email"
@@ -84,9 +84,12 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // Send confirmation email
-    if (updatedUser.email) {
-      await sendAccountDeletionCancelledEmail(updatedUser.email, updatedUser.name || "User")
+    // Send confirmation email once the response is out. Delivery reports
+    // failure by returning false rather than throwing, so it cannot change the
+    // response.
+    const { email, name } = updatedUser
+    if (email) {
+      after(() => sendAccountDeletionCancelledEmail(email, name || "User"))
     }
 
     authLogger.warn({ userId: updatedUser.id }, "User cancelled account deletion request")

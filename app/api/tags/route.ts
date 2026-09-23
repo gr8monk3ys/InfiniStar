@@ -50,14 +50,18 @@ export const POST = guard(
       return NextResponse.json({ error: "Invalid tag name" }, { status: 400 })
     }
 
-    const existingTag = await prisma.tag.findUnique({
-      where: { userId_name: { userId: user.id, name } },
-    })
+    // The duplicate check and the count are independent reads, so they run
+    // together; their results are checked in the original order.
+    const [existingTag, tagCount] = await Promise.all([
+      prisma.tag.findUnique({
+        where: { userId_name: { userId: user.id, name } },
+      }),
+      prisma.tag.count({ where: { userId: user.id } }),
+    ])
     if (existingTag) {
       return NextResponse.json({ error: "A tag with this name already exists" }, { status: 409 })
     }
 
-    const tagCount = await prisma.tag.count({ where: { userId: user.id } })
     if (tagCount >= MAX_TAGS_PER_USER) {
       return NextResponse.json(
         {

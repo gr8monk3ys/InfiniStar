@@ -163,8 +163,15 @@ export async function POST(
       // Non-reply messages can be created in bulk; reply messages must be
       // created individually so we can capture their new IDs for the
       // reply-link pass below.
-      const nonReplyMessages = messagesToCopy.filter((m) => !m.replyToId)
-      const replyMessages = messagesToCopy.filter((m) => m.replyToId)
+      const nonReplyMessages: typeof messagesToCopy = []
+      const replyMessages: typeof messagesToCopy = []
+      for (const message of messagesToCopy) {
+        if (message.replyToId) {
+          replyMessages.push(message)
+        } else {
+          nonReplyMessages.push(message)
+        }
+      }
 
       // Phase 1: bulk-insert all non-reply messages.
       // createMany doesn't return records, so we fetch them back ordered by

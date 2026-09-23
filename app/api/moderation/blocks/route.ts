@@ -54,6 +54,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Too many requests" }, { status: 429 })
     }
 
+    // CSRF is a synchronous comparison, so it runs before the session and user
+    // lookups — the ADR-0003 order.
+    const headerToken = request.headers.get("X-CSRF-Token")
+    const cookieToken = getCsrfTokenFromRequest(request)
+
+    if (!verifyCsrfToken(headerToken, cookieToken)) {
+      return NextResponse.json({ error: "Invalid CSRF token" }, { status: 403 })
+    }
+
     const { userId } = await auth()
 
     if (!userId) {
@@ -63,13 +72,6 @@ export async function POST(request: NextRequest) {
     const currentUser = await prisma.user.findUnique({ where: { clerkId: userId } })
     if (!currentUser) {
       return NextResponse.json({ error: "User not found" }, { status: 401 })
-    }
-
-    const headerToken = request.headers.get("X-CSRF-Token")
-    const cookieToken = getCsrfTokenFromRequest(request)
-
-    if (!verifyCsrfToken(headerToken, cookieToken)) {
-      return NextResponse.json({ error: "Invalid CSRF token" }, { status: 403 })
     }
 
     const body = await request.json()
@@ -114,6 +116,15 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Too many requests" }, { status: 429 })
     }
 
+    // CSRF is a synchronous comparison, so it runs before the session and user
+    // lookups — the ADR-0003 order.
+    const headerToken = request.headers.get("X-CSRF-Token")
+    const cookieToken = getCsrfTokenFromRequest(request)
+
+    if (!verifyCsrfToken(headerToken, cookieToken)) {
+      return NextResponse.json({ error: "Invalid CSRF token" }, { status: 403 })
+    }
+
     const { userId } = await auth()
 
     if (!userId) {
@@ -123,13 +134,6 @@ export async function DELETE(request: NextRequest) {
     const currentUser = await prisma.user.findUnique({ where: { clerkId: userId } })
     if (!currentUser) {
       return NextResponse.json({ error: "User not found" }, { status: 401 })
-    }
-
-    const headerToken = request.headers.get("X-CSRF-Token")
-    const cookieToken = getCsrfTokenFromRequest(request)
-
-    if (!verifyCsrfToken(headerToken, cookieToken)) {
-      return NextResponse.json({ error: "Invalid CSRF token" }, { status: 403 })
     }
 
     const body = await request.json()

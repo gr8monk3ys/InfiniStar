@@ -59,11 +59,12 @@ export async function GET(request: NextRequest) {
         sortOrder: "desc",
       })
 
-      // Filter templates that have shortcuts starting with the query
+      // Filter templates that have shortcuts starting with the query. The
+      // query is lowercased once, not once per template.
+      const shortcutPrefix = normalizedShortcut.toLowerCase()
       const matchingTemplates = allTemplates.filter(
         (template) =>
-          template.shortcut &&
-          template.shortcut.toLowerCase().startsWith(normalizedShortcut.toLowerCase())
+          template.shortcut && template.shortcut.toLowerCase().startsWith(shortcutPrefix)
       )
 
       return NextResponse.json({

@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from "next/server"
+import { after, NextResponse, type NextRequest } from "next/server"
 import { z } from "zod"
 
 import { getCsrfTokenFromRequest, verifyCsrfToken } from "@/app/lib/csrf"
@@ -97,13 +97,12 @@ export async function DELETE(request: NextRequest) {
       },
     })
 
-    // Send notification email
-    if (updatedUser.email && updatedUser.deletionScheduledFor) {
-      await sendAccountDeletionPendingEmail(
-        updatedUser.email,
-        updatedUser.name || "User",
-        updatedUser.deletionScheduledFor
-      )
+    // Send notification email once the response is out. Delivery reports
+    // failure by returning false rather than throwing, so nothing here can
+    // change the response, and the chatter should not wait on the provider.
+    const { email, name, deletionScheduledFor: scheduledFor } = updatedUser
+    if (email && scheduledFor) {
+      after(() => sendAccountDeletionPendingEmail(email, name || "User", scheduledFor))
     }
 
     authLogger.warn(

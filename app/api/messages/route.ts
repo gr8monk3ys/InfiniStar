@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from "next/server"
+import { after, NextResponse, type NextRequest } from "next/server"
 import { z } from "zod"
 
 import { captureServerEvent } from "@/app/lib/analytics"
@@ -108,7 +108,35 @@ export async function POST(request: NextRequest) {
     }
 
     const moderationText = sanitizedMessage || sanitizedTranscript || ""
-    const moderationResult = await moderateTextModelAssisted(moderationText)
+
+    // Moderation, the membership check and the reply-target lookup read
+    // nothing from each other, so they run together. Their results are still
+    // checked in the original order, so the response for any input is unchanged.
+    const [moderationResult, conversation, replyMessage] = await Promise.all([
+      moderateTextModelAssisted(moderationText),
+      // Verify user is a participant in this conversation
+      prisma.conversation.findFirst({
+        where: {
+          id: conversationId,
+          users: {
+            some: {
+              id: currentUser.id,
+            },
+          },
+        },
+        select: { id: true },
+      }),
+      // If replyToId is provided, the message must exist in this conversation
+      replyToId
+        ? prisma.message.findFirst({
+            where: {
+              id: replyToId,
+              conversationId,
+            },
+          })
+        : Promise.resolve(null),
+    ])
+
     if (moderationResult.shouldBlock) {
       return new NextResponse(
         JSON.stringify({
@@ -123,19 +151,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Verify user is a participant in this conversation
-    const conversation = await prisma.conversation.findFirst({
-      where: {
-        id: conversationId,
-        users: {
-          some: {
-            id: currentUser.id,
-          },
-        },
-      },
-      select: { id: true },
-    })
-
     if (!conversation) {
       return new NextResponse(JSON.stringify({ error: "Not authorized for this conversation" }), {
         status: 403,
@@ -143,21 +158,11 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // If replyToId is provided, verify the message exists and belongs to this conversation
-    if (replyToId) {
-      const replyMessage = await prisma.message.findFirst({
-        where: {
-          id: replyToId,
-          conversationId,
-        },
-      })
-
-      if (!replyMessage) {
-        return new NextResponse(
-          JSON.stringify({ error: "Reply message not found or not in this conversation" }),
-          { status: 400, headers: { "Content-Type": "application/json" } }
-        )
-      }
+    if (replyToId && !replyMessage) {
+      return new NextResponse(
+        JSON.stringify({ error: "Reply message not found or not in this conversation" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      )
     }
 
     const newMessage = await prisma.message.create({
@@ -230,13 +235,19 @@ export async function POST(request: NextRequest) {
       surface: "direct",
     })
 
-    if (await isFirstHumanMessage(currentUser.id)) {
-      captureServerEvent(currentUser.id, "first_message_sent", {
-        conversationId,
-        messageId: newMessage.id,
-        surface: "direct",
-      })
-    }
+    // Analytics only: the count starts now, right after the insert it depends
+    // on, and the event is captured once the response has gone out. It never
+    // rejects: it fails closed to `false`.
+    const firstMessage = isFirstHumanMessage(currentUser.id)
+    after(async () => {
+      if (await firstMessage) {
+        captureServerEvent(currentUser.id, "first_message_sent", {
+          conversationId,
+          messageId: newMessage.id,
+          surface: "direct",
+        })
+      }
+    })
 
     return NextResponse.json(newMessage)
   } catch (error) {

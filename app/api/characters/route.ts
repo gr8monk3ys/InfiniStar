@@ -111,29 +111,31 @@ export async function GET(request: NextRequest) {
   }
 
   if (params.sort === "recommended" && currentUser?.id) {
-    const candidates = await prisma.character.findMany({
-      where,
-      take: Math.max(limit * 4, 80),
-      orderBy,
-      select: {
-        id: true,
-        slug: true,
-        name: true,
-        tagline: true,
-        avatarUrl: true,
-        category: true,
-        usageCount: true,
-        likeCount: true,
-        featured: true,
-        createdAt: true,
-        createdById: true,
-        createdBy: {
-          select: { id: true, name: true, image: true },
+    // Candidates and the chatter's signals are independent reads.
+    const [candidates, signals] = await Promise.all([
+      prisma.character.findMany({
+        where,
+        take: Math.max(limit * 4, 80),
+        orderBy,
+        select: {
+          id: true,
+          slug: true,
+          name: true,
+          tagline: true,
+          avatarUrl: true,
+          category: true,
+          usageCount: true,
+          likeCount: true,
+          featured: true,
+          createdAt: true,
+          createdById: true,
+          createdBy: {
+            select: { id: true, name: true, image: true },
+          },
         },
-      },
-    })
-
-    const signals = await getRecommendationSignalsForUser(currentUser.id)
+      }),
+      getRecommendationSignalsForUser(currentUser.id),
+    ])
     const ranked = rankCharactersForUser(candidates, signals).slice(0, limit)
 
     return NextResponse.json({ characters: ranked, nextCursor: null })
@@ -171,16 +173,18 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const currentUser = await getCurrentUser()
-  if (!currentUser) {
-    return NextResponse.json({ error: "User not found" }, { status: 401 })
-  }
-
+  // CSRF is a synchronous comparison, so it runs before the user lookup — the
+  // ADR-0003 order: a forged request is rejected without a database round trip.
   const headerToken = request.headers.get("X-CSRF-Token")
   const cookieToken = getCsrfTokenFromRequest(request)
 
   if (!verifyCsrfToken(headerToken, cookieToken)) {
     return NextResponse.json({ error: "Invalid CSRF token" }, { status: 403 })
+  }
+
+  const currentUser = await getCurrentUser()
+  if (!currentUser) {
+    return NextResponse.json({ error: "User not found" }, { status: 401 })
   }
 
   const body = await request.json()
@@ -195,6 +199,20 @@ export async function POST(request: NextRequest) {
 
   if (!sanitizedName) {
     return NextResponse.json({ error: "Invalid name" }, { status: 400 })
+  }
+
+  // Checked before moderation: it is synchronous, and moderation may call a
+  // model.
+  //
+  // CONTEXT.md: "the two are separate facts and both are required". This
+  // checked `isAdult` alone, so an account holding `isAdult: true,
+  // nsfwEnabled: false` could publish a Character it was itself filtered out of
+  // seeing — and never checked `adultConfirmedAt` at all.
+  if (data.isNsfw && !matureAccess(currentUser).canAuthor) {
+    return NextResponse.json(
+      { error: "You must confirm you are 18+ to create NSFW characters." },
+      { status: 403 }
+    )
   }
 
   const moderationPayload = [
@@ -218,17 +236,6 @@ export async function POST(request: NextRequest) {
         categories: moderationResult.categories,
       },
       { status: 400 }
-    )
-  }
-
-  // CONTEXT.md: "the two are separate facts and both are required". This
-  // checked `isAdult` alone, so an account holding `isAdult: true,
-  // nsfwEnabled: false` could publish a Character it was itself filtered out of
-  // seeing — and never checked `adultConfirmedAt` at all.
-  if (data.isNsfw && !matureAccess(currentUser).canAuthor) {
-    return NextResponse.json(
-      { error: "You must confirm you are 18+ to create NSFW characters." },
-      { status: 403 }
     )
   }
 

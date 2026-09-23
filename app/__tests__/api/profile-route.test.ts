@@ -395,6 +395,8 @@ describe("PATCH /api/profile", () => {
     expect(res.status).toBe(400)
     const data = await res.json()
     expect(data.error).toMatch(/current password is incorrect/i)
+    // The slow bcrypt round for the new password is not paid on a failed attempt.
+    expect(mockHashFallbackPassword).not.toHaveBeenCalled()
   })
 
   it("updates location successfully (within 100 char limit)", async () => {

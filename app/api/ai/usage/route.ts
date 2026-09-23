@@ -104,82 +104,48 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Get usage stats
-    const { usage, stats } = await getUserUsageStats(currentUser.id, {
-      startDate,
-      endDate,
-      conversationId,
-    })
-
-    // Get daily breakdown if requested
-    let dailyUsage = null
-    if (startDate && endDate) {
-      dailyUsage = await getUsageByDateRange(currentUser.id, startDate, endDate)
-    }
-
-    // Get user's subscription plan
-    let subscriptionPlan = null
-    try {
-      subscriptionPlan = await getUserSubscriptionPlan(currentUser.id)
-    } catch {
+    // Every read below depends only on the user and the date range, so they run
+    // together rather than as a ten-query waterfall.
+    const [
+      { usage, stats },
+      dailyUsage,
+      subscriptionPlan,
+      { monthlyMessageCount, monthlyTokenUsage, monthlyCostUsageCents },
+      conversationTokens,
+      modelUsage,
+      personalityUsage,
+      hourlyUsage,
+      avgMessagesPerConversation,
+      peakUsageHours,
+    ] = await Promise.all([
+      getUserUsageStats(currentUser.id, {
+        startDate,
+        endDate,
+        conversationId,
+      }),
+      // Daily breakdown only when there is a bounded range
+      startDate && endDate
+        ? getUsageByDateRange(currentUser.id, startDate, endDate)
+        : Promise.resolve(null),
       // User might not have subscription data
-    }
-
-    // The month is counted in one place, shared with the check that actually
-    // gates the chatter. This route used to run its own copy of these
-    // aggregates with its own copy of `getMonthStartUtc`, and the two had
-    // already drifted: the enforced aggregate excludes `summary-auto` rows and
-    // this one did not, so the dashboard showed a number strictly larger than
-    // the one gating them — and `auto-summary.ts` writes a `summary-auto` row
-    // per conversation, so the gap grew with use.
-    const { monthStart, monthlyMessageCount, monthlyTokenUsage, monthlyCostUsageCents } =
-      await monthlySnapshot(currentUser.id)
-
-    // Get conversation token usage if conversationId provided
-    let conversationTokens = null
-    if (conversationId) {
-      const conversationUsage = await prisma.aiUsage.aggregate({
-        where: {
-          userId: currentUser.id,
-          conversationId,
-        },
-        _sum: {
-          inputTokens: true,
-          outputTokens: true,
-          totalTokens: true,
-        },
-      })
-
-      // Get conversation model to determine context window
-      const conversation = await prisma.conversation.findUnique({
-        where: { id: conversationId },
-        select: { aiModel: true },
-      })
-
-      const model = normalizeModelId(conversation?.aiModel)
-      const contextWindow = MODEL_CONTEXT_WINDOWS[model] || 200_000
-
-      // Get the latest message input tokens to estimate current context usage
-      const latestUsage = await prisma.aiUsage.findFirst({
-        where: {
-          userId: currentUser.id,
-          conversationId,
-        },
-        orderBy: { createdAt: "desc" },
-        select: { inputTokens: true },
-      })
-
-      conversationTokens = {
-        totalInputTokens: conversationUsage._sum.inputTokens || 0,
-        totalOutputTokens: conversationUsage._sum.outputTokens || 0,
-        totalTokens: conversationUsage._sum.totalTokens || 0,
-        currentContextTokens: latestUsage?.inputTokens || 0,
-        contextWindowSize: contextWindow,
-        contextUsagePercentage: latestUsage?.inputTokens
-          ? Math.round((latestUsage.inputTokens / contextWindow) * 10000) / 100
-          : 0,
-      }
-    }
+      getUserSubscriptionPlan(currentUser.id).catch(() => null),
+      // The month is counted in one place, shared with the check that actually
+      // gates the chatter. This route used to run its own copy of these
+      // aggregates with its own copy of `getMonthStartUtc`, and the two had
+      // already drifted: the enforced aggregate excludes `summary-auto` rows and
+      // this one did not, so the dashboard showed a number strictly larger than
+      // the one gating them — and `auto-summary.ts` writes a `summary-auto` row
+      // per conversation, so the gap grew with use.
+      monthlySnapshot(currentUser.id),
+      conversationId
+        ? getConversationTokens(currentUser.id, conversationId)
+        : Promise.resolve(null),
+      getModelUsageDistribution(currentUser.id, startDate, endDate),
+      getPersonalityUsageDistribution(currentUser.id, startDate, endDate),
+      getHourlyUsagePattern(currentUser.id, startDate, endDate),
+      getAverageMessagesPerConversation(currentUser.id, startDate, endDate),
+      getPeakUsageHours(currentUser.id, startDate, endDate),
+    ])
 
     // Calculate remaining messages for free tier
     const isPro = subscriptionPlan?.isPro || false
@@ -189,29 +155,6 @@ export async function GET(request: NextRequest) {
 
     const monthlyTokenQuota = isPro ? null : FREE_TIER_MONTHLY_TOKEN_QUOTA
     const monthlyCostQuotaCents = isPro ? AI_PRO_MONTHLY_COST_CAP_CENTS : null
-
-    // Get model usage distribution
-    const modelUsage = await getModelUsageDistribution(currentUser.id, startDate, endDate)
-
-    // Get personality usage distribution
-    const personalityUsage = await getPersonalityUsageDistribution(
-      currentUser.id,
-      startDate,
-      endDate
-    )
-
-    // Get hourly usage heatmap data
-    const hourlyUsage = await getHourlyUsagePattern(currentUser.id, startDate, endDate)
-
-    // Get average messages per conversation
-    const avgMessagesPerConversation = await getAverageMessagesPerConversation(
-      currentUser.id,
-      startDate,
-      endDate
-    )
-
-    // Get peak usage hours
-    const peakUsageHours = await getPeakUsageHours(currentUser.id, startDate, endDate)
 
     return NextResponse.json({
       stats,
@@ -245,6 +188,54 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     aiLogger.error({ err: error }, "AI usage retrieval error")
     return new NextResponse("Internal Error", { status: 500 })
+  }
+}
+
+/**
+ * Token totals and context-window usage for one conversation. The three reads
+ * are independent of each other, so they run together.
+ */
+async function getConversationTokens(userId: string, conversationId: string) {
+  const [conversationUsage, conversation, latestUsage] = await Promise.all([
+    prisma.aiUsage.aggregate({
+      where: {
+        userId,
+        conversationId,
+      },
+      _sum: {
+        inputTokens: true,
+        outputTokens: true,
+        totalTokens: true,
+      },
+    }),
+    // Get conversation model to determine context window
+    prisma.conversation.findUnique({
+      where: { id: conversationId },
+      select: { aiModel: true },
+    }),
+    // Get the latest message input tokens to estimate current context usage
+    prisma.aiUsage.findFirst({
+      where: {
+        userId,
+        conversationId,
+      },
+      orderBy: { createdAt: "desc" },
+      select: { inputTokens: true },
+    }),
+  ])
+
+  const model = normalizeModelId(conversation?.aiModel)
+  const contextWindow = MODEL_CONTEXT_WINDOWS[model] || 200_000
+
+  return {
+    totalInputTokens: conversationUsage._sum.inputTokens || 0,
+    totalOutputTokens: conversationUsage._sum.outputTokens || 0,
+    totalTokens: conversationUsage._sum.totalTokens || 0,
+    currentContextTokens: latestUsage?.inputTokens || 0,
+    contextWindowSize: contextWindow,
+    contextUsagePercentage: latestUsage?.inputTokens
+      ? Math.round((latestUsage.inputTokens / contextWindow) * 10000) / 100
+      : 0,
   }
 }
 
@@ -498,38 +489,40 @@ async function getPeakUsageHours(
     .slice(0, 5) // Top 5 peak hours
 }
 
+const MODEL_DISPLAY_NAMES: Record<string, string> = {
+  "claude-sonnet-4-6": "Claude Sonnet 4.6",
+  "claude-haiku-4-5": "Claude Haiku 4.5",
+  // Legacy ids
+  "claude-sonnet-4-5-20250929": "Claude Sonnet 4.5",
+  "claude-haiku-4-5-20251001": "Claude Haiku 4.5",
+  "claude-opus-4-1-20250805": "Claude Opus 4.1",
+  "claude-3-5-sonnet-20241022": "Claude 3.5 Sonnet",
+  "claude-3-opus-20240229": "Claude 3 Opus",
+  "claude-3-5-haiku-20241022": "Claude 3.5 Haiku",
+  "claude-3-haiku-20240307": "Claude 3 Haiku",
+}
+
+const PERSONALITY_DISPLAY_NAMES: Record<string, string> = {
+  assistant: "Helpful Assistant",
+  creative: "Creative Writer",
+  technical: "Technical Expert",
+  friendly: "Friendly Companion",
+  professional: "Professional Consultant",
+  socratic: "Socratic Tutor",
+  concise: "Concise Advisor",
+  custom: "Custom",
+}
+
 /**
  * Format model name for display
  */
 function formatModelName(model: string): string {
-  const modelNames: Record<string, string> = {
-    "claude-sonnet-4-6": "Claude Sonnet 4.6",
-    "claude-haiku-4-5": "Claude Haiku 4.5",
-    // Legacy ids
-    "claude-sonnet-4-5-20250929": "Claude Sonnet 4.5",
-    "claude-haiku-4-5-20251001": "Claude Haiku 4.5",
-    "claude-opus-4-1-20250805": "Claude Opus 4.1",
-    "claude-3-5-sonnet-20241022": "Claude 3.5 Sonnet",
-    "claude-3-opus-20240229": "Claude 3 Opus",
-    "claude-3-5-haiku-20241022": "Claude 3.5 Haiku",
-    "claude-3-haiku-20240307": "Claude 3 Haiku",
-  }
-  return modelNames[model] || model
+  return MODEL_DISPLAY_NAMES[model] || model
 }
 
 /**
  * Format personality name for display
  */
 function formatPersonalityName(personality: string): string {
-  const personalityNames: Record<string, string> = {
-    assistant: "Helpful Assistant",
-    creative: "Creative Writer",
-    technical: "Technical Expert",
-    friendly: "Friendly Companion",
-    professional: "Professional Consultant",
-    socratic: "Socratic Tutor",
-    concise: "Concise Advisor",
-    custom: "Custom",
-  }
-  return personalityNames[personality] || personality
+  return PERSONALITY_DISPLAY_NAMES[personality] || personality
 }

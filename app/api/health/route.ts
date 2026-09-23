@@ -7,17 +7,24 @@ import { isRedisAvailable, resolveRedisCredentials } from "@/app/lib/redis"
 export async function GET(): Promise<NextResponse> {
   const timestamp = new Date().toISOString()
 
+  // Asked, not re-derived. This route had its own copy of the rule and read
+  // only the `UPSTASH_*` pair, so when `getRedisClient` learned to accept the
+  // Vercel KV credentials the platform already supplies, rate limiting started
+  // working and this endpoint went on reporting `not_configured` — the health
+  // check disagreeing with the thing whose health it reports.
+  const { url, token } = resolveRedisCredentials()
+  const redisConfigured = Boolean(url && token)
+  // The Redis ping is independent of the database probe, so it starts first
+  // and the two round trips overlap. A failed ping is `false`, and the catch
+  // keeps a rejection from going unobserved when the database probe fails first.
+  const redisAvailablePromise = redisConfigured
+    ? isRedisAvailable().catch(() => false)
+    : Promise.resolve(false)
+
   try {
     await prisma.$queryRaw`SELECT 1`
 
-    // Asked, not re-derived. This route had its own copy of the rule and read
-    // only the `UPSTASH_*` pair, so when `getRedisClient` learned to accept the
-    // Vercel KV credentials the platform already supplies, rate limiting started
-    // working and this endpoint went on reporting `not_configured` — the health
-    // check disagreeing with the thing whose health it reports.
-    const { url, token } = resolveRedisCredentials()
-    const redisConfigured = Boolean(url && token)
-    const redisAvailable = redisConfigured ? await isRedisAvailable() : false
+    const redisAvailable = await redisAvailablePromise
     const shouldRequireRedisInProd = process.env.NODE_ENV === "production"
 
     // Which service would answer a model call. Deliberately not a live call:

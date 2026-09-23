@@ -123,17 +123,19 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // A synchronous config check goes before the access decision, which costs
+    // a round trip and cannot change the answer for an unconfigured deploy.
+    const openAiKey = process.env.OPENAI_API_KEY
+    if (!openAiKey) {
+      return NextResponse.json({ error: "Transcription is not configured." }, { status: 501 })
+    }
+
     const grant = await requestAiAccess({
       userId: currentUser.id,
       requestType: "transcribe",
       estimatedCostCents: AI_TRANSCRIBE_COST_CENTS_PER_REQUEST,
     })
     if (!grant.ok) return grant.response
-
-    const openAiKey = process.env.OPENAI_API_KEY
-    if (!openAiKey) {
-      return NextResponse.json({ error: "Transcription is not configured." }, { status: 501 })
-    }
 
     const body = await request.json()
     const validation = transcribeSchema.safeParse(body)

@@ -1,4 +1,4 @@
-import { type NextRequest } from "next/server"
+import { after, type NextRequest } from "next/server"
 import { z } from "zod"
 
 import { claimAllowanceSlot, releaseAllowanceClaim, type AllowanceClaim } from "@/app/lib/ai-access"
@@ -253,13 +253,20 @@ export async function POST(request: NextRequest) {
       surface: "ai-chat",
     })
 
-    if (await isFirstHumanMessage(currentUser.id)) {
-      captureServerEvent(currentUser.id, "first_message_sent", {
-        conversationId,
-        messageId: userMessage.id,
-        surface: "ai-chat",
-      })
-    }
+    // The first-message check is analytics only, so the stream must not wait
+    // on it. The count starts now, right after the insert it depends on, and
+    // the event is captured once the response is done. It never rejects: it
+    // fails closed to `false`.
+    const firstMessage = isFirstHumanMessage(currentUser.id)
+    after(async () => {
+      if (await firstMessage) {
+        captureServerEvent(currentUser.id, "first_message_sent", {
+          conversationId,
+          messageId: userMessage.id,
+          surface: "ai-chat",
+        })
+      }
+    })
 
     // AbortController that merges client disconnect and 60s hard timeout
     const abortController = new AbortController()

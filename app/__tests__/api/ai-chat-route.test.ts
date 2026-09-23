@@ -32,6 +32,22 @@ const mockAnthropicCreate = jest.fn()
 const mockBuildAiConversationHistory = jest.fn()
 const mockBuildAiMessageContent = jest.fn()
 const mockSendWebPush = jest.fn()
+// `after()` needs a live request scope. Collect its tasks so a test can run
+// them the way the platform does once the response has gone out.
+const mockAfterTasks: Array<() => unknown> = []
+
+jest.mock("next/server", () => ({
+  ...jest.requireActual("next/server"),
+  after: (task: () => unknown) => {
+    mockAfterTasks.push(task)
+  },
+}))
+
+async function flushAfter(): Promise<void> {
+  while (mockAfterTasks.length > 0) {
+    await mockAfterTasks.shift()?.()
+  }
+}
 
 jest.mock("@/app/actions/getCurrentUser", () => ({
   __esModule: true,
@@ -200,6 +216,7 @@ const testAnthropicResponse = {
 // ---- Tests ----
 
 beforeEach(() => {
+  mockAfterTasks.length = 0
   jest.clearAllMocks()
 
   mockVerifyCsrfToken.mockReturnValue(true)
@@ -371,6 +388,30 @@ describe("POST /api/ai/chat", () => {
     expect(data.userMessage).toBeDefined()
     expect(data.aiMessage).toBeDefined()
     expect(data.aiMessage.isAI).toBe(true)
+  })
+
+  it("sends the completion web push after the response, not before it", async () => {
+    mockUserFindUnique.mockResolvedValue({ browserNotifications: true, notifyOnAIComplete: true })
+
+    const response = await POST(createRequest({ message: "Hello AI", conversationId: "conv-1" }))
+
+    expect(response.status).toBe(200)
+    expect(mockSendWebPush).not.toHaveBeenCalled()
+    await flushAfter()
+    expect(mockSendWebPush).toHaveBeenCalledWith(
+      "user-1",
+      expect.objectContaining({ tag: "conv-1", url: "/dashboard/conversations/conv-1" })
+    )
+  })
+
+  it("keeps the 200 when the deferred web push fails", async () => {
+    mockUserFindUnique.mockResolvedValue({ browserNotifications: true, notifyOnAIComplete: true })
+    mockSendWebPush.mockRejectedValue(new Error("push service down"))
+
+    const response = await POST(createRequest({ message: "Hello AI", conversationId: "conv-1" }))
+
+    expect(response.status).toBe(200)
+    await expect(flushAfter()).resolves.toBeUndefined()
   })
 
   it("creates the user message in the database with isAI false", async () => {

@@ -64,12 +64,8 @@ export async function POST(
     return NextResponse.json({ error: "Creator payments are not enabled" }, { status: 503 })
   }
 
-  const supporter = await getCurrentUserProfile()
-  if (!supporter?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
-  // Rate limiting
+  // Limiter, then CSRF, then the user lookups (ADR-0003): a flood or a forged
+  // request is rejected before it costs two database round trips.
   const identifier = getClientIdentifier(request)
   const allowed = await Promise.resolve(creatorPaymentLimiter.check(identifier))
   if (!allowed) {
@@ -83,6 +79,11 @@ export async function POST(
   const cookieToken = getCsrfTokenFromRequest(request)
   if (!verifyCsrfToken(headerToken, cookieToken)) {
     return NextResponse.json({ error: "Invalid CSRF token" }, { status: 403 })
+  }
+
+  const supporter = await getCurrentUserProfile()
+  if (!supporter?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
   const { creatorId } = await params
@@ -218,15 +219,16 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ creatorId: string }> }
 ) {
-  const supporter = await getCurrentUserProfile()
-  if (!supporter?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
+  // CSRF is a synchronous comparison, so it runs before the user lookups.
   const headerToken = request.headers.get("X-CSRF-Token")
   const cookieToken = getCsrfTokenFromRequest(request)
   if (!verifyCsrfToken(headerToken, cookieToken)) {
     return NextResponse.json({ error: "Invalid CSRF token" }, { status: 403 })
+  }
+
+  const supporter = await getCurrentUserProfile()
+  if (!supporter?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
   const { creatorId } = await params

@@ -52,7 +52,8 @@ export async function GET(request: NextRequest) {
     const whereClause: {
       body: { contains: string; mode: "insensitive" }
       isDeleted: boolean
-      conversationId?: string | { in: string[] }
+      conversationId?: string
+      conversation?: { users: { some: { id: string } } }
     } = {
       body: {
         contains: searchQuery,
@@ -84,22 +85,15 @@ export async function GET(request: NextRequest) {
 
       whereClause.conversationId = searchConversationId
     } else {
-      // Search across all user's conversations
-      const userConversations = await prisma.conversation.findMany({
-        where: {
-          users: {
-            some: {
-              id: currentUser.id,
-            },
+      // Search across all user's conversations. Filtering on the relation keeps
+      // this one query instead of fetching every conversation id first and
+      // sending them back as an IN list.
+      whereClause.conversation = {
+        users: {
+          some: {
+            id: currentUser.id,
           },
         },
-        select: {
-          id: true,
-        },
-      })
-
-      whereClause.conversationId = {
-        in: userConversations.map((c: { id: string }) => c.id),
       }
     }
 

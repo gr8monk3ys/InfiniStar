@@ -158,12 +158,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: "Memory key is required" }, { status: 400 })
     }
 
-    // Check memory exists
-    const existingMemory = await getMemoryByKey(currentUser.id, key)
-    if (!existingMemory) {
-      return NextResponse.json({ error: "Memory not found" }, { status: 404 })
-    }
-
+    // The body is parsed and validated before the lookup, so a malformed
+    // request is rejected without a database round trip.
     const body = await request.json()
 
     // Validate input
@@ -178,6 +174,12 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     const sanitizedContent = sanitizePlainText(content)
     if (!sanitizedContent) {
       return NextResponse.json({ error: "Invalid memory content" }, { status: 400 })
+    }
+
+    // Check memory exists
+    const existingMemory = await getMemoryByKey(currentUser.id, key)
+    if (!existingMemory) {
+      return NextResponse.json({ error: "Memory not found" }, { status: 404 })
     }
 
     // Update memory — reuse saveMemory which upserts

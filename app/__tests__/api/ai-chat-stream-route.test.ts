@@ -32,6 +32,17 @@ const mockSendWebPush = jest.fn()
 const mockGetRelevantMemories = jest.fn()
 const mockBuildMemoryContext = jest.fn()
 
+// `after()` needs a live request scope. Collect its tasks; the streaming
+// route's only deferred task is analytics, which these tests do not assert on.
+const mockAfterTasks: Array<() => unknown> = []
+
+jest.mock("next/server", () => ({
+  ...jest.requireActual("next/server"),
+  after: (task: () => unknown) => {
+    mockAfterTasks.push(task)
+  },
+}))
+
 jest.mock("@/app/actions/getCurrentUser", () => ({
   __esModule: true,
   default: () => mockGetCurrentUser(),
@@ -221,6 +232,7 @@ const testAiMessage = {
 }
 
 beforeEach(() => {
+  mockAfterTasks.length = 0
   jest.clearAllMocks()
   mockVerifyCsrfToken.mockReturnValue(true)
   mockAiChatLimiterCheck.mockReturnValue(true)
