@@ -4,6 +4,8 @@ import {
   HiOutlineBolt,
   HiOutlineChatBubbleLeftRight,
   HiOutlineSparkles,
+  HiPause,
+  HiPlay,
 } from "react-icons/hi2"
 
 import { CHARACTER_CATEGORIES } from "@/app/lib/character-categories"
@@ -72,13 +74,18 @@ function CategoryMarquee() {
     ...CHARACTER_CATEGORIES.map((category) => ({ ...category, decorative: true })),
   ]
 
+  // A 45s loop next to other content needs a way to stop it (WCAG 2.2.2). The
+  // control is a native checkbox styled as a button, so it works without any
+  // client JavaScript on this prerendered page: checking it pauses the track
+  // through `group-has-[:checked]`. Hover and keyboard focus inside the rail
+  // also pause it. Under reduced motion nothing moves, so the control is gone.
   return (
-    <div className="relative border-y border-border/50 bg-background/60 py-4">
+    <div className="group/marquee relative border-y border-border/50 bg-background/60 py-4">
       <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-16 bg-gradient-to-r from-background to-transparent" />
       <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 bg-gradient-to-l from-background to-transparent" />
 
       <div className="overflow-hidden">
-        <div className="flex w-max animate-marquee gap-3 hover:[animation-play-state:paused] motion-reduce:w-full motion-reduce:animate-none motion-reduce:flex-wrap motion-reduce:justify-center">
+        <div className="flex w-max animate-marquee gap-3 focus-within:[animation-play-state:paused] hover:[animation-play-state:paused] group-has-[:checked]/marquee:[animation-play-state:paused] motion-reduce:w-full motion-reduce:animate-none motion-reduce:flex-wrap motion-reduce:justify-center">
           {items.map((category) => (
             <Link
               key={`${category.id}-${category.decorative ? "b" : "a"}`}
@@ -92,6 +99,21 @@ function CategoryMarquee() {
           ))}
         </div>
       </div>
+
+      <input
+        type="checkbox"
+        id="hero-marquee-pause"
+        name="hero-marquee-pause"
+        className="peer sr-only motion-reduce:hidden"
+      />
+      <label
+        htmlFor="hero-marquee-pause"
+        className="absolute right-3 top-1/2 z-20 inline-flex size-8 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border border-border/60 bg-card text-muted-foreground shadow-sm transition-colors hover:border-primary/40 hover:text-foreground peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-background motion-reduce:hidden"
+      >
+        <HiPause className="size-4 group-has-[:checked]/marquee:hidden" aria-hidden="true" />
+        <HiPlay className="hidden size-4 group-has-[:checked]/marquee:block" aria-hidden="true" />
+        <span className="sr-only">Pause category animation</span>
+      </label>
     </div>
   )
 }

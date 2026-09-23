@@ -1,12 +1,12 @@
-import { Suspense } from "react"
+import { cache, Suspense } from "react"
 import { type Metadata } from "next"
 import Image from "next/image"
 import { notFound } from "next/navigation"
-import { format } from "date-fns"
 import { HiCalendar, HiChatBubbleLeftRight, HiGlobeAlt } from "react-icons/hi2"
 
 import { siteConfig } from "@/config/site"
 import { toMonthlyRecurringCents } from "@/app/lib/creator-monetization"
+import { formatDate, formatNumber } from "@/app/lib/intl-format"
 import prisma from "@/app/lib/prismadb"
 import { buildCreatorJsonLd } from "@/app/lib/structured-data"
 import { CreatorSupportCard } from "@/app/components/monetization/CreatorSupportCard"
@@ -35,12 +35,35 @@ export function generateStaticParams() {
   return []
 }
 
+// `generateMetadata` and the page both need the profile; one query per render.
+const getCreatorProfile = cache((userId: string) =>
+  prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      name: true,
+      image: true,
+      bio: true,
+      website: true,
+      createdAt: true,
+      characters: {
+        // The cached document is SFW for everyone; a viewer with the mature
+        // preference gets the full grid from the client after hydration.
+        where: { isPublic: true, isNsfw: false },
+        orderBy: [{ usageCount: "desc" }, { createdAt: "desc" }],
+        include: {
+          createdBy: {
+            select: { id: true, name: true, image: true },
+          },
+        },
+      },
+    },
+  })
+)
+
 export async function generateMetadata({ params }: CreatorProfilePageProps): Promise<Metadata> {
   const { userId } = await params
-  const creator = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { name: true, bio: true, image: true },
-  })
+  const creator = await getCreatorProfile(userId)
   if (!creator) return {}
   return {
     alternates: {
@@ -63,35 +86,13 @@ interface CreatorProfilePageProps {
 export default async function CreatorProfilePage({ params }: CreatorProfilePageProps) {
   const { userId } = await params
 
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: {
-      id: true,
-      name: true,
-      image: true,
-      bio: true,
-      website: true,
-      createdAt: true,
-      characters: {
-        // The cached document is SFW for everyone; a viewer with the mature
-        // preference gets the full grid from the client after hydration.
-        where: { isPublic: true, isNsfw: false },
-        orderBy: [{ usageCount: "desc" }, { createdAt: "desc" }],
-        include: {
-          createdBy: {
-            select: { id: true, name: true, image: true },
-          },
-        },
-      },
-    },
-  })
-
-  if (!user) notFound()
-
-  const [tips, subscriptions, followerCount, chatTotals] = await Promise.all([
+  // The profile and the numbers around it only need the id from the URL, so
+  // they load in one round. A missing profile still 404s below.
+  const [user, tips, subscriptions, followerCount, chatTotals] = await Promise.all([
+    getCreatorProfile(userId),
     prisma.creatorTip.findMany({
       where: {
-        creatorId: user.id,
+        creatorId: userId,
         status: "COMPLETED",
       },
       select: {
@@ -105,7 +106,7 @@ export default async function CreatorProfilePage({ params }: CreatorProfilePageP
     }),
     prisma.creatorSubscription.findMany({
       where: {
-        creatorId: user.id,
+        creatorId: userId,
         status: "ACTIVE",
       },
       select: {
@@ -115,15 +116,17 @@ export default async function CreatorProfilePage({ params }: CreatorProfilePageP
       take: 500,
     }),
     prisma.userFollow.count({
-      where: { followingId: user.id },
+      where: { followingId: userId },
     }),
     // Across every public character, mature ones included: an aggregate
     // reveals nothing and should not shrink for viewers who cannot see them.
     prisma.character.aggregate({
-      where: { createdById: user.id, isPublic: true },
+      where: { createdById: userId, isPublic: true },
       _sum: { usageCount: true },
     }),
   ])
+
+  if (!user) notFound()
 
   const totalChats = chatTotals._sum.usageCount ?? 0
 
@@ -170,21 +173,23 @@ export default async function CreatorProfilePage({ params }: CreatorProfilePageP
           </div>
         )}
         <div>
-          <h1 className="text-2xl font-bold">{user.name || "Anonymous"}</h1>
-          {user.bio && <p className="mt-1 max-w-lg text-muted-foreground">{user.bio}</p>}
+          <h1 className="break-words text-2xl font-bold">{user.name || "Anonymous"}</h1>
+          {user.bio && (
+            <p className="mt-1 max-w-lg break-words text-muted-foreground">{user.bio}</p>
+          )}
         </div>
-        <div className="flex items-center gap-6 text-sm text-muted-foreground">
+        <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm tabular-nums text-muted-foreground">
           <span className="flex items-center gap-1">
             <HiCalendar className="size-4" aria-hidden="true" />
-            Joined {format(new Date(user.createdAt), "MMM yyyy")}
+            Joined {formatDate(user.createdAt, { month: "short", year: "numeric" })}
           </span>
           <span className="flex items-center gap-1">
             <HiChatBubbleLeftRight className="size-4" aria-hidden="true" />
-            {totalChats.toLocaleString()} total chats
+            {formatNumber(totalChats)} total chats
           </span>
           <span className="flex items-center gap-1">
             <span className="size-4 rounded-full bg-primary/10" aria-hidden="true" />
-            {followerCount.toLocaleString()} follower{followerCount === 1 ? "" : "s"}
+            {formatNumber(followerCount)} follower{followerCount === 1 ? "" : "s"}
           </span>
           {user.website && (
             <a

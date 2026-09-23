@@ -2,6 +2,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { HiArrowRight, HiArrowTrendingUp, HiOutlineUsers } from "react-icons/hi2"
 
+import { formatNumber } from "@/app/lib/intl-format"
 import { cn } from "@/app/lib/utils"
 import { buttonVariants } from "@/app/components/ui/button"
 import { PublicCharacterCard } from "@/app/components/characters/PublicCharacterCard"
@@ -34,18 +35,18 @@ function CreatorSpotlightCard({ creator }: { creator: CreatorSpotlight }) {
           <p className="truncate font-semibold group-hover:text-primary">
             {creator.name || "Anonymous Creator"}
           </p>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs tabular-nums text-muted-foreground">
             {creator.publicCharacterCount} public character
             {creator.publicCharacterCount !== 1 ? "s" : ""}
           </p>
         </div>
       </div>
       {creator.bio ? (
-        <p className="mt-3 line-clamp-2 text-sm text-muted-foreground">{creator.bio}</p>
+        <p className="mt-3 line-clamp-2 break-words text-sm text-muted-foreground">{creator.bio}</p>
       ) : null}
-      <div className="mt-4 flex gap-4 text-xs text-muted-foreground">
-        <span>{creator.totalUsageCount.toLocaleString()} chats</span>
-        <span>{creator.totalLikeCount.toLocaleString()} likes</span>
+      <div className="mt-4 flex gap-4 text-xs tabular-nums text-muted-foreground">
+        <span>{formatNumber(creator.totalUsageCount)} chats</span>
+        <span>{formatNumber(creator.totalLikeCount)} likes</span>
       </div>
     </Link>
   )
@@ -67,7 +68,8 @@ export function MarketplaceSection({
             </h2>
             <p className="mt-3 text-lg text-muted-foreground [text-wrap:pretty]">
               The best public characters feel authored. If the marketplace is still warming up, use
-              these starter lanes as the kind of experience InfiniStar is built for.
+              these starter lanes as the kind of experience <span translate="no">InfiniStar</span>{" "}
+              is built for.
             </p>
           </div>
 
@@ -92,7 +94,7 @@ export function MarketplaceSection({
             <div className="rounded-3xl border border-border/50 bg-card/70 p-6 shadow-sm">
               <div className="flex items-center gap-2 text-sm font-medium text-primary-accent">
                 <HiArrowTrendingUp className="size-4" aria-hidden="true" />
-                Creator spotlights
+                Creator Spotlights
               </div>
               <div className="mt-6 space-y-4">
                 {creatorSpotlights.map((creator) => (
@@ -119,7 +121,7 @@ export function MarketplaceSection({
                   href="/sign-up"
                   className="mt-6 inline-flex items-center gap-1.5 text-sm font-semibold text-foreground underline decoration-primary/40 underline-offset-4 transition-colors hover:text-primary"
                 >
-                  Start building this vibe
+                  Start Building This Vibe
                   <HiArrowRight
                     className="size-3.5 transition-transform group-hover:translate-x-0.5"
                     aria-hidden="true"

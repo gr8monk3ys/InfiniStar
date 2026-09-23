@@ -1,3 +1,4 @@
+import { cache } from "react"
 import { type Metadata } from "next"
 import { notFound } from "next/navigation"
 
@@ -33,12 +34,21 @@ export function generateStaticParams() {
   return []
 }
 
+// `generateMetadata` and the page both need the row; one query per render.
+const getCharacterBySlug = cache((slug: string) =>
+  prisma.character.findUnique({
+    where: { slug },
+    include: {
+      createdBy: {
+        select: { id: true, name: true, image: true },
+      },
+    },
+  })
+)
+
 export async function generateMetadata({ params }: CharacterPageProps): Promise<Metadata> {
   const { slug } = await params
-  const character = await prisma.character.findUnique({
-    where: { slug },
-    select: { name: true, tagline: true, description: true, avatarUrl: true, isNsfw: true },
-  })
+  const character = await getCharacterBySlug(slug)
   if (!character) return {}
 
   // The document for a mature character is the gate; its <head> must not say
@@ -68,14 +78,7 @@ export async function generateMetadata({ params }: CharacterPageProps): Promise<
 export default async function CharacterPage({ params }: CharacterPageProps) {
   const { slug } = await params
 
-  const character = await prisma.character.findUnique({
-    where: { slug },
-    include: {
-      createdBy: {
-        select: { id: true, name: true, image: true },
-      },
-    },
-  })
+  const character = await getCharacterBySlug(slug)
 
   if (!character || !character.isPublic) {
     notFound()

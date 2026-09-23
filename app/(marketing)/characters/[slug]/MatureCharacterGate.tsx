@@ -9,9 +9,7 @@ import { useAppAuth } from "@/app/hooks/useAppAuth"
 import { revealMatureCharacter } from "./actions"
 
 type RevealState =
-  | { status: "gated" }
-  | { status: "loading" }
-  | { status: "revealed"; body: React.ReactNode }
+  { status: "gated" } | { status: "loading" } | { status: "revealed"; body: React.ReactNode }
 
 /**
  * The 18+ gate, and the only path through it.
@@ -63,7 +61,7 @@ export function MatureCharacterGate({ slug }: { slug: string }) {
   return (
     <section className="container py-12 md:py-16" data-testid="mature-character-gate">
       <div className="mx-auto max-w-2xl rounded-2xl border bg-card p-8 shadow-sm">
-        <h1 className="text-2xl font-bold">NSFW content</h1>
+        <h1 className="text-2xl font-bold">NSFW Content</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           This character is marked as 18+. To view it, you must confirm you are 18+ and enable NSFW
           content in your Safety settings.

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import Link from "next/link"
 import toast from "react-hot-toast"
 
+import { formatNumber } from "@/app/lib/intl-format"
 import { Button } from "@/app/components/ui/button"
 import { useAppAuth } from "@/app/hooks/useAppAuth"
 import { useCsrfToken } from "@/app/hooks/useCsrfToken"
@@ -77,14 +78,18 @@ export default function FollowCreatorButton({
 
       if (!response.ok) {
         const data = (await response.json().catch(() => null)) as { error?: string } | null
-        throw new Error(data?.error || "Request failed")
+        throw new Error(data?.error || "Couldn’t update your follow. Try again.")
       }
 
       const data = (await response.json()) as { isFollowing: boolean; followerCount: number }
       setIsFollowing(data.isFollowing)
       setFollowerCount(data.followerCount)
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to update follow status")
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Couldn’t update your follow. Check your connection and try again."
+      )
     } finally {
       setIsLoading(false)
     }
@@ -96,10 +101,11 @@ export default function FollowCreatorButton({
     return (
       <div className="flex items-center gap-3">
         <Button asChild size="sm" variant="outline">
-          <Link href="/sign-in">Sign in to follow</Link>
+          <Link href="/sign-in">Sign In to Follow</Link>
         </Button>
-        <p className="text-sm text-muted-foreground">
-          {followerCount.toLocaleString()} follower{followerCount === 1 ? "" : "s"}
+        {/* Server and browser locales can group digits differently. */}
+        <p className="text-sm tabular-nums text-muted-foreground" suppressHydrationWarning>
+          {formatNumber(followerCount)} follower{followerCount === 1 ? "" : "s"}
         </p>
       </div>
     )
@@ -119,10 +125,10 @@ export default function FollowCreatorButton({
           })
         }}
       >
-        {disabled ? "This is you" : isFollowing ? "Following" : `Follow ${creatorName}`}
+        {disabled ? "This Is You" : isFollowing ? "Following" : `Follow ${creatorName}`}
       </Button>
-      <p className="text-sm text-muted-foreground">
-        {followerCount.toLocaleString()} follower{followerCount === 1 ? "" : "s"}
+      <p className="text-sm tabular-nums text-muted-foreground" suppressHydrationWarning>
+        {formatNumber(followerCount)} follower{followerCount === 1 ? "" : "s"}
       </p>
     </div>
   )

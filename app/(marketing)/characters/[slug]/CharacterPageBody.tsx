@@ -1,3 +1,4 @@
+import { Suspense } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import {
@@ -10,6 +11,7 @@ import {
 
 import { siteConfig } from "@/config/site"
 import { getCategoryById } from "@/app/lib/character-categories"
+import { formatNumber } from "@/app/lib/intl-format"
 import { type MatureAccess } from "@/app/lib/nsfw"
 import prisma from "@/app/lib/prismadb"
 import { buildCharacterJsonLd } from "@/app/lib/structured-data"
@@ -160,17 +162,26 @@ function CharacterHero({
 
       <div className="container mt-20 sm:mt-16">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex-1 space-y-2">
+          <div className="min-w-0 flex-1 space-y-2">
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold sm:text-3xl">{character.name}</h1>
+              <h1 className="min-w-0 break-words text-2xl font-bold sm:text-3xl">
+                {character.name}
+              </h1>
               {category && (
-                <span className={cn("rounded-full px-3 py-1 text-xs font-medium", category.color)}>
+                <span
+                  className={cn(
+                    "shrink-0 rounded-full px-3 py-1 text-xs font-medium",
+                    category.color
+                  )}
+                >
                   {category.name}
                 </span>
               )}
             </div>
             {character.tagline && (
-              <p className="max-w-2xl text-lg text-muted-foreground">{character.tagline}</p>
+              <p className="max-w-2xl break-words text-lg text-muted-foreground">
+                {character.tagline}
+              </p>
             )}
           </div>
 
@@ -213,7 +224,9 @@ function CharacterStats({ character }: { character: CharacterDetails }) {
         <div key={key} className="flex items-center gap-2 text-sm text-muted-foreground">
           <Icon className="size-5" aria-hidden="true" />
           <span>
-            <span className="font-semibold text-foreground">{value.toLocaleString()}</span>{" "}
+            <span className="font-semibold tabular-nums text-foreground">
+              {formatNumber(value)}
+            </span>{" "}
             {value === 1 ? noun : `${noun}s`}
           </span>
         </div>
@@ -235,7 +248,7 @@ function CharacterContent({
         {character.description && (
           <div className="rounded-xl border bg-card p-6 shadow-sm">
             <h2 className="mb-3 text-lg font-semibold">About</h2>
-            <p className="whitespace-pre-wrap leading-relaxed text-muted-foreground">
+            <p className="whitespace-pre-wrap break-words leading-relaxed text-muted-foreground">
               {character.description}
             </p>
           </div>
@@ -268,8 +281,8 @@ function CharacterContent({
                   {character.name.slice(0, 1).toUpperCase()}
                 </div>
               )}
-              <div className="rounded-2xl rounded-tl-none border bg-muted/50 px-4 py-3">
-                <p className="text-sm leading-relaxed text-muted-foreground">
+              <div className="min-w-0 rounded-2xl rounded-tl-none border bg-muted/50 px-4 py-3">
+                <p className="break-words text-sm leading-relaxed text-muted-foreground">
                   {character.greeting}
                 </p>
               </div>
@@ -286,7 +299,7 @@ function CharacterContent({
               {character.tags.map((tag) => (
                 <span
                   key={tag}
-                  className="rounded-full border bg-muted px-3 py-1 text-xs font-medium text-muted-foreground"
+                  className="max-w-full break-words rounded-full border bg-muted px-3 py-1 text-xs font-medium text-muted-foreground"
                 >
                   {tag}
                 </span>
@@ -313,7 +326,7 @@ function CharacterContent({
               </div>
             ) : (
               <div className="flex size-10 items-center justify-center rounded-full border bg-primary/10 text-sm font-bold text-primary-accent">
-                <HiUser className="size-5" />
+                <HiUser className="size-5" aria-hidden="true" />
               </div>
             )}
             <div className="min-w-0 flex-1">
@@ -329,11 +342,38 @@ function CharacterContent({
   )
 }
 
-function SimilarCharactersSection({
-  similarCharacters,
+/**
+ * Fetches its own rows so the hero, stats and comments stream without waiting
+ * for this query; it sits at the bottom of the page behind a Suspense boundary.
+ */
+async function SimilarCharactersSection({
+  characterId,
+  category,
+  access,
 }: {
-  similarCharacters: SimilarCharacter[]
+  characterId: string
+  category: string
+  access: MatureAccess
 }) {
+  // Same category, excluding this one. The visibility filter is the viewer's
+  // real one when this renders from the action, and the SFW one in the
+  // cached page.
+  const similarCharacters: SimilarCharacter[] = await prisma.character.findMany({
+    where: {
+      isPublic: true,
+      category,
+      id: { not: characterId },
+      ...access.visibilityFilter,
+    },
+    orderBy: [{ usageCount: "desc" }, { createdAt: "desc" }],
+    take: 4,
+    include: {
+      createdBy: {
+        select: { id: true, name: true, image: true },
+      },
+    },
+  })
+
   if (similarCharacters.length === 0) {
     return null
   }
@@ -364,7 +404,7 @@ const gradientMap: Record<string, string> = {
   scifi: "from-cyan-400 to-blue-700",
 }
 
-export async function CharacterPageBody({
+export function CharacterPageBody({
   character,
   access,
 }: {
@@ -373,25 +413,6 @@ export async function CharacterPageBody({
 }) {
   const slug = character.slug
   const category = getCategoryById(character.category)
-
-  // Similar characters: same category, excluding this one. The visibility
-  // filter is the viewer's real one when this renders from the action, and
-  // the SFW one in the cached page.
-  const similarCharacters = await prisma.character.findMany({
-    where: {
-      isPublic: true,
-      category: character.category,
-      id: { not: character.id },
-      ...access.visibilityFilter,
-    },
-    orderBy: [{ usageCount: "desc" }, { createdAt: "desc" }],
-    take: 4,
-    include: {
-      createdBy: {
-        select: { id: true, name: true, image: true },
-      },
-    },
-  })
 
   const gradient = gradientMap[character.category] || gradientMap.general
 
@@ -438,7 +459,13 @@ export async function CharacterPageBody({
           initialCount={character.commentCount}
         />
 
-        <SimilarCharactersSection similarCharacters={similarCharacters} />
+        <Suspense fallback={null}>
+          <SimilarCharactersSection
+            characterId={character.id}
+            category={character.category}
+            access={access}
+          />
+        </Suspense>
       </div>
     </section>
   )

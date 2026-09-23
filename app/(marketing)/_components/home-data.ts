@@ -45,7 +45,7 @@ export const featureCards = [
   {
     number: "01",
     icon: HiOutlineSparkles,
-    title: "Characters with a point of view",
+    title: "Characters with a Point of View",
     description:
       "Profiles, greetings, tags, and creator-defined tone give each character a stronger identity before the first reply.",
     wash: "from-violet-500/[0.08] to-transparent",
@@ -54,7 +54,7 @@ export const featureCards = [
   {
     number: "02",
     icon: HiOutlineBolt,
-    title: "Memory that keeps the thread",
+    title: "Memory That Keeps the Thread",
     description:
       "Longer chats do not need to restart from zero. Save context, revisit favorites, and keep continuity over time.",
     wash: "from-fuchsia-500/[0.08] to-transparent",
@@ -63,7 +63,7 @@ export const featureCards = [
   {
     number: "03",
     icon: HiOutlineRocketLaunch,
-    title: "Creator tools built into the platform",
+    title: "Creator Tools Built into the Platform",
     description:
       "Publish characters, earn support, and build an audience without stitching together a separate storefront.",
     wash: "from-amber-500/[0.08] to-transparent",
@@ -74,19 +74,19 @@ export const featureCards = [
 export const howItWorksSteps = [
   {
     step: "1",
-    title: "Find a character",
+    title: "Find a Character",
     description:
       "Browse the marketplace by category — romance, fantasy, anime, study help — or search for the exact vibe you want.",
   },
   {
     step: "2",
-    title: "Start the conversation",
+    title: "Start the Conversation",
     description:
       "Every character opens with its own greeting and voice. Streaming replies, reactions, threads, and regenerate built in.",
   },
   {
     step: "3",
-    title: "Make it yours",
+    title: "Make It Yours",
     description:
       "Save memories, pin favorites, remix public characters, or publish your own and build an audience around it.",
   },

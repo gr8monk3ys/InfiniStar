@@ -1,12 +1,12 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useId, useRef, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { formatDistanceToNow } from "date-fns"
 import toast from "react-hot-toast"
 import { HiChatBubbleBottomCenterText, HiTrash } from "react-icons/hi2"
 
+import { formatDateTime, formatRelative } from "@/app/lib/intl-format"
 import { cn } from "@/app/lib/utils"
 import { useAppAuth } from "@/app/hooks/useAppAuth"
 import { useCsrfToken, withCsrfHeader } from "@/app/hooks/useCsrfToken"
@@ -39,13 +39,16 @@ export default function CharacterCommentsSection({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [commentBody, setCommentBody] = useState("")
   const [commentCount, setCommentCount] = useState(initialCount)
+  const [bodyError, setBodyError] = useState<string | null>(null)
+  // The comment whose delete is waiting on a second, confirming click.
+  const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   const isLoadingRef = useRef(false)
-
-  const canSubmit = useMemo(
-    () => Boolean(isSignedIn && commentBody.trim().length > 0 && !isSubmitting),
-    [commentBody, isSignedIn, isSubmitting]
-  )
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const fieldId = useId()
+  const errorId = `${fieldId}-error`
+  const counterId = `${fieldId}-count`
 
   const fetchComments = useCallback(
     async (cursor?: string | null) => {
@@ -67,14 +70,18 @@ export default function CharacterCommentsSection({
         } | null
 
         if (!res.ok) {
-          throw new Error(json?.error || "Failed to load comments")
+          throw new Error(json?.error || "Couldn’t load comments. Refresh the page to try again.")
         }
 
         const newComments = Array.isArray(json?.comments) ? json!.comments : []
         setComments((prev) => (cursor ? [...prev, ...newComments] : newComments))
         setNextCursor(typeof json?.nextCursor === "string" ? json.nextCursor : null)
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : "Failed to load comments")
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Couldn’t load comments. Check your connection and try again."
+        )
       } finally {
         isLoadingRef.current = false
         setIsLoading(false)
@@ -97,8 +104,13 @@ export default function CharacterCommentsSection({
     }
 
     const trimmed = commentBody.trim()
-    if (!trimmed) return
+    if (!trimmed) {
+      setBodyError("Write a comment before posting.")
+      textareaRef.current?.focus()
+      return
+    }
 
+    setBodyError(null)
     setIsSubmitting(true)
     const loader = toast.loading("Posting comment…")
 
@@ -117,7 +129,7 @@ export default function CharacterCommentsSection({
       } | null
 
       if (!res.ok) {
-        throw new Error(json?.error || "Failed to post comment")
+        throw new Error(json?.error || "Couldn’t post your comment. Try again.")
       }
 
       const comment = json?.comment
@@ -133,7 +145,11 @@ export default function CharacterCommentsSection({
       setCommentBody("")
       toast.success("Comment posted")
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to post comment")
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Couldn’t post your comment. Check your connection and try again."
+      )
     } finally {
       toast.dismiss(loader)
       setIsSubmitting(false)
@@ -147,6 +163,8 @@ export default function CharacterCommentsSection({
         return
       }
 
+      setConfirmingDeleteId(null)
+      setDeletingId(commentId)
       const loader = toast.loading("Deleting comment…")
       try {
         const res = await fetch(`/api/character-comments/${commentId}`, {
@@ -157,16 +175,21 @@ export default function CharacterCommentsSection({
         })
         const json = (await res.json().catch(() => null)) as { error?: string } | null
         if (!res.ok) {
-          throw new Error(json?.error || "Failed to delete comment")
+          throw new Error(json?.error || "Couldn’t delete the comment. Try again.")
         }
 
         setComments((prev) => prev.filter((c) => c.id !== commentId))
         setCommentCount((prev) => Math.max(prev - 1, 0))
         toast.success("Comment deleted")
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : "Failed to delete comment")
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Couldn’t delete the comment. Check your connection and try again."
+        )
       } finally {
         toast.dismiss(loader)
+        setDeletingId(null)
       }
     },
     [csrfToken]
@@ -178,32 +201,52 @@ export default function CharacterCommentsSection({
         <div className="flex items-center gap-2">
           <HiChatBubbleBottomCenterText className="size-5 text-primary" aria-hidden="true" />
           <h2 className="text-lg font-semibold">Comments</h2>
-          <span className="text-sm text-muted-foreground">({commentCount})</span>
+          <span className="text-sm tabular-nums text-muted-foreground">({commentCount})</span>
         </div>
         {!isSignedIn ? (
           <Link
             href="/sign-in"
             className="rounded-md border px-3 py-1.5 text-sm font-medium hover:bg-accent"
           >
-            Sign in to comment
+            Sign In to Comment
           </Link>
         ) : null}
       </div>
 
       {isSignedIn && (
         <div className="mt-4 flex flex-col gap-2">
+          <label htmlFor={fieldId} className="sr-only">
+            Comment
+          </label>
           <textarea
+            ref={textareaRef}
+            id={fieldId}
+            name="comment"
             value={commentBody}
-            onChange={(e) => setCommentBody(e.target.value)}
+            onChange={(e) => {
+              setCommentBody(e.target.value)
+              if (bodyError) setBodyError(null)
+            }}
             placeholder="Share your thoughts…"
+            autoComplete="off"
+            aria-invalid={bodyError ? true : undefined}
+            aria-describedby={bodyError ? `${errorId} ${counterId}` : counterId}
             className={cn(
               "min-h-[84px] w-full resize-y rounded-xl border bg-background px-3 py-2 text-sm",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+              bodyError && "border-destructive"
             )}
             maxLength={1000}
           />
+          {bodyError ? (
+            <p id={errorId} className="text-xs text-destructive">
+              {bodyError}
+            </p>
+          ) : null}
           <div className="flex items-center justify-between gap-3">
-            <span className="text-xs text-muted-foreground">{commentBody.length}/1000</span>
+            <span id={counterId} className="text-xs tabular-nums text-muted-foreground">
+              {commentBody.length}/1000
+            </span>
             <button
               type="button"
               onClick={() => {
@@ -211,13 +254,13 @@ export default function CharacterCommentsSection({
                   // handled in function
                 })
               }}
-              disabled={!canSubmit || !csrfToken}
+              disabled={isSubmitting || !csrfToken}
               className={cn(
                 "rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground",
                 "hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
               )}
             >
-              Post Comment
+              {isSubmitting ? "Posting…" : "Post Comment"}
             </button>
           </div>
         </div>
@@ -239,6 +282,7 @@ export default function CharacterCommentsSection({
                         src={comment.author.image}
                         alt={comment.author.name || "User"}
                         fill
+                        sizes="36px"
                         className="object-cover"
                       />
                     </div>
@@ -252,29 +296,60 @@ export default function CharacterCommentsSection({
                       {comment.author.name || "Anonymous"}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
+                      <time dateTime={comment.createdAt} title={formatDateTime(comment.createdAt)}>
+                        {formatRelative(comment.createdAt)}
+                      </time>
                     </p>
                   </div>
                 </div>
 
                 {comment.canDelete ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      handleDelete(comment.id).catch(() => {
-                        // handled in function
-                      })
-                    }}
-                    className="rounded-md p-2 text-muted-foreground transition hover:bg-accent hover:text-foreground"
-                    aria-label="Delete comment"
-                    title="Delete comment"
-                  >
-                    <HiTrash className="size-4" />
-                  </button>
+                  confirmingDeleteId === comment.id ? (
+                    <div
+                      className="flex shrink-0 items-center gap-2"
+                      role="group"
+                      aria-label="Confirm comment deletion"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setConfirmingDeleteId(null)}
+                        className="rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        // Focus moves here because the trash button that opened this
+                        // step is gone; without it keyboard focus would drop to <body>.
+                        autoFocus
+                        onClick={() => {
+                          handleDelete(comment.id).catch(() => {
+                            // handled in function
+                          })
+                        }}
+                        className="rounded-md bg-destructive px-3 py-1.5 text-sm font-medium text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        Delete Comment
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setConfirmingDeleteId(comment.id)}
+                      disabled={deletingId === comment.id}
+                      className="rounded-md p-2 text-muted-foreground transition hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                      aria-label="Delete comment"
+                      title="Delete comment"
+                    >
+                      <HiTrash className="size-4" aria-hidden="true" />
+                    </button>
+                  )
                 ) : null}
               </div>
 
-              <p className="mt-3 whitespace-pre-wrap text-sm text-foreground">{comment.body}</p>
+              <p className="mt-3 whitespace-pre-wrap break-words text-sm text-foreground">
+                {comment.body}
+              </p>
             </article>
           ))
         )}
@@ -290,7 +365,7 @@ export default function CharacterCommentsSection({
             disabled={isLoading}
             className="self-center rounded-md border px-4 py-2 text-sm font-medium hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {isLoading ? "Loading…" : "Load more"}
+            {isLoading ? "Loading…" : "Load More"}
           </button>
         )}
       </div>

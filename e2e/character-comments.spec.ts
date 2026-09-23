@@ -71,6 +71,13 @@ if (hasE2EAuthCredentials) {
       await expect(deleteButton).toBeVisible()
       await deleteButton.click()
 
+      // Deleting takes a second, confirming click.
+      const confirmDelete = postedArticle
+        .getByRole("group", { name: /confirm comment deletion/i })
+        .getByRole("button", { name: /delete comment/i })
+      await expect(confirmDelete).toBeVisible()
+      await confirmDelete.click()
+
       await expect(page.getByText(commentText)).toHaveCount(0, { timeout: 15000 })
     })
   })

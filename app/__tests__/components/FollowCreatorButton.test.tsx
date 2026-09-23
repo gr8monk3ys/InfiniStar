@@ -36,7 +36,7 @@ describe("FollowCreatorButton on a prerendered page", () => {
 
     render(<FollowCreatorButton creatorId="c1" creatorName="Ada" initialFollowerCount={3} />)
 
-    expect(screen.getByRole("link", { name: "Sign in to follow" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Sign In to Follow" })).toHaveAttribute(
       "href",
       "/sign-in"
     )
@@ -78,6 +78,6 @@ describe("FollowCreatorButton on a prerendered page", () => {
 
     await act(async () => {})
 
-    expect(screen.getByRole("button", { name: "This is you" })).toBeDisabled()
+    expect(screen.getByRole("button", { name: "This Is You" })).toBeDisabled()
   })
 })

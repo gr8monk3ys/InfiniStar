@@ -4,10 +4,15 @@ import { captureException } from "@sentry/nextjs"
 import { HiArrowTrendingUp, HiChatBubbleLeftRight, HiSparkles, HiUserGroup } from "react-icons/hi2"
 
 import { CHARACTER_SELECT } from "@/app/lib/character-select"
+import { formatNumber } from "@/app/lib/intl-format"
 import { dbLogger } from "@/app/lib/logger"
 import { matureAccess } from "@/app/lib/nsfw"
 import prisma from "@/app/lib/prismadb"
-import { getRecommendationSignalsForUser, rankCharactersForUser } from "@/app/lib/recommendations"
+import {
+  getRecommendationSignalsForUser,
+  rankCharactersForUser,
+  type RecommendationSignals,
+} from "@/app/lib/recommendations"
 import { cn } from "@/app/lib/utils"
 import { buttonVariants } from "@/app/components/ui/button"
 import getCurrentUser from "@/app/actions/getCurrentUser"
@@ -72,19 +77,54 @@ interface FeedCreatorRow {
 
 export default async function FeedPage() {
   const currentUser = await getCurrentUser()
+  const userId = currentUser?.id
   const access = matureAccess(currentUser)
   const publicCharacterWhere = { isPublic: true, ...access.visibilityFilter }
 
   let trendingRaw: FeedCharacter[] = []
   let freshRaw: FeedCharacter[] = []
   let creatorRows: FeedCreatorRow[] = []
-  let recommendationSignals = null
+  let recommendationSignals: RecommendationSignals | null = null
   let followingCreatorIds: string[] = []
   let followingRaw: FeedCharacter[] = []
   let feedError = false
 
   try {
-    ;[trendingRaw, freshRaw, creatorRows] = await Promise.all([
+    // Everything here depends only on the viewer, so it runs in one round:
+    // the followed creators' characters chain off the follow list alone
+    // instead of waiting for the catalog and the recommendation signals.
+    const followingIdsPromise: Promise<string[]> = userId
+      ? prisma.userFollow
+          .findMany({
+            where: { followerId: userId },
+            select: { followingId: true },
+            take: 1000,
+          })
+          .then((rows) => rows.map((row) => row.followingId))
+      : Promise.resolve([])
+
+    const followingRawPromise: Promise<FeedCharacter[]> = followingIdsPromise.then((ids) =>
+      ids.length > 0
+        ? prisma.character.findMany({
+            where: {
+              ...publicCharacterWhere,
+              createdById: { in: ids },
+            },
+            orderBy: [{ createdAt: "desc" }, { usageCount: "desc" }],
+            take: 60,
+            select: CHARACTER_SELECT,
+          })
+        : []
+    )
+
+    ;[
+      trendingRaw,
+      freshRaw,
+      creatorRows,
+      recommendationSignals,
+      followingCreatorIds,
+      followingRaw,
+    ] = await Promise.all([
       prisma.character.findMany({
         where: publicCharacterWhere,
         orderBy: [{ usageCount: "desc" }, { commentCount: "desc" }, { likeCount: "desc" }],
@@ -115,34 +155,10 @@ export default async function FeedPage() {
         },
         take: 30,
       }),
+      userId ? getRecommendationSignalsForUser(userId) : Promise.resolve(null),
+      followingIdsPromise,
+      followingRawPromise,
     ])
-
-    recommendationSignals = currentUser?.id
-      ? await getRecommendationSignalsForUser(currentUser.id)
-      : null
-
-    followingCreatorIds = currentUser?.id
-      ? (
-          await prisma.userFollow.findMany({
-            where: { followerId: currentUser.id },
-            select: { followingId: true },
-            take: 1000,
-          })
-        ).map((row) => row.followingId)
-      : []
-
-    followingRaw =
-      followingCreatorIds.length > 0
-        ? await prisma.character.findMany({
-            where: {
-              ...publicCharacterWhere,
-              createdById: { in: followingCreatorIds },
-            },
-            orderBy: [{ createdAt: "desc" }, { usageCount: "desc" }],
-            take: 60,
-            select: CHARACTER_SELECT,
-          })
-        : []
   } catch (error) {
     // A failed query is not an empty community. Flag it so the page can say so
     // instead of rendering "nothing here yet" over what is actually an outage.
@@ -199,7 +215,7 @@ export default async function FeedPage() {
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Link href="/explore" className={cn(buttonVariants({ size: "sm" }), "gap-2")}>
-              <HiChatBubbleLeftRight className="size-4" />
+              <HiChatBubbleLeftRight className="size-4" aria-hidden="true" />
               Explore Characters
             </Link>
             <Link
@@ -230,7 +246,7 @@ export default async function FeedPage() {
                 href="/explore"
                 className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
               >
-                Browse Explore instead
+                Browse Explore Instead
               </Link>
             </>
           }
@@ -239,21 +255,21 @@ export default async function FeedPage() {
         <>
           <section>
             <div className="mb-4 flex items-center gap-2">
-              <HiUserGroup className="size-5 text-primary" />
+              <HiUserGroup className="size-5 text-primary" aria-hidden="true" />
               <h2 className="text-xl font-semibold">Top Creators</h2>
             </div>
 
             {topCreators.length === 0 ? (
               <EmptySection
                 icon={HiUserGroup}
-                title="No creators to rank yet"
+                title="No Creators to Rank Yet"
                 description="Creators land on this list once they publish a public character. Publish one and you put yourself here, at the top of an empty board."
                 action={
                   <Link
                     href="/dashboard/characters/new"
                     className={cn(buttonVariants({ size: "sm" }))}
                   >
-                    Create a character
+                    Create a Character
                   </Link>
                 }
               />
@@ -285,20 +301,20 @@ export default async function FeedPage() {
                         <p className="truncate font-medium group-hover:text-primary">
                           {creator.name || "Anonymous Creator"}
                         </p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-xs tabular-nums text-muted-foreground">
                           {creator.publicCharacterCount} character
                           {creator.publicCharacterCount !== 1 ? "s" : ""}
                         </p>
                       </div>
                     </div>
                     {creator.bio && (
-                      <p className="mt-3 line-clamp-2 text-sm text-muted-foreground">
+                      <p className="mt-3 line-clamp-2 break-words text-sm text-muted-foreground">
                         {creator.bio}
                       </p>
                     )}
-                    <div className="mt-3 flex gap-4 text-xs text-muted-foreground">
-                      <span>{creator.totalUsageCount.toLocaleString()} chats</span>
-                      <span>{creator.totalLikeCount.toLocaleString()} likes</span>
+                    <div className="mt-3 flex gap-4 text-xs tabular-nums text-muted-foreground">
+                      <span>{formatNumber(creator.totalUsageCount)} chats</span>
+                      <span>{formatNumber(creator.totalLikeCount)} likes</span>
                     </div>
                   </Link>
                 ))}
@@ -309,7 +325,7 @@ export default async function FeedPage() {
           {currentUser?.id && (
             <section>
               <div className="mb-4 flex items-center gap-2">
-                <HiUserGroup className="size-5 text-primary" />
+                <HiUserGroup className="size-5 text-primary" aria-hidden="true" />
                 <h2 className="text-xl font-semibold">From Creators You Follow</h2>
               </div>
               {followingCreatorIds.length === 0 ? (
@@ -319,21 +335,21 @@ export default async function FeedPage() {
                   description="Follow a creator and their newest public characters show up here before they reach anyone's Trending. Explore is the fastest place to find the first few."
                   action={
                     <Link href="/explore" className={cn(buttonVariants({ size: "sm" }))}>
-                      Find creators to follow
+                      Find Creators to Follow
                     </Link>
                   }
                 />
               ) : followingCharacters.length === 0 ? (
                 <EmptySection
                   icon={HiUserGroup}
-                  title="Nothing new from the creators you follow"
+                  title="Nothing New from the Creators You Follow"
                   description="The creators you follow haven't published a public character yet. Widen the net, or check back once they ship something."
                   action={
                     <Link
                       href="/explore"
                       className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
                     >
-                      Follow a few more creators
+                      Follow a Few More Creators
                     </Link>
                   }
                 />
@@ -349,7 +365,7 @@ export default async function FeedPage() {
 
           <section>
             <div className="mb-4 flex items-center gap-2">
-              <HiArrowTrendingUp className="size-5 text-orange-500" />
+              <HiArrowTrendingUp className="size-5 text-orange-500" aria-hidden="true" />
               <h2 className="text-xl font-semibold">Trending Right Now</h2>
             </div>
             {trendingCharacters.length === 0 ? (
@@ -363,13 +379,13 @@ export default async function FeedPage() {
                       href="/dashboard/characters/new"
                       className={cn(buttonVariants({ size: "sm" }))}
                     >
-                      Create a character
+                      Create a Character
                     </Link>
                     <Link
                       href="/explore"
                       className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
                     >
-                      Browse the catalog
+                      Browse the Catalog
                     </Link>
                   </>
                 }
@@ -385,7 +401,7 @@ export default async function FeedPage() {
 
           <section>
             <div className="mb-4 flex items-center gap-2">
-              <HiSparkles className="size-5 text-emerald-500" />
+              <HiSparkles className="size-5 text-emerald-500" aria-hidden="true" />
               <h2 className="text-xl font-semibold">Fresh Characters</h2>
             </div>
             {freshCharacters.length === 0 ? (
@@ -399,13 +415,13 @@ export default async function FeedPage() {
                       href="/dashboard/characters/new"
                       className={cn(buttonVariants({ size: "sm" }))}
                     >
-                      Publish the first character
+                      Publish the First Character
                     </Link>
                     <Link
                       href="/explore"
                       className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
                     >
-                      See how Explore works
+                      See How Explore Works
                     </Link>
                   </>
                 }
